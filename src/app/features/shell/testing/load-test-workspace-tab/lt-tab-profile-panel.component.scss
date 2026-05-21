@@ -1,0 +1,48 @@
+.lt-profile-presets {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.lt-profile-presets__card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.55rem 0.65rem;
+  border-radius: var(--tx-radius-sm, 8px);
+  border: 1px solid color-mix(in srgb, var(--tx-border-0) 55%, transparent);
+  background: color-mix(in srgb, var(--tx-surface-1) 88%, #000 12%);
+  text-align: left;
+  cursor: pointer;
+
+  &.is-active {
+    border-color: color-mix(in srgb, var(--tx-accent) 55%, transparent);
+    background: color-mix(in srgb, var(--tx-accent) 10%, var(--tx-surface-1));
+  }
+}
+
+.lt-profile-presets__label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--tx-text-0);
+}
+
+.lt-profile-presets__desc {
+  font-size: 0.6875rem;
+  color: var(--tx-text-2);
+  line-height: 1.35;
+}
+
+.lt-profile-presets__meta {
+  font-size: 0.6875rem;
+  color: var(--tx-text-1);
+}
+
+.lt-profile-presets__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.55rem;
+  margin-bottom: 1rem;
+}

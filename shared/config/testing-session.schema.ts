@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { loadTestTabsByIdSchema } from './load-test-tab-ui.schema';
+
 export const TESTING_ACTIVE_VIEW_IDS = ['menu', 'test-suite', 'load-test'] as const;
 export type TestingActiveViewId = (typeof TESTING_ACTIVE_VIEW_IDS)[number];
 
@@ -27,6 +29,7 @@ export const workspaceTestingSchema = z.object({
   subpanel: z.enum(TESTING_SUBPANEL_IDS).default('menu'),
   testSuite: testingTreeSidebarPrefsSchema,
   loadTest: testingTreeSidebarPrefsSchema,
+  loadTestTabsById: loadTestTabsByIdSchema.default({}),
   regression: testingTreeSidebarPrefsSchema,
   mockServer: testingTreeSidebarPrefsSchema,
   capture: testingTreeSidebarPrefsSchema,
@@ -63,6 +66,7 @@ export function mergeWorkspaceTesting(
     ...patch,
     testSuite: { ...base.testSuite, ...patch.testSuite },
     loadTest: { ...base.loadTest, ...patch.loadTest },
+    loadTestTabsById: { ...base.loadTestTabsById, ...patch.loadTestTabsById },
     regression: { ...base.regression, ...patch.regression },
     mockServer: { ...base.mockServer, ...patch.mockServer },
     capture: { ...base.capture, ...patch.capture },

@@ -1,13 +1,158 @@
-@use '../testing-workspace-tab.shared';
+@use '../../workspace/workspace-tab-chrome' as tab-chrome;
+@use '../../workspace/workspace-tab-motion';
 
-.load-test-workspace-tab__dl {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 0.35rem 1rem;
-  margin: 0;
-  font-size: 13px;
+:host {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  min-width: 0;
 }
 
-.load-test-workspace-tab__dl dt {
-  color: color-mix(in srgb, var(--tx-text-1) 80%, transparent);
+.lt-tab {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  min-width: 0;
+}
+
+.lt-tab__split {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.lt-tab__split-primary {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  position: relative;
+}
+
+.lt-tab__results-slot {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.lt-tab__bar {
+  @include tab-chrome.workspace-tab-toolbar-row;
+}
+
+.lt-tab__bar-cluster {
+  @include tab-chrome.workspace-tab-bar-cluster;
+
+  &--grow {
+    @include tab-chrome.workspace-tab-bar-cluster-grow;
+  }
+
+  &--trailing {
+    @include tab-chrome.workspace-tab-bar-cluster-trailing;
+  }
+}
+
+.lt-tab__protocol-chip {
+  @include tab-chrome.workspace-tab-title-chip;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex: 0 0 auto;
+  align-self: flex-end;
+  margin-bottom: 1px;
+  padding-inline: 0.55rem;
+  color: var(--tx-text-1);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.lt-tab__name-field {
+  flex: 1 1 auto;
+  min-width: 8rem;
+  max-width: 24rem;
+}
+
+.lt-tab__bar-cluster--trailing tx-button {
+  flex-shrink: 0;
+  align-self: flex-end;
+  margin-bottom: 1px;
+}
+
+.lt-tab__target-section {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+}
+
+:host ::ng-deep .tx-workspace-tab__section-shell:has(app-lt-tab-target-panel) {
+  overflow: hidden;
+}
+
+:host ::ng-deep .tx-workspace-tab__section-shell > .tx-entrance-stagger__block.lt-tab__target-section {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.lt-tab--sidebar .lt-tab__workspace {
+  flex-direction: row;
+}
+
+.lt-tab__sections-wrap {
+  @include tab-chrome.workspace-tab-sections-wrap;
+}
+
+.lt-tab__sections-bar {
+  @include tab-chrome.workspace-tab-sections-bar;
+}
+
+.lt-tab__section-tab {
+  @include tab-chrome.workspace-tab-section-tab;
+}
+
+.lt-tab__workspace {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+}
+
+.lt-tab__nav {
+  @include tab-chrome.workspace-tab-section-sidebar-nav;
+}
+
+.lt-tab__nav-item {
+  @include tab-chrome.workspace-tab-section-sidebar-nav-item;
+}
+
+.lt-tab__nav-icon {
+  display: flex;
+  flex-shrink: 0;
+}
+
+.lt-tab__divider {
+  @include tab-chrome.workspace-tab-section-sidebar-divider;
+}
+
+.lt-tab__pane {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  padding: 14px 18px 18px;
 }

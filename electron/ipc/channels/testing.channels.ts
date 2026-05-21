@@ -22,6 +22,7 @@ export const TestingChannels = {
   interceptorStart: 'testing:interceptorStart',
   interceptorStop: 'testing:interceptorStop',
   loadTestStatus: 'testing:loadTestStatus',
+  loadTestMetrics: 'testing:loadTestMetrics',
   loadTestStart: 'testing:loadTestStart',
   loadTestCancel: 'testing:loadTestCancel',
   e2eExecuteFlow: 'testing:e2eExecuteFlow',

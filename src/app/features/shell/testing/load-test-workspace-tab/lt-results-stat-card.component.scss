@@ -1,0 +1,95 @@
+.lt-stat-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: 0.28rem 1fr;
+  gap: 0.55rem;
+  align-items: stretch;
+  min-width: 0;
+  padding: 0.55rem 0.65rem 0.55rem 0;
+  border-radius: var(--tx-radius-sm, 8px);
+  border: 1px solid color-mix(in srgb, var(--tx-border-0) 55%, transparent);
+  background: color-mix(in srgb, var(--tx-surface-1) 88%, #000 12%);
+  overflow: hidden;
+
+  &[data-health='good'] {
+    --lt-stat-accent: var(--tx-success);
+    --lt-stat-glow: color-mix(in srgb, var(--tx-success) 16%, transparent);
+  }
+
+  &[data-health='ok'] {
+    --lt-stat-accent: var(--tx-warning);
+    --lt-stat-glow: color-mix(in srgb, var(--tx-warning) 16%, transparent);
+  }
+
+  &[data-health='bad'] {
+    --lt-stat-accent: var(--tx-danger);
+    --lt-stat-glow: color-mix(in srgb, var(--tx-danger) 16%, transparent);
+  }
+}
+
+.lt-stat-card__accent {
+  margin: -0.55rem 0 -0.55rem -0.65rem;
+  border-radius: var(--tx-radius-sm, 8px) 0 0 var(--tx-radius-sm, 8px);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--lt-stat-accent) 88%, white 12%),
+    var(--lt-stat-accent)
+  );
+  box-shadow: 0 0 18px var(--lt-stat-glow);
+}
+
+.lt-stat-card__content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.lt-stat-card__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.4rem;
+}
+
+.lt-stat-card__label-group {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.lt-stat-card__label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--tx-text-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lt-stat-card__tag {
+  flex-shrink: 0;
+}
+
+.lt-stat-card__value {
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--tx-text-0);
+}
+
+.lt-stat-card__hint {
+  font-size: 0.6875rem;
+  color: var(--tx-text-2);
+  line-height: 1.35;
+}
+
+.lt-stat-card__icon {
+  flex-shrink: 0;
+  color: color-mix(in srgb, var(--lt-stat-accent) 72%, var(--tx-text-2));
+  opacity: 0.9;
+}

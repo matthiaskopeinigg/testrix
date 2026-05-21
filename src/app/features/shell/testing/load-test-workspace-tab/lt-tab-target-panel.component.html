@@ -1,0 +1,86 @@
+<div class="lt-target-panel">
+  <header class="lt-target-panel__header">
+    <div>
+      <h2 class="lt-target-panel__title">Target request</h2>
+      <p class="lt-target-panel__hint">
+        Choose the collection HTTP request this load test will exercise.
+      </p>
+    </div>
+    @if (targetRequestId()) {
+      <div class="lt-target-panel__selection">
+        <tx-banner variant="info" title="Selected target">
+          {{ selectedTargetLabel() }}
+        </tx-banner>
+        <div class="lt-target-panel__selection-actions">
+          <tx-button variant="secondary" (pressed)="openRequest.emit()">Open request tab</tx-button>
+          <tx-button variant="secondary" (pressed)="handleClearTarget()">Clear target</tx-button>
+        </div>
+      </div>
+    }
+  </header>
+
+  <app-workspace-sidebar-panel-shell
+    class="lt-target-panel__shell"
+    searchPlaceholder="Search requests…"
+    searchAriaLabel="Search collection requests"
+    [allFoldersExpanded]="allExpanded()"
+    [useDefaultToolbarActions]="false"
+    (searchChange)="handleSearch($event)"
+    (allFoldersExpandedChange)="handleExpandAll($event)"
+  >
+    <div workspacePanelToolbarActions class="lt-target-panel__toolbar-actions">
+      <button
+        type="button"
+        class="workspace-panel-shell__icon-btn"
+        [class.is-pressed]="filterToolbarActive()"
+        aria-label="Filter collection items"
+        [attr.aria-expanded]="filterMenuOpen()"
+        (click)="handleFilterToolbarClick($event)"
+      >
+        <tx-icon name="filter" [size]="16" />
+      </button>
+      <button
+        type="button"
+        class="workspace-panel-shell__icon-btn"
+        [class.is-pressed]="sortToolbarActive()"
+        aria-label="Sort collection items"
+        [attr.aria-expanded]="sortMenuOpen()"
+        (click)="handleSortToolbarClick($event)"
+      >
+        <tx-icon name="list" [size]="16" />
+      </button>
+    </div>
+
+    <div class="lt-target-panel__body">
+      @if (displayNodes().length === 0) {
+        <p class="lt-target-panel__empty">{{ emptyStateMessage() }}</p>
+      } @else {
+        <tx-tree
+          class="lt-target-panel__tree"
+          [nodes]="displayNodes()"
+          [config]="treeConfig()"
+          [expandedIds]="expandedIds()"
+          [selectionIds]="treeSelectionIds()"
+          (expandedChange)="handleExpandedChange($event)"
+          (nodeClick)="handleNodeClick($event)"
+        />
+      }
+    </div>
+  </app-workspace-sidebar-panel-shell>
+</div>
+
+<tx-context-menu
+  [open]="filterMenuOpen()"
+  [position]="filterMenuPosition()"
+  [items]="filterMenuItems()"
+  (itemSelect)="handleFilterMenuSelect($event)"
+  (closed)="handleFilterMenuClosed()"
+/>
+
+<tx-context-menu
+  [open]="sortMenuOpen()"
+  [position]="sortMenuPosition()"
+  [items]="sortMenuItems()"
+  (itemSelect)="handleSortMenuSelect($event)"
+  (closed)="handleSortMenuClosed()"
+/>

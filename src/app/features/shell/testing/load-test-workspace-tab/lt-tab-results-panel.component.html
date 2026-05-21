@@ -1,0 +1,384 @@
+<section class="lt-results-panel" aria-label="Load test results">
+  <header class="lt-results-panel__chrome">
+    <div class="lt-results-panel__chrome-top">
+      <div class="lt-results-panel__brand">
+        <span class="lt-results-panel__brand-icon" aria-hidden="true">
+          <tx-icon name="barChart" [size]="16" />
+        </span>
+        <div class="lt-results-panel__brand-copy">
+          <h2 class="lt-results-panel__title">Results dashboard</h2>
+          <p class="lt-results-panel__subtitle">
+            {{ resultsViewLabel() }}
+            @if (hasDisplayableData()) {
+              <span class="lt-results-panel__subtitle-sep">·</span>
+              <span>{{ elapsedLabel() }} elapsed</span>
+            }
+          </p>
+        </div>
+      </div>
+
+      <div class="lt-results-panel__status-group">
+        @if (hasDisplayableData()) {
+          <tx-tag [variant]="overallTagVariant()" casing="normal">{{ healthOverview().label }}</tx-tag>
+        }
+        <span
+          class="lt-results-panel__status-pill"
+          [class.is-running]="runState() === 'running'"
+          [class.is-completed]="runState() === 'completed'"
+        >
+          {{ statusLabel() }}
+        </span>
+      </div>
+    </div>
+
+    <div class="lt-results-panel__chrome-bottom">
+      <div class="lt-results-panel__view-toggle" role="tablist" aria-label="Results view">
+        <button
+          type="button"
+          class="lt-results-panel__view-btn"
+          role="tab"
+          [class.is-active]="resultsView() === 'live'"
+          [attr.aria-selected]="resultsView() === 'live'"
+          (click)="handleViewChange('live')"
+        >
+          Live
+        </button>
+        <button
+          type="button"
+          class="lt-results-panel__view-btn"
+          role="tab"
+          [class.is-active]="resultsView() === 'history'"
+          [attr.aria-selected]="resultsView() === 'history'"
+          (click)="handleViewChange('history')"
+        >
+          History
+          @if (runs().length > 0) {
+            <span class="lt-results-panel__view-count">{{ runs().length }}</span>
+          }
+        </button>
+        <button
+          type="button"
+          class="lt-results-panel__view-btn"
+          role="tab"
+          [class.is-active]="resultsView() === 'compare'"
+          [attr.aria-selected]="resultsView() === 'compare'"
+          [disabled]="!canCompare()"
+          [title]="canCompare() ? 'Compare two saved runs' : 'Save at least two runs to compare'"
+          (click)="handleViewChange('compare')"
+        >
+          Compare
+        </button>
+      </div>
+
+      <span class="lt-results-panel__chrome-divider" aria-hidden="true"></span>
+
+      <app-lt-results-export-toolbar class="lt-results-panel__export" [record]="exportRecord()" />
+
+      @if (runs().length > 0) {
+        <tx-button variant="secondary" (pressed)="handleClearRunsRequest()">Clear history</tx-button>
+      }
+    </div>
+  </header>
+
+  <div class="lt-results-panel__scroll">
+    @if (runs().length > 0) {
+      @if (resultsView() === 'compare' && canCompare()) {
+        <section class="lt-results-panel__compare-picker" aria-label="Choose runs to compare">
+          <tx-form-field label="Run A (baseline)" controlId="lt-compare-run-a">
+            <tx-dropdown
+              id="lt-compare-run-a"
+              ariaLabel="Baseline run"
+              [options]="runOptions()"
+              [ngModel]="compareRunAId()"
+              (ngModelChange)="handleCompareRunAChange($event)"
+            />
+          </tx-form-field>
+          <tx-button variant="secondary" title="Swap baseline and comparison runs" (pressed)="handleSwapCompareRuns()">
+            Swap
+          </tx-button>
+          <tx-form-field label="Run B (comparison)" controlId="lt-compare-run-b">
+            <tx-dropdown
+              id="lt-compare-run-b"
+              ariaLabel="Comparison run"
+              [options]="runOptions()"
+              [ngModel]="compareRunBId()"
+              (ngModelChange)="handleCompareRunBChange($event)"
+            />
+          </tx-form-field>
+        </section>
+      }
+
+      <app-lt-results-run-timeline
+        class="lt-results-panel__timeline"
+        [runs]="runs()"
+        [selectedId]="selectedRunId() ?? runs()[0]?.id ?? null"
+        [pinnedId]="pinnedBaselineRunId()"
+        [compareMode]="resultsView() === 'compare'"
+        [compareSelection]="compareSelection()"
+        (selectedIdChange)="handleSelectedRunChange($event)"
+        (compareRuns)="handleCompareSelection($event)"
+        (pinRun)="handlePinRun($event)"
+      />
+    }
+
+    <div class="lt-results-panel__body" [class.is-empty]="isDashboardEmpty()">
+      @if (isDashboardEmpty()) {
+        <tx-banner variant="info" title="No results yet">
+          Start a load test to populate health scores, metric cards, charts, and run history.
+        </tx-banner>
+      }
+
+      @if (resultsView() === 'compare' && compareRuns()) {
+        <app-lt-results-compare-panel [runA]="compareRuns()!.a" [runB]="compareRuns()!.b" />
+      } @else if (resultsView() === 'compare' && canCompare()) {
+        <tx-banner variant="info" title="Pick two runs">
+          Choose run A and run B above, or click chips in the timeline to compare throughput, latency, and success metrics side by side.
+        </tx-banner>
+      }
+
+      @if (baselineDeltas().length > 0) {
+        <section class="lt-results-panel__baseline" aria-label="Baseline comparison">
+          <h3 class="lt-results-panel__section-title">Vs pinned baseline</h3>
+          <ul class="lt-baseline-deltas">
+            @for (delta of baselineDeltas(); track delta.label) {
+              <li class="lt-baseline-deltas__item" [attr.data-direction]="delta.direction">
+                <span>{{ delta.label }}</span>
+                <tx-tag
+                  [variant]="delta.direction === 'better' ? 'success' : delta.direction === 'worse' ? 'error' : 'default'"
+                  casing="normal"
+                >
+                  {{ delta.delta }}
+                </tx-tag>
+              </li>
+            }
+          </ul>
+        </section>
+      }
+
+      <app-lt-results-health-overview [overview]="healthOverview()" />
+
+      <div class="lt-results-panel__stats">
+        <app-lt-results-stat-card
+          label="Throughput"
+          icon="zap"
+          [value]="formatStat((displayMetrics()?.requestsPerSec ?? 0) + ' rps')"
+          [health]="throughputHealth().level"
+          [healthLabel]="throughputHealth().label"
+          [hint]="throughputHealth().hint"
+          [showHealth]="!isDashboardEmpty()"
+        />
+        <app-lt-results-stat-card
+          label="Peak throughput"
+          icon="barChart"
+          [value]="formatStat((displayMetrics()?.peakRequestsPerSec ?? 0) + ' rps')"
+          [health]="peakHealth().level"
+          [healthLabel]="peakHealth().label"
+          [hint]="peakHealth().hint"
+          [showHealth]="!isDashboardEmpty()"
+        />
+        <app-lt-results-stat-card
+          label="Success rate"
+          icon="checkCircle"
+          [value]="formatStat((displayMetrics()?.successRatePercent ?? 100).toFixed(2) + '%')"
+          [health]="successHealth().level"
+          [healthLabel]="successHealth().label"
+          [hint]="successHealth().hint"
+          [showHealth]="!isDashboardEmpty()"
+        />
+        <app-lt-results-stat-card
+          label="Error rate"
+          icon="alertCircle"
+          [value]="formatStat((displayMetrics()?.errorRatePercent ?? 0).toFixed(2) + '%')"
+          [health]="errorHealth().level"
+          [healthLabel]="errorHealth().label"
+          [hint]="errorHealth().hint"
+          [showHealth]="!isDashboardEmpty()"
+        />
+        <app-lt-results-stat-card
+          label="Total requests"
+          icon="http"
+          [value]="formatStat((displayMetrics()?.totalRequests ?? 0) + '')"
+          health="ok"
+          healthLabel="OK"
+          [showHealth]="false"
+        />
+        <app-lt-results-stat-card
+          label="Failed requests"
+          icon="xCircle"
+          [value]="formatStat((displayMetrics()?.failedRequests ?? 0) + '')"
+          [health]="errorHealth().level"
+          [healthLabel]="errorHealth().label"
+          [showHealth]="!isDashboardEmpty()"
+        />
+        <app-lt-results-stat-card
+          label="Virtual users"
+          icon="users"
+          [value]="formatStat((displayMetrics()?.virtualUsers ?? 0) + '')"
+          health="good"
+          healthLabel="Good"
+          [showHealth]="false"
+        />
+        <app-lt-results-stat-card
+          label="p50 latency"
+          icon="clock"
+          [value]="formatStat((displayMetrics()?.latencyMs?.p50 ?? 0) + ' ms')"
+          [health]="p50Health().level"
+          [healthLabel]="p50Health().label"
+          [showHealth]="!isDashboardEmpty()"
+        />
+        <app-lt-results-stat-card
+          label="p95 latency"
+          icon="clock"
+          [value]="formatStat((displayMetrics()?.latencyMs?.p95 ?? 0) + ' ms')"
+          [health]="p95Health().level"
+          [healthLabel]="p95Health().label"
+          [hint]="p95Health().hint"
+          [showHealth]="!isDashboardEmpty()"
+        />
+        <app-lt-results-stat-card
+          label="p99 latency"
+          icon="clock"
+          [value]="formatStat((displayMetrics()?.latencyMs?.p99 ?? 0) + ' ms')"
+          [health]="p95Health().level"
+          [healthLabel]="p95Health().label"
+          [showHealth]="!isDashboardEmpty()"
+        />
+        <app-lt-results-stat-card
+          label="Avg latency"
+          icon="activity"
+          [value]="formatStat((displayMetrics()?.latencyMs?.avg ?? 0) + ' ms')"
+          [health]="avgHealth().level"
+          [healthLabel]="avgHealth().label"
+          [showHealth]="!isDashboardEmpty()"
+        />
+      </div>
+
+      <div class="lt-results-panel__charts-layout">
+        <section class="lt-results-panel__chart-block" aria-label="Latency distribution">
+          <h3 class="lt-results-panel__section-title">Latency distribution</h3>
+          <div class="lt-results-panel__chart-card">
+            <app-lt-results-latency-bars
+              [latency]="displayMetrics()!.latencyMs"
+              [empty]="isDashboardEmpty()"
+            />
+          </div>
+        </section>
+
+        <section class="lt-results-panel__chart-block" aria-label="Traffic charts">
+          <h3 class="lt-results-panel__section-title">Traffic</h3>
+          <div class="lt-results-panel__charts">
+            <app-lt-results-line-chart
+              title="Throughput"
+              unit="rps"
+              strokeColor="var(--tx-accent)"
+              [elapsedSec]="displayMetrics()?.elapsedSec ?? 0"
+              [values]="throughputSeries()"
+              [secondaryValues]="compareThroughputSeries()"
+            />
+            <app-lt-results-line-chart
+              title="Virtual users"
+              unit="VUs"
+              strokeColor="var(--tx-accent)"
+              [elapsedSec]="displayMetrics()?.elapsedSec ?? 0"
+              [values]="vuSeries()"
+            />
+          </div>
+        </section>
+
+        <section class="lt-results-panel__chart-block" aria-label="Reliability charts">
+          <h3 class="lt-results-panel__section-title">Reliability</h3>
+          <div class="lt-results-panel__charts">
+            <app-lt-results-line-chart
+              title="Success rate"
+              unit="%"
+              strokeColor="var(--tx-success)"
+              [elapsedSec]="displayMetrics()?.elapsedSec ?? 0"
+              [values]="successSeries()"
+              [secondaryValues]="compareSuccessSeries()"
+            />
+            <app-lt-results-line-chart
+              title="Error rate"
+              unit="%"
+              strokeColor="var(--tx-danger)"
+              [elapsedSec]="displayMetrics()?.elapsedSec ?? 0"
+              [values]="errorSeries()"
+            />
+          </div>
+        </section>
+
+        <section class="lt-results-panel__chart-block" aria-label="Latency over time">
+          <h3 class="lt-results-panel__section-title">Latency over time</h3>
+          <div class="lt-results-panel__charts lt-results-panel__charts--triple">
+            <app-lt-results-line-chart
+              title="p95 latency"
+              unit="ms"
+              strokeColor="var(--tx-secondary)"
+              [elapsedSec]="displayMetrics()?.elapsedSec ?? 0"
+              [values]="latencySeries()"
+              [secondaryValues]="compareLatencySeries()"
+            />
+            <app-lt-results-line-chart
+              title="p50 latency"
+              unit="ms"
+              strokeColor="var(--tx-warning)"
+              [elapsedSec]="displayMetrics()?.elapsedSec ?? 0"
+              [values]="p50Series()"
+            />
+            <app-lt-results-line-chart
+              title="Avg latency"
+              unit="ms"
+              strokeColor="var(--tx-text-1)"
+              [elapsedSec]="displayMetrics()?.elapsedSec ?? 0"
+              [values]="avgLatencySeries()"
+            />
+          </div>
+        </section>
+      </div>
+
+      @if (thresholdChecks().length > 0) {
+        <section class="lt-results-panel__thresholds" aria-label="Threshold checks">
+          <h3 class="lt-results-panel__section-title">Configured thresholds</h3>
+          <ul class="lt-threshold-list">
+            @for (check of thresholdChecks(); track check.label) {
+              <li
+                class="lt-threshold-list__item"
+                [class.is-pass]="check.pass === true"
+                [class.is-warn]="check.pass === false"
+              >
+                <tx-icon
+                  [name]="check.pass ? 'checkCircle' : 'xCircle'"
+                  [size]="14"
+                  aria-hidden="true"
+                />
+                <span class="lt-threshold-list__label">{{ check.label }}</span>
+                <span class="lt-threshold-list__value">{{ check.value }}</span>
+                <tx-tag
+                  [variant]="check.pass ? 'success' : 'error'"
+                  casing="normal"
+                >
+                  {{ check.pass ? 'Pass' : 'Fail' }}
+                </tx-tag>
+              </li>
+            }
+          </ul>
+        </section>
+      }
+
+      @if (runState() === 'running' && resultsView() === 'live') {
+        <tx-banner variant="info" title="Live simulation">
+          Metrics update every 500 ms. Use the Compare tab (2+ saved runs) to diff historical runs. Alt+click a run chip to pin a baseline.
+        </tx-banner>
+      }
+    </div>
+  </div>
+
+  <tx-confirm-dialog
+    [open]="clearConfirmOpen()"
+    title="Clear run history?"
+    message="This removes all saved runs for this load test. This action cannot be undone."
+    confirmLabel="Clear history"
+    variant="danger"
+    (confirmed)="handleClearRunsConfirm()"
+    (cancelled)="handleClearRunsCancel()"
+  />
+</section>

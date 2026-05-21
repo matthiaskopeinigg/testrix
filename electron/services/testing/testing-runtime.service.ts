@@ -2,11 +2,19 @@
  * In-process stubs for mock server, capture, interceptor, and load-test runtimes.
  * Replace with real engines as verticals mature.
  */
+import {
+  LoadTestRunSimulator,
+  createIdleLoadTestRunMetrics,
+  loadTestStartOptionsSchema,
+  type LoadTestRunMetrics,
+  type LoadTestStartOptions,
+} from '../../../shared/testing';
+
 export class TestingRuntimeService {
   private mockRunning = false;
   private captureRunning = false;
   private interceptorRunning = false;
-  private loadRunning = false;
+  private readonly loadTestSimulator = new LoadTestRunSimulator();
   private readonly captureEntries: { readonly id: string; readonly method: string; readonly url: string; readonly at: string }[] =
     [];
 
@@ -57,17 +65,20 @@ export class TestingRuntimeService {
   }
 
   loadTestStatus(): { readonly running: boolean } {
-    return { running: this.loadRunning };
+    return { running: this.loadTestSimulator.snapshot().running };
   }
 
-  loadTestStart(): { readonly running: boolean } {
-    this.loadRunning = true;
-    return { running: true };
+  loadTestMetrics(): LoadTestRunMetrics {
+    return this.loadTestSimulator.snapshot();
   }
 
-  loadTestCancel(): { readonly running: boolean } {
-    this.loadRunning = false;
-    return { running: false };
+  loadTestStart(options: unknown = {}): LoadTestRunMetrics {
+    const parsed = loadTestStartOptionsSchema.parse(options ?? {});
+    return this.loadTestSimulator.start(parsed);
+  }
+
+  loadTestCancel(): LoadTestRunMetrics {
+    return this.loadTestSimulator.cancel();
   }
 
   async e2eExecuteFlow(_flowId: string): Promise<{ readonly ok: boolean; readonly message: string }> {
@@ -78,3 +89,5 @@ export class TestingRuntimeService {
     // no-op stub
   }
 }
+
+export { createIdleLoadTestRunMetrics, type LoadTestRunMetrics, type LoadTestStartOptions };

@@ -1,0 +1,95 @@
+.lt-run-timeline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.lt-run-timeline__hint {
+  flex: 1 0 100%;
+  margin: 0 0 0.15rem;
+  font-size: 0.6875rem;
+  line-height: 1.4;
+  color: var(--tx-text-2);
+
+  strong {
+    color: var(--tx-text-0);
+    font-weight: 700;
+  }
+}
+
+.lt-run-timeline__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.45rem;
+  border-radius: var(--tx-radius-sm, 8px);
+  border: 1px solid color-mix(in srgb, var(--tx-border-0) 55%, transparent);
+  background: color-mix(in srgb, var(--tx-surface-1) 88%, #000 12%);
+  color: var(--tx-text-1);
+  font-size: 0.75rem;
+  cursor: pointer;
+
+  &.is-active {
+    border-color: color-mix(in srgb, var(--tx-accent) 55%, transparent);
+    background: color-mix(in srgb, var(--tx-accent) 10%, var(--tx-surface-1));
+  }
+
+  &.is-pinned {
+    border-color: color-mix(in srgb, var(--tx-warning) 55%, transparent);
+  }
+
+  &.is-compare-a {
+    border-color: color-mix(in srgb, var(--tx-secondary) 55%, transparent);
+    background: color-mix(in srgb, var(--tx-secondary) 10%, var(--tx-surface-1));
+  }
+
+  &.is-compare-b {
+    border-color: color-mix(in srgb, var(--tx-accent) 55%, transparent);
+    background: color-mix(in srgb, var(--tx-accent) 10%, var(--tx-surface-1));
+  }
+}
+
+.lt-run-timeline__dot {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  background: var(--tx-text-2);
+
+  &.is-pass {
+    background: var(--tx-success);
+  }
+
+  &.is-fail {
+    background: var(--tx-danger);
+  }
+}
+
+.lt-run-timeline__label {
+  white-space: nowrap;
+}
+
+.lt-run-timeline__pin {
+  color: var(--tx-warning);
+}
+
+.lt-run-timeline__slot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1rem;
+  height: 1rem;
+  border-radius: 999px;
+  font-size: 0.625rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.lt-run-timeline__slot--a {
+  color: var(--tx-secondary);
+  background: color-mix(in srgb, var(--tx-secondary) 18%, transparent);
+}
+
+.lt-run-timeline__slot--b {
+  color: var(--tx-accent);
+  background: color-mix(in srgb, var(--tx-accent) 18%, transparent);
+}

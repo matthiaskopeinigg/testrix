@@ -1,21 +1,33 @@
-@use '../testing-sidebar-shared' as shared;
-
 :host {
-  @include shared.testing-sidebar-host;
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
 }
 
 .load-test-sidebar-panel {
-  @include shared.testing-sidebar-shell;
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
 }
 
-.load-test-sidebar-panel__list {
-  @include shared.testing-sidebar-list;
+.load-test-sidebar-panel__body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
 }
 
-.load-test-sidebar-panel__item {
-  @include shared.testing-sidebar-list-item;
+.load-test-sidebar-panel__tree {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding-top: 0.15rem;
 }
 
 .load-test-sidebar-panel__empty {
-  @include shared.testing-sidebar-empty;
+  margin: 0.75rem 0.85rem;
+  color: var(--tx-text-2);
+  font-size: 0.8125rem;
 }

@@ -35,6 +35,7 @@ export * from './log-level';
 export * from './design-system-session.schema';
 export * from './development-tool.schema';
 export * from './development-session.schema';
+export * from './load-test-tab-ui.schema';
 export * from './testing-session.schema';
 export * from './defaults';
 export * from './merge-config';

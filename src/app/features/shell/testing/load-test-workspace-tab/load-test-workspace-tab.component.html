@@ -1,0 +1,220 @@
+@if (missing()) {
+  <tx-banner variant="warning" title="Load test not found">
+    This tab points to a load test that no longer exists. Close the tab or pick another from the sidebar.
+  </tx-banner>
+} @else {
+  <section
+    class="lt-tab tx-workspace-tab"
+    [class.lt-tab--titlebar]="useTitlebarLayout()"
+    [class.lt-tab--sidebar]="useSidebarLayout()"
+    [attr.aria-label]="title()"
+  >
+    <div
+      class="tx-workspace-tab__chrome tx-entrance-stagger"
+      [class.tx-entrance-stagger--play]="tabMotion.loadStaggerPlay()"
+      [class.tx-entrance-stagger--settled]="tabMotion.loadStaggerSettled()"
+    >
+      <div class="tx-entrance-stagger__block lt-tab__bar">
+        <div class="lt-tab__bar-cluster lt-tab__bar-cluster--grow">
+          <div class="lt-tab__protocol-chip" aria-hidden="true">
+            <tx-icon name="zap" [size]="14" aria-hidden="true" />
+            <span>LT</span>
+          </div>
+          <tx-form-field class="lt-tab__name-field" label="Name" controlId="lt-name">
+            <tx-input
+              id="lt-name"
+              [ngModel]="title()"
+              (ngModelChange)="handleNameChange($event)"
+            />
+          </tx-form-field>
+        </div>
+        <div class="lt-tab__bar-cluster lt-tab__bar-cluster--trailing">
+          <tx-button
+            [variant]="runButtonVariant()"
+            [loading]="runActionPending()"
+            loadingLabel="Working"
+            [title]="running() ? 'Cancel load test' : 'Start load test'"
+            (pressed)="handleRunToggle()"
+          >
+            {{ runButtonLabel() }}
+          </tx-button>
+        </div>
+      </div>
+
+      @if (useTitlebarLayout()) {
+        <div class="tx-entrance-stagger__block lt-tab__sections-wrap">
+          <nav class="lt-tab__sections-bar" role="tablist" aria-label="Load test sections">
+            @for (item of navItems; track item.id) {
+              <button
+                type="button"
+                class="lt-tab__section-tab"
+                role="tab"
+                [attr.aria-selected]="activeSection() === item.id"
+                [class.is-active]="activeSection() === item.id"
+                (click)="handleSectionSelect(item.id)"
+              >
+                <tx-icon [name]="$any(item.icon)" [size]="14" aria-hidden="true" />
+                <span>{{ item.label }}</span>
+              </button>
+            }
+          </nav>
+        </div>
+      }
+    </div>
+
+    <tx-vertical-split-pane
+      class="lt-tab__split"
+      [secondaryVisible]="showResultsPanel()"
+      [secondaryHidden]="resultsPanelHidden()"
+      [secondaryHeight]="resultsPanelHeight()"
+      (secondaryHeightChange)="handleResultsPanelHeight($event)"
+      (secondaryHeightCommit)="handleResultsPanelHeightCommit($event)"
+      (secondaryHiddenChange)="handleResultsPanelHidden($event)"
+    >
+      <div class="lt-tab__workspace lt-tab__split-primary" txSplitPrimary>
+        @if (useSidebarLayout()) {
+          <nav class="lt-tab__nav" role="tablist" aria-label="Load test sections">
+            @for (item of navItems; track item.id) {
+              <button
+                type="button"
+                class="lt-tab__nav-item"
+                role="tab"
+                [attr.aria-selected]="activeSection() === item.id"
+                [class.is-active]="activeSection() === item.id"
+                (click)="handleSectionSelect(item.id)"
+              >
+                <span class="lt-tab__nav-icon">
+                  <tx-icon [name]="$any(item.icon)" [size]="14" aria-hidden="true" />
+                </span>
+                <span>{{ item.label }}</span>
+              </button>
+            }
+          </nav>
+          <div class="lt-tab__divider" aria-hidden="true"></div>
+        }
+        <div
+          class="lt-tab__pane tx-workspace-tab__pane"
+          [class.tx-workspace-tab__pane--switch]="tabMotion.paneSwitchActive()"
+        >
+          @switch (activeSection()) {
+            @case ('overview') {
+              <div
+                class="tx-workspace-tab__section-shell tx-entrance-stagger"
+                [class.tx-entrance-stagger--play]="isSectionContentAnimating('overview')"
+                [class.tx-entrance-stagger--settled]="isSectionContentSettled('overview')"
+              >
+                <div class="tx-entrance-stagger__block">
+                  <app-lt-tab-overview-panel
+                    [description]="artifact()?.description ?? ''"
+                    [profile]="artifact()?.profile"
+                    [targetSummary]="targetLabel()"
+                    [scenarioCount]="artifact()?.scenarios?.length ?? 0"
+                    [runs]="artifact()?.runs ?? []"
+                    [pinnedBaselineRunId]="pinnedBaselineRunId()"
+                    (descriptionChange)="handleDescriptionChange($event)"
+                    (openHistory)="handleOpenHistoryView()"
+                    (sectionSelect)="handleSectionSelect($event)"
+                  />
+                </div>
+              </div>
+            }
+            @case ('target') {
+              <div
+                class="tx-workspace-tab__section-shell tx-entrance-stagger"
+                [class.tx-entrance-stagger--play]="isSectionContentAnimating('target')"
+                [class.tx-entrance-stagger--settled]="isSectionContentSettled('target')"
+              >
+                <div class="tx-entrance-stagger__block lt-tab__target-section">
+                  <app-lt-tab-target-panel
+                    [targetRequestId]="artifact()?.targetRequestId"
+                    (targetRequestIdChange)="handleTargetChange($event)"
+                    (openRequest)="handleOpenTargetRequest()"
+                  />
+                </div>
+              </div>
+            }
+            @case ('profile') {
+              <div
+                class="tx-workspace-tab__section-shell tx-entrance-stagger"
+                [class.tx-entrance-stagger--play]="isSectionContentAnimating('profile')"
+                [class.tx-entrance-stagger--settled]="isSectionContentSettled('profile')"
+              >
+                <div class="tx-entrance-stagger__block">
+                  <app-lt-tab-profile-panel
+                    [profile]="artifact()!.profile"
+                    (profileChange)="handleProfileChange($event)"
+                    (presetApply)="handlePresetApply($event)"
+                  />
+                </div>
+              </div>
+            }
+            @case ('thresholds') {
+              <div
+                class="tx-workspace-tab__section-shell tx-entrance-stagger"
+                [class.tx-entrance-stagger--play]="isSectionContentAnimating('thresholds')"
+                [class.tx-entrance-stagger--settled]="isSectionContentSettled('thresholds')"
+              >
+                <div class="tx-entrance-stagger__block">
+                  <app-lt-tab-thresholds-panel
+                    [thresholds]="artifact()!.thresholds"
+                    (thresholdsChange)="handleThresholdsChange($event)"
+                  />
+                </div>
+              </div>
+            }
+            @case ('scenarios') {
+              <div
+                class="tx-workspace-tab__section-shell tx-entrance-stagger"
+                [class.tx-entrance-stagger--play]="isSectionContentAnimating('scenarios')"
+                [class.tx-entrance-stagger--settled]="isSectionContentSettled('scenarios')"
+              >
+                <div class="tx-entrance-stagger__block">
+                  <app-lt-tab-scenarios-panel
+                    [scenarios]="artifact()?.scenarios ?? []"
+                    (scenariosChange)="handleScenariosChange($event)"
+                    (addScenario)="handleAddScenario()"
+                    (removeScenario)="handleRemoveScenario($event)"
+                  />
+                </div>
+              </div>
+            }
+            @case ('docs') {
+              <div
+                class="tx-workspace-tab__section-shell tx-entrance-stagger"
+                [class.tx-entrance-stagger--play]="isSectionContentAnimating('docs')"
+                [class.tx-entrance-stagger--settled]="isSectionContentSettled('docs')"
+              >
+                <div class="tx-entrance-stagger__block">
+                  <app-lt-tab-docs-panel
+                    [docs]="artifact()?.docs ?? ''"
+                    (docsChange)="handleDocsChange($event)"
+                  />
+                </div>
+              </div>
+            }
+          }
+        </div>
+      </div>
+      @if (showResultsSplit()) {
+        <div class="lt-tab__results-slot" txSplitSecondary>
+          <app-lt-tab-results-panel
+            [runState]="runState()"
+            [metrics]="metrics()"
+            [thresholds]="artifact()?.thresholds ?? {}"
+            [runs]="artifact()?.runs ?? []"
+            [resultsView]="resultsView()"
+            [selectedRunId]="selectedRunId()"
+            [pinnedBaselineRunId]="pinnedBaselineRunId()"
+            [compareSelection]="compareSelection()"
+            (resultsViewChange)="handleResultsViewChange($event)"
+            (selectedRunIdChange)="handleSelectedRunChange($event)"
+            (compareSelectionChange)="handleCompareSelectionChange($event)"
+            (pinnedBaselineRunIdChange)="handlePinnedBaselineChange($event)"
+            (clearRuns)="handleClearRuns()"
+            (deleteRun)="handleDeleteRun($event)"
+          />
+        </div>
+      }
+    </tx-vertical-split-pane>
+  </section>
+}

@@ -15,6 +15,8 @@ import type { StoredCookie } from '../shared/http/stored-cookie.schema';
 import type {
   CaptureFile,
   InterceptorFile,
+  LoadTestRunMetrics,
+  LoadTestStartOptions,
   LoadTestsFile,
   MockServerFile,
   RegressionsFile,
@@ -148,8 +150,9 @@ export interface ElectronAPI {
     interceptorStart: () => Promise<{ readonly running: boolean }>;
     interceptorStop: () => Promise<{ readonly running: boolean }>;
     loadTestStatus: () => Promise<{ readonly running: boolean }>;
-    loadTestStart: () => Promise<{ readonly running: boolean }>;
-    loadTestCancel: () => Promise<{ readonly running: boolean }>;
+    loadTestMetrics: () => Promise<LoadTestRunMetrics>;
+    loadTestStart: (options?: LoadTestStartOptions) => Promise<LoadTestRunMetrics>;
+    loadTestCancel: () => Promise<LoadTestRunMetrics>;
     e2eExecuteFlow: (flowId: string) => Promise<{ readonly ok: boolean; readonly message: string }>;
     e2eCancel: () => Promise<void>;
   };

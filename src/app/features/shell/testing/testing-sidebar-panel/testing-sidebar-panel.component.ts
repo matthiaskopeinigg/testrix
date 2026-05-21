@@ -114,7 +114,7 @@ export class TestingSidebarPanelComponent implements OnDestroy {
       id: 'load-test',
       icon: 'zap',
       title: 'Load Test',
-      hint: 'Performance and scalability',
+      hint: 'Performance, run history, and compare',
       drillIn: 'load-test',
     },
     {

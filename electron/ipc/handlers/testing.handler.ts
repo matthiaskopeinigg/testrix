@@ -134,8 +134,14 @@ export function registerTestingHandlers(ipc: IpcMainBinder, deps: TestingHandler
     wrapInvokeHandler(TestingChannels.loadTestStatus, async () => runtime.loadTestStatus()),
   );
   ipc.handle(
+    TestingChannels.loadTestMetrics,
+    wrapInvokeHandler(TestingChannels.loadTestMetrics, async () => runtime.loadTestMetrics()),
+  );
+  ipc.handle(
     TestingChannels.loadTestStart,
-    wrapInvokeHandler(TestingChannels.loadTestStart, async () => runtime.loadTestStart()),
+    wrapInvokeHandler(TestingChannels.loadTestStart, async (_e, options: unknown) =>
+      runtime.loadTestStart(options),
+    ),
   );
   ipc.handle(
     TestingChannels.loadTestCancel,
