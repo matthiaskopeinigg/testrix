@@ -49,10 +49,10 @@ export class CaptureSidebarPanelComponent extends TestingProgrammaticSidebarPane
   constructor() {
     super();
     effect(() => {
+      this.capture.items();
       this.workspaceEditor.activeTab();
       this.cdr.markForCheck();
     });
-    void this.capture.hydrate().then(() => this.cdr.markForCheck());
   }
 
   protected handleSearch(query: string): void {

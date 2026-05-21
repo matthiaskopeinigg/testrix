@@ -4,6 +4,14 @@ import { WindowChannels } from '../channels/window.channels';
 import type { IpcMainBinder } from '../register-ipc';
 import { wrapInvokeHandler } from '../wrap-ipc-handler';
 
+interface DragOffset {
+  readonly x: number;
+  readonly y: number;
+}
+
+const dragOffsetByWindow = new WeakMap<BrowserWindow, DragOffset>();
+
+/** Win32 frameless windows: CSS `-webkit-app-region: drag` is unreliable; IPC move is used instead. */
 export function registerWindowControlHandlers(ipc: IpcMainBinder): void {
   ipc.handle(
     WindowChannels.minimize,
@@ -50,4 +58,37 @@ export function registerWindowControlHandlers(ipc: IpcMainBinder): void {
       win.webContents.focus();
     }),
   );
+
+  ipc.on(WindowChannels.dragStart, (event, offset: DragOffset) => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    if (!win || win.isDestroyed() || !win.isMovable()) {
+      return;
+    }
+    if (win.isMaximized()) {
+      win.unmaximize();
+    }
+    dragOffsetByWindow.set(win, offset);
+  });
+
+  ipc.on(WindowChannels.dragMove, (event, position: { readonly screenX: number; readonly screenY: number }) => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    if (!win || win.isDestroyed() || !win.isMovable()) {
+      return;
+    }
+    const offset = dragOffsetByWindow.get(win);
+    if (!offset) {
+      return;
+    }
+    win.setPosition(
+      Math.round(position.screenX - offset.x),
+      Math.round(position.screenY - offset.y),
+    );
+  });
+
+  ipc.on(WindowChannels.dragEnd, (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    if (win && !win.isDestroyed()) {
+      dragOffsetByWindow.delete(win);
+    }
+  });
 }

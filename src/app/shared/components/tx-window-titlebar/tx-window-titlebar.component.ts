@@ -91,6 +91,43 @@ export class TxWindowTitlebarComponent {
     void ctrls.minimize();
   }
 
+  /** Win32: IPC window move — `-webkit-app-region: drag` is unreliable in frameless Electron. */
+  protected handleTitlebarMouseDown(event: MouseEvent): void {
+    const bridge = this.electron.bridge();
+    if (bridge?.platform !== 'win32' || this.useNativeFrame()) {
+      return;
+    }
+    if (event.button !== 0) {
+      return;
+    }
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) {
+      return;
+    }
+    if (target.closest('button, a, input, select, textarea, .tx-titlebar__profile, .tx-titlebar__trailing')) {
+      return;
+    }
+    const ctrls = bridge.windowControls;
+    if (!ctrls?.dragStart) {
+      return;
+    }
+
+    event.preventDefault();
+    ctrls.dragStart({ offsetX: event.clientX, offsetY: event.clientY });
+
+    const onMove = (move: MouseEvent): void => {
+      ctrls.dragMove({ screenX: move.screenX, screenY: move.screenY });
+    };
+    const onUp = (): void => {
+      ctrls.dragEnd();
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  }
+
   protected handleMaximizeToggle(): void {
     const ctrls = this.electron.bridge()?.windowControls;
     if (!ctrls) return;

@@ -2,6 +2,7 @@
   class="tx-titlebar disable-select"
   [class.tx-titlebar--darwin]="isDarwin()"
   [class.tx-titlebar--native-frame]="useNativeFrame()"
+  (mousedown)="handleTitlebarMouseDown($event)"
 >
   <div class="tx-titlebar__lead">
     @if (!useNativeFrame()) {

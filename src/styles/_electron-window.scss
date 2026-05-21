@@ -118,6 +118,24 @@ html.tx-electron-app[data-platform='win32'] {
   }
 }
 
+// Frameless titlebar drag — global styles so Angular encapsulation cannot strip `-webkit-app-region`.
+html.tx-electron-app:not(.tx-electron-app--browser-parity) {
+  app-tx-window-titlebar .tx-titlebar:not(.tx-titlebar--native-frame) {
+    -webkit-app-region: drag;
+    cursor: default;
+  }
+
+  app-tx-window-titlebar .tx-titlebar__profile,
+  app-tx-window-titlebar .tx-titlebar__trailing,
+  app-tx-window-titlebar .tx-titlebar__actions,
+  app-tx-window-titlebar .tx-titlebar__window-controls,
+  app-tx-window-titlebar .tx-titlebar-btn,
+  app-tx-window-titlebar .tx-titlebar__profile-dropdown,
+  app-tx-window-titlebar .tx-dropdown__trigger {
+    -webkit-app-region: no-drag;
+  }
+}
+
 // Native OS frame on Win32 — no custom window-control chrome required.
 html.tx-electron-app.tx-electron-app--native-dev-frame {
   .tx-titlebar {

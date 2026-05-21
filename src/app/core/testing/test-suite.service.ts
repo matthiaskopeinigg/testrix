@@ -14,6 +14,7 @@ import { ElectronService } from '@app/core/electron/electron.service';
 import { ErrorNotificationService } from '@app/core/errors/error-notification.service';
 
 import { newTestingId } from './testing-id';
+import { runTestingHydrateOnce } from './testing-hydrate-once';
 
 const BROWSER_STORAGE_KEY = 'testrix.test-suites.v1';
 
@@ -35,6 +36,7 @@ export class TestSuiteService {
 
   private readonly fileState = signal<TestSuitesFile | null>(null);
   private saveTimer: ReturnType<typeof setTimeout> | null = null;
+  private readonly hydrateInflight: { current: Promise<void> | null } = { current: null };
 
   readonly rootSuite = computed((): TestSuiteRoot | null => {
     const file = this.fileState();
@@ -47,18 +49,24 @@ export class TestSuiteService {
   readonly flows = computed(() => this.rootSuite()?.flows ?? []);
 
   async hydrate(): Promise<void> {
-    const api = this.electron.bridge()?.testing;
-    if (!api) {
-      this.loadBrowserFallback();
-      return;
-    }
-    try {
-      const file = await api.getTestSuites();
-      this.fileState.set(testSuitesFileSchema.parse(file));
-    } catch (error: unknown) {
-      this.notifier.reportUnknown(error);
-      this.fileState.set(createDefaultTestSuitesFile());
-    }
+    return runTestingHydrateOnce(
+      () => this.fileState() !== null,
+      this.hydrateInflight,
+      async () => {
+        const api = this.electron.bridge()?.testing;
+        if (!api) {
+          this.loadBrowserFallback();
+          return;
+        }
+        try {
+          const file = await api.getTestSuites();
+          this.fileState.set(testSuitesFileSchema.parse(file));
+        } catch (error: unknown) {
+          this.notifier.reportUnknown(error);
+          this.fileState.set(createDefaultTestSuitesFile());
+        }
+      },
+    );
   }
 
   findFlow(id: string): TestSuiteFlow | null {

@@ -101,6 +101,9 @@ export interface ElectronAPI {
     maximizeToggle: () => Promise<void>;
     close: () => Promise<void>;
     focus: () => Promise<void>;
+    dragStart: (offset: { readonly offsetX: number; readonly offsetY: number }) => void;
+    dragMove: (position: { readonly screenX: number; readonly screenY: number }) => void;
+    dragEnd: () => void;
   };
   updater: {
     getStatus: () => Promise<UpdaterStatus>;

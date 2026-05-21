@@ -130,6 +130,11 @@ const api: ElectronAPI = {
     maximizeToggle: () => ipcRenderer.invoke(WindowChannels.maximizeToggle),
     close: () => ipcRenderer.invoke(WindowChannels.close),
     focus: () => ipcRenderer.invoke(WindowChannels.focus),
+    dragStart: (offset: { readonly offsetX: number; readonly offsetY: number }) =>
+      ipcRenderer.send(WindowChannels.dragStart, { x: offset.offsetX, y: offset.offsetY }),
+    dragMove: (position: { readonly screenX: number; readonly screenY: number }) =>
+      ipcRenderer.send(WindowChannels.dragMove, position),
+    dragEnd: () => ipcRenderer.send(WindowChannels.dragEnd),
   },
   updater: {
     getStatus: () => ipcRenderer.invoke(UpdaterChannels.getStatus) as Promise<UpdaterStatus>,

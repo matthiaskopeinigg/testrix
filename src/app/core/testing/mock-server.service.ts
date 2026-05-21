@@ -12,6 +12,7 @@ import { ElectronService } from '@app/core/electron/electron.service';
 import { ErrorNotificationService } from '@app/core/errors/error-notification.service';
 
 import { newTestingId } from './testing-id';
+import { runTestingHydrateOnce } from './testing-hydrate-once';
 
 const BROWSER_STORAGE_KEY = 'testrix.mock-server.v1';
 
@@ -23,25 +24,32 @@ export class MockServerService {
   private readonly fileState = signal<MockServerFile | null>(null);
   private readonly runningState = signal(false);
   private saveTimer: ReturnType<typeof setTimeout> | null = null;
+  private readonly hydrateInflight: { current: Promise<void> | null } = { current: null };
 
   readonly endpoints = computed(() => this.fileState()?.endpoints ?? []);
   readonly options = computed(() => this.fileState()?.options ?? createDefaultMockServerFile().options);
   readonly running = computed(() => this.runningState());
 
   async hydrate(): Promise<void> {
-    const api = this.electron.bridge()?.testing;
-    if (!api) {
-      this.loadBrowserFallback();
-      return;
-    }
-    try {
-      const [file, status] = await Promise.all([api.getMockServer(), api.mockStatus()]);
-      this.fileState.set(mockServerFileSchema.parse(file));
-      this.runningState.set(status.running);
-    } catch (error: unknown) {
-      this.notifier.reportUnknown(error);
-      this.fileState.set(createDefaultMockServerFile());
-    }
+    return runTestingHydrateOnce(
+      () => this.fileState() !== null,
+      this.hydrateInflight,
+      async () => {
+        const api = this.electron.bridge()?.testing;
+        if (!api) {
+          this.loadBrowserFallback();
+          return;
+        }
+        try {
+          const [file, status] = await Promise.all([api.getMockServer(), api.mockStatus()]);
+          this.fileState.set(mockServerFileSchema.parse(file));
+          this.runningState.set(status.running);
+        } catch (error: unknown) {
+          this.notifier.reportUnknown(error);
+          this.fileState.set(createDefaultMockServerFile());
+        }
+      },
+    );
   }
 
   find(id: string): MockEndpoint | null {

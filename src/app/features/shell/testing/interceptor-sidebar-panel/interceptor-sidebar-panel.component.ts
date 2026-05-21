@@ -63,10 +63,10 @@ export class InterceptorSidebarPanelComponent extends TestingProgrammaticSidebar
   constructor() {
     super();
     effect(() => {
+      this.interceptor.items();
       this.workspaceEditor.activeTab();
       this.cdr.markForCheck();
     });
-    void this.interceptor.hydrate().then(() => this.cdr.markForCheck());
   }
 
   protected handleSearch(query: string): void {

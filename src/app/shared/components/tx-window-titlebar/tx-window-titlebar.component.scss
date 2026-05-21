@@ -181,21 +181,6 @@ html.tx-electron-app .tx-titlebar {
   min-width: 2rem;
 }
 
-// Frameless Electron: drag the bar; mark interactive controls no-drag (ancestors must not be no-drag).
-html.tx-electron-app .tx-titlebar:not(.tx-titlebar--native-frame) {
-  -webkit-app-region: drag;
-}
-
-html.tx-electron-app .tx-titlebar__profile,
-html.tx-electron-app .tx-titlebar__trailing,
-html.tx-electron-app .tx-titlebar__actions,
-html.tx-electron-app .tx-titlebar__window-controls,
-html.tx-electron-app .tx-titlebar-btn,
-html.tx-electron-app .tx-titlebar__profile-dropdown,
-html.tx-electron-app .tx-titlebar__profile-dropdown.tx-dropdown-host .tx-dropdown__trigger {
-  -webkit-app-region: no-drag;
-}
-
 html.tx-electron-app[data-platform='win32'] .tx-titlebar::after {
   display: none;
 }

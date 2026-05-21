@@ -28,7 +28,6 @@ import { WorkspaceEditorService } from '@app/core/workspace/workspace-editor.ser
 import { WorkspaceEditorComponent } from '@app/features/shell/workspace/workspace-editor/workspace-editor.component';
 import { workspaceSidebarPanelSearch } from '@app/features/shell/workspace/workspace-sidebar-panel-search';
 import { TxSpinnerComponent } from '@app/shared/components/tx-spinner/tx-spinner.component';
-import { TestingSessionService } from '@app/core/testing/testing-session.service';
 import {
   isHomeSidebarPanelId,
   loadHomeSidebarPanel,
@@ -36,11 +35,6 @@ import {
   type HomeSidebarPanelComponent,
   type HomeSidebarPanelId,
 } from './home-sidebar-panel-loader';
-import {
-  loadTestingSidebarPanel,
-  peekTestingSidebarPanel,
-  type TestingSidebarPanelComponent,
-} from './resolve-testing-sidebar-panel';
 
 type WelcomeToastTone = 'success' | 'error';
 
@@ -72,7 +66,6 @@ export class HomeComponent {
   protected readonly workspaceEditor = inject(WorkspaceEditorService);
 
   private readonly config = inject(ConfigService);
-  private readonly testingSession = inject(TestingSessionService);
   private readonly uiPreferences = inject(UiPreferencesService);
   private readonly electron = inject(ElectronService);
   private readonly route = inject(ActivatedRoute);
@@ -104,10 +97,6 @@ export class HomeComponent {
     Partial<Record<HomeSidebarPanelId, HomeSidebarPanelComponent>>
   >({});
 
-  private readonly testingPanelComponents = signal<
-    Partial<Record<string, TestingSidebarPanelComponent>>
-  >({});
-
   constructor() {
     afterNextRender(() => {
       this.applyDebugPanelFromRoute();
@@ -117,22 +106,6 @@ export class HomeComponent {
       const panelId = this.activeSidebarId();
       const open = this.sidebarPanelOpen();
       if (!open || !isHomeSidebarPanelId(panelId)) {
-        return;
-      }
-      if (panelId === 'testing') {
-        const subpanel = this.testingSession.subpanel();
-        const peeked = peekTestingSidebarPanel(subpanel);
-        if (peeked) {
-          untracked(() =>
-            this.testingPanelComponents.update((current) =>
-              current[subpanel] === peeked ? current : { ...current, [subpanel]: peeked },
-            ),
-          );
-          return;
-        }
-        void loadTestingSidebarPanel(subpanel).then((cmp) => {
-          this.testingPanelComponents.update((current) => ({ ...current, [subpanel]: cmp }));
-        });
         return;
       }
       const peeked = peekHomeSidebarPanel(panelId);
@@ -148,22 +121,6 @@ export class HomeComponent {
         this.sidebarPanelComponents.update((current) => ({ ...current, [panelId]: cmp }));
       });
     });
-
-    effect(() => {
-      this.testingSession.subpanel();
-      this.config.sessionRevision();
-      const panelId = this.activeSidebarId();
-      if (panelId !== 'testing' || !this.sidebarPanelOpen()) {
-        return;
-      }
-      const subpanel = this.testingSession.subpanel();
-      if (peekTestingSidebarPanel(subpanel)) {
-        return;
-      }
-      void loadTestingSidebarPanel(subpanel).then((cmp) => {
-        this.testingPanelComponents.update((current) => ({ ...current, [subpanel]: cmp }));
-      });
-    });
   }
 
   protected isSidebarPanelId(panelId: string | undefined): panelId is HomeSidebarPanelId {
@@ -171,14 +128,6 @@ export class HomeComponent {
   }
 
   protected sidebarPanelComponent(panelId: HomeSidebarPanelId): HomeSidebarPanelComponent | null {
-    if (panelId === 'testing') {
-      const subpanel = this.testingSession.subpanel();
-      return (
-        this.testingPanelComponents()[subpanel] ??
-        peekTestingSidebarPanel(subpanel) ??
-        peekHomeSidebarPanel('testing')
-      );
-    }
     return this.sidebarPanelComponents()[panelId] ?? peekHomeSidebarPanel(panelId);
   }
 

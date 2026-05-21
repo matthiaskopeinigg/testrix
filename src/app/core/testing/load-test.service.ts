@@ -13,6 +13,7 @@ import { ElectronService } from '@app/core/electron/electron.service';
 import { ErrorNotificationService } from '@app/core/errors/error-notification.service';
 
 import { newTestingId } from './testing-id';
+import { runTestingHydrateOnce } from './testing-hydrate-once';
 
 const BROWSER_STORAGE_KEY = 'testrix.load-tests.v1';
 
@@ -27,21 +28,28 @@ export class LoadTestService {
 
   private readonly fileState = signal<LoadTestsFile | null>(null);
   private saveTimer: ReturnType<typeof setTimeout> | null = null;
+  private readonly hydrateInflight: { current: Promise<void> | null } = { current: null };
 
   readonly items = computed(() => this.fileState()?.items ?? []);
 
   async hydrate(): Promise<void> {
-    const api = this.electron.bridge()?.testing;
-    if (!api) {
-      this.loadBrowserFallback();
-      return;
-    }
-    try {
-      this.fileState.set(loadTestsFileSchema.parse(await api.getLoadTests()));
-    } catch (error: unknown) {
-      this.notifier.reportUnknown(error);
-      this.fileState.set(createDefaultLoadTestsFile());
-    }
+    return runTestingHydrateOnce(
+      () => this.fileState() !== null,
+      this.hydrateInflight,
+      async () => {
+        const api = this.electron.bridge()?.testing;
+        if (!api) {
+          this.loadBrowserFallback();
+          return;
+        }
+        try {
+          this.fileState.set(loadTestsFileSchema.parse(await api.getLoadTests()));
+        } catch (error: unknown) {
+          this.notifier.reportUnknown(error);
+          this.fileState.set(createDefaultLoadTestsFile());
+        }
+      },
+    );
   }
 
   findArtifact(id: string): LoadTestArtifact | null {

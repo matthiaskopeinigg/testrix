@@ -47,10 +47,10 @@ export class RegressionSidebarPanelComponent extends TestingProgrammaticSidebarP
   constructor() {
     super();
     effect(() => {
+      this.regression.items();
       this.workspaceEditor.activeTab();
       this.cdr.markForCheck();
     });
-    void this.regression.hydrate().then(() => this.cdr.markForCheck());
   }
 
   protected handleSearch(query: string): void {

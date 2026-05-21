@@ -1,6 +1,4 @@
-@if (!sessionHydrated()) {
-  <div class="testing-sidebar-panel__hydration" aria-hidden="true"></div>
-} @else if (activeView() === 'menu') {
+@if (activeView() === 'menu' && subpanel() === 'menu') {
   <div
     class="testing-sidebar-panel__menu tx-entrance-stagger"
     [class.tx-entrance-stagger--play]="entranceStaggerPlay()"
@@ -32,10 +30,18 @@
     [searchPlaceholder]="searchPlaceholder()"
     [searchAriaLabel]="searchAriaLabel()"
   />
-} @else {
+} @else if (activeView() === 'load-test') {
   <app-load-test-sidebar-panel
     class="testing-sidebar-panel__drill-in"
     [searchPlaceholder]="searchPlaceholder()"
     [searchAriaLabel]="searchAriaLabel()"
   />
+} @else if (programmaticPanel(); as cmp) {
+  <div class="testing-sidebar-panel__drill-in">
+    <ng-container *ngComponentOutlet="cmp; inputs: panelInputs()" />
+  </div>
+} @else {
+  <div class="testing-sidebar-panel__loading" aria-busy="true">
+    <tx-spinner label="Loading panel" />
+  </div>
 }

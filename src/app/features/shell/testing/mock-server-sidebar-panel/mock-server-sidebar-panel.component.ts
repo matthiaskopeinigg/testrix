@@ -51,10 +51,10 @@ export class MockServerSidebarPanelComponent extends TestingProgrammaticSidebarP
   constructor() {
     super();
     effect(() => {
+      this.mockServer.endpoints();
       this.workspaceEditor.activeTab();
       this.cdr.markForCheck();
     });
-    void this.mockServer.hydrate().then(() => this.cdr.markForCheck());
   }
 
   protected handleSearch(query: string): void {

@@ -93,11 +93,10 @@ export class TestSuiteSidebarPanelComponent {
 
   constructor() {
     effect(() => {
+      this.testSuite.flows();
       this.workspaceEditor.activeTab();
       this.cdr.markForCheck();
     });
-
-    void this.testSuite.hydrate().then(() => this.cdr.markForCheck());
   }
 
   protected handleSearch(query: string): void {

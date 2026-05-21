@@ -12,6 +12,7 @@ import { ElectronService } from '@app/core/electron/electron.service';
 import { ErrorNotificationService } from '@app/core/errors/error-notification.service';
 
 import { newTestingId } from './testing-id';
+import { runTestingHydrateOnce } from './testing-hydrate-once';
 
 const BROWSER_STORAGE_KEY = 'testrix.capture.v1';
 
@@ -23,24 +24,31 @@ export class CaptureWorkbenchStore {
   private readonly fileState = signal<CaptureFile | null>(null);
   private readonly runningState = signal(false);
   private saveTimer: ReturnType<typeof setTimeout> | null = null;
+  private readonly hydrateInflight: { current: Promise<void> | null } = { current: null };
 
   readonly items = computed(() => this.fileState()?.items ?? []);
   readonly running = computed(() => this.runningState());
 
   async hydrate(): Promise<void> {
-    const api = this.electron.bridge()?.testing;
-    if (!api) {
-      this.loadBrowserFallback();
-      return;
-    }
-    try {
-      const [file, status] = await Promise.all([api.getCapture(), api.captureStatus()]);
-      this.fileState.set(captureFileSchema.parse(file));
-      this.runningState.set(status.running);
-    } catch (error: unknown) {
-      this.notifier.reportUnknown(error);
-      this.fileState.set(createDefaultCaptureFile());
-    }
+    return runTestingHydrateOnce(
+      () => this.fileState() !== null,
+      this.hydrateInflight,
+      async () => {
+        const api = this.electron.bridge()?.testing;
+        if (!api) {
+          this.loadBrowserFallback();
+          return;
+        }
+        try {
+          const [file, status] = await Promise.all([api.getCapture(), api.captureStatus()]);
+          this.fileState.set(captureFileSchema.parse(file));
+          this.runningState.set(status.running);
+        } catch (error: unknown) {
+          this.notifier.reportUnknown(error);
+          this.fileState.set(createDefaultCaptureFile());
+        }
+      },
+    );
   }
 
   find(id: string): CaptureItem | null {

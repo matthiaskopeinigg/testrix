@@ -63,6 +63,22 @@ export function loadTestingSidebarPanel(
   return promise;
 }
 
+const PROGRAMMATIC_SUBPANELS: readonly Exclude<TestingSubpanelId, 'menu'>[] = [
+  'regression',
+  'mock-server',
+  'capture',
+  'interceptor',
+];
+
+/**
+ * Warms lazy chunks for programmatic testing panels while the hub is visible.
+ */
+export function prefetchTestingSidebarPanels(): void {
+  for (const subpanel of PROGRAMMATIC_SUBPANELS) {
+    void loadTestingSidebarPanel(subpanel);
+  }
+}
+
 export function peekTestingSidebarPanel(
   subpanel: TestingSubpanelId,
 ): TestingSidebarPanelComponent | null {

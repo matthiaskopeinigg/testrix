@@ -59,11 +59,10 @@ export class LoadTestSidebarPanelComponent {
 
   constructor() {
     effect(() => {
+      this.loadTest.items();
       this.workspaceEditor.activeTab();
       this.cdr.markForCheck();
     });
-
-    void this.loadTest.hydrate().then(() => this.cdr.markForCheck());
   }
 
   protected handleSearch(query: string): void {

@@ -13,6 +13,7 @@ import { ElectronService } from '@app/core/electron/electron.service';
 import { ErrorNotificationService } from '@app/core/errors/error-notification.service';
 
 import { newTestingId } from './testing-id';
+import { runTestingHydrateOnce } from './testing-hydrate-once';
 
 const BROWSER_STORAGE_KEY = 'testrix.interceptor.v1';
 
@@ -28,24 +29,31 @@ export class InterceptorWorkspaceStore {
   private readonly fileState = signal<InterceptorFile | null>(null);
   private readonly runningState = signal(false);
   private saveTimer: ReturnType<typeof setTimeout> | null = null;
+  private readonly hydrateInflight: { current: Promise<void> | null } = { current: null };
 
   readonly items = computed(() => this.fileState()?.items ?? []);
   readonly running = computed(() => this.runningState());
 
   async hydrate(): Promise<void> {
-    const api = this.electron.bridge()?.testing;
-    if (!api) {
-      this.loadBrowserFallback();
-      return;
-    }
-    try {
-      const [file, status] = await Promise.all([api.getInterceptor(), api.interceptorStatus()]);
-      this.fileState.set(interceptorFileSchema.parse(file));
-      this.runningState.set(status.running);
-    } catch (error: unknown) {
-      this.notifier.reportUnknown(error);
-      this.fileState.set(createDefaultInterceptorFile());
-    }
+    return runTestingHydrateOnce(
+      () => this.fileState() !== null,
+      this.hydrateInflight,
+      async () => {
+        const api = this.electron.bridge()?.testing;
+        if (!api) {
+          this.loadBrowserFallback();
+          return;
+        }
+        try {
+          const [file, status] = await Promise.all([api.getInterceptor(), api.interceptorStatus()]);
+          this.fileState.set(interceptorFileSchema.parse(file));
+          this.runningState.set(status.running);
+        } catch (error: unknown) {
+          this.notifier.reportUnknown(error);
+          this.fileState.set(createDefaultInterceptorFile());
+        }
+      },
+    );
   }
 
   findRule(id: string): InterceptorRule | null {

@@ -1,4 +1,4 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable, computed, inject, signal } from '@angular/core';
 
 import { ConfigService } from '@app/core/config/config.service';
 import {
@@ -14,6 +14,7 @@ const PATCH_DEBOUNCE_MS = 300;
 
 /**
  * Persists Testing sidebar navigation in {@link SessionFile.workspace.testing}.
+ * Navigation updates apply optimistically; disk writes stay debounced.
  */
 @Injectable({ providedIn: 'root' })
 export class TestingSessionService {
@@ -21,6 +22,21 @@ export class TestingSessionService {
 
   private patchTimer: ReturnType<typeof setTimeout> | null = null;
   private pending: Partial<WorkspaceTestingState> | null = null;
+
+  /** Optimistic overlay until debounced session patch lands on disk. */
+  private readonly localOverride = signal<WorkspaceTestingState | null>(null);
+
+  private readonly mergedState = computed((): WorkspaceTestingState => {
+    const local = this.localOverride();
+    if (local) {
+      return local;
+    }
+    return mergeWorkspaceTesting(this.config.session()?.workspace.testing ?? undefined, {});
+  });
+
+  readonly activeView = computed((): TestingActiveViewId => this.mergedState().activeView);
+
+  readonly subpanel = computed((): TestingSubpanelId => this.mergedState().subpanel);
 
   /** Ensures the testing session slice exists. */
   load(): void {
@@ -30,20 +46,8 @@ export class TestingSessionService {
     void this.flushPatch(createDefaultWorkspaceTesting());
   }
 
-  /** Current testing workspace session slice merged with defaults. */
-  state(): WorkspaceTestingState {
-    return mergeWorkspaceTesting(this.readSlice() ?? undefined, {});
-  }
-
-  activeView(): TestingActiveViewId {
-    return this.state().activeView;
-  }
-
-  subpanel(): TestingSubpanelId {
-    return this.state().subpanel;
-  }
-
   patch(partial: Partial<WorkspaceTestingState>): void {
+    this.applyOptimistic(partial);
     this.pending = { ...this.pending, ...partial };
     this.schedulePatch();
   }
@@ -58,6 +62,11 @@ export class TestingSessionService {
 
   backToTestingMenu(): void {
     this.patch({ activeView: 'menu', subpanel: 'menu' });
+  }
+
+  private applyOptimistic(partial: Partial<WorkspaceTestingState>): void {
+    const base = this.localOverride() ?? mergeWorkspaceTesting(this.readSlice() ?? undefined, {});
+    this.localOverride.set(mergeWorkspaceTesting(base, partial));
   }
 
   private readSlice(): WorkspaceTestingState | null {
@@ -86,5 +95,6 @@ export class TestingSessionService {
         testing: workspaceTestingSchema.parse(next),
       },
     });
+    this.localOverride.set(null);
   }
 }

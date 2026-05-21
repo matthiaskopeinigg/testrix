@@ -57,7 +57,7 @@ export function createMainWindow(
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: !win32DirectShow,
+      sandbox: process.platform === 'win32' ? false : !win32DirectShow,
       backgroundThrottling: false,
       preload: resolveMainPreloadPath(),
       additionalArguments: [...bootThemeAdditionalArguments()],

@@ -10,6 +10,14 @@
   min-height: 0;
 }
 
+.testing-sidebar-panel__loading {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  justify-content: center;
+  min-height: 8rem;
+}
+
 .testing-sidebar-panel__menu {
   display: flex;
   flex-direction: column;
