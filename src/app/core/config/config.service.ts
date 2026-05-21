@@ -169,6 +169,12 @@ export class ConfigService {
                   ...patch.workspace.collections.requestTabsById,
                 }
               : current.workspace.collections.requestTabsById,
+            websocketTabsById: patch.workspace?.collections?.websocketTabsById
+              ? {
+                  ...current.workspace.collections.websocketTabsById,
+                  ...patch.workspace.collections.websocketTabsById,
+                }
+              : current.workspace.collections.websocketTabsById,
             requestRunsById: patch.workspace?.collections?.requestRunsById
               ? {
                   ...current.workspace.collections.requestRunsById,

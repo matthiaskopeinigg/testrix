@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { collectionRequestTabsByIdSchema } from './collection-request-tab-ui.schema';
+import { collectionWebsocketTabsByIdSchema } from './collection-websocket-tab-ui.schema';
 import { workspaceRequestRunsSchema } from './request-runs-session.schema';
 
 /** Folder workspace tab sections. */
@@ -54,6 +55,7 @@ export const workspaceCollectionFolderTabsSchema = z.object({
   expandedFolderIds: z.array(z.string()),
   folderTabsById: collectionFolderTabsByIdSchema.default({}),
   requestTabsById: collectionRequestTabsByIdSchema.default({}),
+  websocketTabsById: collectionWebsocketTabsByIdSchema.default({}),
   requestRunsById: workspaceRequestRunsSchema.default({}),
   folderRunsById: z
     .record(

@@ -1,13 +1,323 @@
-<section class="ws-tab" [attr.aria-label]="title()">
-  @if (missing()) {
-    <tx-banner variant="warning" title="WebSocket not found">
-      This tab points to a collection entry that no longer exists.
-    </tx-banner>
-  } @else {
-    <div class="ws-tab__bar">
-      <code class="ws-tab__path">{{ wsPath() }}</code>
-      <tx-button variant="primary" (pressed)="handleConnect()">Connect</tx-button>
+@if (missing()) {
+  <tx-banner variant="warning" title="WebSocket not found">
+    This tab points to a collection entry that no longer exists. Close the tab or pick another from the
+    sidebar.
+  </tx-banner>
+} @else {
+  <section
+    class="ws-tab tx-workspace-tab"
+    [class.ws-tab--titlebar]="useTitlebarLayout()"
+    [class.ws-tab--sidebar]="useSidebarLayout()"
+    [attr.aria-label]="title()"
+  >
+    <div
+      class="tx-workspace-tab__chrome tx-entrance-stagger"
+      [class.tx-entrance-stagger--play]="tabMotion.loadStaggerPlay()"
+      [class.tx-entrance-stagger--settled]="tabMotion.loadStaggerSettled()"
+    >
+      <div class="tx-entrance-stagger__block ws-tab__bar">
+        <div class="ws-tab__bar-cluster ws-tab__bar-cluster--grow">
+          <div class="ws-tab__protocol-chip" aria-hidden="true">
+            <tx-icon name="zap" [size]="14" aria-hidden="true" />
+            <span>WS</span>
+          </div>
+          <tx-form-field class="ws-tab__url-field" label="URL" controlId="ws-url">
+            <app-request-tab-url-input
+              controlId="ws-url"
+              [pathParams]="[]"
+              [catalog]="variableCatalog()"
+              [ngModel]="wsPath()"
+              (ngModelChange)="handleWsPathChange($event)"
+              (environmentVariableClick)="handleEnvironmentVariableClick($event)"
+              placeholder="ws://localhost:8080/socket"
+            />
+          </tx-form-field>
+        </div>
+        <div class="ws-tab__bar-cluster ws-tab__bar-cluster--trailing">
+          <tx-form-field class="ws-tab__environment-field" label="Environment" controlId="ws-environment">
+            <tx-dropdown
+              id="ws-environment"
+              placeholder="No environment"
+              ariaLabel="Active environment"
+              [options]="environmentOptions()"
+              [ngModel]="environmentDropdownValue()"
+              (ngModelChange)="handleEnvironmentChange($event)"
+            />
+          </tx-form-field>
+          <tx-button
+            [variant]="connectButtonVariant()"
+            [loading]="isConnecting()"
+            loadingLabel="Connecting"
+            [title]="connectionState() === 'connected' ? 'Disconnect from WebSocket server' : 'Connect to WebSocket server'"
+            (pressed)="handleConnectToggle()"
+          >
+            {{ connectButtonLabel() }}
+          </tx-button>
+        </div>
+      </div>
+
+      @if (useTitlebarLayout()) {
+        <div class="tx-entrance-stagger__block ws-tab__sections-wrap">
+          <nav class="ws-tab__sections-bar" role="tablist" aria-label="WebSocket sections">
+            @for (item of navItems; track item.id) {
+              <button
+                type="button"
+                class="ws-tab__section-tab"
+                role="tab"
+                [attr.aria-selected]="activeSection() === item.id"
+                [class.is-active]="activeSection() === item.id"
+                (click)="handleSectionSelect(item.id)"
+              >
+                <tx-icon [name]="$any(item.icon)" [size]="14" aria-hidden="true" />
+                <span>{{ item.label }}</span>
+              </button>
+            }
+          </nav>
+        </div>
+      }
     </div>
-    <p class="ws-tab__hint">WebSocket message editor will appear here in a future release.</p>
-  }
-</section>
+
+    <tx-vertical-split-pane
+      class="ws-tab__split"
+      [secondaryVisible]="showMessagesPanel()"
+      [secondaryHidden]="messagesPanelHidden()"
+      [secondaryHeight]="messagesPanelHeight()"
+      (secondaryHeightChange)="handleMessagesPanelHeight($event)"
+      (secondaryHeightCommit)="handleMessagesPanelHeightCommit($event)"
+      (secondaryHiddenChange)="handleMessagesPanelHidden($event)"
+    >
+      <div class="ws-tab__workspace ws-tab__split-primary" txSplitPrimary>
+        @if (useSidebarLayout()) {
+          <nav class="ws-tab__nav" role="tablist" aria-label="WebSocket sections">
+            @for (item of navItems; track item.id) {
+              <button
+                type="button"
+                class="ws-tab__nav-item"
+                role="tab"
+                [attr.aria-selected]="activeSection() === item.id"
+                [class.is-active]="activeSection() === item.id"
+                (click)="handleSectionSelect(item.id)"
+              >
+                <span class="ws-tab__nav-icon">
+                  <tx-icon [name]="$any(item.icon)" [size]="14" aria-hidden="true" />
+                </span>
+                <span>{{ item.label }}</span>
+              </button>
+            }
+          </nav>
+          <div class="ws-tab__divider" aria-hidden="true"></div>
+        }
+        <div
+          class="ws-tab__pane tx-workspace-tab__pane"
+          [class.tx-workspace-tab__pane--switch]="tabMotion.paneSwitchActive()"
+        >
+          @switch (activeSection()) {
+            @case ('overview') {
+              <div
+                class="tx-workspace-tab__section-shell tx-entrance-stagger"
+                [class.tx-entrance-stagger--play]="isSectionContentAnimating('overview')"
+                [class.tx-entrance-stagger--settled]="isSectionContentSettled('overview')"
+              >
+                <div class="tx-entrance-stagger__block">
+                  <app-ws-tab-overview-panel
+                    [description]="descriptionDraft()"
+                    [tags]="tags()"
+                    [auth]="auth()"
+                    [paramCount]="paramCount()"
+                    [headerCount]="headerCount()"
+                    (descriptionChange)="handleDescriptionChange($event)"
+                    (tagsChange)="handleTagsChange($event)"
+                  />
+                </div>
+              </div>
+            }
+            @case ('params') {
+              <div
+                class="tx-workspace-tab__section-shell tx-entrance-stagger"
+                [class.tx-entrance-stagger--play]="isSectionContentAnimating('params')"
+                [class.tx-entrance-stagger--settled]="isSectionContentSettled('params')"
+              >
+                <div class="tx-entrance-stagger__block ws-tab__section">
+                  <h2 class="ws-tab__section-title">Query parameters</h2>
+                  <p class="ws-tab__section-hint">
+                    Appended to the WebSocket URL when connecting. Use
+                    <code>$</code> dynamic variables or <code ngNonBindable>{{key}}</code> environment
+                    placeholders.
+                  </p>
+                </div>
+                <div class="tx-entrance-stagger__block">
+                  <tx-key-value-description-list
+                    keyLabel="Key"
+                    valueLabel="Value"
+                    descriptionLabel="Description"
+                    addLabel="Add query param"
+                    valueInput="variables"
+                    [showEnabled]="true"
+                    [rows]="queryRows()"
+                    [variableCatalog]="variableCatalog()"
+                    (rowsChange)="handleQueryParamsChange($event)"
+                    (environmentVariableClick)="handleEnvironmentVariableClick($event)"
+                  />
+                </div>
+              </div>
+            }
+            @case ('auth') {
+              <div
+                class="tx-workspace-tab__section-shell tx-entrance-stagger"
+                [class.tx-entrance-stagger--play]="isSectionContentAnimating('auth')"
+                [class.tx-entrance-stagger--settled]="isSectionContentSettled('auth')"
+              >
+                <div class="tx-entrance-stagger__block ws-tab__section">
+                  <h2 class="ws-tab__section-title">Authorization</h2>
+                  <p class="ws-tab__section-hint">
+                    Configure how this WebSocket authenticates. Inherited folder auth is resolved when
+                    connecting.
+                  </p>
+                </div>
+                <div class="tx-entrance-stagger__block">
+                  <app-folder-tab-auth-panel
+                    [auth]="auth()"
+                    [hasParentFolder]="hasParentFolder()"
+                    (authChange)="handleAuthChange($event)"
+                  />
+                </div>
+              </div>
+            }
+            @case ('headers') {
+              <div
+                class="tx-workspace-tab__section-shell tx-entrance-stagger"
+                [class.tx-entrance-stagger--play]="isSectionContentAnimating('headers')"
+                [class.tx-entrance-stagger--settled]="isSectionContentSettled('headers')"
+              >
+                <div class="tx-entrance-stagger__block ws-tab__section">
+                  <h2 class="ws-tab__section-title">Headers</h2>
+                  <p class="ws-tab__section-hint">
+                    Sent with the WebSocket handshake when connecting.
+                  </p>
+                </div>
+                <div class="tx-entrance-stagger__block">
+                  <tx-key-value-description-list
+                    keyLabel="Key"
+                    valueLabel="Value"
+                    descriptionLabel="Description"
+                    addLabel="Add header"
+                    valueInput="variables"
+                    [rows]="headerRows()"
+                    [variableCatalog]="variableCatalog()"
+                    (rowsChange)="handleHeadersChange($event)"
+                    (environmentVariableClick)="handleEnvironmentVariableClick($event)"
+                  />
+                </div>
+              </div>
+            }
+            @case ('message') {
+              <div
+                class="tx-workspace-tab__section-shell tx-entrance-stagger ws-tab__section--script"
+                [class.tx-entrance-stagger--play]="isSectionContentAnimating('message')"
+                [class.tx-entrance-stagger--settled]="isSectionContentSettled('message')"
+              >
+                <div class="tx-entrance-stagger__block ws-tab__section">
+                  <h2 class="ws-tab__section-title">Message</h2>
+                  <p class="ws-tab__section-hint">
+                    Default payload to send after connecting. Sending is not wired yet.
+                  </p>
+                  <tx-banner variant="info" title="Send not available yet">
+                    Message delivery will be enabled when WebSocket connection support ships.
+                  </tx-banner>
+                </div>
+                <div class="tx-entrance-stagger__block ws-tab__editor">
+                  <tx-code-editor
+                    language="json"
+                    languageBadgeLabel="JSON"
+                    [placeholder]="messageEditorPlaceholder"
+                    [hideToolbarActions]="true"
+                    [framed]="false"
+                    [ngModel]="message()"
+                    (ngModelChange)="handleMessageChange($event)"
+                  />
+                </div>
+              </div>
+            }
+            @case ('scripts') {
+              <div
+                class="tx-workspace-tab__section-shell tx-entrance-stagger ws-tab__section--script"
+                [class.tx-entrance-stagger--play]="isSectionContentAnimating('scripts')"
+                [class.tx-entrance-stagger--settled]="isSectionContentSettled('scripts')"
+              >
+                <div class="tx-entrance-stagger__block ws-tab__section">
+                  <h2 class="ws-tab__section-title">Scripts</h2>
+                  <p class="ws-tab__section-hint">
+                    JavaScript run before connecting or when a message is received.
+                  </p>
+                </div>
+                <div class="tx-entrance-stagger__block ws-tab__script-nav" role="tablist" aria-label="Script timing">
+                  <button
+                    type="button"
+                    class="ws-tab__script-tab"
+                    role="tab"
+                    [attr.aria-selected]="activeScriptPane() === 'pre'"
+                    [class.is-active]="activeScriptPane() === 'pre'"
+                    (click)="handleScriptPaneSelect('pre')"
+                  >
+                    Before connect
+                  </button>
+                  <button
+                    type="button"
+                    class="ws-tab__script-tab"
+                    role="tab"
+                    [attr.aria-selected]="activeScriptPane() === 'post'"
+                    [class.is-active]="activeScriptPane() === 'post'"
+                    (click)="handleScriptPaneSelect('post')"
+                  >
+                    On message
+                  </button>
+                </div>
+                <div class="tx-entrance-stagger__block ws-tab__editor">
+                  <tx-code-editor
+                    language="js"
+                    languageBadgeLabel="Javascript"
+                    [placeholder]="scriptEditorPlaceholder"
+                    [hideToolbarActions]="true"
+                    [framed]="false"
+                    [ngModel]="activeScriptSource()"
+                    (ngModelChange)="handleScriptChange($event)"
+                  />
+                </div>
+              </div>
+            }
+            @case ('settings') {
+              <div
+                class="tx-workspace-tab__section-shell tx-entrance-stagger"
+                [class.tx-entrance-stagger--play]="isSectionContentAnimating('settings')"
+                [class.tx-entrance-stagger--settled]="isSectionContentSettled('settings')"
+              >
+                <div class="tx-entrance-stagger__block">
+                  <app-ws-tab-settings-panel
+                    [transport]="transport()"
+                    (transportChange)="handleTransportChange($event)"
+                  />
+                </div>
+              </div>
+            }
+            @case ('docs') {
+              <div
+                class="tx-workspace-tab__section-shell tx-entrance-stagger"
+                [class.tx-entrance-stagger--play]="isSectionContentAnimating('docs')"
+                [class.tx-entrance-stagger--settled]="isSectionContentSettled('docs')"
+              >
+                <div class="tx-entrance-stagger__block">
+                  <app-folder-tab-docs-panel [docs]="docs()" (docsChange)="handleDocsChange($event)" />
+                </div>
+              </div>
+            }
+          }
+        </div>
+      </div>
+      @if (showMessagesSplit()) {
+        <div class="ws-tab__messages-slot" txSplitSecondary>
+          <app-ws-tab-messages-panel [connectionState]="connectionState()" />
+        </div>
+      }
+    </tx-vertical-split-pane>
+  </section>
+}

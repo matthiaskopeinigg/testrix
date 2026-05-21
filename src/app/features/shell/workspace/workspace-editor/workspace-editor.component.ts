@@ -26,6 +26,7 @@ import { WorkspaceEditorService } from '@app/core/workspace/workspace-editor.ser
 
 import { WorkspaceEditorPaneDropComponent } from '../workspace-editor-pane-drop/workspace-editor-pane-drop.component';
 import { RequestWorkspaceTabComponent } from '../request-workspace-tab/request-workspace-tab.component';
+import { prefetchRequestTabSections } from '../request-workspace-tab/request-tab-section-loader';
 import {
   loadWorkspaceTabComponent,
   peekWorkspaceTabComponent,
@@ -121,6 +122,7 @@ export class WorkspaceEditorComponent {
     seedWorkspaceTabComponent('request', RequestWorkspaceTabComponent);
     this.tabComponentsByKind.set({ request: RequestWorkspaceTabComponent });
     preloadWorkspaceTabKinds('folder');
+    prefetchRequestTabSections('overview');
 
     effect(() => {
       const mounted = this.mountedTabs();
@@ -198,7 +200,9 @@ export class WorkspaceEditorComponent {
         }
       }
 
-      this.mountedTabs.set(mounted);
+      if (mounted !== this.mountedTabs()) {
+        this.mountedTabs.set(mounted);
+      }
     });
   }
 
@@ -444,13 +448,24 @@ export class WorkspaceEditorComponent {
 
   private rememberWarmTab(tabId: string): void {
     this.warmTabOrder.update((order) => {
+      if (order[0] === tabId) {
+        return order;
+      }
       const next = [tabId, ...order.filter((id) => id !== tabId)];
-      return next.length > MAX_WARM_TABS ? next.slice(0, MAX_WARM_TABS) : next;
+      if (next.length > MAX_WARM_TABS) {
+        return next.slice(0, MAX_WARM_TABS);
+      }
+      return next;
     });
   }
 
   private promoteWarmTab(tabId: string): void {
-    this.warmTabOrder.update((order) => order.filter((id) => id !== tabId));
+    this.warmTabOrder.update((order) => {
+      if (!order.includes(tabId)) {
+        return order;
+      }
+      return order.filter((id) => id !== tabId);
+    });
   }
 
   private dropWarmTabs(tabIds: readonly string[]): void {

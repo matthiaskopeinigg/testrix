@@ -49,6 +49,7 @@ import { filterCollectionTree } from './collection-tree.filter';
 import {
   collectCollectionNodeIdsForDeletion,
   collectFolderIdsFromNodes,
+  collectionFolderHasChildren,
   findCollectionNode,
 } from './collection-tree.mutations';
 import type { CollectionTreeKind, CollectionTreeNode, CollectionTreeNodeMeta } from './collection-tree.types';
@@ -56,7 +57,6 @@ import type { CollectionTreeKind, CollectionTreeNode, CollectionTreeNodeMeta } f
 const SESSION_EXPAND_DEBOUNCE_MS = 300;
 const SEARCH_DEBOUNCE_MS = 100;
 const LARGE_TREE_NODE_THRESHOLD = 40;
-const ROW_CLICK_DELAY_MS = 250;
 
 function countCollectionTreeNodes(nodes: readonly CollectionTreeNode[]): number {
   let total = 0;
@@ -115,7 +115,6 @@ export class CollectionsSidebarPanelComponent {
 
   private readonly expandedSnapshotBeforeSearch = signal<string[] | null>(null);
   private sessionSaveTimer: ReturnType<typeof setTimeout> | null = null;
-  private rowClickTimer: ReturnType<typeof setTimeout> | null = null;
   private searchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 
   protected readonly nodes = computed(() => this.collectionsService.nodes());
@@ -238,35 +237,10 @@ export class CollectionsSidebarPanelComponent {
     if (this.renamingNodeId()) {
       return;
     }
-
-    const loc = findCollectionNode(this.nodes(), event.nodeId);
-    const kind = (loc?.node.data?.kind ?? loc?.node.kind) as CollectionTreeKind | undefined;
-
-    // Folders: apply immediately so expansion toggles under OnPush (no click-delay timer).
-    if (kind === 'folder') {
-      if (this.rowClickTimer !== null) {
-        clearTimeout(this.rowClickTimer);
-        this.rowClickTimer = null;
-      }
-      this.performNodeClick(event);
-      return;
-    }
-
-    if (this.rowClickTimer !== null) {
-      clearTimeout(this.rowClickTimer);
-    }
-
-    this.rowClickTimer = setTimeout(() => {
-      this.rowClickTimer = null;
-      this.performNodeClick(event);
-    }, ROW_CLICK_DELAY_MS);
+    this.performNodeClick(event);
   }
 
   protected handleNodeDblClick(event: TxTreeNodeClickEvent<CollectionTreeNodeMeta>): void {
-    if (this.rowClickTimer !== null) {
-      clearTimeout(this.rowClickTimer);
-      this.rowClickTimer = null;
-    }
     this.startInlineRename(event.nodeId);
   }
 
@@ -329,14 +303,14 @@ export class CollectionsSidebarPanelComponent {
           this.collectionsService.duplicateNode(nodeId);
         }
         break;
-      case 'expand':
+      case 'open':
         if (nodeId) {
-          this.setFolderExpanded(nodeId, true);
+          this.openCollectionItem(nodeId);
         }
         break;
-      case 'collapse':
-        if (nodeId) {
-          this.setFolderExpanded(nodeId, false);
+      case 'expand':
+        if (nodeId && collectionFolderHasChildren(this.nodes(), nodeId)) {
+          this.setFolderExpanded(nodeId, true);
         }
         break;
     }
@@ -371,7 +345,8 @@ export class CollectionsSidebarPanelComponent {
       const loc = findCollectionNode(this.nodes(), nodeId);
       const kind = (loc?.node.data?.kind ?? loc?.node.kind ?? 'folder') as CollectionTreeKind;
       const expanded = this.expandedIds().includes(nodeId);
-      this.contextMenuItems.set(buildCollectionNodeContextMenu(kind, expanded));
+      const hasChildren = collectionFolderHasChildren(this.nodes(), nodeId);
+      this.contextMenuItems.set(buildCollectionNodeContextMenu(kind, expanded, hasChildren));
     }
     this.contextMenuPosition.set({ x, y });
     this.contextMenuOpen.set(true);
@@ -402,21 +377,33 @@ export class CollectionsSidebarPanelComponent {
   }
 
   private performNodeClick(event: TxTreeNodeClickEvent<CollectionTreeNodeMeta>): void {
-    const loc = findCollectionNode(this.nodes(), event.nodeId);
+    this.openCollectionItem(event.nodeId, { respectFolderClickBehavior: true });
+  }
+
+  /** Opens a collection item in the workspace editor (context menu always opens the tab). */
+  private openCollectionItem(
+    nodeId: string,
+    options: { readonly respectFolderClickBehavior?: boolean } = {},
+  ): void {
+    const loc = findCollectionNode(this.nodes(), nodeId);
     const kind = (loc?.node.data?.kind ?? loc?.node.kind) as CollectionTreeKind | undefined;
 
     if (kind === 'request') {
-      this.workspaceEditor.openResource({ resourceId: event.nodeId, kind: 'request' });
+      this.workspaceEditor.openResource({ resourceId: nodeId, kind: 'request' });
       return;
     }
 
     if (kind === 'websocket') {
-      this.workspaceEditor.openResource({ resourceId: event.nodeId, kind: 'websocket' });
+      this.workspaceEditor.openResource({ resourceId: nodeId, kind: 'websocket' });
       return;
     }
 
     if (kind === 'folder') {
-      this.handleFolderClick(event.nodeId);
+      if (options.respectFolderClickBehavior) {
+        this.handleFolderClick(nodeId);
+        return;
+      }
+      this.workspaceEditor.openResource({ resourceId: nodeId, kind: 'folder' });
     }
   }
 
@@ -433,7 +420,10 @@ export class CollectionsSidebarPanelComponent {
     if (action.openTab) {
       this.workspaceEditor.openResource({ resourceId: nodeId, kind: 'folder' });
     }
-    if (action.setExpanded !== undefined) {
+    if (
+      action.setExpanded !== undefined &&
+      collectionFolderHasChildren(this.nodes(), nodeId)
+    ) {
       this.setFolderExpanded(nodeId, action.setExpanded);
     }
   }

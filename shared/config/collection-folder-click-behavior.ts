@@ -1,14 +1,21 @@
 /** Single-click behavior for collection folder rows in the sidebar tree. */
-export const COLLECTION_FOLDER_CLICK_BEHAVIOR_IDS = ['toggle', 'openAndExpand'] as const;
+export const COLLECTION_FOLDER_CLICK_BEHAVIOR_IDS = [
+  'expandCollapseAndOpenTab',
+  'expandCollapse',
+  'openTab',
+] as const;
 
 export type CollectionFolderClickBehavior = (typeof COLLECTION_FOLDER_CLICK_BEHAVIOR_IDS)[number];
 
-export const DEFAULT_COLLECTION_FOLDER_CLICK_BEHAVIOR: CollectionFolderClickBehavior = 'openAndExpand';
+export const DEFAULT_COLLECTION_FOLDER_CLICK_BEHAVIOR: CollectionFolderClickBehavior =
+  'expandCollapseAndOpenTab';
 
 /** Legacy persisted values mapped to {@link CollectionFolderClickBehavior}. */
 const LEGACY_FOLDER_CLICK_BEHAVIOR: Readonly<Record<string, CollectionFolderClickBehavior>> = {
-  open: 'toggle',
-  expandOnly: 'toggle',
+  open: 'openTab',
+  expandOnly: 'expandCollapse',
+  toggle: 'expandCollapse',
+  openAndExpand: 'expandCollapseAndOpenTab',
 };
 
 /** Coerces persisted settings (including legacy ids) to a supported behavior. */
@@ -30,10 +37,12 @@ export function coerceCollectionFolderClickBehavior(
 /** User-facing label for settings and documentation. */
 export function collectionFolderClickBehaviorLabel(id: CollectionFolderClickBehavior): string {
   switch (id) {
-    case 'toggle':
-      return 'Toggle';
-    case 'openAndExpand':
-      return 'Open and expand';
+    case 'expandCollapseAndOpenTab':
+      return 'Expand/Collapse and open Tab';
+    case 'expandCollapse':
+      return 'Expand/Collapse';
+    case 'openTab':
+      return 'Open Tab';
     default:
       return id;
   }
@@ -53,10 +62,12 @@ export function resolveCollectionFolderClickAction(
   isExpanded: boolean,
 ): CollectionFolderClickAction {
   switch (behavior) {
-    case 'toggle':
+    case 'openTab':
+      return { openTab: true };
+    case 'expandCollapse':
       return { openTab: false, setExpanded: !isExpanded };
-    case 'openAndExpand':
-      return { openTab: true, setExpanded: isExpanded ? undefined : true };
+    case 'expandCollapseAndOpenTab':
+      return { openTab: true, setExpanded: !isExpanded };
     default:
       return { openTab: true };
   }

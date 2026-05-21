@@ -2,8 +2,10 @@ import type { CollectionNode, HttpMethodId } from '@shared/config';
 import {
   createDefaultCollectionFolderSettings,
   createDefaultCollectionRequestSettings,
+  createDefaultCollectionWebsocketSettings,
   enrichCollectionFolderNode,
   enrichCollectionRequestNode,
+  enrichCollectionWebsocketNode,
 } from '@shared/config';
 
 import { iconForCollectionKind } from './collection-tree.icons';
@@ -61,15 +63,28 @@ function toTreeNode(node: CollectionNode): CollectionTreeNode {
     };
   }
 
-  return {
-    id: node.id,
-    label: node.label,
-    kind,
-    icon: iconForCollectionKind('websocket'),
-    order: node.order,
-    priority: node.priority,
-    data: { kind: 'websocket', wsPath: node.wsPath },
-  };
+  if (node.kind === 'websocket') {
+    const enriched = enrichCollectionWebsocketNode(node);
+    const description = enriched.description?.trim();
+    return {
+      id: enriched.id,
+      label: enriched.label,
+      subtitle: description || undefined,
+      tags: treeTagsFromSettings(enriched.settings.tags),
+      kind,
+      icon: iconForCollectionKind('websocket'),
+      order: enriched.order,
+      priority: enriched.priority,
+      data: {
+        kind: 'websocket',
+        wsPath: enriched.wsPath,
+        description: enriched.description,
+        websocketSettings: enriched.settings,
+      },
+    };
+  }
+
+  throw new Error(`Unsupported collection node kind: ${(node as CollectionNode).kind}`);
 }
 
 /** Strips presentation fields before persisting to collections.json. */
@@ -113,6 +128,8 @@ function fromTreeNode(node: CollectionTreeNode): CollectionNode {
     kind: 'websocket',
     order: node.order,
     priority: node.priority,
-    wsPath: node.data?.wsPath ?? '/',
+    wsPath: node.data?.wsPath ?? 'ws://localhost/path',
+    description: node.data?.description,
+    settings: node.data?.websocketSettings ?? createDefaultCollectionWebsocketSettings(),
   };
 }

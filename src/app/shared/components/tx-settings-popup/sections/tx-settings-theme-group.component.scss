@@ -39,37 +39,6 @@
   min-width: 0;
   margin-top: 0.5rem;
   margin-bottom: 0.25rem;
-
-  &--placeholder {
-    pointer-events: none;
-  }
-}
-
-.tx-settings__theme-skeleton {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  width: 100%;
-  padding: 8px;
-  border: 2px solid transparent;
-  border-radius: var(--tx-radius-lg, 14px);
-  background: color-mix(in srgb, var(--tx-text-0) 3%, var(--tx-surface-2));
-  box-sizing: border-box;
-}
-
-.tx-settings__theme-skeleton-preview {
-  width: 100%;
-  min-height: 44px;
-  border-radius: var(--tx-radius-md, 10px);
-  background: color-mix(in srgb, var(--tx-text-0) 6%, var(--tx-surface-1));
-}
-
-.tx-settings__theme-skeleton-label {
-  width: 68%;
-  height: 10px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--tx-text-0) 8%, var(--tx-surface-1));
 }
 
 .tx-settings__theme-option {
@@ -89,7 +58,10 @@
   font: inherit;
   color: inherit;
   box-sizing: border-box;
-  transition: all var(--tx-duration-base, 180ms) var(--tx-ease-out-expo, cubic-bezier(0.16, 1, 0.3, 1));
+  transition:
+    background var(--tx-duration-base, 180ms) var(--tx-ease-out-expo, cubic-bezier(0.16, 1, 0.3, 1)),
+    border-color var(--tx-duration-base, 180ms) var(--tx-ease-out-expo, cubic-bezier(0.16, 1, 0.3, 1)),
+    transform var(--tx-duration-base, 180ms) var(--tx-ease-out-expo, cubic-bezier(0.16, 1, 0.3, 1));
 
   tx-theme-layout-preview {
     display: block;

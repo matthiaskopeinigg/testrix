@@ -69,24 +69,15 @@
         <div #contentScroll class="tx-settings__content">
           @let s = settingsView();
             <div class="tx-settings__pane">
-              @if (isSectionMountPending(activeSection())) {
-                <div class="tx-settings__section-loading" role="status" aria-busy="true">
-                  <tx-spinner label="Loading section" />
-                </div>
-              }
               @if (isSectionActive('appearance')) {
                 <section
                   class="tx-settings__section"
                   [class.tx-settings__section--active]="isSectionActive('appearance')"
                   [attr.aria-hidden]="!isSectionActive('appearance')"
                 >
-                  <div
-                    class="tx-settings__section-inner tx-settings__section-inner--appearance tx-entrance-stagger"
-                    [class.tx-entrance-stagger--play]="isSectionContentAnimating('appearance')"
-                    [class.tx-entrance-stagger--settled]="isSectionContentSettled('appearance')"
-                  >
+                  <div class="tx-settings__section-inner tx-settings__section-inner--appearance">
 
-                  <div class="tx-entrance-stagger__block tx-settings__appearance-header">
+                  <div class="tx-settings__appearance-header">
                     <div class="tx-settings__appearance-header-text">
                       <h2 class="tx-settings__tab-title">Appearance</h2>
                       <p class="tx-settings__tab-description">
@@ -103,14 +94,14 @@
                     </tx-button>
                   </div>
 
-                  <div class="tx-entrance-stagger__block tx-settings__appearance-font">
+                  <div class="tx-settings__appearance-font">
                     <h3 class="tx-settings__section-heading">Typography</h3>
                     <div class="tx-settings__typography-grid">
                       <tx-form-field label="Interface font" controlId="tx-settings-ui-font">
                         <tx-dropdown
                           controlId="tx-settings-ui-font"
                           [options]="uiFontOptions"
-                          [ngModel]="s.appearance.uiFont"
+                          [ngModel]="appearanceSettings().uiFont"
                           (ngModelChange)="applyUiFont($event)"
                         />
                       </tx-form-field>
@@ -118,7 +109,7 @@
                         <tx-dropdown
                           controlId="tx-settings-ui-font-size"
                           [options]="uiFontSizeOptions"
-                          [ngModel]="s.appearance.uiFontSize"
+                          [ngModel]="appearanceSettings().uiFontSize"
                           (ngModelChange)="applyUiFontSize($event)"
                         />
                       </tx-form-field>
@@ -126,7 +117,7 @@
                         <tx-dropdown
                           controlId="tx-settings-ui-font-weight"
                           [options]="uiFontWeightOptions"
-                          [ngModel]="s.appearance.uiFontWeight"
+                          [ngModel]="appearanceSettings().uiFontWeight"
                           (ngModelChange)="applyUiFontWeight($event)"
                         />
                       </tx-form-field>
@@ -134,7 +125,7 @@
                         <tx-dropdown
                           controlId="tx-settings-ui-line-height"
                           [options]="uiLineHeightOptions"
-                          [ngModel]="s.appearance.uiLineHeight"
+                          [ngModel]="appearanceSettings().uiLineHeight"
                           (ngModelChange)="applyUiLineHeight($event)"
                         />
                       </tx-form-field>
@@ -145,17 +136,14 @@
                     </p>
                   </div>
 
-                  <div class="tx-entrance-stagger__block tx-settings__appearance-theme-intro">
+                  <div class="tx-settings__appearance-theme-intro">
                     <h3 class="tx-settings__section-heading">Theme</h3>
                   </div>
 
-                  @for (group of appearanceGroupsToRender(); track group.id) {
+                  @for (group of themePickerGroups; track group.id) {
                     <tx-settings-theme-group
                       [group]="group"
-                      [scrollRoot]="contentScrollRef()?.nativeElement ?? null"
-                      [eager]="eagerThemeGroup(group.id)"
-                      [activeTheme]="settingsView().appearance.theme"
-                      [paletteFor]="paletteFor"
+                      [activeTheme]="activeAppearanceTheme()"
                       (themeSelect)="applyTheme($event)"
                     />
                   }
@@ -333,8 +321,7 @@
                     </tx-form-field>
                     <p class="tx-settings__tab-description">
                       Controls what happens when you click a folder in the collections tree.
-                      <strong>Toggle</strong> expands or collapses the folder without opening a tab.
-                      The chevron still expands and collapses folders.
+                      The chevron still expands and collapses folders independently.
                     </p>
                   </div>
 

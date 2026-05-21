@@ -1,4 +1,8 @@
-import type { CollectionFolderSettings, CollectionRequestSettings } from '@shared/config';
+import type {
+  CollectionFolderSettings,
+  CollectionRequestSettings,
+  CollectionWebsocketSettings,
+} from '@shared/config';
 import type { TxTreeNode } from '@app/shared/components/tx-tree/tx-tree.types';
 
 /** Node kinds shown in the Collections sidebar tree. */
@@ -13,6 +17,7 @@ export interface CollectionTreeNodeMeta {
   readonly wsPath?: string;
   readonly settings?: CollectionFolderSettings;
   readonly requestSettings?: CollectionRequestSettings;
+  readonly websocketSettings?: CollectionWebsocketSettings;
 }
 
 export type CollectionTreeNode = TxTreeNode<CollectionTreeNodeMeta>;

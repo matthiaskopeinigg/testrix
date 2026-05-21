@@ -140,44 +140,40 @@ describe('CollectionsSidebarPanelComponent', () => {
     fixture.detectChanges();
 
     rows = fixture.nativeElement.querySelectorAll('tx-tree-row');
-    expect(rows.length).toBe(3);
+    expect(rows.length).toBe(4);
   });
 
-  it('opens a workspace tab when a request row is clicked', async () => {
-    vi.useFakeTimers();
+  it('opens a workspace tab when a request row is clicked', () => {
     const requestRow = [...fixture.nativeElement.querySelectorAll('.tx-tree-row')].find((row: Element) =>
       row.textContent?.includes('/login'),
     ) as HTMLElement | undefined;
     expect(requestRow).toBeTruthy();
     requestRow?.click();
-    await vi.advanceTimersByTimeAsync(250);
+    fixture.detectChanges();
     expect(openResource).toHaveBeenCalledWith(
       expect.objectContaining({ kind: 'request', resourceId: expect.any(String) }),
     );
-    vi.useRealTimers();
   });
 
-  it('opens a workspace tab when a folder row is clicked with openAndExpand', async () => {
-    vi.useFakeTimers();
+  it('opens a workspace tab when a folder row is clicked with expandCollapseAndOpenTab', () => {
     const folderRow = [...fixture.nativeElement.querySelectorAll('.tx-tree-row')].find((row: Element) =>
       row.textContent?.includes('Auth'),
     ) as HTMLElement | undefined;
     expect(folderRow).toBeTruthy();
     folderRow?.click();
-    await vi.advanceTimersByTimeAsync(250);
+    fixture.detectChanges();
     expect(openResource).toHaveBeenCalledWith(
       expect.objectContaining({ kind: 'folder', resourceId: expect.any(String) }),
     );
-    vi.useRealTimers();
   });
 
-  it('toggles folder expansion without opening a tab when behavior is toggle', async () => {
+  it('opens tab without toggling expansion when behavior is openTab', async () => {
     vi.useFakeTimers();
     settingsState.set({
       ...createDefaultSettings(),
       collections: {
         ...createDefaultSettings().collections,
-        folderClickBehavior: 'toggle',
+        folderClickBehavior: 'openTab',
       },
     });
     fixture.detectChanges();
@@ -201,13 +197,71 @@ describe('CollectionsSidebarPanelComponent', () => {
     folderRow?.click();
     fixture.detectChanges();
 
-    expect(openResource).not.toHaveBeenCalled();
-    expect(fixture.componentInstance['expandedIds']()).not.toContain(authFolderId);
-    vi.advanceTimersByTime(350);
-    await vi.runOnlyPendingTimersAsync();
-    expect(patchSession).toHaveBeenCalled();
+    expect(openResource).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: 'folder', resourceId: authFolderId }),
+    );
+    expect(fixture.componentInstance['expandedIds']()).toEqual(expandedBefore);
 
     vi.useRealTimers();
+  });
+
+  it('toggles expansion without opening a tab when behavior is expandCollapse', async () => {
+    vi.useFakeTimers();
+    settingsState.set({
+      ...createDefaultSettings(),
+      collections: {
+        ...createDefaultSettings().collections,
+        folderClickBehavior: 'expandCollapse',
+      },
+    });
+    fixture.detectChanges();
+
+    openResource.mockClear();
+    patchSession.mockClear();
+
+    const folderRow = [...fixture.nativeElement.querySelectorAll('.tx-tree-row')].find((row: Element) =>
+      row.textContent?.includes('Auth'),
+    ) as HTMLElement | undefined;
+    expect(folderRow).toBeTruthy();
+    const authFolderId = folderIds.find((id) => {
+      const loc = findCollectionNode(treeNodes, id);
+      return loc?.node.label === 'Auth';
+    });
+    expect(authFolderId).toBeTruthy();
+    expect(fixture.componentInstance['expandedIds']()).toContain(authFolderId);
+
+    folderRow?.click();
+    fixture.detectChanges();
+    vi.advanceTimersByTime(350);
+    await vi.runOnlyPendingTimersAsync();
+
+    expect(openResource).not.toHaveBeenCalled();
+    expect(fixture.componentInstance['expandedIds']()).not.toContain(authFolderId);
+    expect(patchSession).toHaveBeenCalledWith({
+      workspace: { collections: { expandedFolderIds: expect.not.arrayContaining([authFolderId]) } },
+    });
+
+    vi.useRealTimers();
+  });
+
+  it('opens tab without toggling expansion when an empty folder is clicked', () => {
+    openResource.mockClear();
+    patchSession.mockClear();
+
+    const emptyFolderRow = [...fixture.nativeElement.querySelectorAll('.tx-tree-row')].find(
+      (row: Element) => row.textContent?.includes('Empty'),
+    ) as HTMLElement | undefined;
+    expect(emptyFolderRow).toBeTruthy();
+
+    const expandedBefore = fixture.componentInstance['expandedIds']();
+    emptyFolderRow?.click();
+    fixture.detectChanges();
+
+    expect(openResource).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: 'folder', resourceId: 'folder-empty' }),
+    );
+    expect(fixture.componentInstance['expandedIds']()).toEqual(expandedBefore);
+    expect(patchSession).not.toHaveBeenCalled();
   });
 
   it('opens context menu on empty area right-click', () => {

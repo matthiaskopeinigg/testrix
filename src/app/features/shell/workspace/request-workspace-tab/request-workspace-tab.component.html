@@ -20,11 +20,13 @@
       </tx-form-field>
       <tx-button variant="primary" [disabled]="true" title="Send — coming soon">Send</tx-button>
     </div>
-    <app-request-tab-code-snippet-modal
-      [open]="codeSnippetOpen()"
-      [snippetInput]="codeSnippetInput()"
-      (closed)="handleCloseCodeSnippets()"
-    />
+    @if (codeSnippetOpen()) {
+      <app-request-tab-dynamic-outlet
+        [componentType]="codeSnippetModalComponent()"
+        [panelInputs]="codeSnippetModalInputs()"
+        [panelOutputs]="codeSnippetModalOutputs"
+      />
+    }
   </section>
 } @else {
   <section
@@ -173,16 +175,11 @@
               [class.tx-entrance-stagger--settled]="isSectionContentSettled('overview')"
             >
               <div class="tx-entrance-stagger__block">
-            <app-request-tab-overview-panel
-              [description]="descriptionDraft()"
-              [tags]="settings().tags"
-              [auth]="settings().auth"
-              [inheritedVariableLines]="inheritedVariableLines()"
-              [examples]="settings().examples"
-              [snapshots]="settings().snapshots"
-              (descriptionChange)="handleDescriptionChange($event)"
-              (tagsChange)="handleTagsChange($event)"
-            />
+                <app-request-tab-section-outlet
+                  section="overview"
+                  [panelInputs]="sectionPanelInputs('overview')"
+                  [panelOutputs]="overviewPanelOutputs"
+                />
               </div>
             </div>
           }
@@ -193,14 +190,11 @@
               [class.tx-entrance-stagger--settled]="isSectionContentSettled('params')"
             >
               <div class="tx-entrance-stagger__block">
-            <app-request-tab-params-panel
-              [pathParams]="settings().pathParams"
-              [queryParams]="settings().queryParams"
-              [variableCatalog]="variableCatalog()"
-              (pathParamsChange)="handlePathParamsChange($event)"
-              (queryParamsChange)="handleQueryParamsChange($event)"
-              (environmentVariableClick)="handleEnvironmentVariableClick($event)"
-            />
+                <app-request-tab-section-outlet
+                  section="params"
+                  [panelInputs]="sectionPanelInputs('params')"
+                  [panelOutputs]="paramsPanelOutputs"
+                />
               </div>
             </div>
           }
@@ -211,33 +205,30 @@
               [class.tx-entrance-stagger--settled]="isSectionContentSettled('auth')"
             >
               <div class="tx-entrance-stagger__block request-panel">
-              <h2 class="request-panel__title">Authorization</h2>
+                <h2 class="request-panel__title">Authorization</h2>
               </div>
               <div class="tx-entrance-stagger__block">
-              <app-folder-tab-auth-panel
-                [auth]="settings().auth"
-                [hasParentFolder]="hasParentFolder()"
-                (authChange)="handleSettingsPatch({ auth: $event })"
-              />
+                <app-request-tab-section-outlet
+                  section="auth"
+                  [panelInputs]="sectionPanelInputs('auth')"
+                  [panelOutputs]="authPanelOutputs"
+                />
               </div>
             </div>
           }
           @case ('headers') {
-            @if (headerResolveInput(); as headerInput) {
+            @if (headerResolveInput()) {
               <div
                 class="tx-workspace-tab__section-shell tx-entrance-stagger"
                 [class.tx-entrance-stagger--play]="isSectionContentAnimating('headers')"
                 [class.tx-entrance-stagger--settled]="isSectionContentSettled('headers')"
               >
                 <div class="tx-entrance-stagger__block">
-              <app-request-tab-headers-panel
-                [resolveInput]="headerInput"
-                [headers]="settings().headers"
-                [contentTypeHint]="contentTypeHint()"
-                [variableCatalog]="variableCatalog()"
-                (headersChange)="handleSettingsPatch({ headers: $event })"
-                (environmentVariableClick)="handleEnvironmentVariableClick($event)"
-              />
+                  <app-request-tab-section-outlet
+                    section="headers"
+                    [panelInputs]="sectionPanelInputs('headers')"
+                    [panelOutputs]="headersPanelOutputs"
+                  />
                 </div>
               </div>
             }
@@ -249,13 +240,11 @@
               [class.tx-entrance-stagger--settled]="isSectionContentSettled('body')"
             >
               <div class="tx-entrance-stagger__block">
-            <app-request-tab-body-panel
-              [body]="settings().body"
-              [method]="method()"
-              [variableCatalog]="variableCatalog()"
-              (bodyChange)="handleSettingsPatch({ body: $event })"
-              (environmentVariableClick)="handleEnvironmentVariableClick($event)"
-            />
+                <app-request-tab-section-outlet
+                  section="body"
+                  [panelInputs]="sectionPanelInputs('body')"
+                  [panelOutputs]="bodyPanelOutputs"
+                />
               </div>
             </div>
           }
@@ -266,13 +255,11 @@
               [class.tx-entrance-stagger--settled]="isSectionContentSettled('scripts')"
             >
               <div class="tx-entrance-stagger__block">
-            <app-request-tab-scripts-panel
-              [scripts]="settings().scripts"
-              [activePane]="activeScriptPane()"
-              [completionItems]="scriptCompletionItems()"
-              (scriptsChange)="handleSettingsPatch({ scripts: $event })"
-              (activePaneChange)="handleScriptPaneSelect($event)"
-            />
+                <app-request-tab-section-outlet
+                  section="scripts"
+                  [panelInputs]="sectionPanelInputs('scripts')"
+                  [panelOutputs]="scriptsPanelOutputs"
+                />
               </div>
             </div>
           }
@@ -283,24 +270,26 @@
               [class.tx-entrance-stagger--settled]="isSectionContentSettled('settings')"
             >
               <div class="tx-entrance-stagger__block">
-            <app-request-tab-settings-panel
-              [transport]="settings().transport"
-              (transportChange)="handleSettingsPatch({ transport: $event })"
-            />
+                <app-request-tab-section-outlet
+                  section="settings"
+                  [panelInputs]="sectionPanelInputs('settings')"
+                  [panelOutputs]="settingsPanelOutputs"
+                />
               </div>
             </div>
           }
           @case ('docs') {
             <div
               class="tx-workspace-tab__section-shell tx-entrance-stagger"
-              [class.tx-entrance-stagger--play]="isSectionContentAnimating('docs')"
               [class.tx-entrance-stagger--settled]="isSectionContentSettled('docs')"
+              [class.tx-entrance-stagger--play]="isSectionContentAnimating('docs')"
             >
               <div class="tx-entrance-stagger__block">
-            <app-request-tab-docs-panel
-              [docs]="settings().docs"
-              (docsChange)="handleSettingsPatch({ docs: $event })"
-            />
+                <app-request-tab-section-outlet
+                  section="docs"
+                  [panelInputs]="sectionPanelInputs('docs')"
+                  [panelOutputs]="docsPanelOutputs"
+                />
               </div>
             </div>
           }
@@ -318,10 +307,12 @@
       }
     </tx-vertical-split-pane>
 
-    <app-request-tab-code-snippet-modal
-      [open]="codeSnippetOpen()"
-      [snippetInput]="codeSnippetInput()"
-      (closed)="handleCloseCodeSnippets()"
-    />
+    @if (codeSnippetOpen()) {
+      <app-request-tab-dynamic-outlet
+        [componentType]="codeSnippetModalComponent()"
+        [panelInputs]="codeSnippetModalInputs()"
+        [panelOutputs]="codeSnippetModalOutputs"
+      />
+    }
   </section>
 }

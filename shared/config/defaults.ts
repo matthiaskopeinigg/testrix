@@ -214,6 +214,7 @@ export function createDefaultSession(): SessionFile {
         expandedFolderIds: [],
         folderTabsById: {},
         requestTabsById: {},
+        websocketTabsById: {},
         requestRunsById: {},
         folderRunsById: {},
       },

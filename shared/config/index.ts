@@ -3,6 +3,8 @@ export * from './collection-folder-click-behavior';
 export * from './collection-folder-settings.schema';
 export * from './collection-transport-settings.schema';
 export * from './collection-request-settings.schema';
+export * from './collection-websocket-settings.schema';
+export * from './collection-websocket-tab-ui.schema';
 export * from './collection-request-path-params';
 export * from './request-url';
 export * from '../http/request-code-snippets';

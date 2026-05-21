@@ -40,7 +40,7 @@ import {
 } from '@shared/config';
 import type { ConfigFilePaths, LogPaths } from '@app/core/electron/electron-renderer.types';
 import {
-  THEME_UI_GROUPS,
+  DEFAULT_APPEARANCE_THEME_ID,
   UI_FONT_CATALOG,
   UI_FONT_SIZE_OPTIONS,
   UI_FONT_WEIGHT_OPTIONS,
@@ -50,9 +50,6 @@ import {
   type UiFontSizeId,
   type UiFontWeightId,
   type UiLineHeightId,
-  findThemePalette,
-  type ThemePalette,
-  type ThemeUiGroupId,
 } from '@shared/theme';
 
 import type { UpdateChannel } from '@shared/updater/updater-status.schema';
@@ -78,6 +75,7 @@ import { TxSettingsHttpDnsSectionComponent } from './sections/tx-settings-http-d
 import { TxSettingsHttpHeadersSectionComponent } from './sections/tx-settings-http-headers-section.component';
 import { TxSettingsHttpProxySectionComponent } from './sections/tx-settings-http-proxy-section.component';
 import { TxSettingsThemeGroupComponent } from './sections/tx-settings-theme-group.component';
+import { SETTINGS_THEME_PICKER_GROUPS } from './sections/tx-settings-theme-picker.data';
 import { TxSettingsEditorKeyboardSectionComponent } from './sections/tx-settings-editor-keyboard-section.component';
 import { TxSettingsHttpRequestSectionComponent } from './sections/tx-settings-http-request-section.component';
 import { TxSettingsHttpRetriesSectionComponent } from './sections/tx-settings-http-retries-section.component';
@@ -131,23 +129,7 @@ export interface SettingsSidebarSection {
 }
 
 const CLOSE_ANIMATION_MS = 300;
-/** Theme groups mounted on first paint; others stream in on idle. */
-const APPEARANCE_THEME_GROUP_INITIAL = 1;
-
-/** First visit mounts on the next frame so the sidebar can paint first. */
-const DEFERRED_SETTINGS_SECTIONS: ReadonlySet<SettingsPopupSection> = new Set([
-  'collections',
-  'httpRequest',
-  'httpRetries',
-  'httpTesting',
-  'httpHeaders',
-  'httpCertificates',
-  'httpDns',
-  'httpProxy',
-  'environments',
-  'dataConfig',
-  'logging',
-]);
+const THEME_PERSIST_DEBOUNCE_MS = 280;
 
 @Component({
   selector: 'tx-settings-popup',
@@ -226,9 +208,8 @@ export class TxSettingsPopupComponent {
   protected readonly contentStaggerPlay = signal<SettingsPopupSection | null>(null);
   /** Brief reset between `--play` off/on so CSS entrance animations restart on remounted panes. */
   private readonly contentStaggerArming = signal(false);
-  /** Sections created once per popup session; toggled with visibility, not `@switch`. */
-  private readonly mountedSections = signal<ReadonlySet<SettingsPopupSection>>(new Set());
-  private readonly sectionMountPending = signal<SettingsPopupSection | null>(null);
+  /** Sections visited this popup session (skips entrance stagger on revisit). */
+  private readonly visitedSections = signal<ReadonlySet<SettingsPopupSection>>(new Set());
 
   readonly settings = computed(() => this.config.settings());
 
@@ -278,20 +259,19 @@ export class TxSettingsPopupComponent {
     }
   });
 
-  /** Theme picker groups (popular, accessibility). */
-  protected readonly themeGroups = THEME_UI_GROUPS;
+  /** Pre-resolved theme cards for the appearance grid. */
+  protected readonly themePickerGroups = SETTINGS_THEME_PICKER_GROUPS;
 
-  private readonly appearanceGroupLimit = signal(APPEARANCE_THEME_GROUP_INITIAL);
-  private appearanceGroupWarmupHandle: ReturnType<typeof requestIdleCallback> | null = null;
+  protected readonly appearanceSettings = computed(
+    () => this.settings()?.appearance ?? createDefaultSettings().appearance,
+  );
 
-  /** Progressive mount: avoids creating every theme group DOM node in one frame. */
-  protected readonly appearanceGroupsToRender = computed(() => {
-    const groups = this.themeGroups;
-    const limit = this.appearanceGroupLimit();
-    const minForActive = this.activeThemeGroupIndex() + 1;
-    const effective = Math.min(groups.length, Math.max(limit, minForActive));
-    return groups.slice(0, effective);
-  });
+  protected readonly activeAppearanceTheme = computed(
+    () =>
+      this.themePreviewId() ??
+      this.settings()?.appearance.theme ??
+      DEFAULT_APPEARANCE_THEME_ID,
+  );
 
   protected readonly animationSpeedOptions = ANIMATION_SPEED_OPTIONS;
   protected readonly logLevelOptions = LOG_LEVEL_OPTIONS.map((opt) => ({
@@ -375,23 +355,23 @@ export class TxSettingsPopupComponent {
   private openTimer: ReturnType<typeof setTimeout> | null = null;
   private staggerSettleTimer: ReturnType<typeof setTimeout> | null = null;
   private contentStaggerTimer: ReturnType<typeof setTimeout> | null = null;
+  private themePersistTimer: ReturnType<typeof setTimeout> | null = null;
+  private themePersistTarget: AppearanceThemeId | null = null;
+  private readonly themePreviewId = signal<AppearanceThemeId | null>(null);
 
   protected readonly contentScrollRef = viewChild<ElementRef<HTMLElement>>('contentScroll');
 
   constructor() {
     effect(() => {
       if (this.open()) {
-        // Already open — do not reset isShown / stagger (effect re-runs must not replay open motion).
-        if (this.isVisible()) {
+        // Already open or mid-close — do not reset isShown / stagger.
+        if (this.isVisible() || this.isClosing()) {
           return;
         }
         this.cancelCloseTimer();
         this.isClosing.set(false);
         this.isVisible.set(true);
-        this.mountedSections.set(new Set([this.activeSection()]));
-        if (this.activeSection() === 'appearance') {
-          this.queuePrimeAppearanceGroups();
-        }
+        this.visitedSections.set(new Set([this.activeSection()]));
         this.scheduleOpenTransition();
         void this.loadConfigDir();
         void this.refreshSectionData(this.activeSection());
@@ -409,7 +389,7 @@ export class TxSettingsPopupComponent {
       this.cancelStaggerSettleTimer();
       this.cancelDialogSettleTimer();
       this.cancelContentStaggerTimer();
-      this.cancelAppearanceGroupWarmup();
+      this.cancelThemePersistTimer();
       this.updateBannerContext.setUpdatesPanelActive(false);
     });
 
@@ -430,38 +410,17 @@ export class TxSettingsPopupComponent {
     if (this.activeSection() === id) {
       return;
     }
-    const t0 = performance.now();
-    const from = this.activeSection();
-    const alreadyMounted = this.mountedSections().has(id);
+    const alreadyVisited = this.visitedSections().has(id);
+    this.visitedSections.update((visited) => new Set([...visited, id]));
     this.activeSection.set(id);
-    this.scrollActiveSectionToTop();
-    this.scheduleSectionContentStagger(id, 'switch');
-    if (id === 'appearance' && this.appearanceGroupLimit() < this.themeGroups.length) {
-      this.queuePrimeAppearanceGroups();
-    }
-    const deferMount = !alreadyMounted && DEFERRED_SETTINGS_SECTIONS.has(id);
-    if (deferMount) {
-      this.sectionMountPending.set(id);
-      requestAnimationFrame(() => {
-        if (!this.isVisible() || this.isClosing() || this.activeSection() !== id) {
-          this.sectionMountPending.set(null);
-          return;
-        }
-        this.ensureSectionMounted(id);
-        requestAnimationFrame(() => {
-          if (this.activeSection() === id) {
-            this.sectionMountPending.set(null);
-          }
-        });
-        void this.refreshSectionData(id);
-      });
+    this.scrollContentToTop();
+    if (alreadyVisited) {
+      this.contentStaggerPlay.set(null);
+      this.contentStaggerArming.set(false);
     } else {
-      this.sectionMountPending.set(null);
-      if (!alreadyMounted) {
-        this.ensureSectionMounted(id);
-      }
-      void this.refreshSectionData(id);
+      this.scheduleSectionContentStagger(id);
     }
+    void this.refreshSectionData(id);
   }
 
   protected isSectionContentAnimating(id: SettingsPopupSection): boolean {
@@ -483,15 +442,6 @@ export class TxSettingsPopupComponent {
     return true;
   }
 
-  protected isSectionMounted(id: SettingsPopupSection): boolean {
-    return this.mountedSections().has(id);
-  }
-
-  /** True while a deferred heavy section is waiting for its first paint frame. */
-  protected isSectionMountPending(id: SettingsPopupSection): boolean {
-    return this.sectionMountPending() === id;
-  }
-
   protected isSectionActive(id: SettingsPopupSection): boolean {
     return this.activeSection() === id;
   }
@@ -503,19 +453,14 @@ export class TxSettingsPopupComponent {
     this.markDialogMotionSettled();
   }
 
-  protected paletteFor(themeId: string): ThemePalette | undefined {
-    return findThemePalette(themeId);
-  }
-
-  protected async applyTheme(themeId: AppearanceThemeId): Promise<void> {
-    // Skip the full-page view transition while the modal is open (previews already show the palette).
-    await this.themeService.setTheme(themeId, true, { animate: false });
-    this.notifications.showSuccess('Theme updated');
+  protected applyTheme(themeId: AppearanceThemeId): void {
+    this.themePreviewId.set(themeId);
+    this.themeService.loadTheme(themeId);
+    this.scheduleThemePersist(themeId);
   }
 
   protected async applyAppearanceTypography(patch: Partial<AppearanceTypography>): Promise<void> {
     await this.uiFontService.patchAppearanceTypography(patch, true);
-    this.notifications.showSuccess('Typography updated');
   }
 
   protected async applyUiFont(fontId: UiFontId): Promise<void> {
@@ -553,25 +498,15 @@ export class TxSettingsPopupComponent {
   protected async resetAppearanceToDefaults(): Promise<void> {
     const appearance = createDefaultSettings().appearance;
     try {
+      this.cancelThemePersistTimer();
+      this.themePreviewId.set(null);
       await this.config.patchSettings({ appearance });
+      this.themeService.loadTheme(appearance.theme);
+      this.uiFontService.loadAppearanceTypography(appearance);
       this.notifications.showSuccess('Appearance reset to defaults');
     } catch {
       this.notifications.showError('Could not reset appearance');
     }
-  }
-
-  /** Only the group containing the active theme skips chunked preview loading. */
-  protected eagerThemeGroup(groupId: ThemeUiGroupId): boolean {
-    return this.themeGroupContainsActiveTheme(groupId);
-  }
-
-  private themeGroupContainsActiveTheme(groupId: ThemeUiGroupId): boolean {
-    const active = this.settings()?.appearance.theme;
-    if (!active) {
-      return false;
-    }
-    const group = this.themeGroups.find((entry) => entry.id === groupId);
-    return group?.themes.includes(active) ?? false;
   }
 
   protected async patchGeneralToggle(
@@ -1079,16 +1014,25 @@ export class TxSettingsPopupComponent {
   }
 
   private beginClose(emitClosed: boolean): void {
+    if (this.isClosing()) {
+      return;
+    }
+    if (emitClosed) {
+      this.closed.emit();
+    }
+    if (!this.isVisible()) {
+      return;
+    }
     this.cancelOpenTimer();
+    void this.flushThemePersist();
+    this.themePreviewId.set(null);
     this.isClosing.set(true);
     this.isShown.set(false);
     this.sidebarStaggerPlay.set(false);
     this.sidebarStaggerSettled.set(false);
     this.dialogMotionSettled.set(false);
     this.popupOpening.set(false);
-    this.mountedSections.set(new Set());
-    this.cancelAppearanceGroupWarmup();
-    this.appearanceGroupLimit.set(APPEARANCE_THEME_GROUP_INITIAL);
+    this.visitedSections.set(new Set());
     this.contentStaggerPlay.set(null);
     this.contentStaggerArming.set(false);
     this.freezePopupMotion.set(false);
@@ -1102,9 +1046,6 @@ export class TxSettingsPopupComponent {
       this.closeTimer = null;
       this.isVisible.set(false);
       this.isClosing.set(false);
-      if (emitClosed) {
-        this.closed.emit();
-      }
     }, duration);
   }
 
@@ -1120,6 +1061,7 @@ export class TxSettingsPopupComponent {
       return;
     }
 
+    this.lockSidebarEntrance();
     this.openTimer = setTimeout(() => {
       this.openTimer = null;
       requestAnimationFrame(() => {
@@ -1127,8 +1069,7 @@ export class TxSettingsPopupComponent {
           this.isShown.set(true);
           this.popupOpening.set(true);
           this.scheduleDialogMotionSettledFallback();
-          this.replaySidebarOpenStagger();
-          this.scheduleSectionContentStagger(this.activeSection(), 'open');
+          this.scheduleSectionContentStagger(this.activeSection());
         }
       });
     }, 0);
@@ -1158,11 +1099,8 @@ export class TxSettingsPopupComponent {
     this.dialogMotionSettled.set(true);
   }
 
-  /** Content-pane stagger on section change (never replays sidebar or dialog shell). */
-  private scheduleSectionContentStagger(
-    id: SettingsPopupSection,
-    mode: 'open' | 'switch' = 'open',
-  ): void {
+  /** Content-pane stagger on first visit to a section (never replays sidebar or dialog shell). */
+  private scheduleSectionContentStagger(id: SettingsPopupSection): void {
     this.cancelContentStaggerTimer();
 
     if (!this.uiPreferences.entranceStaggerEnabled()) {
@@ -1174,23 +1112,6 @@ export class TxSettingsPopupComponent {
     if (id === 'appearance') {
       this.contentStaggerPlay.set(null);
       this.contentStaggerArming.set(false);
-      return;
-    }
-
-    const remountReplay = mode === 'switch' && this.mountedSections().has(id);
-
-    if (remountReplay) {
-      this.contentStaggerArming.set(true);
-      this.contentStaggerPlay.set(null);
-      requestAnimationFrame(() => {
-        if (!this.isVisible() || this.isClosing() || this.activeSection() !== id) {
-          this.contentStaggerArming.set(false);
-          return;
-        }
-        this.contentStaggerArming.set(false);
-        this.contentStaggerPlay.set(id);
-        this.scheduleContentStaggerEnd();
-      });
       return;
     }
 
@@ -1230,11 +1151,9 @@ export class TxSettingsPopupComponent {
     }
   }
 
-  private scrollActiveSectionToTop(): void {
+  private scrollContentToTop(): void {
     queueMicrotask(() => {
-      const host = this.contentScrollRef()?.nativeElement;
-      const active = host?.querySelector('.tx-settings__section--active');
-      active?.scrollTo({ top: 0 });
+      this.contentScrollRef()?.nativeElement.scrollTo({ top: 0 });
     });
   }
 
@@ -1297,70 +1216,40 @@ export class TxSettingsPopupComponent {
     this.sidebarStaggerSettled.set(true);
   }
 
-  private activeThemeGroupIndex(): number {
-    const active = this.settings()?.appearance.theme;
-    if (!active) {
-      return 0;
+  private scheduleThemePersist(themeId: AppearanceThemeId): void {
+    this.themePersistTarget = themeId;
+    this.cancelThemePersistTimer();
+    this.themePersistTimer = setTimeout(() => {
+      this.themePersistTimer = null;
+      void this.flushThemePersist();
+    }, THEME_PERSIST_DEBOUNCE_MS);
+  }
+
+  private cancelThemePersistTimer(): void {
+    if (this.themePersistTimer !== null) {
+      clearTimeout(this.themePersistTimer);
+      this.themePersistTimer = null;
     }
-    return this.themeGroups.findIndex((group) => group.themes.includes(active));
   }
 
-  /** Defers theme grid expansion until after the dialog shell has painted. */
-  private queuePrimeAppearanceGroups(): void {
-    requestAnimationFrame(() => {
-      if (!this.isVisible() || this.isClosing() || this.activeSection() !== 'appearance') {
-        return;
-      }
-      this.primeAppearanceGroups();
-    });
-  }
-
-  private primeAppearanceGroups(): void {
-    this.cancelAppearanceGroupWarmup();
-    if (!this.uiPreferences.entranceStaggerEnabled()) {
-      this.appearanceGroupLimit.set(this.themeGroups.length);
+  private async flushThemePersist(): Promise<void> {
+    this.cancelThemePersistTimer();
+    const themeId = this.themePersistTarget;
+    this.themePersistTarget = null;
+    if (!themeId) {
       return;
     }
-    const min = Math.min(
-      this.themeGroups.length,
-      Math.max(APPEARANCE_THEME_GROUP_INITIAL, this.activeThemeGroupIndex() + 1),
-    );
-    this.appearanceGroupLimit.set(min);
-    this.startAppearanceGroupWarmup();
-  }
-
-  private startAppearanceGroupWarmup(): void {
-    if (this.appearanceGroupLimit() >= this.themeGroups.length) {
+    const persisted = this.settings()?.appearance.theme;
+    if (persisted === themeId) {
+      this.themePreviewId.set(null);
       return;
     }
-
-    const step = (): void => {
-      this.appearanceGroupWarmupHandle = null;
-      if (!this.isVisible() || this.isClosing() || this.activeSection() !== 'appearance') {
-        return;
-      }
-      const next = Math.min(this.appearanceGroupLimit() + 1, this.themeGroups.length);
-      this.appearanceGroupLimit.set(next);
-      if (next < this.themeGroups.length) {
-        this.appearanceGroupWarmupHandle = requestIdleCallback(step, { timeout: 72 });
-      }
-    };
-
-    this.appearanceGroupWarmupHandle = requestIdleCallback(step, { timeout: 72 });
-  }
-
-  private cancelAppearanceGroupWarmup(): void {
-    if (this.appearanceGroupWarmupHandle != null) {
-      cancelIdleCallback(this.appearanceGroupWarmupHandle);
-      this.appearanceGroupWarmupHandle = null;
+    try {
+      await this.config.patchSettings({ appearance: { theme: themeId } });
+      this.themePreviewId.set(null);
+    } catch {
+      this.notifications.showError('Could not save theme');
     }
-  }
-
-  private ensureSectionMounted(id: SettingsPopupSection): void {
-    if (this.mountedSections().has(id)) {
-      return;
-    }
-    this.mountedSections.update((mounted) => new Set([...mounted, id]));
   }
 
   private cancelStaggerSettleTimer(): void {

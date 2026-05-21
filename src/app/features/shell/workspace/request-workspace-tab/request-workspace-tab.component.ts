@@ -1,10 +1,10 @@
 import { NgComponentOutlet } from '@angular/common';
 import {
   ChangeDetectionStrategy,
+  ChangeDetectorRef,
   Component,
   DestroyRef,
   Type,
-  afterNextRender,
   computed,
   effect,
   inject,
@@ -64,15 +64,12 @@ import { TxIconComponent } from '@app/shared/components/tx-icon/tx-icon.componen
 import { RequestTabUrlInputComponent } from './request-tab-url-input.component';
 import type { TxCodeEditorCompletionItem } from '@app/shared/components/tx-code-editor/tx-code-editor-completion';
 
-import { FolderTabAuthPanelComponent } from '../collection-folder-workspace-tab/folder-tab-auth-panel.component';
-import { RequestTabBodyPanelComponent } from './request-tab-body-panel.component';
-import { RequestTabDocsPanelComponent } from './request-tab-docs-panel.component';
-import { RequestTabHeadersPanelComponent } from './request-tab-headers-panel.component';
-import { RequestTabOverviewPanelComponent } from './request-tab-overview-panel.component';
-import { RequestTabParamsPanelComponent } from './request-tab-params-panel.component';
-import { RequestTabScriptsPanelComponent } from './request-tab-scripts-panel.component';
-import { RequestTabCodeSnippetModalComponent } from './request-tab-code-snippet-modal.component';
-import { RequestTabSettingsPanelComponent } from './request-tab-settings-panel.component';
+import {
+  prefetchRequestTabSections,
+  type RequestTabSectionPanelId,
+} from './request-tab-section-loader';
+import { RequestTabDynamicOutletComponent } from './request-tab-dynamic-outlet.component';
+import { RequestTabSectionOutletComponent } from './request-tab-section-outlet.component';
 import { buildRequestVariableCatalog } from './request-variable-catalog';
 
 interface RequestTabNavItem {
@@ -112,15 +109,8 @@ const SETTINGS_SAVE_DEBOUNCE_MS = 150;
     TxFormFieldComponent,
     TxIconComponent,
     RequestTabUrlInputComponent,
-    FolderTabAuthPanelComponent,
-    RequestTabOverviewPanelComponent,
-    RequestTabParamsPanelComponent,
-    RequestTabHeadersPanelComponent,
-    RequestTabBodyPanelComponent,
-    RequestTabScriptsPanelComponent,
-    RequestTabSettingsPanelComponent,
-    RequestTabDocsPanelComponent,
-    RequestTabCodeSnippetModalComponent,
+    RequestTabSectionOutletComponent,
+    RequestTabDynamicOutletComponent,
     TxVerticalSplitPaneComponent,
   ],
   templateUrl: './request-workspace-tab.component.html',
@@ -135,6 +125,7 @@ export class RequestWorkspaceTabComponent {
   private readonly workspaceEditor = inject(WorkspaceEditorService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly uiPreferences = inject(UiPreferencesService);
+  private readonly cdr = inject(ChangeDetectorRef);
   protected readonly httpRequest = inject(HttpRequestService);
 
   protected readonly tabMotion = new WorkspaceTabMotionController(
@@ -149,6 +140,65 @@ export class RequestWorkspaceTabComponent {
   readonly cached = input(false);
 
   protected readonly responsePanelComponent = signal<Type<unknown> | null>(null);
+  protected readonly codeSnippetModalComponent = signal<Type<unknown> | null>(null);
+
+  protected readonly codeSnippetModalInputs = computed(() => ({
+    open: this.codeSnippetOpen(),
+    snippetInput: this.codeSnippetInput(),
+  }));
+
+  protected readonly overviewPanelOutputs = {
+    descriptionChange: (value: unknown) => this.handleDescriptionChange(value as string),
+    tagsChange: (value: unknown) => this.handleTagsChange(value as readonly string[]),
+  };
+
+  protected readonly paramsPanelOutputs = {
+    pathParamsChange: (value: unknown) =>
+      this.handlePathParamsChange(value as readonly CollectionRequestPathParam[]),
+    queryParamsChange: (value: unknown) =>
+      this.handleQueryParamsChange(value as readonly HttpKeyValueRow[]),
+    environmentVariableClick: (value: unknown) =>
+      this.handleEnvironmentVariableClick(value as { readonly key: string }),
+  };
+
+  protected readonly authPanelOutputs = {
+    authChange: (value: unknown) =>
+      this.handleSettingsPatch({ auth: value as CollectionRequestSettings['auth'] }),
+  };
+
+  protected readonly headersPanelOutputs = {
+    headersChange: (value: unknown) =>
+      this.handleSettingsPatch({ headers: value as CollectionRequestSettings['headers'] }),
+    environmentVariableClick: (value: unknown) =>
+      this.handleEnvironmentVariableClick(value as { readonly key: string }),
+  };
+
+  protected readonly bodyPanelOutputs = {
+    bodyChange: (value: unknown) =>
+      this.handleSettingsPatch({ body: value as CollectionRequestSettings['body'] }),
+    environmentVariableClick: (value: unknown) =>
+      this.handleEnvironmentVariableClick(value as { readonly key: string }),
+  };
+
+  protected readonly scriptsPanelOutputs = {
+    scriptsChange: (value: unknown) =>
+      this.handleSettingsPatch({ scripts: value as CollectionRequestSettings['scripts'] }),
+    activePaneChange: (value: unknown) => this.handleScriptPaneSelect(value as 'pre' | 'post'),
+  };
+
+  protected readonly settingsPanelOutputs = {
+    transportChange: (value: unknown) =>
+      this.handleSettingsPatch({ transport: value as CollectionRequestSettings['transport'] }),
+  };
+
+  protected readonly docsPanelOutputs = {
+    docsChange: (value: unknown) =>
+      this.handleSettingsPatch({ docs: value as CollectionRequestSettings['docs'] }),
+  };
+
+  protected readonly codeSnippetModalOutputs = {
+    closed: () => this.handleCloseCodeSnippets(),
+  };
 
   protected readonly navItems = NAV_ITEMS;
   protected readonly methodOptions = METHOD_OPTIONS;
@@ -245,6 +295,10 @@ export class RequestWorkspaceTabComponent {
   );
 
   protected readonly codeSnippetInput = computed((): RequestCodeSnippetInput | null => {
+    if (!this.codeSnippetOpen()) {
+      return null;
+    }
+
     if (this.isHistory()) {
       const meta = this.historyMeta();
       if (!meta) {
@@ -279,13 +333,25 @@ export class RequestWorkspaceTabComponent {
     });
   });
 
+  private readonly ancestorFolders = computed(() => {
+    const loc = this.collectionLoc();
+    if (!loc) {
+      return [];
+    }
+    return collectAncestorFolders(this.collectionsService.nodes(), loc.node.id);
+  });
+
   protected readonly headerResolveInput = computed(() => {
+    const section = this.activeSection();
+    if (section !== 'headers' && !this.codeSnippetOpen()) {
+      return null;
+    }
     const loc = this.collectionLoc();
     if (!loc?.node.data?.requestSettings) {
       return null;
     }
     const settings = this.configService.settings();
-    const ancestors = collectAncestorFolders(this.collectionsService.nodes(), loc.node.id);
+    const ancestors = this.ancestorFolders();
     return {
       globalHeaders: settings?.http.headers ?? {
         applyDefaultHeaders: true,
@@ -308,8 +374,7 @@ export class RequestWorkspaceTabComponent {
       return [];
     }
     const lines: string[] = [];
-    const ancestors = collectAncestorFolders(this.collectionsService.nodes(), loc.node.id);
-    for (const folder of ancestors) {
+    for (const folder of this.ancestorFolders()) {
       if (folder.data?.kind !== 'folder' || !folder.data.settings) {
         continue;
       }
@@ -338,6 +403,9 @@ export class RequestWorkspaceTabComponent {
   });
 
   protected readonly scriptCompletionItems = computed((): readonly TxCodeEditorCompletionItem[] => {
+    if (this.activeSection() !== 'scripts') {
+      return [];
+    }
     const keys = new Set<string>();
     for (const line of this.inheritedVariableLines()) {
       const key = line.split(' · ')[1];
@@ -372,7 +440,77 @@ export class RequestWorkspaceTabComponent {
     };
   });
 
+  protected sectionPanelInputs(section: RequestTabSectionPanelId): Record<string, unknown> {
+    switch (section) {
+      case 'overview':
+        return {
+          description: this.descriptionDraft(),
+          tags: this.settings().tags,
+          auth: this.settings().auth,
+          inheritedVariableLines: this.inheritedVariableLines(),
+          examples: this.settings().examples,
+          snapshots: this.settings().snapshots,
+        };
+      case 'params':
+        return {
+          pathParams: this.settings().pathParams,
+          queryParams: this.settings().queryParams,
+          variableCatalog: this.variableCatalog(),
+        };
+      case 'auth':
+        return {
+          auth: this.settings().auth,
+          hasParentFolder: this.hasParentFolder(),
+        };
+      case 'headers': {
+        const headerInput = this.headerResolveInput();
+        return headerInput
+          ? {
+              resolveInput: headerInput,
+              headers: this.settings().headers,
+              contentTypeHint: this.contentTypeHint(),
+              variableCatalog: this.variableCatalog(),
+            }
+          : {};
+      }
+      case 'body':
+        return {
+          body: this.settings().body,
+          method: this.method(),
+          variableCatalog: this.variableCatalog(),
+        };
+      case 'scripts':
+        return {
+          scripts: this.settings().scripts,
+          activePane: this.activeScriptPane(),
+          completionItems: this.scriptCompletionItems(),
+        };
+      case 'settings':
+        return {
+          transport: this.settings().transport,
+        };
+      case 'docs':
+        return {
+          docs: this.settings().docs,
+        };
+      default:
+        return {};
+    }
+  }
+
   constructor() {
+    prefetchRequestTabSections('overview');
+
+    effect(() => {
+      if (!this.codeSnippetOpen() || this.codeSnippetModalComponent()) {
+        return;
+      }
+      void import('./request-tab-code-snippet-modal.component').then((module) => {
+        this.codeSnippetModalComponent.set(module.RequestTabCodeSnippetModalComponent);
+        this.cdr.markForCheck();
+      });
+    });
+
     effect(() => {
       if (!this.active()) {
         return;

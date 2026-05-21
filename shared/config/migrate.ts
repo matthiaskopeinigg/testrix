@@ -22,6 +22,8 @@ import {
 import { createDefaultEditorKeyboardSettings } from './editor-settings.schema';
 import { coerceCollectionFolderClickBehavior } from './collection-folder-click-behavior';
 import { enrichCollectionFolderSettings } from './collection-folder-settings.schema';
+import { enrichCollectionRequestSettings } from './collection-request-settings.schema';
+import { enrichCollectionWebsocketSettings } from './collection-websocket-settings.schema';
 import { collectionsFileSchema, type CollectionsFile } from './collections.schema';
 import {
   environmentDefinitionSchema,
@@ -530,6 +532,12 @@ export function migrateSession(data: unknown): SessionFile {
           collectionsRaw['requestTabsById'] !== null
             ? (collectionsRaw['requestTabsById'] as Record<string, unknown>)
             : defaults.workspace.collections.requestTabsById,
+        websocketTabsById:
+          collectionsRaw['websocketTabsById'] &&
+          typeof collectionsRaw['websocketTabsById'] === 'object' &&
+          collectionsRaw['websocketTabsById'] !== null
+            ? (collectionsRaw['websocketTabsById'] as Record<string, unknown>)
+            : defaults.workspace.collections.websocketTabsById,
         requestRunsById:
           collectionsRaw['requestRunsById'] &&
           typeof collectionsRaw['requestRunsById'] === 'object' &&
@@ -634,24 +642,41 @@ export function migrateCollections(data: unknown): CollectionsFile {
   });
 }
 
-/** Maps raw JSON nodes and fills default folder settings before Zod parse. */
+/** Maps raw JSON nodes and fills default settings before Zod parse. */
 function enrichCollectionNodesFromRaw(nodes: unknown[]): unknown[] {
   return nodes.map((item) => {
     if (typeof item !== 'object' || item === null) {
       return item;
     }
     const record = item as Record<string, unknown>;
-    if (record['kind'] !== 'folder') {
-      return item;
+    const kind = record['kind'];
+
+    if (kind === 'folder') {
+      const children = Array.isArray(record['children'])
+        ? enrichCollectionNodesFromRaw(record['children'] as unknown[])
+        : [];
+      return {
+        ...record,
+        settings: enrichCollectionFolderSettings(record['settings']),
+        children,
+      };
     }
-    const children = Array.isArray(record['children'])
-      ? enrichCollectionNodesFromRaw(record['children'] as unknown[])
-      : [];
-    return {
-      ...record,
-      settings: enrichCollectionFolderSettings(record['settings']),
-      children,
-    };
+
+    if (kind === 'request') {
+      return {
+        ...record,
+        settings: enrichCollectionRequestSettings(record['settings']),
+      };
+    }
+
+    if (kind === 'websocket') {
+      return {
+        ...record,
+        settings: enrichCollectionWebsocketSettings(record['settings']),
+      };
+    }
+
+    return item;
   });
 }
 

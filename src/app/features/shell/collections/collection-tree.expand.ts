@@ -10,7 +10,7 @@ export function collectFolderIds(nodes: readonly CollectionTreeNode[]): string[]
 
   const walk = (list: readonly CollectionTreeNode[]): void => {
     for (const node of list) {
-      if (node.kind === 'folder') {
+      if (node.kind === 'folder' && node.children?.length) {
         ids.push(node.id);
       }
       if (node.children?.length) {

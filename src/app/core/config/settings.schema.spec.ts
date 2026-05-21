@@ -16,7 +16,7 @@ describe('settingsFileSchema', () => {
     expect(settings.collections.animateExpand).toBe(true);
     expect(settings.collections.showDescriptions).toBe(true);
     expect(settings.collections.showTags).toBe(false);
-    expect(settings.collections.folderClickBehavior).toBe('openAndExpand');
+    expect(settings.collections.folderClickBehavior).toBe('expandCollapseAndOpenTab');
     expect(settings.collections.editorLayout).toBe('sidebar');
     expect(settings.collections.displayHttpMethod).toBe('tree-and-tab');
     expect(settings.environments.animateMove).toBe(true);

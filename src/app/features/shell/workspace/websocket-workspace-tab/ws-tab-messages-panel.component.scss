@@ -1,0 +1,40 @@
+:host {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.ws-messages-panel {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  background: color-mix(in srgb, var(--tx-surface-0) 92%, var(--tx-surface-1));
+  border-top: 1px solid color-mix(in srgb, var(--tx-border-0) 55%, transparent);
+}
+
+.ws-messages-panel__header {
+  flex-shrink: 0;
+  padding: 0.55rem 0.75rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--tx-border-0) 48%, transparent);
+}
+
+.ws-messages-panel__title {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--tx-text-0);
+}
+
+.ws-messages-panel__body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 0;
+  padding: 1rem;
+}

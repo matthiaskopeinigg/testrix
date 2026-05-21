@@ -1,13 +1,16 @@
 import type {
   CollectionFolderSettings,
   CollectionRequestSettings,
+  CollectionWebsocketSettings,
   HttpMethodId,
 } from '@shared/config';
 import {
   createDefaultCollectionFolderSettings,
   createDefaultCollectionRequestSettings,
+  createDefaultCollectionWebsocketSettings,
   enrichCollectionFolderSettings,
   enrichCollectionRequestSettings,
+  enrichCollectionWebsocketSettings,
 } from '@shared/config';
 
 import { iconForCollectionKind } from './collection-tree.icons';
@@ -43,6 +46,15 @@ export function findCollectionNode(
     }
   }
   return null;
+}
+
+/** Returns true when a collection folder has at least one child node. */
+export function collectionFolderHasChildren(
+  nodes: readonly CollectionTreeNode[],
+  folderId: string,
+): boolean {
+  const loc = findCollectionNode(nodes, folderId);
+  return !!loc?.node.children?.length;
 }
 
 /** Collects folder ids in subtree (for session prune). */
@@ -139,7 +151,11 @@ function createNode(
     kind: 'websocket',
     icon: iconForCollectionKind('websocket'),
     order,
-    data: { kind: 'websocket', wsPath: '/path' },
+    data: {
+      kind: 'websocket',
+      wsPath: 'ws://localhost/path',
+      websocketSettings: createDefaultCollectionWebsocketSettings(),
+    },
   };
 }
 
@@ -482,6 +498,103 @@ export function updateCollectionRequestSettings(
           ...data,
           kind: 'request',
           requestSettings,
+        },
+      },
+    };
+  });
+}
+
+interface UpdateCollectionWebsocketNodeResult {
+  readonly node: CollectionTreeNode;
+}
+
+/** Updates a websocket node via callback. */
+export function updateCollectionWebsocketNode(
+  nodes: readonly CollectionTreeNode[],
+  websocketId: string,
+  updater: (
+    node: CollectionTreeNode,
+    data: NonNullable<CollectionTreeNode['data']> & { kind: 'websocket' },
+  ) => UpdateCollectionWebsocketNodeResult,
+): CollectionTreeNode[] | null {
+  let found = false;
+
+  const mapNodes = (list: readonly CollectionTreeNode[]): CollectionTreeNode[] =>
+    list.map((node) => {
+      if (node.id === websocketId && node.data?.kind === 'websocket') {
+        found = true;
+        const data = node.data as NonNullable<CollectionTreeNode['data']> & { kind: 'websocket' };
+        const { node: nextNode } = updater(node, data);
+        return nextNode;
+      }
+      if (node.children?.length) {
+        return { ...node, children: mapNodes(node.children) };
+      }
+      return node;
+    });
+
+  const next = mapNodes(nodes);
+  return found ? next : null;
+}
+
+/** Sets websocket description (empty string clears). */
+export function setCollectionWebsocketDescription(
+  nodes: readonly CollectionTreeNode[],
+  websocketId: string,
+  description: string,
+): CollectionTreeNode[] | null {
+  const trimmed = description.trim();
+  return updateCollectionWebsocketNode(nodes, websocketId, (node, data) => ({
+    node: {
+      ...node,
+      subtitle: trimmed || undefined,
+      data: { ...data, description: trimmed || undefined },
+    },
+  }));
+}
+
+/** Updates wsPath and/or label on a websocket node. */
+export function updateCollectionWebsocketLine(
+  nodes: readonly CollectionTreeNode[],
+  websocketId: string,
+  patch: { readonly wsPath?: string; readonly label?: string },
+): CollectionTreeNode[] | null {
+  return updateCollectionWebsocketNode(nodes, websocketId, (node, data) => {
+    const wsPath = patch.wsPath ?? data.wsPath ?? 'ws://localhost/path';
+    const label = patch.label ?? node.label;
+    return {
+      node: {
+        ...node,
+        label,
+        data: {
+          ...data,
+          kind: 'websocket',
+          wsPath,
+          websocketSettings:
+            data.websocketSettings ?? createDefaultCollectionWebsocketSettings(),
+        },
+      },
+    };
+  });
+}
+
+/** Patches websocket settings for a websocket node by id. */
+export function updateCollectionWebsocketSettings(
+  nodes: readonly CollectionTreeNode[],
+  websocketId: string,
+  settingsPatch: Partial<CollectionWebsocketSettings>,
+): CollectionTreeNode[] | null {
+  return updateCollectionWebsocketNode(nodes, websocketId, (node, data) => {
+    const current = enrichCollectionWebsocketSettings(data.websocketSettings);
+    const websocketSettings = enrichCollectionWebsocketSettings({ ...current, ...settingsPatch });
+    return {
+      node: {
+        ...node,
+        tags: treeTagsFromSettings(websocketSettings.tags),
+        data: {
+          ...data,
+          kind: 'websocket',
+          websocketSettings,
         },
       },
     };

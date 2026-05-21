@@ -6,12 +6,12 @@ export type CollectionContextMenuAction =
   | 'new-folder'
   | 'new-request'
   | 'new-websocket'
+  | 'open'
   | 'rename'
   | 'edit-description'
   | 'delete'
   | 'duplicate'
-  | 'expand'
-  | 'collapse';
+  | 'expand';
 
 /** Menu for right-click on empty sidebar / tree area (root-level create). */
 export function buildEmptyCollectionContextMenu(): TxContextMenuItem[] {
@@ -26,26 +26,30 @@ export function buildEmptyCollectionContextMenu(): TxContextMenuItem[] {
 export function buildCollectionNodeContextMenu(
   kind: CollectionTreeKind,
   expanded: boolean,
+  hasChildren = true,
 ): TxContextMenuItem[] {
   if (kind === 'folder') {
-    return [
+    const items: TxContextMenuItem[] = [
       { id: 'new-folder', label: 'New folder', icon: 'folder' },
       { id: 'new-request', label: 'New request', icon: 'http' },
       { id: 'new-websocket', label: 'New websocket', icon: 'interceptor' },
       { id: 'sep-1', label: '', separator: true },
+      { id: 'open', label: 'Open', icon: 'folderOpen' },
       { id: 'rename', label: 'Rename', icon: 'edit' },
       { id: 'edit-description', label: 'Edit description…', icon: 'fileText' },
       { id: 'delete', label: 'Delete', icon: 'trash', danger: true },
-      { id: 'sep-2', label: '', separator: true },
-      {
-        id: expanded ? 'collapse' : 'expand',
-        label: expanded ? 'Collapse' : 'Expand',
-        icon: expanded ? 'chevronRight' : 'chevronDown',
-      },
     ];
+    if (!expanded && hasChildren) {
+      items.push(
+        { id: 'sep-2', label: '', separator: true },
+        { id: 'expand', label: 'Expand', icon: 'chevronDown' },
+      );
+    }
+    return items;
   }
 
   return [
+    { id: 'open', label: 'Open', icon: 'folderOpen' },
     { id: 'rename', label: 'Rename', icon: 'edit' },
     { id: 'duplicate', label: 'Duplicate', icon: 'copy' },
     { id: 'delete', label: 'Delete', icon: 'trash', danger: true },

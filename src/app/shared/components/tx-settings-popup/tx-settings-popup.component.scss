@@ -17,13 +17,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: color-mix(in srgb, var(--tx-scrim, var(--tx-surface-0)) 48%, transparent);
-  backdrop-filter: blur(28px) saturate(1.14);
-  -webkit-backdrop-filter: blur(28px) saturate(1.14);
+  background: color-mix(in srgb, var(--tx-scrim, var(--tx-surface-0)) 58%, transparent);
   opacity: 0;
-  transition:
-    opacity var(--tx-settings-backdrop-duration) var(--tx-ease-out-expo, cubic-bezier(0.16, 1, 0.3, 1)),
-    backdrop-filter var(--tx-settings-backdrop-duration) var(--tx-ease-out-expo, cubic-bezier(0.16, 1, 0.3, 1));
+  transition: opacity var(--tx-settings-backdrop-duration) var(--tx-ease-out-expo, cubic-bezier(0.16, 1, 0.3, 1));
 
   &.tx-settings--shown {
     opacity: 1;
@@ -358,37 +354,17 @@
   min-height: 0;
   box-sizing: border-box;
   padding: 0;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
   border-radius: var(--tx-radius-md, 10px);
-  background: linear-gradient(
-    165deg,
-    color-mix(in srgb, var(--tx-surface-1) 92%, var(--tx-surface-2)) 0%,
-    var(--tx-surface-1) 42%
-  );
-  contain: layout style;
-  isolation: isolate;
-  box-shadow:
-    inset 0 1px 0 color-mix(in srgb, var(--tx-text-0) 5%, transparent),
-    inset 12px 0 28px -20px color-mix(in srgb, var(--tx-shadow-color) 22%, transparent);
-
-  &::before {
-    content: '';
-    position: absolute;
-    inset: 0 auto 0 0;
-    z-index: 2;
-    width: 20px;
-    pointer-events: none;
-    background: linear-gradient(
-      90deg,
-      color-mix(in srgb, var(--tx-shadow-color) 14%, transparent),
-      transparent
-    );
-  }
+  background: var(--tx-surface-1);
 }
 
 .tx-settings__pane {
-  position: absolute;
-  inset: 0;
+  position: relative;
+  box-sizing: border-box;
 }
 
 .tx-settings__section-loading {
@@ -402,28 +378,13 @@
 }
 
 .tx-settings__section {
-  position: absolute;
-  inset: 0;
+  position: relative;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
   align-items: stretch;
   padding: 14px clamp(18px, 3vw, 32px) 36px clamp(18px, 2.5vw, 32px);
-  overflow-x: hidden;
-  overflow-y: auto;
-  visibility: hidden;
-  pointer-events: none;
-  z-index: 0;
-  content-visibility: hidden;
-  scrollbar-gutter: stable;
-
-  &--active {
-    visibility: visible;
-    pointer-events: auto;
-    z-index: 1;
-    content-visibility: visible;
-  }
-
+  overflow: visible;
 }
 
 .tx-settings__section-inner {

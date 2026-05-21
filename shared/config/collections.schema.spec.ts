@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
-import {
-  createDefaultCollectionRequestSettings,
-} from '@shared/config/collection-request-settings.schema';
+import { createDefaultCollectionRequestSettings } from '@shared/config/collection-request-settings.schema';
+import { createDefaultCollectionWebsocketSettings } from '@shared/config/collection-websocket-settings.schema';
 import {
   collectionsFileSchema,
   enrichCollectionFolderNode,
   enrichCollectionRequestNode,
+  enrichCollectionWebsocketNode,
 } from '@shared/config/collections.schema';
 
 describe('collectionsFileSchema', () => {
@@ -33,6 +33,13 @@ describe('collectionsFileSchema', () => {
               method: 'POST',
               url: '/login',
               settings: createDefaultCollectionRequestSettings(),
+            },
+            {
+              id: 'ws-events',
+              label: 'WS /events',
+              kind: 'websocket' as const,
+              wsPath: 'ws://localhost/events',
+              settings: createDefaultCollectionWebsocketSettings(),
             },
           ],
         },
@@ -64,6 +71,17 @@ describe('collectionsFileSchema', () => {
     expect(enriched.settings.auth.type).toBe('none');
   });
 
+  it('enrichCollectionWebsocketNode fills default settings', () => {
+    const enriched = enrichCollectionWebsocketNode({
+      id: 'w1',
+      label: 'WS /x',
+      kind: 'websocket',
+      wsPath: 'ws://localhost/x',
+    });
+    expect(enriched.settings.auth.type).toBe('none');
+    expect(enriched.settings.message).toBe('');
+  });
+
   it('rejects unknown node kinds', () => {
     expect(() =>
       collectionsFileSchema.parse({
@@ -72,5 +90,29 @@ describe('collectionsFileSchema', () => {
         nodes: [{ id: 'bad', label: 'Bad', kind: 'environment' }],
       }),
     ).toThrow();
+  });
+});
+
+describe('migrateCollections', () => {
+  it('fills default websocket settings for legacy nodes missing settings', async () => {
+    const { migrateCollections } = await import('./migrate');
+    const migrated = migrateCollections({
+      schemaVersion: 1,
+      meta: { createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+      nodes: [
+        {
+          id: 'ws-legacy',
+          label: 'WS /events',
+          kind: 'websocket',
+          wsPath: 'ws://localhost/events',
+        },
+      ],
+    });
+
+    expect(migrated.nodes[0]?.kind).toBe('websocket');
+    if (migrated.nodes[0]?.kind === 'websocket') {
+      expect(migrated.nodes[0].settings.auth.type).toBe('none');
+      expect(migrated.nodes[0].settings.message).toBe('');
+    }
   });
 });

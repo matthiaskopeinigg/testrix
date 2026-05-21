@@ -1,6 +1,7 @@
 import {
   createDefaultCollectionFolderSettings,
   createDefaultCollectionRequestSettings,
+  createDefaultCollectionWebsocketSettings,
 } from '@shared/config';
 
 import { iconForCollectionKind } from './collection-tree.icons';
@@ -8,6 +9,17 @@ import type { CollectionTreeNode } from './collection-tree.types';
 
 const DEFAULT_FOLDER_SETTINGS = createDefaultCollectionFolderSettings();
 const DEFAULT_REQUEST_SETTINGS = createDefaultCollectionRequestSettings();
+const DEFAULT_WEBSOCKET_SETTINGS = createDefaultCollectionWebsocketSettings();
+
+const EMPTY_FOLDER: CollectionTreeNode = {
+  id: 'folder-empty',
+  label: 'Empty',
+  kind: 'folder',
+  icon: iconForCollectionKind('folder'),
+  order: 30,
+  data: { kind: 'folder', settings: DEFAULT_FOLDER_SETTINGS },
+  children: [],
+};
 
 /** In-memory sample tree for the Collections sidebar (v1). */
 export const COLLECTION_TREE_MOCK: CollectionTreeNode[] = [
@@ -51,7 +63,11 @@ export const COLLECTION_TREE_MOCK: CollectionTreeNode[] = [
         kind: 'websocket',
         icon: iconForCollectionKind('websocket'),
         order: 20,
-        data: { kind: 'websocket', wsPath: '/auth/status' },
+        data: {
+          kind: 'websocket',
+          wsPath: 'ws://localhost/auth/status',
+          websocketSettings: DEFAULT_WEBSOCKET_SETTINGS,
+        },
       },
     ],
   },
@@ -105,7 +121,11 @@ export const COLLECTION_TREE_MOCK: CollectionTreeNode[] = [
         kind: 'websocket',
         icon: iconForCollectionKind('websocket'),
         order: 0,
-        data: { kind: 'websocket', wsPath: '/events' },
+        data: {
+          kind: 'websocket',
+          wsPath: 'ws://localhost/events',
+          websocketSettings: DEFAULT_WEBSOCKET_SETTINGS,
+        },
       },
       {
         id: 'ws-notifications',
@@ -113,8 +133,13 @@ export const COLLECTION_TREE_MOCK: CollectionTreeNode[] = [
         kind: 'websocket',
         icon: iconForCollectionKind('websocket'),
         order: 10,
-        data: { kind: 'websocket', wsPath: '/notifications' },
+        data: {
+          kind: 'websocket',
+          wsPath: 'ws://localhost/notifications',
+          websocketSettings: DEFAULT_WEBSOCKET_SETTINGS,
+        },
       },
     ],
   },
+  EMPTY_FOLDER,
 ];

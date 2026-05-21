@@ -3,6 +3,7 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import type {
   CollectionFolderSettings,
   CollectionRequestSettings,
+  CollectionWebsocketSettings,
   CollectionsFile,
   HttpMethodId,
 } from '@shared/config';
@@ -17,9 +18,12 @@ import {
   renameCollectionNode,
   setCollectionFolderDescription,
   setCollectionRequestDescription,
+  setCollectionWebsocketDescription,
   updateCollectionFolderSettings,
   updateCollectionRequestLine,
   updateCollectionRequestSettings,
+  updateCollectionWebsocketLine,
+  updateCollectionWebsocketSettings,
 } from '@app/features/shell/collections/collection-tree.mutations';
 import type { CollectionTreeKind, CollectionTreeNode } from '@app/features/shell/collections/collection-tree.types';
 
@@ -176,6 +180,42 @@ export class CollectionsService {
   /** Updates persisted settings on a collection request. */
   patchRequestSettings(requestId: string, patch: Partial<CollectionRequestSettings>): boolean {
     const next = updateCollectionRequestSettings(this.nodesState(), requestId, patch);
+    if (!next) {
+      return false;
+    }
+    this.saveNodes(next);
+    return true;
+  }
+
+  /** Sets optional notes on a collection websocket (empty string clears). */
+  setWebsocketDescription(websocketId: string, description: string): boolean {
+    const next = setCollectionWebsocketDescription(this.nodesState(), websocketId, description);
+    if (!next) {
+      return false;
+    }
+    this.saveNodes(next);
+    return true;
+  }
+
+  /** Updates wsPath and/or label on a collection websocket. */
+  updateWebsocket(
+    websocketId: string,
+    patch: { readonly wsPath?: string; readonly label?: string },
+  ): boolean {
+    const next = updateCollectionWebsocketLine(this.nodesState(), websocketId, patch);
+    if (!next) {
+      return false;
+    }
+    this.saveNodes(next);
+    return true;
+  }
+
+  /** Updates persisted settings on a collection websocket. */
+  patchWebsocketSettings(
+    websocketId: string,
+    patch: Partial<CollectionWebsocketSettings>,
+  ): boolean {
+    const next = updateCollectionWebsocketSettings(this.nodesState(), websocketId, patch);
     if (!next) {
       return false;
     }

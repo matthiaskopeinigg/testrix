@@ -173,4 +173,16 @@ describe('WorkspaceEditorComponent mount cache', () => {
     expect(cmp['tabInputs'](createTab('tab-a', 'req-a'), 'main')['active']).toBe(false);
     expect(cmp['tabInputs'](createTab('tab-b', 'req-b'), 'main')['active']).toBe(true);
   });
+
+  it('does not loop when the mount effect reconciles an active tab', () => {
+    const cmp = fixture.componentInstance as WorkspaceEditorComponent;
+    const warmTabOrder = cmp['warmTabOrder'];
+
+    for (let i = 0; i < 8; i += 1) {
+      fixture.detectChanges();
+    }
+
+    expect(warmTabOrder()).toEqual([]);
+    expect(cmp['isTabMounted']('main', 'tab-a')).toBe(true);
+  });
 });

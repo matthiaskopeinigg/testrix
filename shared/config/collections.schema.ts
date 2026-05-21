@@ -10,6 +10,11 @@ import {
   collectionRequestSettingsSchema,
   enrichCollectionRequestSettings,
 } from './collection-request-settings.schema';
+import {
+  type CollectionWebsocketSettings,
+  collectionWebsocketSettingsSchema,
+  enrichCollectionWebsocketSettings,
+} from './collection-websocket-settings.schema';
 import { HTTP_METHOD_IDS } from './http-settings.schema';
 
 const metaCollectionsSchema = z.object({
@@ -35,6 +40,8 @@ const collectionRequestNodeSchema = collectionNodeBaseSchema.extend({
 const collectionWebsocketNodeSchema = collectionNodeBaseSchema.extend({
   kind: z.literal('websocket'),
   wsPath: z.string().min(1),
+  description: z.string().optional(),
+  settings: collectionWebsocketSettingsSchema,
 });
 
 export type CollectionFolderNode = z.infer<typeof collectionNodeBaseSchema> & {
@@ -47,7 +54,9 @@ export type CollectionFolderNode = z.infer<typeof collectionNodeBaseSchema> & {
 export type CollectionRequestNode = z.infer<typeof collectionRequestNodeSchema> & {
   readonly settings: CollectionRequestSettings;
 };
-export type CollectionWebsocketNode = z.infer<typeof collectionWebsocketNodeSchema>;
+export type CollectionWebsocketNode = z.infer<typeof collectionWebsocketNodeSchema> & {
+  readonly settings: CollectionWebsocketSettings;
+};
 
 export type CollectionNode =
   | CollectionFolderNode
@@ -104,6 +113,16 @@ export function enrichCollectionRequestNode(
   };
 }
 
+/** Applies default websocket settings when missing (migration / read path). */
+export function enrichCollectionWebsocketNode(
+  node: Omit<CollectionWebsocketNode, 'settings'> & { settings?: CollectionWebsocketSettings },
+): CollectionWebsocketNode {
+  return {
+    ...node,
+    settings: enrichCollectionWebsocketSettings(node.settings),
+  };
+}
+
 /** Recursively enriches folder nodes in a collection tree. */
 export function enrichCollectionNode(node: CollectionNode): CollectionNode {
   if (node.kind === 'folder') {
@@ -111,6 +130,9 @@ export function enrichCollectionNode(node: CollectionNode): CollectionNode {
   }
   if (node.kind === 'request') {
     return enrichCollectionRequestNode(node);
+  }
+  if (node.kind === 'websocket') {
+    return enrichCollectionWebsocketNode(node);
   }
   return node;
 }

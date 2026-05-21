@@ -11,14 +11,28 @@ describe('collection-context-menu', () => {
     expect(items.map((i) => i.id)).toEqual(['new-folder', 'new-request', 'new-websocket']);
   });
 
-  it('builds folder menu with expand action when collapsed', () => {
+  it('builds folder menu with open and expand when collapsed', () => {
     const items = buildCollectionNodeContextMenu('folder', false);
+    expect(items.some((i) => i.id === 'open')).toBe(true);
     expect(items.some((i) => i.id === 'expand')).toBe(true);
-    expect(items.some((i) => i.id === 'rename')).toBe(true);
+    expect(items.some((i) => i.id === 'collapse')).toBe(false);
   });
 
-  it('builds request menu with duplicate', () => {
+  it('omits collapse and expand on expanded folders', () => {
+    const items = buildCollectionNodeContextMenu('folder', true);
+    expect(items.some((i) => i.id === 'open')).toBe(true);
+    expect(items.some((i) => i.id === 'expand')).toBe(false);
+    expect(items.some((i) => i.id === 'collapse')).toBe(false);
+  });
+
+  it('omits expand on empty collapsed folders', () => {
+    const items = buildCollectionNodeContextMenu('folder', false, false);
+    expect(items.some((i) => i.id === 'open')).toBe(true);
+    expect(items.some((i) => i.id === 'expand')).toBe(false);
+  });
+
+  it('builds request menu with open and duplicate', () => {
     const items = buildCollectionNodeContextMenu('request', false);
-    expect(items.map((i) => i.id)).toEqual(['rename', 'duplicate', 'delete']);
+    expect(items.map((i) => i.id)).toEqual(['open', 'rename', 'duplicate', 'delete']);
   });
 });

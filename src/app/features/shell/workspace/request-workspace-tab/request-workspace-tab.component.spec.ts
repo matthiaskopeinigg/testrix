@@ -91,6 +91,8 @@ describe('RequestWorkspaceTabComponent', () => {
     fixture.componentRef.setInput('resourceId', 'req-login');
     fixture.componentRef.setInput('active', true);
     fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
   });
 
   it('bindRequest runs only when the tab is active', () => {
