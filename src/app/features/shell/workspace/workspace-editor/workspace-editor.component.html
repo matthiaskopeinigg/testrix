@@ -1,0 +1,85 @@
+<div
+  class="workspace-editor"
+  [class.workspace-editor--splitting]="editor.motion.layoutTransition() === 'split'"
+  [class.workspace-editor--merging]="editor.motion.layoutTransition() === 'merge'"
+>
+  <ng-template #paneLeaf let-ctx>
+    <div
+      class="workspace-editor__pane"
+      (mousedown)="handlePaneFocus(ctx.groupId)"
+    >
+      <tx-tab-bar
+        [groupId]="ctx.groupId"
+        [tabs]="tabItems(ctx.groupId)"
+        [attr.aria-label]="'Editor tabs for pane ' + ctx.groupId"
+        (tabActivate)="handleTabActivate(ctx.groupId, $event)"
+        (tabClose)="handleTabClose(ctx.groupId, $event)"
+        (tabPinToggle)="handleTabPinToggle(ctx.groupId, $event)"
+        (tabReorder)="handleTabReorder(ctx.groupId, $event)"
+        (tabCrossDrop)="handleTabCrossDrop(ctx.groupId, $event)"
+        (tabContextMenu)="handleTabContextMenu(ctx.groupId, $event)"
+        (barContextMenu)="handleTabBarContextMenu(ctx.groupId, $event)"
+      />
+
+      <div class="workspace-editor__content" role="tabpanel">
+        <app-workspace-editor-pane-drop [groupId]="ctx.groupId">
+          @if (tabsForPane(ctx.groupId).length > 0) {
+            <div class="workspace-editor__tab-stack">
+              @for (tab of tabsForPane(ctx.groupId); track tab.id) {
+                @if (isTabRendered(ctx.groupId, tab.id)) {
+                  <div
+                    class="workspace-editor__tab-panel"
+                    [class.workspace-editor__tab-panel--active]="isTabActive(ctx.groupId, tab.id)"
+                  >
+                    @if (isTabLoading(ctx.groupId, tab)) {
+                      <tx-workspace-tab-skeleton
+                        class="workspace-editor__tab-panel-skeleton"
+                        [variant]="skeletonVariant(tab.kind)"
+                      />
+                    }
+                    <app-workspace-editor-tab-panel
+                      [tabId]="tab.id"
+                      (ready)="handleTabPanelReady(tab.id, ctx.groupId)"
+                    >
+                      @if (tabComponent(tab.kind); as cmp) {
+                        <ng-container
+                          *ngComponentOutlet="cmp; inputs: tabInputs(tab, ctx.groupId)"
+                        />
+                      }
+                    </app-workspace-editor-tab-panel>
+                  </div>
+                }
+              }
+            </div>
+          } @else {
+            <div
+              class="workspace-editor__empty-host"
+              (contextmenu)="handleEmptyPaneContextMenu(ctx.groupId, $event)"
+            >
+              <app-workspace-editor-empty
+                [showPaneActions]="hasMultiplePanes()"
+                (closePane)="handleClosePane(ctx.groupId)"
+                (resetLayout)="handleMergeToSinglePane()"
+              />
+            </div>
+          }
+        </app-workspace-editor-pane-drop>
+      </div>
+    </div>
+  </ng-template>
+
+  <tx-split-pane
+    class="workspace-editor__split"
+    [layout]="layout()"
+    [leafTemplate]="leafTemplate()"
+    (ratioChange)="handleRatioChange($event)"
+  />
+</div>
+
+<tx-context-menu
+  [open]="contextMenuOpen()"
+  [position]="contextMenuPosition()"
+  [items]="contextMenuItems()"
+  (itemSelect)="handleContextMenuSelect($event)"
+  (closed)="handleContextMenuClosed()"
+/>

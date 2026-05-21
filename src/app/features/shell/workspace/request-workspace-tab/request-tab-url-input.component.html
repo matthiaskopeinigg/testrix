@@ -1,0 +1,53 @@
+<div class="request-tab-url-input">
+  <div
+    class="request-tab-url-input__field"
+    [class.request-tab-url-input__field--disabled]="disabled()"
+    (mouseenter)="handleFieldMouseEnter($event)"
+    (mouseleave)="handleFieldMouseLeave($event)"
+  >
+    <div class="request-tab-url-input__mirror" aria-hidden="true"><code [innerHTML]="highlightedHtml() | txVariableInputHighlightHtml"></code></div>
+    <div
+      class="request-tab-url-input__hit"
+      aria-hidden="true"
+      (pointerover)="handleHitPointerOver($event)"
+      (pointerout)="handleHitPointerOut($event)"
+      (pointerdown)="handleHitPointerDown($event)"
+    ><code [innerHTML]="highlightedHtml() | txVariableInputHighlightHtml"></code></div>
+    <input
+      #nativeInput
+      class="request-tab-url-input__control"
+      [id]="effectiveId()"
+      type="text"
+      [placeholder]="placeholder()"
+      [disabled]="disabled()"
+      [attr.aria-label]="'Request URL'"
+      (input)="handleInput($event)"
+      (keydown)="handleKeydown($event)"
+      (scroll)="handleScroll()"
+      (focus)="handleFocus()"
+      (blur)="handleBlur()"
+      (click)="handleControlClick()"
+    />
+  </div>
+
+  @if (completionOpen()) {
+    <div class="request-tab-url-input__completion" role="listbox" aria-label="Dynamic variable suggestions">
+      <p class="request-tab-url-input__completion-hint">↑↓ Enter Tab · Esc dismiss</p>
+      <div class="request-tab-url-input__completion-list">
+        @for (item of completionItems(); track item.id; let index = $index) {
+          <button
+            type="button"
+            class="request-tab-url-input__completion-item"
+            role="option"
+            [class.is-active]="index === completionIndex()"
+            (mousedown)="$event.preventDefault()"
+            (click)="applyCompletion(item)"
+          >
+            <span class="request-tab-url-input__completion-label">{{ item.label }}</span>
+            <span class="request-tab-url-input__completion-detail">{{ item.detail }}</span>
+          </button>
+        }
+      </div>
+    </div>
+  }
+</div>

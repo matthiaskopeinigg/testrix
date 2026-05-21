@@ -1,0 +1,12 @@
+@use '../testing-workspace-tab.shared';
+
+.capture-workspace-tab__url {
+  margin: 0;
+  font-size: 13px;
+}
+
+.capture-workspace-tab__log {
+  margin: 0;
+  padding-left: 1.25rem;
+  font-size: 12px;
+}

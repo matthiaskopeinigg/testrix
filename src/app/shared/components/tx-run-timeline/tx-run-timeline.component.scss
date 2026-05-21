@@ -1,0 +1,62 @@
+:host(.tx-run-timeline--inline) .tx-run-timeline {
+  padding: 0;
+  border-bottom: none;
+}
+
+.tx-run-timeline {
+  display: flex;
+  flex: 0 0 auto;
+  flex-shrink: 0;
+  gap: 0.35rem;
+  padding: 0.35rem 0.75rem;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--tx-border-0);
+}
+
+.tx-run-timeline__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.55rem;
+  border: 1px solid var(--tx-border-0);
+  border-radius: var(--tx-radius-sm);
+  background: var(--tx-surface-2);
+  color: var(--tx-text-0);
+  font-size: 0.8125rem;
+  white-space: nowrap;
+  cursor: pointer;
+
+  &.is-active {
+    border-color: color-mix(in srgb, var(--tx-accent) 55%, var(--tx-border-0));
+    background: color-mix(in srgb, var(--tx-accent) 12%, var(--tx-surface-2));
+  }
+
+  &.is-pinned {
+    border-color: color-mix(in srgb, var(--tx-warning) 45%, var(--tx-border-0));
+  }
+}
+
+.tx-run-timeline__pin {
+  color: var(--tx-warning);
+}
+
+.tx-run-timeline__dot {
+  flex-shrink: 0;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--tx-text-1);
+
+  &.is-ok {
+    background: var(--tx-success);
+  }
+
+  &.is-error {
+    background: var(--tx-danger);
+  }
+}
+
+.tx-run-timeline__time {
+  color: var(--tx-text-1);
+  font-size: 0.75rem;
+}

@@ -1,0 +1,159 @@
+@use '../workspace-tab-chrome' as tab-chrome;
+@use '../workspace-tab-motion';
+
+:host {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  min-width: 0;
+}
+
+.folder-tab {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  min-width: 0;
+}
+
+.folder-tab__header {
+  flex-shrink: 0;
+  padding: 0;
+  border-bottom: none;
+}
+
+.folder-tab__header-row {
+  @include tab-chrome.workspace-tab-toolbar-row;
+  align-items: center;
+}
+
+.folder-tab__title-chip {
+  @include tab-chrome.workspace-tab-title-chip;
+}
+
+.folder-tab__title {
+  margin: 0;
+}
+
+.folder-tab__header-cluster {
+  @include tab-chrome.workspace-tab-bar-cluster;
+  @include tab-chrome.workspace-tab-bar-cluster-trailing;
+}
+
+.folder-tab__sections-wrap {
+  @include tab-chrome.workspace-tab-sections-wrap;
+}
+
+.folder-tab__sections-bar {
+  @include tab-chrome.workspace-tab-sections-bar;
+}
+
+.folder-tab__section-tab {
+  @include tab-chrome.workspace-tab-section-tab;
+}
+
+.folder-tab--sidebar .folder-tab__body {
+  flex-direction: row;
+}
+
+.folder-tab__body {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+}
+
+.folder-tab__nav {
+  @include tab-chrome.workspace-tab-section-sidebar-nav;
+}
+
+.folder-tab__nav-item {
+  @include tab-chrome.workspace-tab-section-sidebar-nav-item;
+}
+
+.folder-tab__nav-icon {
+  display: flex;
+  flex-shrink: 0;
+}
+
+.folder-tab__divider {
+  @include tab-chrome.workspace-tab-section-sidebar-divider;
+}
+
+.folder-tab__pane {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  padding: 16px 18px 20px;
+}
+
+.folder-tab__section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  max-width: 56rem;
+}
+
+.folder-tab__section--script {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-width: none;
+}
+
+.folder-tab__section-title {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--tx-text-0);
+}
+
+.folder-tab__section-hint {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--tx-text-1);
+
+  code {
+    font-size: 0.75rem;
+    padding: 0.1em 0.35em;
+    border-radius: 4px;
+    background: color-mix(in srgb, var(--tx-surface-2) 80%, transparent);
+  }
+}
+
+.folder-tab__script-nav {
+  display: inline-flex;
+  gap: 0.08rem;
+  padding: 0.15rem;
+  width: fit-content;
+  @include tab-chrome.workspace-tab-chip-surface;
+}
+
+.folder-tab__script-tab {
+  @include tab-chrome.workspace-tab-section-tab;
+}
+
+.folder-tab__editor {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 12rem;
+  min-width: 0;
+  border: 1px solid color-mix(in srgb, var(--tx-border-0) 70%, transparent);
+  border-radius: var(--tx-radius-md, 10px);
+  background: var(--tx-surface-1);
+  overflow: hidden;
+  padding: 8px 10px 10px;
+}
+
+.folder-tab__editor tx-code-editor {
+  flex: 1 1 auto;
+  min-height: 0;
+}

@@ -1,0 +1,18 @@
+<div class="tx-tags-input" [class.tx-tags-input--disabled]="disabled()">
+  <div class="tx-tags-input__chips" role="list" aria-label="Tags">
+    @for (tag of tags(); track tag) {
+      <tx-tag variant="info" [removable]="!disabled()" (removed)="handleRemoveTag(tag)">{{ tag }}</tx-tag>
+    }
+    <input
+      class="tx-tags-input__control"
+      type="text"
+      [id]="effectiveId()"
+      [value]="draft()"
+      [placeholder]="tags().length === 0 ? placeholder() : ''"
+      [disabled]="disabled()"
+      (input)="handleDraftInput($event)"
+      (keydown)="handleDraftKeydown($event)"
+      (blur)="handleBlur()"
+    />
+  </div>
+</div>

@@ -1,0 +1,90 @@
+/**
+ * Mirror highlight spans are injected via innerHTML — styles must be global (not encapsulated).
+ * Highlights must not change glyph metrics (no extra padding / mono) so the caret aligns with text.
+ */
+
+.tx-variable-input__field .tx-variable-input__control {
+  color: transparent !important;
+  -webkit-text-fill-color: transparent !important;
+}
+
+.tx-variable-input__mirror,
+.tx-variable-input__hit {
+  margin: 0;
+}
+
+.tx-variable-input__mirror {
+  code {
+    font-family: inherit;
+    font-size: inherit;
+    font-weight: inherit;
+    letter-spacing: inherit;
+
+    .tx-var-token {
+      color: color-mix(in srgb, var(--tx-primary) 92%, var(--tx-text-0));
+      font-weight: 600;
+      box-shadow: inset 0 -0.14em 0 color-mix(in srgb, var(--tx-primary) 38%, transparent);
+      transition:
+        color 160ms var(--tx-ease-out-expo, cubic-bezier(0.16, 1, 0.3, 1)),
+        box-shadow 160ms var(--tx-ease-out-expo, cubic-bezier(0.16, 1, 0.3, 1));
+    }
+
+    .tx-var-token--env {
+      color: color-mix(in srgb, var(--tx-info, #5eb8ff) 88%, var(--tx-text-0));
+      font-weight: 600;
+      box-shadow: inset 0 -0.14em 0 color-mix(in srgb, var(--tx-info, #5eb8ff) 42%, transparent);
+    }
+
+    .tx-var-token--unknown {
+      color: color-mix(in srgb, var(--tx-text-1) 90%, var(--tx-text-0));
+      font-weight: 600;
+      box-shadow: inset 0 -0.14em 0 color-mix(in srgb, var(--tx-text-1) 28%, transparent);
+    }
+
+    .tx-var-param {
+      color: color-mix(in srgb, var(--tx-warning) 92%, var(--tx-text-0));
+      font-weight: 700;
+      box-shadow: inset 0 -0.14em 0 color-mix(in srgb, var(--tx-warning) 45%, transparent);
+      transition:
+        color 160ms var(--tx-ease-out-expo, cubic-bezier(0.16, 1, 0.3, 1)),
+        box-shadow 160ms var(--tx-ease-out-expo, cubic-bezier(0.16, 1, 0.3, 1));
+    }
+
+    .tx-var-token.is-var-hovered {
+      color: var(--tx-primary);
+      box-shadow: inset 0 -0.16em 0 color-mix(in srgb, var(--tx-primary) 55%, transparent);
+    }
+
+    .tx-var-token--env.is-var-hovered {
+      color: color-mix(in srgb, var(--tx-info, #5eb8ff) 95%, white);
+      box-shadow: inset 0 -0.16em 0 color-mix(in srgb, var(--tx-info, #5eb8ff) 58%, transparent);
+      text-decoration: underline;
+      text-underline-offset: 0.12em;
+    }
+
+    .tx-var-param.is-var-hovered {
+      color: color-mix(in srgb, var(--tx-warning) 95%, white);
+      box-shadow: inset 0 -0.16em 0 color-mix(in srgb, var(--tx-warning) 62%, transparent);
+    }
+  }
+}
+
+.tx-variable-input__hit {
+  code {
+    color: transparent;
+    font-family: inherit;
+    font-size: inherit;
+    font-weight: inherit;
+    letter-spacing: inherit;
+
+    .tx-var-token,
+    .tx-var-param {
+      pointer-events: auto;
+      cursor: text;
+    }
+
+    .tx-var-token--env {
+      cursor: pointer;
+    }
+  }
+}

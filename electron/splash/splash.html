@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; img-src 'self' data:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Testrix</title>
+    <link rel="stylesheet" href="./splash.css" />
+  </head>
+  <body>
+    <!-- Centered splash card (parity with api-workbench boot splash framing). -->
+    <div class="tx-splash-shell">
+      <div class="tx-splash-stage">
+        <img class="tx-splash-logo" src="./assets/logo.svg" alt="Testrix" width="240" height="240" />
+        <p id="tx-splash-version" class="tx-splash-version"></p>
+      </div>
+    </div>
+    <script>
+      const params = new URLSearchParams(window.location.search);
+      const version = params.get('version');
+      const node = document.getElementById('tx-splash-version');
+      if (node) {
+        node.textContent = version ? 'v' + version : '';
+      }
+    </script>
+  </body>
+</html>

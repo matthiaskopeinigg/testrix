@@ -1,0 +1,19 @@
+<label class="tx-toggle" [attr.for]="effectiveId()">
+  <input
+    class="tx-toggle__input"
+    [id]="effectiveId()"
+    type="checkbox"
+    role="switch"
+    [attr.aria-checked]="checked()"
+    [checked]="checked()"
+    [disabled]="disabled()"
+    (change)="handleChange($event)"
+    (blur)="handleBlur()"
+  />
+  <span class="tx-toggle__track" aria-hidden="true">
+    <span class="tx-toggle__thumb"></span>
+  </span>
+  @if (label()) {
+    <span class="tx-toggle__label">{{ label() }}</span>
+  }
+</label>

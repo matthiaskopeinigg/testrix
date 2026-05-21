@@ -1,0 +1,186 @@
+$tx-update-accent: color-mix(in srgb, var(--tx-primary) 48%, #ff9d3b);
+$tx-update-accent-soft: color-mix(in srgb, #ff6b9d 55%, $tx-update-accent);
+
+:host {
+  display: none;
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  z-index: var(--tx-z-update-install, 1400);
+  opacity: 0;
+  transition: opacity var(--tx-duration-base, 180ms) var(--tx-ease-out-expo, ease);
+
+  &.tx-update-install-overlay-host--visible {
+    display: block;
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
+.tx-update-install-overlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  box-sizing: border-box;
+}
+
+.tx-update-install-overlay__scrim {
+  position: absolute;
+  inset: 0;
+  background: color-mix(in srgb, var(--tx-scrim, #1a1714) 78%, transparent);
+  backdrop-filter: blur(6px);
+}
+
+.tx-update-install-overlay__card {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 380px);
+  overflow: hidden;
+  border-radius: var(--tx-radius-lg, 14px);
+  border: 1px solid color-mix(in srgb, $tx-update-accent, transparent 68%);
+  background-color: color-mix(in srgb, var(--tx-surface-1) 96%, var(--tx-surface-0));
+  box-shadow:
+    0 24px 64px rgba(0, 0, 0, 0.48),
+    0 0 48px color-mix(in srgb, $tx-update-accent, transparent 92%),
+    inset 0 1px 0 color-mix(in srgb, #fff, transparent 92%);
+  animation: tx-update-install-card-in 0.42s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.tx-update-install-overlay__bg {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.tx-update-install-overlay__bg-grid {
+  position: absolute;
+  inset: 0;
+  opacity: 0.28;
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--tx-text-0) 6%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--tx-text-0) 6%, transparent) 1px, transparent 1px);
+  background-size: 24px 24px;
+  mask-image: radial-gradient(ellipse 80% 70% at 50% 40%, #000 0%, transparent 100%);
+}
+
+.tx-update-install-overlay__bg-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(48px);
+  opacity: 0.5;
+
+  &--a {
+    width: 180px;
+    height: 180px;
+    top: -40px;
+    left: -20px;
+    background: color-mix(in srgb, $tx-update-accent-soft, transparent 35%);
+  }
+
+  &--b {
+    width: 140px;
+    height: 140px;
+    right: -24px;
+    bottom: -32px;
+    background: color-mix(in srgb, $tx-update-accent, transparent 50%);
+  }
+}
+
+.tx-update-install-overlay__accent {
+  position: relative;
+  height: 3px;
+  overflow: hidden;
+}
+
+.tx-update-install-overlay__accent-band {
+  display: block;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    $tx-update-accent-soft,
+    $tx-update-accent,
+    color-mix(in srgb, #ffc966 50%, $tx-update-accent),
+    transparent
+  );
+  animation: tx-update-install-accent 1.8s ease-in-out infinite;
+}
+
+.tx-update-install-overlay__content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 28px 24px 24px;
+  text-align: center;
+}
+
+.tx-update-install-overlay__icon-wrap {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  background: color-mix(in srgb, $tx-update-accent, transparent 88%);
+  border: 1px solid color-mix(in srgb, $tx-update-accent, transparent 62%);
+  color: $tx-update-accent;
+}
+
+.tx-update-install-overlay__title {
+  margin: 0;
+  font-size: 1.0625rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--tx-text-0);
+}
+
+.tx-update-install-overlay__desc {
+  margin: 0;
+  max-width: 28ch;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: color-mix(in srgb, var(--tx-text-1) 90%, transparent);
+}
+
+.tx-update-install-overlay__hint {
+  margin: 4px 0 0;
+  font-size: 0.6875rem;
+  color: color-mix(in srgb, var(--tx-text-1) 72%, transparent);
+}
+
+@keyframes tx-update-install-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes tx-update-install-accent {
+  0%,
+  100% {
+    transform: translateX(-30%);
+    opacity: 0.65;
+  }
+
+  50% {
+    transform: translateX(30%);
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tx-update-install-overlay__card,
+  .tx-update-install-overlay__accent-band {
+    animation: none;
+  }
+}

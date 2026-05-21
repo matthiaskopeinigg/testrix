@@ -1,0 +1,21 @@
+<tx-modal
+  layer="stacked"
+  [open]="open()"
+  [title]="title()"
+  [ariaLabel]="title()"
+  [dismissOnBackdrop]="dismissOnBackdrop()"
+  (closed)="handleModalClosed()"
+>
+  <p class="tx-confirm-dialog__message">{{ message() }}</p>
+
+  <div class="tx-confirm-dialog__actions" role="group" [attr.aria-label]="title() + ' actions'">
+    <tx-button variant="secondary" (pressed)="handleCancel()">{{ cancelLabel() }}</tx-button>
+    <tx-button
+      variant="primary"
+      [class.tx-confirm-dialog__confirm--danger]="variant() === 'danger'"
+      (pressed)="handleConfirm()"
+    >
+      {{ confirmLabel() }}
+    </tx-button>
+  </div>
+</tx-modal>

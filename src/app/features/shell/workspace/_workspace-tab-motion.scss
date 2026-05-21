@@ -1,0 +1,82 @@
+// Motion for request / folder workspace tabs (gated by `settings.ui.animationSpeed`).
+
+.tx-workspace-tab__chrome {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+
+.tx-workspace-tab__chrome.tx-entrance-stagger > .tx-entrance-stagger__block {
+  min-width: 0;
+}
+
+.tx-workspace-tab__pane {
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow: auto;
+
+  // Slide/crossfade paints outside the box; clip while motion runs to avoid scrollbar flash.
+  &.tx-workspace-tab__pane--switch,
+  &:has(.tx-workspace-tab__section-shell.tx-entrance-stagger--play),
+  &:has(.tx-workspace-tab__section-shell.tx-entrance-stagger:not(.tx-entrance-stagger--settled)) {
+    overflow: hidden;
+  }
+}
+
+// Opacity-only — translateY on the pane also triggered transient overflow scrollbars.
+.tx-workspace-tab__pane--switch {
+  animation: tx-pane-enter var(--tx-duration-base, 180ms) var(--tx-ease-out-expo, cubic-bezier(0.16, 1, 0.3, 1)) both;
+}
+
+.tx-workspace-tab__section-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1 1 auto;
+  width: 100%;
+
+  &.tx-entrance-stagger:not(.tx-entrance-stagger--settled) {
+    overflow: hidden;
+  }
+}
+
+// Smaller offset than global stagger — less bleed past the clipped pane.
+.tx-workspace-tab__section-shell.tx-entrance-stagger > * {
+  transform: translateY(6px);
+}
+
+.tx-workspace-tab__section-shell.tx-entrance-stagger.tx-entrance-stagger--settled > *,
+.tx-workspace-tab__section-shell.tx-entrance-stagger.tx-entrance-stagger--settled.tx-entrance-stagger--play > * {
+  transform: none;
+}
+
+.tx-workspace-tab__section-shell.tx-entrance-stagger > .tx-entrance-stagger__block {
+  min-width: 0;
+}
+
+// Body / script editors fill the pane; scroll inside the editor field.
+.tx-workspace-tab__section-shell:has(app-request-tab-body-panel),
+.tx-workspace-tab__section-shell:has(app-request-tab-scripts-panel),
+.tx-workspace-tab__section-shell.folder-tab__section--script {
+  overflow: hidden;
+}
+
+.tx-workspace-tab__section-shell > .tx-entrance-stagger__block:has(app-request-tab-body-panel),
+.tx-workspace-tab__section-shell > .tx-entrance-stagger__block:has(app-request-tab-scripts-panel) {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+}
+
+html[data-animation-speed='none'] {
+  .tx-workspace-tab__pane--switch {
+    animation: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tx-workspace-tab__pane--switch {
+    animation: none;
+  }
+}

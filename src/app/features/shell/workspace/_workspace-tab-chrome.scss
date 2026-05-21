@@ -1,0 +1,182 @@
+// Shared toolbar + section nav chrome for request/folder workspace tabs (matches window titlebar chips).
+
+$workspace-tab-inset-x: 12px;
+$workspace-tab-chip-height: 30px;
+$workspace-tab-chip-bg: color-mix(in srgb, var(--tx-surface-2) 72%, var(--tx-surface-1));
+$workspace-tab-chip-border: color-mix(in srgb, var(--tx-border-0) 62%, transparent);
+$workspace-tab-ease: var(--tx-ease-out-expo, cubic-bezier(0.16, 1, 0.3, 1));
+
+@mixin workspace-tab-chip-surface {
+  border: 1px solid $workspace-tab-chip-border;
+  border-radius: var(--tx-radius-md, 10px);
+  background: $workspace-tab-chip-bg;
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--tx-text-0) 5%, transparent),
+    0 1px 2px color-mix(in srgb, var(--tx-shadow-color, #000) 14%, transparent);
+}
+
+@mixin workspace-tab-toolbar-row {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  flex-shrink: 0;
+  padding: 0.45rem $workspace-tab-inset-x 0.4rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--tx-border-0) 48%, transparent);
+}
+
+@mixin workspace-tab-bar-cluster {
+  display: inline-flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  min-width: 0;
+  padding: 0.35rem 0.45rem;
+  @include workspace-tab-chip-surface;
+}
+
+@mixin workspace-tab-bar-cluster-grow {
+  flex: 1 1 12rem;
+  min-width: 0;
+}
+
+@mixin workspace-tab-bar-cluster-trailing {
+  flex: 0 1 auto;
+  flex-wrap: nowrap;
+}
+
+@mixin workspace-tab-title-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-width: 0;
+  flex: 1 1 auto;
+  padding: 0.35rem 0.55rem;
+  @include workspace-tab-chip-surface;
+
+  h1 {
+    margin: 0;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--tx-text-0);
+    letter-spacing: -0.01em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  tx-icon {
+    flex-shrink: 0;
+    color: color-mix(in srgb, var(--tx-accent) 70%, var(--tx-text-1));
+  }
+}
+
+@mixin workspace-tab-sections-wrap {
+  flex-shrink: 0;
+  padding: 0.35rem $workspace-tab-inset-x 0.45rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--tx-border-0) 48%, transparent);
+}
+
+@mixin workspace-tab-sections-bar {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.06rem;
+  max-width: 100%;
+  padding: 0.15rem;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  @include workspace-tab-chip-surface;
+}
+
+@mixin workspace-tab-section-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-shrink: 0;
+  padding: 0.32rem 0.62rem;
+  border: 0;
+  border-radius: calc(var(--tx-radius-md, 10px) - 3px);
+  background: transparent;
+  color: color-mix(in srgb, var(--tx-text-0) 56%, transparent);
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    background-color var(--tx-duration-base, 180ms) $workspace-tab-ease,
+    color var(--tx-duration-base, 180ms) $workspace-tab-ease,
+    box-shadow var(--tx-duration-base, 180ms) $workspace-tab-ease;
+
+  tx-icon {
+    opacity: 0.82;
+    transition: opacity var(--tx-duration-base, 180ms) $workspace-tab-ease;
+  }
+
+  &:hover:not(.is-active) {
+    color: var(--tx-text-0);
+    background: color-mix(in srgb, var(--tx-text-0) 7%, transparent);
+
+    tx-icon {
+      opacity: 1;
+    }
+  }
+
+  &.is-active {
+    color: var(--tx-text-0);
+    font-weight: 600;
+    background: color-mix(in srgb, var(--tx-accent) 18%, var(--tx-surface-2));
+    box-shadow:
+      inset 0 0 0 1px color-mix(in srgb, var(--tx-accent) 32%, transparent),
+      0 1px 3px color-mix(in srgb, var(--tx-shadow-color, #000) 18%, transparent);
+
+    tx-icon {
+      opacity: 1;
+      color: color-mix(in srgb, var(--tx-accent) 85%, var(--tx-text-0));
+    }
+  }
+
+  &:focus {
+    outline: none;
+  }
+
+  &:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--tx-focus-ring) 75%, transparent);
+    outline-offset: 1px;
+  }
+}
+
+@mixin workspace-tab-section-sidebar-nav {
+  display: flex;
+  flex: 0 0 11.5rem;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 10px 8px;
+  min-width: 10rem;
+  max-width: 13rem;
+  flex-shrink: 0;
+  background: color-mix(in srgb, var(--tx-surface-1) 88%, #000 12%);
+  border-right: 1px solid color-mix(in srgb, var(--tx-border-0) 48%, transparent);
+}
+
+@mixin workspace-tab-section-sidebar-nav-item {
+  @include workspace-tab-section-tab;
+  width: 100%;
+  justify-content: flex-start;
+  text-align: left;
+}
+
+@mixin workspace-tab-section-sidebar-divider {
+  flex-shrink: 0;
+  width: 1px;
+  align-self: stretch;
+  background: color-mix(in srgb, var(--tx-border-0) 50%, transparent);
+}
+
+/** Compact dropdown triggers inside workspace toolbars. */
+@mixin workspace-tab-toolbar-dropdown {
+  ::ng-deep .tx-dropdown__trigger {
+    min-height: $workspace-tab-chip-height;
+    padding: 0.28rem 0.5rem 0.28rem 0.55rem;
+    font-size: 0.8125rem;
+  }
+}

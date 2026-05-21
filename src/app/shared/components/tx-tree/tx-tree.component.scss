@@ -1,0 +1,76 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+
+:host.tx-tree-host--dragging {
+  .tx-tree-row-host:not(.tx-tree-row-host--dragging) {
+    pointer-events: auto;
+  }
+}
+
+:host.tx-tree-host--debug .tx-tree {
+  position: relative;
+}
+
+.tx-tree {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  position: relative;
+}
+
+:host.tx-tree-host--dragging .tx-tree,
+:host:has(.tx-tree-row-host--moving) .tx-tree {
+  overflow: hidden;
+}
+
+/* DnD overlay lines are not list items — skip entrance stagger motion. */
+.tx-tree.tx-entrance-stagger > .tx-tree__folder-exit-line,
+.tx-tree.tx-entrance-stagger > .tx-tree__empty {
+  opacity: 1;
+  transform: none;
+  animation: none;
+}
+
+.tx-tree__folder-exit-line {
+  position: absolute;
+  left: calc(
+    var(--tx-tree-indent, 16px) * var(--row-indicator-depth, 0) + 0.5rem
+  );
+  right: 0.5rem;
+  height: var(--tx-dnd-insert-line-size, 3px);
+  border-radius: var(--tx-dnd-insert-line-radius, 2px);
+  background: var(--tx-primary);
+  pointer-events: none;
+  z-index: 4;
+  transform: translateY(-50%);
+}
+
+:host-context(.tx-tree-host--dragging) .tx-tree__folder-exit-line {
+  animation: tx-dnd-insert-line-glow 1.35s var(--tx-ease-standard) infinite;
+}
+
+.tx-tree__empty {
+  margin: 0.5rem 0;
+  font-size: 0.8125rem;
+  color: var(--tx-text-1);
+}
+
+.tx-tree__custom-row {
+  min-height: var(--tx-tree-row-min-height, 34px);
+}
+
+:global(body.tx-tree-dnd-active) {
+  user-select: none;
+  cursor: grabbing;
+}
+
+:global(.tx-tree-ghost) {
+  opacity: 0.92;
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--tx-scrim) 35%, transparent);
+  border-radius: var(--tx-radius-sm);
+  background: var(--tx-surface-1);
+  pointer-events: none;
+  contain: layout style paint;
+}

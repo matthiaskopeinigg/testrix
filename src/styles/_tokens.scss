@@ -1,0 +1,107 @@
+:root {
+  color-scheme: light dark;
+
+  /** Structural tokens (non-theme). Color tokens are set per theme in _themes.scss. */
+  --tx-radius-sm: 8px;
+  --tx-radius-md: 10px;
+  --tx-radius-lg: 14px;
+  --tx-control-height-md: 36px;
+
+  --tx-duration-fast: 120ms;
+  --tx-duration-base: 180ms;
+  --tx-duration-slow: 280ms;
+  --tx-duration-reorder: 260ms;
+  --tx-ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --tx-ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --tx-ease-in-out-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+  --tx-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --tx-stagger-delay: 40ms;
+  --tx-dnd-insert-line-size: 3px;
+
+  /** Tree row density (compact list with comfortable click/drag targets). */
+  --tx-tree-row-min-height: 34px;
+  --tx-tree-row-padding-block: 0.3rem;
+  --tx-tree-row-gap: 0.4rem;
+  --tx-tree-row-control-size: 1.5rem;
+  --tx-tree-row-font-size: 0.875rem;
+  --tx-tree-row-line-height: 1.35;
+  --tx-tree-row-icon-size: 18;
+  --tx-tree-row-chevron-size: 16;
+  --tx-tree-row-handle-size: 16;
+  --tx-tree-indent: 16px;
+  --tx-tree-expand-duration: 0.22s;
+  --tx-tree-expand-stagger-step: 28ms;
+
+  /** Overlay stacking (low → high). */
+  --tx-z-dropdown-panel: 200;
+  --tx-z-modal: 1000;
+  --tx-z-settings-overlay: 1100;
+  --tx-z-modal-stacked: 1200;
+  --tx-z-error-banner: 1260;
+  --tx-z-context-menu: 1350;
+  --tx-z-notification: 1300;
+  --tx-z-update-install: 1400;
+  --tx-z-tooltip: 10000;
+
+  /**
+   * Fallback palette (Testrix dark gold) before ThemeService applies a theme class.
+   * Overridden by html/body.theme-* from _themes.scss.
+   */
+  --tx-surface-0: #1a1714;
+  --tx-content-bg: #1a1714;
+  --tx-chrome-bg: #2a241f;
+  --tx-chrome-surface: #262018;
+  --tx-surface-1: #221e1a;
+  --tx-surface-2: #252019;
+  --tx-text-0: #ede5d8;
+  --tx-text-1: #a89b8a;
+  --tx-border-0: color-mix(in srgb, #f3ece2 14%, transparent);
+  --tx-border-strong: color-mix(in srgb, #f3ece2 28%, transparent);
+  --tx-focus-ring: color-mix(in srgb, #e0b85a 55%, transparent);
+  --tx-link: #e0b85a;
+  --tx-primary: #e0b85a;
+  --tx-primary-strong: color-mix(in srgb, #e0b85a 72%, #ede5d8);
+  --tx-primary-muted: color-mix(in srgb, #e0b85a 16%, #221e1a);
+  --tx-primary-subtle: color-mix(in srgb, #e0b85a 8%, #221e1a);
+  --tx-secondary: #a89070;
+  --tx-accent: #6b9e82;
+  --tx-danger: color-mix(in srgb, #f87171 72%, #5cb88a 28%);
+  --tx-success: color-mix(in srgb, #4ade80 72%, #5cb88a 28%);
+  --tx-warning: color-mix(in srgb, #fbbf24 70%, #b8956a 30%);
+  --tx-scrim: color-mix(in srgb, #1a1714 68%, transparent);
+  --tx-shadow-color: #0a0908;
+  --tx-highlight: color-mix(in srgb, #f3ece2 14%, #14110f 86%);
+  --tx-control-face: color-mix(in srgb, #f3ece2 6%, #14110f 94%);
+  --tx-on-primary: #0a0908;
+  --tx-shadow-sm: 0 1px 3px color-mix(in srgb, #0a0908 88%, transparent);
+  --tx-shadow-md: 0 4px 14px color-mix(in srgb, #0a0908 78%, transparent);
+
+  --tx-btn-focus-ring: color-mix(in srgb, #d4a647 50%, transparent);
+  --tx-btn-secondary-bg: #14110f;
+  --tx-btn-secondary-fg: #f3ece2;
+  --tx-btn-secondary-border: color-mix(in srgb, #2c2620 88%, transparent);
+  --tx-btn-secondary-hover-bg: color-mix(in srgb, #14110f 72%, #f3ece2 10%);
+  --tx-btn-secondary-active-bg: color-mix(in srgb, #14110f 58%, #0a0908 42%);
+  --tx-btn-primary-bg: color-mix(in srgb, #d4a647 14%, #14110f);
+  --tx-btn-primary-fg: color-mix(in srgb, #d4a647 94%, #f3ece2);
+  --tx-btn-primary-border: color-mix(in srgb, #d4a647 46%, #2c2620);
+  --tx-btn-primary-hover-bg: color-mix(in srgb, #d4a647 22%, #14110f);
+  --tx-btn-primary-active-bg: color-mix(in srgb, #d4a647 30%, #14110f);
+  --tx-btn-cta-bg: #d4a647;
+  --tx-btn-cta-fg: #0a0908;
+  --tx-btn-cta-border: color-mix(in srgb, #d4a647 92%, #2c2620);
+  --tx-btn-cta-hover-bg: color-mix(in srgb, #d4a647 88%, #f3ece2 12%);
+  --tx-btn-cta-active-bg: color-mix(in srgb, #d4a647 82%, #0a0908 18%);
+  --tx-btn-add-bg: color-mix(in srgb, #5cb88a 10%, #14110f);
+  --tx-btn-add-fg: color-mix(in srgb, #5cb88a 82%, #f3ece2);
+  --tx-btn-add-border: color-mix(in srgb, #5cb88a 52%, #2c2620);
+  --tx-btn-add-hover-bg: color-mix(in srgb, #5cb88a 16%, #14110f);
+
+  --tx-scrollbar-track: color-mix(in srgb, var(--tx-surface-1) 94%, var(--tx-surface-0) 6%);
+  --tx-scrollbar-thumb: color-mix(in srgb, var(--tx-primary) 48%, var(--tx-surface-1) 52%);
+  --tx-scrollbar-thumb-hover: color-mix(in srgb, var(--tx-primary) 62%, var(--tx-surface-1) 38%);
+  --tx-scrollbar-thumb-active: color-mix(in srgb, var(--tx-secondary) 55%, var(--tx-primary) 45%);
+
+  --tx-diff-add: var(--tx-success);
+  --tx-diff-remove: var(--tx-danger);
+}

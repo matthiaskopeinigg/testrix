@@ -1,0 +1,327 @@
+@if (missing()) {
+  <tx-banner variant="warning" title="Item not found">
+    This tab points to a collection or history entry that no longer exists. Close the tab or pick another item.
+  </tx-banner>
+} @else if (isHistory()) {
+  <section class="request-tab" [attr.aria-label]="title()">
+    <tx-banner variant="info" title="History entry (read-only)">
+      History requests are shown for reference. Open the collection request to edit settings.
+    </tx-banner>
+    <div class="request-tab__bar">
+      <span class="request-tab__method" [attr.data-method]="method()">{{ method() }}</span>
+      <tx-form-field class="request-tab__url-field" label="URL">
+        <input
+          class="request-tab__url-input"
+          type="text"
+          [value]="urlPath()"
+          readonly
+          aria-label="Request URL"
+        />
+      </tx-form-field>
+      <tx-button variant="primary" [disabled]="true" title="Send — coming soon">Send</tx-button>
+    </div>
+    <app-request-tab-code-snippet-modal
+      [open]="codeSnippetOpen()"
+      [snippetInput]="codeSnippetInput()"
+      (closed)="handleCloseCodeSnippets()"
+    />
+  </section>
+} @else {
+  <section
+    class="request-tab tx-workspace-tab"
+    [class.request-tab--titlebar]="useTitlebarLayout()"
+    [class.request-tab--sidebar]="useSidebarLayout()"
+    [attr.aria-label]="title()"
+  >
+    <div
+      class="tx-workspace-tab__chrome tx-entrance-stagger"
+      [class.tx-entrance-stagger--play]="tabMotion.loadStaggerPlay()"
+      [class.tx-entrance-stagger--settled]="tabMotion.loadStaggerSettled()"
+    >
+      <div class="tx-entrance-stagger__block request-tab__bar">
+      <div class="request-tab__bar-cluster request-tab__bar-cluster--grow">
+        <tx-form-field class="request-tab__method-field" label="Method" controlId="request-method">
+          <tx-dropdown
+            id="request-method"
+            [options]="methodOptions"
+            [ngModel]="method()"
+            (ngModelChange)="handleMethodChange($event)"
+          />
+        </tx-form-field>
+        <tx-form-field class="request-tab__url-field" label="URL" controlId="request-url">
+          <app-request-tab-url-input
+            controlId="request-url"
+            [pathParams]="settings().pathParams"
+            [catalog]="variableCatalog()"
+            [ngModel]="urlPath()"
+            (ngModelChange)="handleUrlPathChange($event)"
+            (environmentVariableClick)="handleEnvironmentVariableClick($event)"
+            (sendRequest)="handleSend()"
+            placeholder="https://api.example.com/:id"
+          />
+        </tx-form-field>
+      </div>
+      <div class="request-tab__bar-cluster request-tab__bar-cluster--trailing">
+        <tx-form-field
+          class="request-tab__environment-field"
+          label="Environment"
+          controlId="request-environment"
+        >
+          <tx-dropdown
+            id="request-environment"
+            placeholder="No environment"
+            ariaLabel="Active environment"
+            [options]="environmentOptions()"
+            [ngModel]="environmentDropdownValue()"
+            (ngModelChange)="handleEnvironmentChange($event)"
+          />
+        </tx-form-field>
+        @if (useSidebarLayout()) {
+          <button
+            type="button"
+            class="request-tab__code-btn"
+            title="Generate code snippet (cURL, Python, …)"
+            aria-label="Open code snippet generator"
+            (click)="handleOpenCodeSnippets()"
+          >
+            <tx-icon name="code" [size]="14" aria-hidden="true" />
+            <span>Code</span>
+          </button>
+        }
+        <tx-button
+          variant="primary"
+          [loading]="httpRequest.inFlight()"
+          loadingLabel="Sending request"
+          title="Send request (Enter in URL field)"
+          (pressed)="handleSend()"
+        >
+          Send
+        </tx-button>
+      </div>
+      </div>
+
+    @if (useTitlebarLayout()) {
+      <div class="tx-entrance-stagger__block request-tab__sections-wrap">
+        <nav class="request-tab__sections-bar" role="tablist" aria-label="Request sections">
+          @for (item of navItems; track item.id) {
+            <button
+              type="button"
+              class="request-tab__section-tab"
+              role="tab"
+              [attr.aria-selected]="activeSection() === item.id"
+              [class.is-active]="activeSection() === item.id"
+              (click)="handleSectionSelect(item.id)"
+            >
+              <tx-icon [name]="$any(item.icon)" [size]="14" aria-hidden="true" />
+              <span>{{ item.label }}</span>
+            </button>
+          }
+        </nav>
+        <button
+          type="button"
+          class="request-tab__code-btn"
+          title="Generate code snippet (cURL, Python, …)"
+          aria-label="Open code snippet generator"
+          (click)="handleOpenCodeSnippets()"
+        >
+          <tx-icon name="code" [size]="14" aria-hidden="true" />
+          <span>Code</span>
+        </button>
+      </div>
+    }
+    </div>
+
+    <tx-vertical-split-pane
+      class="request-tab__split"
+      [secondaryVisible]="showResponsePanel()"
+      [secondaryHidden]="responsePanelHidden()"
+      [secondaryHeight]="responsePanelHeight()"
+      (secondaryHeightChange)="handleResponsePanelHeight($event)"
+      (secondaryHeightCommit)="handleResponsePanelHeightCommit($event)"
+      (secondaryHiddenChange)="handleResponsePanelHidden($event)"
+    >
+      <div class="request-tab__workspace request-tab__split-primary" txSplitPrimary>
+      @if (useSidebarLayout()) {
+        <nav class="request-tab__nav" role="tablist" aria-label="Request sections">
+          @for (item of navItems; track item.id) {
+            <button
+              type="button"
+              class="request-tab__nav-item"
+              role="tab"
+              [attr.aria-selected]="activeSection() === item.id"
+              [class.is-active]="activeSection() === item.id"
+              (click)="handleSectionSelect(item.id)"
+            >
+              <span class="request-tab__nav-icon">
+                <tx-icon [name]="$any(item.icon)" [size]="14" aria-hidden="true" />
+              </span>
+              <span>{{ item.label }}</span>
+            </button>
+          }
+        </nav>
+        <div class="request-tab__divider" aria-hidden="true"></div>
+      }
+      <div
+        class="request-tab__pane tx-workspace-tab__pane"
+        [class.tx-workspace-tab__pane--switch]="tabMotion.paneSwitchActive()"
+      >
+        @switch (activeSection()) {
+          @case ('overview') {
+            <div
+              class="tx-workspace-tab__section-shell tx-entrance-stagger"
+              [class.tx-entrance-stagger--play]="isSectionContentAnimating('overview')"
+              [class.tx-entrance-stagger--settled]="isSectionContentSettled('overview')"
+            >
+              <div class="tx-entrance-stagger__block">
+            <app-request-tab-overview-panel
+              [description]="descriptionDraft()"
+              [tags]="settings().tags"
+              [auth]="settings().auth"
+              [inheritedVariableLines]="inheritedVariableLines()"
+              [examples]="settings().examples"
+              [snapshots]="settings().snapshots"
+              (descriptionChange)="handleDescriptionChange($event)"
+              (tagsChange)="handleTagsChange($event)"
+            />
+              </div>
+            </div>
+          }
+          @case ('params') {
+            <div
+              class="tx-workspace-tab__section-shell tx-entrance-stagger"
+              [class.tx-entrance-stagger--play]="isSectionContentAnimating('params')"
+              [class.tx-entrance-stagger--settled]="isSectionContentSettled('params')"
+            >
+              <div class="tx-entrance-stagger__block">
+            <app-request-tab-params-panel
+              [pathParams]="settings().pathParams"
+              [queryParams]="settings().queryParams"
+              [variableCatalog]="variableCatalog()"
+              (pathParamsChange)="handlePathParamsChange($event)"
+              (queryParamsChange)="handleQueryParamsChange($event)"
+              (environmentVariableClick)="handleEnvironmentVariableClick($event)"
+            />
+              </div>
+            </div>
+          }
+          @case ('auth') {
+            <div
+              class="tx-workspace-tab__section-shell tx-entrance-stagger"
+              [class.tx-entrance-stagger--play]="isSectionContentAnimating('auth')"
+              [class.tx-entrance-stagger--settled]="isSectionContentSettled('auth')"
+            >
+              <div class="tx-entrance-stagger__block request-panel">
+              <h2 class="request-panel__title">Authorization</h2>
+              </div>
+              <div class="tx-entrance-stagger__block">
+              <app-folder-tab-auth-panel
+                [auth]="settings().auth"
+                [hasParentFolder]="hasParentFolder()"
+                (authChange)="handleSettingsPatch({ auth: $event })"
+              />
+              </div>
+            </div>
+          }
+          @case ('headers') {
+            @if (headerResolveInput(); as headerInput) {
+              <div
+                class="tx-workspace-tab__section-shell tx-entrance-stagger"
+                [class.tx-entrance-stagger--play]="isSectionContentAnimating('headers')"
+                [class.tx-entrance-stagger--settled]="isSectionContentSettled('headers')"
+              >
+                <div class="tx-entrance-stagger__block">
+              <app-request-tab-headers-panel
+                [resolveInput]="headerInput"
+                [headers]="settings().headers"
+                [contentTypeHint]="contentTypeHint()"
+                [variableCatalog]="variableCatalog()"
+                (headersChange)="handleSettingsPatch({ headers: $event })"
+                (environmentVariableClick)="handleEnvironmentVariableClick($event)"
+              />
+                </div>
+              </div>
+            }
+          }
+          @case ('body') {
+            <div
+              class="tx-workspace-tab__section-shell tx-entrance-stagger"
+              [class.tx-entrance-stagger--play]="isSectionContentAnimating('body')"
+              [class.tx-entrance-stagger--settled]="isSectionContentSettled('body')"
+            >
+              <div class="tx-entrance-stagger__block">
+            <app-request-tab-body-panel
+              [body]="settings().body"
+              [method]="method()"
+              [variableCatalog]="variableCatalog()"
+              (bodyChange)="handleSettingsPatch({ body: $event })"
+              (environmentVariableClick)="handleEnvironmentVariableClick($event)"
+            />
+              </div>
+            </div>
+          }
+          @case ('scripts') {
+            <div
+              class="tx-workspace-tab__section-shell tx-entrance-stagger"
+              [class.tx-entrance-stagger--play]="isSectionContentAnimating('scripts')"
+              [class.tx-entrance-stagger--settled]="isSectionContentSettled('scripts')"
+            >
+              <div class="tx-entrance-stagger__block">
+            <app-request-tab-scripts-panel
+              [scripts]="settings().scripts"
+              [activePane]="activeScriptPane()"
+              [completionItems]="scriptCompletionItems()"
+              (scriptsChange)="handleSettingsPatch({ scripts: $event })"
+              (activePaneChange)="handleScriptPaneSelect($event)"
+            />
+              </div>
+            </div>
+          }
+          @case ('settings') {
+            <div
+              class="tx-workspace-tab__section-shell tx-entrance-stagger"
+              [class.tx-entrance-stagger--play]="isSectionContentAnimating('settings')"
+              [class.tx-entrance-stagger--settled]="isSectionContentSettled('settings')"
+            >
+              <div class="tx-entrance-stagger__block">
+            <app-request-tab-settings-panel
+              [transport]="settings().transport"
+              (transportChange)="handleSettingsPatch({ transport: $event })"
+            />
+              </div>
+            </div>
+          }
+          @case ('docs') {
+            <div
+              class="tx-workspace-tab__section-shell tx-entrance-stagger"
+              [class.tx-entrance-stagger--play]="isSectionContentAnimating('docs')"
+              [class.tx-entrance-stagger--settled]="isSectionContentSettled('docs')"
+            >
+              <div class="tx-entrance-stagger__block">
+            <app-request-tab-docs-panel
+              [docs]="settings().docs"
+              (docsChange)="handleSettingsPatch({ docs: $event })"
+            />
+              </div>
+            </div>
+          }
+        }
+      </div>
+      </div>
+      @if (showResponseSplit()) {
+        <div class="request-tab__response-slot" txSplitSecondary>
+          @if (responsePanelComponent(); as responsePanel) {
+            <ng-container
+              *ngComponentOutlet="responsePanel; inputs: { requestId: resourceId() }"
+            />
+          }
+        </div>
+      }
+    </tx-vertical-split-pane>
+
+    <app-request-tab-code-snippet-modal
+      [open]="codeSnippetOpen()"
+      [snippetInput]="codeSnippetInput()"
+      (closed)="handleCloseCodeSnippets()"
+    />
+  </section>
+}

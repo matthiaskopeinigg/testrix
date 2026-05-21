@@ -1,0 +1,41 @@
+<app-workspace-sidebar-panel-shell
+  [searchPlaceholder]="searchPlaceholder()"
+  [searchAriaLabel]="searchAriaLabel()"
+  [showFolderToggle]="false"
+  [showFilterButton]="false"
+  [showSortButton]="false"
+  (searchChange)="handleSearch($event)"
+>
+  <div workspacePanelToolbarActions class="capture-sidebar-panel__toolbar">
+    <tx-button variant="secondary" (pressed)="handleToggle()">{{ running() ? 'Stop' : 'Start' }} capture</tx-button>
+    <button
+      type="button"
+      class="workspace-panel-shell__icon-btn"
+      aria-label="Add capture session"
+      title="Add capture session"
+      (click)="handleAdd()"
+    >
+      <tx-icon name="plus" [size]="16" aria-hidden="true" />
+    </button>
+  </div>
+  @if (running()) {
+    <p class="capture-sidebar-panel__status"><tx-tag variant="success">Capturing</tx-tag></p>
+  }
+  <ul class="testing-list-sidebar-panel__list" role="list">
+    @for (item of filtered(); track item.id) {
+      <li>
+        <button
+          type="button"
+          class="testing-list-sidebar-panel__item"
+          [class.is-active]="activeItemId() === item.id"
+          (click)="handleOpen(item.id)"
+        >
+          <tx-icon name="globe" [size]="16" aria-hidden="true" />
+          <span>{{ item.name }}</span>
+        </button>
+      </li>
+    } @empty {
+      <li class="testing-list-sidebar-panel__empty" role="status">No capture sessions yet.</li>
+    }
+  </ul>
+</app-workspace-sidebar-panel-shell>

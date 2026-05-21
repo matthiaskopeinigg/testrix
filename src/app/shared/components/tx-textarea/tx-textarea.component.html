@@ -1,0 +1,12 @@
+<textarea
+  class="tx-textarea"
+  [class.tx-textarea--mono]="monospace()"
+  [id]="effectiveId()"
+  [rows]="rows()"
+  [placeholder]="placeholder()"
+  [disabled]="disabled()"
+  [readOnly]="readOnly()"
+  [value]="value()"
+  (input)="handleInput($event)"
+  (blur)="handleBlur()"
+></textarea>

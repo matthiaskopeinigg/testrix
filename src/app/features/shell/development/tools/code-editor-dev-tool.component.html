@@ -1,0 +1,34 @@
+<app-dev-tool-layout toolId="code-editor" [fillHeight]="true">
+  <app-dev-tool-toolbar devToolToolbar>
+    <div leading>
+      <tx-dropdown
+        label="Language"
+        [options]="languageOptions"
+        [ngModel]="state().language"
+        (ngModelChange)="handleLanguageChange($event)"
+      />
+    </div>
+    <div trailing>
+      <tx-button variant="secondary" (click)="handleLoadSample()">Load sample</tx-button>
+      <tx-button variant="secondary" (click)="handleFormat()">Format</tx-button>
+      <tx-button variant="secondary" (click)="handleCopy()">Copy</tx-button>
+      <tx-button variant="secondary" (click)="handleClear()">Clear</tx-button>
+    </div>
+  </app-dev-tool-toolbar>
+
+  <app-dev-tool-stat-strip>
+    <tx-tag>{{ state().language }}</tx-tag>
+    <tx-tag>{{ lineCount() }} lines</tx-tag>
+    <tx-tag>{{ charCount() }} chars</tx-tag>
+  </app-dev-tool-stat-strip>
+
+  <div class="dev-tool-tab__editor-host dev-tool-tab__editor-host--fill">
+    <tx-code-editor
+      [language]="state().language"
+      [framed]="true"
+      [autoFormat]="false"
+      [ngModel]="state().content"
+      (ngModelChange)="state.update((s) => ({ ...s, content: $event }))"
+    />
+  </div>
+</app-dev-tool-layout>

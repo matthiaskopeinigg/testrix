@@ -1,0 +1,72 @@
+@use '../tx-settings-pane-blocks' as pane;
+
+.tx-settings-editor-kbd {
+  @include pane.tx-settings-pane-blocks-layout;
+}
+
+.tx-settings-editor-kbd__group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.85rem;
+
+  &:first-of-type {
+    margin-top: 0.35rem;
+  }
+}
+
+.tx-settings-editor-kbd__group-title {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--tx-text-1);
+}
+
+.tx-settings-editor-kbd__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8125rem;
+
+  th,
+  td {
+    padding: 0.45rem 0.65rem;
+    text-align: left;
+    border-bottom: 1px solid color-mix(in srgb, var(--tx-border-0) 55%, transparent);
+  }
+
+  th {
+    font-weight: 600;
+    color: var(--tx-text-1);
+    font-size: 0.6875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  tbody tr:last-child td,
+  tbody tr:last-child th {
+    border-bottom: none;
+  }
+}
+
+.tx-settings-editor-kbd__keys {
+  display: inline-block;
+  padding: 0.15rem 0.45rem;
+  border-radius: var(--tx-radius-sm, 6px);
+  border: 1px solid color-mix(in srgb, var(--tx-border-0) 70%, transparent);
+  background: color-mix(in srgb, var(--tx-surface-0) 80%, var(--tx-surface-1));
+  font-family: var(--tx-font-mono, monospace);
+  font-size: 0.75rem;
+  color: var(--tx-text-0);
+  white-space: nowrap;
+}
+
+.tx-settings-editor-kbd .tx-settings__tab-description kbd {
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  border: 1px solid color-mix(in srgb, var(--tx-border-0) 65%, transparent);
+  background: var(--tx-surface-0);
+  font-family: var(--tx-font-mono, monospace);
+  font-size: 0.75rem;
+}

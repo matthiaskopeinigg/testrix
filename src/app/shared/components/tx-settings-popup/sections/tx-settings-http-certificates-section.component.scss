@@ -1,0 +1,225 @@
+:host {
+  display: contents;
+}
+
+.tx-http-cert-ssl {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.tx-http-cert-ssl__option {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  cursor: pointer;
+  user-select: none;
+}
+
+.tx-http-cert-ssl__checkbox {
+  width: 1rem;
+  height: 1rem;
+  margin: 0.15rem 0 0;
+  flex-shrink: 0;
+  accent-color: var(--tx-secondary);
+  cursor: pointer;
+}
+
+.tx-http-cert-ssl__label {
+  font-size: 0.875rem;
+  line-height: 1.45;
+  color: color-mix(in srgb, var(--tx-text-0) 92%, transparent);
+}
+
+.tx-http-cert-managed__intro {
+  margin: 0 0 1rem;
+  font-size: 0.8125rem;
+  line-height: 1.55;
+  color: color-mix(in srgb, var(--tx-text-1) 88%, transparent);
+}
+
+.tx-http-cert-managed__list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  margin: 0 0 1rem;
+  padding: 0;
+  list-style: none;
+}
+
+.tx-http-cert-managed__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-height: 2.5rem;
+  padding: 0.45rem 0.75rem;
+  border-radius: var(--tx-radius-sm, 8px);
+  background: color-mix(in srgb, var(--tx-surface-2) 55%, var(--tx-surface-1));
+  border: 1px solid color-mix(in srgb, var(--tx-border-0) 50%, transparent);
+}
+
+.tx-http-cert-managed__hostname {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--tx-text-0);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tx-http-cert-managed__remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+  border: 0;
+  border-radius: var(--tx-radius-sm, 8px);
+  background: transparent;
+  color: color-mix(in srgb, var(--tx-danger, #e5484d) 85%, var(--tx-text-1));
+  cursor: pointer;
+  flex-shrink: 0;
+
+  &:hover {
+    background: color-mix(in srgb, var(--tx-danger, #e5484d) 16%, transparent);
+    color: var(--tx-danger, #e5484d);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--tx-focus-ring, var(--tx-secondary));
+    outline-offset: 2px;
+  }
+}
+
+.tx-http-cert-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.tx-http-cert-form__row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  align-items: start;
+
+  @media (max-width: 520px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.tx-http-cert-form__passphrase {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  width: 100%;
+
+  tx-input {
+    flex: 1;
+    min-width: 0;
+  }
+
+  ::ng-deep .tx-input {
+    padding-right: 2.35rem;
+  }
+}
+
+.tx-http-cert-form__passphrase-toggle {
+  position: absolute;
+  top: 50%;
+  right: 0.45rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+  border: 0;
+  border-radius: var(--tx-radius-sm, 8px);
+  background: transparent;
+  color: color-mix(in srgb, var(--tx-text-1) 85%, transparent);
+  transform: translateY(-50%);
+  cursor: pointer;
+
+  &:hover {
+    color: var(--tx-text-0);
+    background: color-mix(in srgb, var(--tx-text-0) 6%, transparent);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--tx-focus-ring, var(--tx-secondary));
+    outline-offset: 2px;
+  }
+}
+
+.tx-http-cert-files {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: var(--tx-radius-md, 10px);
+  background: color-mix(in srgb, var(--tx-surface-0) 40%, var(--tx-surface-1));
+  border: 1px solid color-mix(in srgb, var(--tx-border-0) 55%, transparent);
+}
+
+.tx-http-cert-files__row {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-height: 2rem;
+}
+
+.tx-http-cert-files__badge {
+  flex-shrink: 0;
+  min-width: 2.75rem;
+  padding: 0.2rem 0.55rem;
+  border: 1px solid color-mix(in srgb, var(--tx-border-0) 70%, transparent);
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--tx-surface-2) 70%, var(--tx-surface-1));
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: color-mix(in srgb, var(--tx-text-1) 90%, transparent);
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    border-color: color-mix(in srgb, var(--tx-secondary) 45%, transparent);
+    color: var(--tx-text-0);
+  }
+
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--tx-focus-ring, var(--tx-secondary));
+    outline-offset: 2px;
+  }
+}
+
+.tx-http-cert-files__name {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.8125rem;
+  color: color-mix(in srgb, var(--tx-text-1) 88%, transparent);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+:host ::ng-deep button.tx-http-cert-form__add.tx-button {
+  width: 100%;
+  margin-top: 0.15rem;
+  border-color: color-mix(in srgb, var(--tx-accent, var(--tx-secondary)) 75%, transparent);
+  color: color-mix(in srgb, var(--tx-accent, var(--tx-secondary)) 95%, var(--tx-text-0));
+  background: transparent;
+
+  &:not(:disabled):hover {
+    background: color-mix(in srgb, var(--tx-accent, var(--tx-secondary)) 10%, transparent);
+    border-color: var(--tx-accent, var(--tx-secondary));
+    color: var(--tx-accent, var(--tx-secondary));
+  }
+}

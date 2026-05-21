@@ -1,0 +1,17 @@
+---
+alwaysApply: false
+description: Optional generic SPA notes — prefer testrix-project.mdc + theme-and-shared-ui.mdc
+---
+
+# Generic frontend patterns (optional)
+
+Use **`.cursor/rules/testrix-project.mdc`** and **`theme-and-shared-ui.mdc`** as the binding source for this repo.
+
+Portable ideas that **do** align with Testrix:
+
+- SOLID / DRY / KISS; prefer **readable** code over micro-optimizations.
+- **Type safety** (`strictTemplates`, narrow types, avoid `any`).
+- **Component composition** via standalone Angular pieces and shared `tx-*` widgets.
+- **Event handler** naming with **`handle*`** prefix; boolean state with **`is` / `has` / `can`** prefixes.
+
+Ignore stack-specific sections elsewhere that mention **React, Next.js, Tailwind**, or **`use client`** — those do not apply here.

@@ -1,0 +1,16 @@
+<svg
+  class="tx-icon"
+  [attr.width]="size()"
+  [attr.height]="size()"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  [attr.stroke-width]="strokeWidth()"
+  [attr.role]="isDecorative() ? null : 'img'"
+  [attr.aria-hidden]="isDecorative() ? true : null"
+  [attr.aria-label]="isDecorative() ? null : ariaLabel()"
+>
+  @if (svgInner(); as inner) {
+    <g [innerHTML]="inner"></g>
+  }
+</svg>

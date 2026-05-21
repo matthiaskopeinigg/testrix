@@ -1,0 +1,113 @@
+<app-dev-tool-layout toolId="jwt">
+  <app-dev-tool-toolbar devToolToolbar>
+    <div leading>
+      <app-dev-tool-mode-chip [active]="state().mode === 'decode'" (selected)="setMode('decode')">Decode</app-dev-tool-mode-chip>
+      <app-dev-tool-mode-chip [active]="state().mode === 'encode'" (selected)="setMode('encode')">Encode</app-dev-tool-mode-chip>
+      <app-dev-tool-mode-chip [active]="state().mode === 'verify'" (selected)="setMode('verify')">Verify</app-dev-tool-mode-chip>
+    </div>
+    <div trailing>
+      @if (state().mode === 'encode') {
+        <tx-button variant="primary" (click)="handleEncode()">Sign HS256</tx-button>
+      }
+      @if (state().mode === 'verify') {
+        <tx-button variant="primary" (click)="handleVerify()">Verify</tx-button>
+      }
+      <tx-button variant="secondary" (click)="handleCopyToken()">Copy token</tx-button>
+      <tx-button variant="secondary" (click)="handleCopySignature()">Copy signature</tx-button>
+      <tx-button variant="secondary" (click)="handleClear()">Clear</tx-button>
+    </div>
+  </app-dev-tool-toolbar>
+
+  @if (state().mode === 'decode' && state().token.trim() && decoded().error) {
+    <tx-banner variant="error" [title]="decoded().error!" />
+  }
+  @if (encodeError()) {
+    <tx-banner variant="error" [title]="encodeError()!" />
+  }
+  @if (state().mode === 'verify' && verifyValid() === true) {
+    <tx-banner variant="success" title="Signature is valid for the provided secret." />
+  }
+  @if (state().mode === 'verify' && verifyValid() === false) {
+    <tx-banner variant="warning" title="Signature does not match the provided secret." />
+  }
+
+  @if (state().mode === 'decode' || state().mode === 'verify') {
+    <tx-form-field label="JWT">
+      <tx-textarea
+        [rows]="3"
+        [monospace]="true"
+        [ngModel]="state().token"
+        (ngModelChange)="state.update((s) => ({ ...s, token: $event }))"
+      />
+    </tx-form-field>
+  }
+
+  @if (state().mode === 'decode' && !decoded().error) {
+    <app-dev-tool-stat-strip>
+      @if (decoded().algorithm) {
+        <tx-tag>{{ decoded().algorithm }}</tx-tag>
+      }
+      @if (decoded().issuedAt) {
+        <tx-tag>iat {{ decoded().issuedAt }}</tx-tag>
+      }
+      @if (decoded().expiresAt) {
+        <tx-tag>exp {{ decoded().expiresAt }}</tx-tag>
+      }
+    </app-dev-tool-stat-strip>
+    <div class="dev-tool-tab__split">
+      <div class="dev-tool-tab__pane dev-tool-tab__editor-host">
+        <span class="dev-tool-tab__pane-label">Header</span>
+        <tx-code-editor
+          language="json"
+          [readOnly]="true"
+          [hideToolbar]="true"
+          [ngModel]="decoded().headerJson"
+        />
+      </div>
+      <div class="dev-tool-tab__pane dev-tool-tab__editor-host">
+        <span class="dev-tool-tab__pane-label">Payload</span>
+        <tx-code-editor
+          language="json"
+          [readOnly]="true"
+          [hideToolbar]="true"
+          [ngModel]="decoded().payloadJson"
+        />
+      </div>
+    </div>
+  }
+
+  @if (state().mode === 'encode') {
+    <tx-form-field label="HS256 secret (not saved)">
+      <tx-input type="password" [ngModel]="secret()" (ngModelChange)="secret.set($event)" />
+    </tx-form-field>
+    <div class="dev-tool-tab__split dev-tool-tab__split--fill">
+      <div class="dev-tool-tab__pane dev-tool-tab__editor-host">
+        <span class="dev-tool-tab__pane-label">Header</span>
+        <tx-code-editor
+          language="json"
+          [framed]="true"
+          [ngModel]="state().headerJson"
+          (ngModelChange)="state.update((s) => ({ ...s, headerJson: $event }))"
+        />
+      </div>
+      <div class="dev-tool-tab__pane dev-tool-tab__editor-host">
+        <span class="dev-tool-tab__pane-label">Payload</span>
+        <tx-code-editor
+          language="json"
+          [framed]="true"
+          [ngModel]="state().payloadJson"
+          (ngModelChange)="state.update((s) => ({ ...s, payloadJson: $event }))"
+        />
+      </div>
+    </div>
+    @if (encodedToken() || state().token) {
+      <pre class="dev-tool-tab__output">{{ encodedToken() || state().token }}</pre>
+    }
+  }
+
+  @if (state().mode === 'verify') {
+    <tx-form-field label="HS256 secret (not saved)">
+      <tx-input type="password" [ngModel]="secret()" (ngModelChange)="secret.set($event)" />
+    </tx-form-field>
+  }
+</app-dev-tool-layout>

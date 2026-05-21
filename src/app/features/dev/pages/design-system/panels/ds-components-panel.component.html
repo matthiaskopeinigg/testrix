@@ -1,0 +1,524 @@
+@if (entry(); as comp) {
+  <section class="ds-panel">
+    <header class="ds-entry-header">
+      <h2>{{ comp.label }}</h2>
+      <code class="ds-snippet">{{ comp.selector }} · {{ comp.importPath }}</code>
+      <p class="ds-lede">{{ comp.description }}</p>
+    </header>
+
+    @switch (comp.id) {
+      @case ('button') {
+        <div class="ds-demo ds-demo--buttons" [class.ds-demo--debug]="debugEnabled()">
+          @for (spec of buttonDemoSpecs; track spec.key) {
+            @if (debugEnabled()) {
+              <div class="ds-debug-slot">
+                <div class="ds-debug-slot__block" aria-hidden="true">
+                  <span class="ds-debug-slot__block-label">div.ds-debug-slot</span>
+                  <span class="ds-debug-slot__block-meta">variant: {{ spec.variant }}</span>
+                </div>
+                <div class="ds-debug-slot__hitbox">
+                  <span class="ds-debug-slot__hitbox-label">hitbox</span>
+                  <tx-button
+                    [variant]="spec.variant"
+                    [disabled]="spec.disabled ?? false"
+                    [loading]="spec.usesLoading ? demoButtonLoading() : false"
+                  >
+                    {{ spec.label }}
+                  </tx-button>
+                </div>
+                <p class="ds-debug-slot__foot">
+                  <code>button.tx-button</code> · min-height var(--tx-control-height-md)
+                </p>
+              </div>
+            } @else {
+              <tx-button
+                [variant]="spec.variant"
+                [disabled]="spec.disabled ?? false"
+                [loading]="spec.usesLoading ? demoButtonLoading() : false"
+              >
+                {{ spec.label }}
+              </tx-button>
+            }
+          }
+        </div>
+      }
+      @case ('icon') {
+        <div class="ds-demo">
+          <tx-icon name="settings" [size]="22" />
+          <tx-icon name="testing" [size]="22" />
+          <tx-icon name="close" [size]="22" />
+        </div>
+      }
+      @case ('form-field') {
+        <div class="ds-demo ds-demo--stack">
+          <tx-form-field label="API base URL" controlId="ds-url">
+            <input id="ds-url" type="url" placeholder="https://api.example.com" />
+          </tx-form-field>
+        </div>
+      }
+      @case ('modal') {
+        <div class="ds-demo">
+          <tx-button variant="primary" (pressed)="openModal()">Open modal</tx-button>
+        </div>
+        <tx-modal [open]="modalOpen()" title="Design System" (closed)="closeModal()">
+          <p>Projected modal body content.</p>
+        </tx-modal>
+      }
+      @case ('error-banner') {
+        <div class="ds-demo">
+          <tx-button variant="secondary" (pressed)="showDemoBanner()">Show demo error</tx-button>
+        </div>
+        <p class="ds-lede">Live banner renders in the shell via <code>tx-error-banner</code>.</p>
+      }
+      @case ('banner') {
+        <div class="ds-demo ds-demo--stack">
+          <tx-banner variant="info" title="Configuration synced">
+            Settings were written to your config directory.
+          </tx-banner>
+          <tx-banner variant="success" title="Collection imported">
+            12 requests added from the OpenAPI spec.
+          </tx-banner>
+          <tx-banner variant="warning" title="Certificate warning" [dismissible]="true">
+            The proxy is using a self-signed certificate for localhost.
+          </tx-banner>
+          <tx-banner variant="error" title="Request failed">
+            POST /auth/login returned HTTP 502.
+            <div bannerActions>
+              <tx-button variant="secondary">View logs</tx-button>
+              <tx-button variant="primary">Retry</tx-button>
+            </div>
+          </tx-banner>
+          @if (showDismissibleBanner()) {
+            <tx-banner
+              variant="info"
+              title="Dismissible"
+              [dismissible]="true"
+              (dismissed)="showDismissibleBanner.set(false)"
+            >
+              Close removes this banner until you refresh the page.
+            </tx-banner>
+          }
+        </div>
+      }
+      @case ('notification') {
+        <p class="ds-lede">
+          Toasts are rendered by <code>tx-notification-host</code> in the shell. Use
+          <code>TxNotificationService</code> from features.
+        </p>
+        <div class="ds-demo">
+          <tx-button variant="primary" (pressed)="showDemoNotification()">Show success toast</tx-button>
+        </div>
+      }
+      @case ('brand-logo') {
+        <div class="ds-demo">
+          <tx-brand-logo />
+          <tx-brand-logo variant="dark" />
+        </div>
+      }
+      @case ('window-titlebar') {
+        <p class="ds-lede">Requires Electron preload <code>window.testrix.windowControls</code>. Preview may be non-interactive in browser-only harness.</p>
+        <div class="ds-demo ds-demo--stack ds-titlebar-frame">
+          <app-tx-window-titlebar />
+        </div>
+      }
+      @case ('autofocus') {
+        <div class="ds-demo ds-demo--stack">
+          <input type="text" txAutofocus placeholder="Focused on load" />
+        </div>
+      }
+      @case ('truncate') {
+        <p><code>{{ truncateSample | truncate: 48 }}</code></p>
+        <p class="ds-lede">Full: {{ truncateSample }}</p>
+      }
+      @case ('input') {
+        <div class="ds-demo ds-demo--stack">
+          <tx-form-field label="Endpoint" controlId="ds-input-demo">
+            <tx-input
+              controlId="ds-input-demo"
+              [ngModel]="inputDemo()"
+              (ngModelChange)="inputDemo.set($event)"
+              placeholder="https://…"
+            />
+          </tx-form-field>
+        </div>
+      }
+      @case ('variable-input') {
+        <div class="ds-demo ds-demo--stack">
+          <tx-form-field label="Dynamic value" controlId="ds-variable-input-demo">
+            <tx-variable-input
+              controlId="ds-variable-input-demo"
+              [ngModel]="variableInputDemo()"
+              (ngModelChange)="variableInputDemo.set($event)"
+              placeholder="Bearer $uuid"
+            />
+          </tx-form-field>
+          <p class="ds-lede">Type <code>$</code> to open the variable catalog.</p>
+        </div>
+      }
+      @case ('dropdown') {
+        <div
+          class="ds-demo ds-demo--dropdown"
+          [class.ds-demo--stack]="!debugEnabled()"
+          [class.ds-demo--debug]="debugEnabled()"
+        >
+          @if (debugEnabled()) {
+            @for (spec of dropdownDemoSpecs; track spec.key) {
+              <div class="ds-debug-slot">
+                <div class="ds-debug-slot__block" aria-hidden="true">
+                  <span class="ds-debug-slot__block-label">div.ds-debug-slot</span>
+                  <span class="ds-debug-slot__block-meta">{{ spec.meta }}</span>
+                </div>
+                @if (spec.mode === 'field') {
+                  <tx-form-field
+                    class="ds-debug-field"
+                    label="Body format"
+                    controlId="ds-dropdown-field"
+                  >
+                    <tx-dropdown
+                      controlId="ds-dropdown-field"
+                      [options]="dropdownOptions"
+                      placeholder="Choose format…"
+                      [ngModel]="dropdownDemo()"
+                      (ngModelChange)="dropdownDemo.set($event)"
+                    />
+                  </tx-form-field>
+                } @else {
+                  <div class="ds-debug-slot__hitbox ds-debug-slot__hitbox--trigger">
+                    <span class="ds-debug-slot__hitbox-label">hover + click</span>
+                    @switch (spec.mode) {
+                      @case ('standalone') {
+                        <tx-dropdown
+                          controlId="ds-dropdown-standalone"
+                          [options]="dropdownOptions"
+                          placeholder="Choose format…"
+                          [ngModel]="dropdownStandaloneDemo()"
+                          (ngModelChange)="dropdownStandaloneDemo.set($event)"
+                        />
+                      }
+                      @case ('disabled') {
+                        <tx-dropdown
+                          controlId="ds-dropdown-disabled"
+                          [options]="dropdownOptions"
+                          placeholder="Choose format…"
+                          [disabled]="true"
+                          [ngModel]="dropdownDisabledDemo()"
+                          (ngModelChange)="dropdownDisabledDemo.set($event)"
+                        />
+                      }
+                      @case ('empty') {
+                        <tx-dropdown
+                          controlId="ds-dropdown-empty"
+                          [options]="dropdownEmptyOptions"
+                          placeholder="No formats available"
+                          [ngModel]="dropdownEmptyDemo()"
+                          (ngModelChange)="dropdownEmptyDemo.set($event)"
+                        />
+                      }
+                    }
+                  </div>
+                }
+                <p class="ds-debug-slot__foot">
+                  <code>{{ spec.foot }}</code>
+                </p>
+              </div>
+            }
+          } @else {
+            <tx-form-field label="Body format" controlId="ds-dropdown-demo">
+              <tx-dropdown
+                controlId="ds-dropdown-demo"
+                [options]="dropdownOptions"
+                placeholder="Choose format…"
+                [ngModel]="dropdownDemo()"
+                (ngModelChange)="dropdownDemo.set($event)"
+              />
+            </tx-form-field>
+            <p class="ds-lede">Selected: <code>{{ dropdownDemo() }}</code></p>
+          }
+        </div>
+      }
+      @case ('tag') {
+        <div class="ds-demo">
+          <tx-tag>Default</tx-tag>
+          <tx-tag variant="success">Success</tx-tag>
+          <tx-tag variant="warning">Warning</tx-tag>
+          <tx-tag variant="error">Error</tx-tag>
+          <tx-tag variant="info">Info</tx-tag>
+          @if (showRemovableTag()) {
+            <tx-tag [removable]="true" (removed)="showRemovableTag.set(false)">Removable</tx-tag>
+          }
+        </div>
+      }
+      @case ('spinner') {
+        <div class="ds-demo">
+          <tx-spinner size="sm" />
+          <tx-spinner size="md" />
+        </div>
+      }
+      @case ('toggle') {
+        <div class="ds-demo ds-demo--stack">
+          <tx-toggle
+            label="Enable telemetry"
+            [ngModel]="toggleDemo()"
+            (ngModelChange)="toggleDemo.set($event)"
+          />
+        </div>
+      }
+      @case ('code-editor') {
+        <div class="ds-demo ds-demo--code-editor">
+          <div class="ds-code-editor-langs" role="tablist" aria-label="Editor language">
+            @for (lang of codeEditorLanguages; track lang) {
+              <tx-button
+                variant="secondary"
+                [class.is-active]="codeEditorLanguage() === lang"
+                (pressed)="setCodeEditorLanguage(lang)"
+              >
+                {{ codeEditorLanguageLabel(lang) }}
+              </tx-button>
+            }
+          </div>
+          <tx-code-editor
+            [title]="'Request body'"
+            [language]="codeEditorLanguage()"
+            [ngModel]="codeEditorDemo()"
+            (ngModelChange)="codeEditorDemo.set($event)"
+          />
+        </div>
+      }
+      @case ('textarea') {
+        <div class="ds-demo ds-demo--stack">
+          <tx-form-field label="Request body (JSON)" controlId="ds-textarea-demo">
+            <tx-textarea
+              controlId="ds-textarea-demo"
+              [monospace]="true"
+              [rows]="5"
+              [ngModel]="textareaDemo()"
+              (ngModelChange)="textareaDemo.set($event)"
+            />
+          </tx-form-field>
+        </div>
+      }
+      @case ('slider') {
+        <div class="ds-demo ds-demo--stack ds-demo--slider">
+          <tx-slider
+            label="Timeout"
+            [min]="0"
+            [max]="120"
+            [step]="5"
+            unit="s"
+            [ngModel]="sliderDemo()"
+            (ngModelChange)="sliderDemo.set($event)"
+          />
+        </div>
+      }
+      @case ('divider') {
+        <div class="ds-demo ds-demo--stack">
+          <span>Section A</span>
+          <tx-divider />
+          <span>Section B</span>
+        </div>
+      }
+      @case ('tooltip') {
+        <div class="ds-demo ds-demo--row">
+          <tx-button variant="secondary" txTooltip="Development" txTooltipPosition="right">
+            Hover me
+          </tx-button>
+        </div>
+      }
+      @case ('tab') {
+        <div class="ds-demo ds-demo--row">
+          <tx-tab label="GET /users" method="GET" [active]="true" [pinned]="true" />
+          <tx-tab label="POST /login" method="POST" />
+        </div>
+      }
+      @case ('tab-bar') {
+        <tx-tab-bar
+          groupId="ds-demo"
+          [tabs]="tabBarDemo()"
+          (tabActivate)="handleTabBarDemoActivate($event)"
+        />
+      }
+      @case ('split-pane') {
+        <div class="ds-split-demo">
+          <ng-template #splitPaneLeaf let-ctx>
+            <div class="ds-split-demo__pane">Pane {{ ctx.groupId }}</div>
+          </ng-template>
+          <tx-split-pane [layout]="splitDemoLayout()" [leafTemplate]="splitPaneLeaf" />
+        </div>
+      }
+      @case ('tree') {
+        <p class="ds-lede">
+          Pointer drag-and-drop with configurable policies. Keyboard reorder is planned for a later release.
+        </p>
+        <div class="ds-tree-demo" [class.ds-tree-demo--debug]="debugEnabled()">
+          <div class="ds-tree-demo__controls">
+            <tx-toggle
+              label="Drag enabled"
+              [ngModel]="treeDragEnabled()"
+              (ngModelChange)="treeDragEnabled.set($event)"
+            />
+            <tx-toggle
+              label="Reparent allowed"
+              [ngModel]="treeReparentAllowed()"
+              (ngModelChange)="treeReparentAllowed.set($event)"
+            />
+            <tx-toggle
+              label="Handle only"
+              [ngModel]="treeHandleOnly()"
+              (ngModelChange)="treeHandleOnly.set($event)"
+            />
+            <tx-toggle
+              label="Max depth = 2"
+              [ngModel]="treeMaxDepth() === 2"
+              (ngModelChange)="treeMaxDepth.set($event ? 2 : null)"
+            />
+            <tx-toggle
+              label="Expand folder on drag"
+              [ngModel]="treeExpandFolderOnDrag()"
+              (ngModelChange)="treeExpandFolderOnDrag.set($event)"
+            />
+            <tx-toggle
+              label="Move animation"
+              [ngModel]="treeAnimateMove()"
+              (ngModelChange)="treeAnimateMove.set($event)"
+            />
+          </div>
+          <div class="ds-tree-demo__scopes" role="group" aria-label="Drag scope">
+            <span class="ds-tree-demo__label">Scope</span>
+            @for (scope of treeDragScopes; track scope) {
+              <tx-button
+                variant="secondary"
+                [class.is-active]="treeDragScope() === scope"
+                (pressed)="setTreeDragScope(scope)"
+              >
+                {{ scope }}
+              </tx-button>
+            }
+          </div>
+          <div class="ds-tree-demo__scopes" role="group" aria-label="Sibling sort">
+            <span class="ds-tree-demo__label">Sort</span>
+            @for (mode of treeSortModes; track mode) {
+              <tx-button
+                variant="secondary"
+                [class.is-active]="treeSiblingSort() === mode"
+                (pressed)="setTreeSiblingSort(mode)"
+              >
+                {{ mode }}
+              </tx-button>
+            }
+          </div>
+          <div
+            class="ds-tree-demo__body"
+            [class.ds-tree-demo__body--debug]="debugEnabled()"
+          >
+            <div class="ds-tree-demo__panel" [class.ds-tree-demo__panel--debug]="debugEnabled()">
+              <tx-tree
+                [nodes]="treeDemoNodes()"
+                [config]="treeDemoConfig()"
+                [expandedIds]="treeDemoExpandedIds()"
+                [debug]="debugEnabled()"
+                (nodesChange)="handleTreeNodesChange($event)"
+                (expandedChange)="handleTreeExpandedChange($event)"
+                (nodeDrop)="handleTreeDrop($event)"
+                (dndDebugChange)="handleTreeDndDebugChange($event)"
+              />
+            </div>
+            @if (debugEnabled()) {
+            <div
+              class="ds-tree-demo__dnd-hud"
+              [class.ds-tree-demo__dnd-hud--dragging]="treeDndDebug().phase === 'dragging'"
+              aria-live="polite"
+            >
+              <div class="ds-tree-demo__dnd-hud-header">
+                <span class="ds-tree-demo__dnd-badge">{{
+                  treeDndDebug().phase === 'dragging' ? 'Dragging' : 'DnD idle'
+                }}</span>
+                @if (treeDndDebug().pointer; as pt) {
+                  <span class="ds-tree-demo__dnd-pointer"
+                    >pointer {{ pt.x | number: '1.0-0' }}, {{ pt.y | number: '1.0-0' }}</span
+                  >
+                }
+              </div>
+              <p class="ds-tree-demo__dnd-summary">{{ treeDndDebug().summary }}</p>
+              @if (treeDndDebug().phase === 'dragging') {
+                <dl class="ds-tree-demo__dnd-dl">
+                  <div class="ds-tree-demo__dnd-row">
+                    <dt>Source</dt>
+                    <dd>
+                      @if (treeDndDebug().source; as source) {
+                        <code>{{ source.id }}</code> · {{ source.label }}
+                        <span class="ds-tree-demo__dnd-meta"
+                          >depth {{ source.depth }} · parent
+                          {{ source.parentId ?? '—' }}</span
+                        >
+                      } @else {
+                        —
+                      }
+                    </dd>
+                  </div>
+                  <div class="ds-tree-demo__dnd-row">
+                    <dt>Target</dt>
+                    <dd>
+                      @if (treeDndDebug().target; as target) {
+                        <code>{{ target.id }}</code> · {{ target.label }}
+                        <span class="ds-tree-demo__dnd-meta"
+                          >depth {{ target.depth }} · kind {{ target.kind ?? '—' }}</span
+                        >
+                      } @else {
+                        <span class="ds-tree-demo__dnd-meta">no row under pointer</span>
+                      }
+                    </dd>
+                  </div>
+                  <div class="ds-tree-demo__dnd-row">
+                    <dt>Position</dt>
+                    <dd>
+                      <code>{{ treeDndDebug().dropPosition ?? '—' }}</code>
+                    </dd>
+                  </div>
+                  <div class="ds-tree-demo__dnd-row">
+                    <dt>Policy</dt>
+                    <dd>
+                      @if (treeDndDebug().denied) {
+                        <span class="ds-tree-demo__dnd-verdict ds-tree-demo__dnd-verdict--deny"
+                          >denied</span
+                        >
+                      } @else if (treeDndDebug().dropAllowed) {
+                        <span class="ds-tree-demo__dnd-verdict ds-tree-demo__dnd-verdict--allow"
+                          >allowed</span
+                        >
+                      } @else {
+                        <span class="ds-tree-demo__dnd-verdict">blocked / no band</span>
+                      }
+                    </dd>
+                  </div>
+                </dl>
+              } @else {
+                <p class="ds-tree-demo__dnd-hint">
+                  Hitbox-only view: each row is top (25%) · center (inside on folders) · bottom
+                  (25%). Drag to test; labels are hidden. Rows stack flush (±{{ treeHitSlopPx }}px
+                  slop at list edges only).
+                </p>
+              }
+              <details class="ds-tree-demo__dnd-raw">
+                <summary>Raw state</summary>
+                <pre>{{ treeDndDebug().raw | json }}</pre>
+              </details>
+            </div>
+            }
+          </div>
+          @if (debugEnabled()) {
+            <p class="ds-debug-slot__foot ds-tree-demo__foot">
+              <code>tx-tree-row-host</code> row hit target · drop bands
+              <code>25% / 50% / 25%</code> (before / inside / after) · rows share borders, no
+              inter-row gap · ghost <code>.tx-tree-ghost</code>
+            </p>
+          }
+          @if (treeLastDrop(); as drop) {
+            <pre class="ds-tree-demo__event" aria-live="polite">last drop: {{ drop | json }}</pre>
+          }
+        </div>
+      }
+    }
+  </section>
+} @else {
+  <section class="ds-panel"><p>Unknown component section.</p></section>
+}

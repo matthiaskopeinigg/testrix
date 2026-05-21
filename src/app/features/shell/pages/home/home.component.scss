@@ -1,0 +1,88 @@
+@use '../../workspace/workspace-shell';
+
+.workspace-shell__panel-host {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  width: 100%;
+}
+
+.workspace-shell__panel-loading {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  justify-content: center;
+  min-height: 8rem;
+}
+
+:host {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  width: 100%;
+  min-height: 0;
+  min-width: 0;
+}
+
+.home-sidebar-panel {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  overflow: auto;
+  padding: 1rem 0.85rem;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: color-mix(in srgb, var(--tx-text-1) 92%, transparent);
+
+  &--empty p {
+    margin: 0;
+  }
+}
+
+.welcome {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: 100%;
+}
+
+// Hero/content must stay visible — global entrance-stagger hides direct children at opacity 0.
+:host .welcome__inner > * {
+  opacity: 1;
+  transform: none;
+}
+
+.welcome__logo {
+  ::ng-deep .tx-brand-logo__img {
+    width: clamp(64px, 8.5vh, 88px);
+    height: clamp(64px, 8.5vh, 88px);
+    border-radius: var(--tx-radius-lg);
+    object-fit: contain;
+    filter: drop-shadow(0 6px 18px color-mix(in srgb, var(--tx-secondary) 35%, transparent));
+    -webkit-user-drag: none;
+    user-select: none;
+    pointer-events: none;
+  }
+}
+
+.welcome__btn-primary {
+  text-decoration: none;
+}
+
+.home-modal-lead {
+  margin: 0 0 1rem;
+  font-size: 0.9375rem;
+  line-height: 1.55;
+  color: color-mix(in srgb, var(--tx-text-0) 88%, transparent);
+
+  strong {
+    display: block;
+    margin-top: 0.35rem;
+    font-family: var(--tx-font-mono);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--tx-text-0);
+  }
+}

@@ -1,0 +1,24 @@
+<section
+  class="tx-shell"
+  [class.tx-shell--debug]="isDebugRoute()"
+  [class.tx-shell--home]="isHomeRoute()"
+>
+  <app-tx-window-titlebar />
+
+  <tx-error-banner />
+
+  <tx-update-banner [visible]="showUpdateBanner()" />
+
+  @if (showInstallOverlay()) {
+    <tx-update-install-overlay [visible]="true" />
+  }
+
+  <div class="tx-shell__stage">
+    <main class="tx-shell__body" #shellMain>
+      <router-outlet />
+    </main>
+    @if (hasNotification()) {
+      <tx-notification-host />
+    }
+  </div>
+</section>

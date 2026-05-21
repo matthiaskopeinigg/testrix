@@ -1,0 +1,37 @@
+:host {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  width: 100%;
+}
+
+.environment-tree-panel {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  width: 100%;
+}
+
+.environment-tree-panel__body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.environment-tree-panel__tree {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding-top: 0.15rem;
+}
+
+.environment-tree-panel__empty {
+  margin: 0.75rem 0 0;
+  padding: 0.5rem 0.35rem;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--tx-text-1);
+}

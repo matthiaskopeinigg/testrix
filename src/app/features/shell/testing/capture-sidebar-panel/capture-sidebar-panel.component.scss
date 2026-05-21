@@ -1,0 +1,28 @@
+@use '../testing-sidebar-shared' as shared;
+
+:host {
+  @include shared.testing-sidebar-host;
+}
+
+.capture-sidebar-panel__toolbar {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.capture-sidebar-panel__status {
+  @include shared.testing-sidebar-status;
+}
+
+.testing-list-sidebar-panel__list {
+  @include shared.testing-sidebar-list;
+}
+
+.testing-list-sidebar-panel__item {
+  @include shared.testing-sidebar-list-item;
+}
+
+.testing-list-sidebar-panel__empty {
+  @include shared.testing-sidebar-empty;
+}

@@ -1,0 +1,66 @@
+@if (variant() === 'swatch') {
+  <div
+    class="tx-theme-layout-preview tx-theme-layout-preview--swatch"
+    role="img"
+    [attr.aria-label]="palette().label + ' theme swatch'"
+  >
+    <span class="tx-theme-layout-preview__swatch tx-theme-layout-preview__swatch--bg" aria-hidden="true"></span>
+    <span class="tx-theme-layout-preview__swatch tx-theme-layout-preview__swatch--surface" aria-hidden="true"></span>
+    <span class="tx-theme-layout-preview__swatch tx-theme-layout-preview__swatch--primary" aria-hidden="true"></span>
+    <span class="tx-theme-layout-preview__swatch tx-theme-layout-preview__swatch--accent" aria-hidden="true"></span>
+  </div>
+} @else {
+  <div
+    class="tx-theme-layout-preview"
+    role="img"
+    [attr.aria-label]="palette().label + ' theme layout preview'"
+  >
+    <header class="tx-theme-layout-preview__titlebar" aria-hidden="true">
+      <span class="tx-theme-layout-preview__traffic"></span>
+      <span class="tx-theme-layout-preview__traffic"></span>
+      <span class="tx-theme-layout-preview__traffic"></span>
+      <span class="tx-theme-layout-preview__logo"></span>
+      <span class="tx-theme-layout-preview__titlebar-actions"></span>
+    </header>
+
+    <div class="tx-theme-layout-preview__workspace">
+      <aside class="tx-theme-layout-preview__sidebar" aria-hidden="true">
+        <span class="tx-theme-layout-preview__sidebar-icon is-active"></span>
+        <span class="tx-theme-layout-preview__sidebar-icon"></span>
+        <span class="tx-theme-layout-preview__sidebar-icon"></span>
+        <span class="tx-theme-layout-preview__sidebar-divider"></span>
+        <span class="tx-theme-layout-preview__tree-line is-folder">
+          <span class="tx-theme-layout-preview__tree-fill"></span>
+        </span>
+        <span class="tx-theme-layout-preview__tree-line is-selected">
+          <span class="tx-theme-layout-preview__method is-get">G</span>
+          <span class="tx-theme-layout-preview__tree-fill"></span>
+        </span>
+        <span class="tx-theme-layout-preview__tree-line">
+          <span class="tx-theme-layout-preview__method is-post">P</span>
+          <span class="tx-theme-layout-preview__tree-fill is-short"></span>
+        </span>
+      </aside>
+
+      <div class="tx-theme-layout-preview__main" aria-hidden="true">
+        <div class="tx-theme-layout-preview__tabs">
+          <span class="tx-theme-layout-preview__tab is-active"></span>
+          <span class="tx-theme-layout-preview__tab"></span>
+          <span class="tx-theme-layout-preview__tab is-faint"></span>
+        </div>
+
+        <div class="tx-theme-layout-preview__request-bar">
+          <span class="tx-theme-layout-preview__method-select">GET</span>
+          <span class="tx-theme-layout-preview__url"></span>
+          <span class="tx-theme-layout-preview__send"></span>
+        </div>
+
+        <div class="tx-theme-layout-preview__editor">
+          <span class="tx-theme-layout-preview__editor-line"></span>
+          <span class="tx-theme-layout-preview__editor-line is-accent"></span>
+          <span class="tx-theme-layout-preview__editor-line is-short"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+}

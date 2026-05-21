@@ -1,0 +1,25 @@
+<div
+  #scrollRegion
+  class="tx-tab-bar__scroll"
+  role="tablist"
+  [attr.aria-label]="ariaLabel()"
+  (contextmenu)="handleBarContextMenu($event)"
+>
+  @for (tab of tabs(); track tab.id; let i = $index) {
+    <tx-tab
+      [attr.data-tab-id]="tab.id"
+      [label]="tab.label"
+      [icon]="tab.icon"
+      [method]="tab.method"
+      [active]="tab.active ?? false"
+      [pinned]="tab.pinned ?? false"
+      [dirty]="tab.dirty ?? false"
+      (activated)="handleTabActivate(tab.id)"
+      (closed)="handleTabClose(tab.id)"
+      (pinToggled)="handleTabPinToggle(tab.id)"
+      (dragStarted)="handleDragStart($event, i, tab.id)"
+      (dragEnded)="handleDragEnd()"
+      (contextMenu)="handleTabContextMenu(tab.id, $event)"
+    />
+  }
+</div>

@@ -1,0 +1,299 @@
+@use '../../workspace/workspace-tab-chrome' as wt;
+
+// Shared development tool chrome (import from tools, shell widgets, and styles.scss).
+
+.dev-tool-tab {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+}
+
+.dev-tool-tab--fill {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+}
+
+.dev-tool-tab__chrome {
+  flex-shrink: 0;
+}
+
+.dev-tool-tab__header {
+  @include wt.workspace-tab-toolbar-row;
+}
+
+.dev-tool-tab__title-chip {
+  @include wt.workspace-tab-title-chip;
+
+  h1 {
+    font-size: 0.875rem;
+  }
+}
+
+.dev-tool-tab__lede {
+  margin: 0;
+  padding: 0 wt.$workspace-tab-inset-x 0.35rem;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  color: color-mix(in srgb, var(--tx-text-1) 80%, transparent);
+}
+
+.dev-tool-tab__sections {
+  @include wt.workspace-tab-toolbar-row;
+  padding-top: 0;
+}
+
+.dev-tool-tab__sections-bar {
+  @include wt.workspace-tab-bar-cluster;
+  @include wt.workspace-tab-bar-cluster-grow;
+  gap: 0.06rem;
+  padding: 0.15rem;
+}
+
+.dev-tool-tab__section-tab {
+  @include wt.workspace-tab-section-tab;
+}
+
+.dev-tool-tab__toolbar-row {
+  @include wt.workspace-tab-toolbar-row;
+}
+
+.dev-tool-tab__toolbar-leading {
+  @include wt.workspace-tab-bar-cluster;
+  @include wt.workspace-tab-bar-cluster-grow;
+  @include wt.workspace-tab-toolbar-dropdown;
+}
+
+.dev-tool-tab__toolbar-trailing {
+  @include wt.workspace-tab-bar-cluster;
+  @include wt.workspace-tab-bar-cluster-trailing;
+}
+
+.dev-tool-tab__mode-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.28rem 0.55rem;
+  border: 1px solid transparent;
+  border-radius: var(--tx-radius-sm, 8px);
+  background: transparent;
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: color-mix(in srgb, var(--tx-text-1) 85%, transparent);
+  cursor: pointer;
+  transition:
+    background-color var(--tx-duration-base, 180ms) var(--tx-ease-out-expo, ease),
+    color var(--tx-duration-base, 180ms) var(--tx-ease-out-expo, ease),
+    border-color var(--tx-duration-base, 180ms) var(--tx-ease-out-expo, ease);
+
+  &:hover:not(.is-active) {
+    color: var(--tx-text-0);
+    background: color-mix(in srgb, var(--tx-text-0) 6%, transparent);
+  }
+
+  &.is-active {
+    color: var(--tx-text-0);
+    border-color: color-mix(in srgb, var(--tx-primary) 35%, transparent);
+    background: color-mix(in srgb, var(--tx-primary) 12%, transparent);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--tx-primary);
+    outline-offset: 2px;
+  }
+}
+
+.dev-tool-tab__body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 0.65rem;
+  min-height: 0;
+  padding: 0.65rem wt.$workspace-tab-inset-x 0.85rem;
+  overflow: auto;
+}
+
+.dev-tool-tab__body--fill {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+
+  > app-dev-tool-stat-strip,
+  > tx-banner,
+  > tx-form-field {
+    flex-shrink: 0;
+  }
+
+  > .dev-tool-tab__editor-host--fill {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+}
+
+.dev-tool-tab__stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.dev-tool-tab__split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.65rem;
+  flex: 1 1 auto;
+  min-height: 12rem;
+
+  @media (max-width: 900px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.dev-tool-tab__split--fill {
+  min-height: 0;
+}
+
+.dev-tool-tab__pane {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  min-height: 0;
+}
+
+.dev-tool-tab__pane--fill {
+  flex: 1 1 auto;
+}
+
+.dev-tool-tab__pane-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.dev-tool-tab__pane-label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--tx-text-1) 75%, transparent);
+}
+
+.dev-tool-tab__pane-body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.dev-tool-tab__output {
+  margin: 0;
+  padding: 0.55rem 0.65rem;
+  border-radius: var(--tx-radius-sm, 8px);
+  background: var(--tx-surface-1);
+  border: 1px solid var(--tx-border-0);
+  font-family: var(--tx-font-mono);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--tx-text-0);
+}
+
+.dev-tool-tab__editor-host {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 10rem;
+
+  tx-code-editor {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+}
+
+.dev-tool-tab__editor-host--fill {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+
+  tx-code-editor {
+    flex: 1 1 auto;
+    min-height: 0;
+    height: 100%;
+  }
+}
+
+.dev-tool-tab__options {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.5rem 0.75rem;
+  @include wt.workspace-tab-toolbar-dropdown;
+}
+
+.dev-tool-tab__match-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.75rem;
+  font-family: var(--tx-font-mono);
+
+  th,
+  td {
+    padding: 0.35rem 0.5rem;
+    border-bottom: 1px solid var(--tx-border-0);
+    text-align: left;
+  }
+
+  th {
+    font-weight: 600;
+    color: color-mix(in srgb, var(--tx-text-1) 80%, transparent);
+  }
+}
+
+.dev-tool-tab__viewer-dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.35rem 0.75rem;
+  margin: 0;
+  font-size: 0.8125rem;
+
+  dt {
+    font-weight: 600;
+    color: color-mix(in srgb, var(--tx-text-1) 80%, transparent);
+  }
+
+  dd {
+    margin: 0;
+    color: var(--tx-text-0);
+  }
+}
+
+.dev-tool-tab__stack-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dev-tool-tab__stack-list > li {
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--tx-text-0);
+}
+
+.dev-tool-tab__uuid-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+
+  code.dev-tool-tab__output {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+}

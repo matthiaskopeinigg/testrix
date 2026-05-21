@@ -1,0 +1,102 @@
+<div
+  class="tx-code-editor"
+  [class.tx-code-editor--readonly]="readOnly()"
+  [class.tx-code-editor--no-toolbar]="hideToolbar()"
+  [class.tx-code-editor--framed]="framed()"
+  [class.tx-code-editor--badge-toolbar]="hideToolbarActions() && !hideToolbar()"
+  [class.tx-code-editor--plain]="!overlaySyntaxHighlight()"
+>
+  @if (!hideToolbar() && (!readOnly() || title())) {
+    <div class="tx-code-editor__toolbar" role="toolbar" [attr.aria-label]="toolbarAriaLabel()">
+      <div class="tx-code-editor__toolbar-start">
+        @if (title()) {
+          <span class="tx-code-editor__title">{{ title() }}</span>
+        }
+        <span class="tx-code-editor__badge">{{ languageBadge() }}</span>
+      </div>
+      @if (!hideToolbarActions() || showFormatAction()) {
+        <div class="tx-code-editor__toolbar-actions">
+          @if (!readOnly() && (!hideToolbarActions() || showFormatAction())) {
+            <button type="button" class="tx-code-editor__action" (click)="handleFormat()">Format</button>
+          }
+          @if (!hideToolbarActions()) {
+            <button type="button" class="tx-code-editor__action" (click)="handleCopy()">
+              <tx-icon name="copy" [size]="14" ariaLabel="Copy" />
+              Copy
+            </button>
+          }
+        </div>
+      }
+    </div>
+  }
+
+  <div class="tx-code-editor__body">
+    @if (!hideLineNumbers()) {
+      <div class="tx-code-editor__gutter" aria-hidden="true">
+        @for (line of lineNumbers(); track $index) {
+          <div class="tx-code-editor__line-num">{{ $index + 1 }}</div>
+        }
+      </div>
+    }
+    <div
+      class="tx-code-editor__field"
+      (mouseenter)="handleFieldMouseEnter($event)"
+      (mouseleave)="handleFieldMouseLeave($event)"
+    >
+      @if (showPlaceholder()) {
+        <div class="tx-code-editor__placeholder" aria-hidden="true">{{ placeholder() }}</div>
+      }
+      <textarea
+        #textarea
+        class="tx-code-editor__input"
+        [class.tx-code-editor__input--readonly]="readOnly()"
+        [readonly]="readOnly()"
+        [attr.aria-label]="ariaLabel() || title() || languageBadge() + ' editor'"
+        spellcheck="false"
+        autocomplete="off"
+        autocorrect="off"
+        (input)="handleInput($event)"
+        (scroll)="handleScroll()"
+        (keydown)="handleKeydown($event)"
+        (blur)="handleBlur()"
+      ></textarea>
+      @if (overlaySyntaxHighlight()) {
+        <pre class="tx-code-editor__mirror" aria-hidden="true"><code [innerHTML]="highlightedHtml() | txCodeEditorHtml"></code></pre>
+        @if (templateVarsActive()) {
+          <pre
+            class="tx-code-editor__hit"
+            aria-hidden="true"
+            (pointerover)="handleMirrorPointerOver($event)"
+            (pointerout)="handleMirrorPointerOut()"
+            (pointerdown)="handleMirrorPointerDown($event)"
+          ><code [innerHTML]="highlightedHtml() | txCodeEditorHtml"></code></pre>
+        }
+      }
+    </div>
+  </div>
+
+  @if (completionOpen()) {
+    <div class="tx-code-editor__completion" role="listbox" [attr.aria-label]="completionPanelLabel()">
+      <div class="tx-code-editor__completion-hint">Ctrl+Space — ↑↓ Enter Tab Esc</div>
+      <div class="tx-code-editor__completion-list">
+        @for (item of completionItems(); track item.label; let i = $index) {
+          <button
+            type="button"
+            class="tx-code-editor__completion-item"
+            role="option"
+            [class.is-active]="i === completionIndex()"
+            (mousedown)="$event.preventDefault(); applyCompletion(item)"
+            (mouseenter)="completionIndex.set(i)"
+          >
+            <span class="tx-code-editor__completion-label">{{ item.label }}</span>
+            @if (item.detail) {
+              <span class="tx-code-editor__completion-detail">{{ item.detail }}</span>
+            }
+          </button>
+        } @empty {
+          <div class="tx-code-editor__completion-empty">No matches</div>
+        }
+      </div>
+    </div>
+  }
+</div>

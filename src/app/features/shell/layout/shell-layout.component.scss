@@ -1,0 +1,49 @@
+:host {
+  display: block;
+  height: 100%;
+}
+
+.tx-shell {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  height: 100%;
+  background: var(--tx-content-bg, var(--tx-surface-0));
+}
+
+
+
+.tx-shell__stage {
+  position: relative;
+  z-index: 0;
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  background: var(--tx-content-bg, var(--tx-surface-0));
+}
+
+.tx-shell--home .tx-shell__body,
+.tx-shell--debug .tx-shell__body {
+  overflow: visible;
+}
+
+.tx-shell__body {
+  flex: 1;
+  min-height: 0;
+  padding: clamp(1rem, 2vw + 0.75rem, 2rem);
+
+  &:focus {
+    outline: none;
+  }
+
+  .tx-shell--debug &,
+  .tx-shell--home & {
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    overflow: hidden;
+  }
+}

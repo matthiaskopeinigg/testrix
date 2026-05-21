@@ -1,0 +1,18 @@
+<article class="tx-notification">
+  <span class="tx-notification__icon" aria-hidden="true">
+    <tx-icon [name]="iconName()" [size]="18" />
+  </span>
+
+  <p class="tx-notification__message">{{ message() }}</p>
+
+  @if (dismissible()) {
+    <button
+      type="button"
+      class="tx-notification__dismiss"
+      aria-label="Dismiss notification"
+      (click)="handleDismiss()"
+    >
+      <tx-icon name="close" [size]="14" />
+    </button>
+  }
+</article>

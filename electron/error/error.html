@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Testrix · Problem</title>
+    <link rel="stylesheet" href="./error.css" />
+  </head>
+  <body class="tx-theme tx-error">
+    <header class="tx-brand" aria-label="Testrix">
+      <img class="tx-brand-mark" src="./assets/logo.svg" width="88" height="88" alt="Testrix" />
+      <h1 class="tx-brand-wordmark">Testrix</h1>
+    </header>
+
+    <main class="tx-error-panel" aria-live="assertive">
+      <h2 class="tx-error-title">Could not start correctly</h2>
+      <p id="tx-error-message" class="tx-error-detail">
+        Refer to logs in your user-data folder if this persists.
+      </p>
+      <button type="button" class="tx-error-close">Close Testrix</button>
+    </main>
+
+    <script>
+      ;(() => {
+        const btn = document.querySelector('.tx-error-close');
+        btn?.addEventListener('click', () => {
+          window.close();
+        });
+      })();
+    </script>
+  </body>
+</html>

@@ -1,0 +1,278 @@
+@if (missing()) {
+  <tx-banner variant="warning" title="History entry not found">
+    This tab points to a history entry that no longer exists. Close the tab or pick another item from History.
+  </tx-banner>
+} @else {
+  <div class="history-tab">
+    <div class="history-tab__scroll">
+      <header class="history-tab__header">
+        <div class="history-tab__header-top">
+          <div class="history-tab__title">
+            <span class="history-tab__method" [attr.data-method]="method()">{{ method() }}</span>
+            <span class="history-tab__url" [title]="url()">{{ url() }}</span>
+          </div>
+          @if (statusCode() !== undefined) {
+            <span class="history-tab__status-chip" [attr.data-status]="statusTone()">
+              <span class="history-tab__status-dot" aria-hidden="true"></span>
+              <span class="history-tab__status-code">{{ statusCode() }}</span>
+              @if (statusText()) {
+                <span class="history-tab__status-text">{{ statusText() }}</span>
+              }
+            </span>
+          }
+        </div>
+
+        <div class="history-tab__stats" role="group" aria-label="Request stats">
+          <div class="history-tab__stat history-tab__stat--highlight">
+            <tx-icon name="zap" [size]="12" aria-hidden="true" />
+            <span class="history-tab__stat-label">Duration</span>
+            <span class="history-tab__stat-value">{{ durationMs() }} ms</span>
+          </div>
+          <div class="history-tab__stat">
+            <tx-icon name="database" [size]="12" aria-hidden="true" />
+            <span class="history-tab__stat-label">Size</span>
+            <span class="history-tab__stat-value">{{ bodySizeLabel() }}</span>
+          </div>
+          <div class="history-tab__stat">
+            <tx-icon name="clock" [size]="12" aria-hidden="true" />
+            <span class="history-tab__stat-label">Started</span>
+            <span class="history-tab__stat-value">{{ startedAt() | date: 'mediumTime' }}</span>
+          </div>
+          <div class="history-tab__stat">
+            <tx-icon name="checkCircle" [size]="12" aria-hidden="true" />
+            <span class="history-tab__stat-label">Finished</span>
+            <span class="history-tab__stat-value">{{ finishedAt() | date: 'mediumTime' }}</span>
+          </div>
+          <div class="history-tab__stat history-tab__stat--date">
+            <span class="history-tab__stat-value">{{ startedAt() | date: 'mediumDate' }}</span>
+          </div>
+        </div>
+      </header>
+
+      <section class="history-tab__section">
+        <button
+          type="button"
+          class="history-tab__section-header"
+          [attr.aria-expanded]="!isCollapsed('request')"
+          (click)="handleToggleSection('request')"
+        >
+          <tx-icon
+            class="history-tab__chevron"
+            [class.history-tab__chevron--collapsed]="isCollapsed('request')"
+            name="chevronDown"
+            [size]="12"
+            aria-hidden="true"
+          />
+          <h3>Request</h3>
+        </button>
+
+        @if (!isCollapsed('request')) {
+          <div class="history-tab__section-body">
+            <div class="history-tab__block">
+              <div class="history-tab__block-header">
+                <button
+                  type="button"
+                  class="history-tab__block-toggle"
+                  [attr.aria-expanded]="!isCollapsed('headers')"
+                  (click)="handleToggleSection('headers')"
+                >
+                  <tx-icon
+                    class="history-tab__chevron history-tab__chevron--sm"
+                    [class.history-tab__chevron--collapsed]="isCollapsed('headers')"
+                    name="chevronDown"
+                    [size]="10"
+                    aria-hidden="true"
+                  />
+                  <h4>Headers</h4>
+                  <span class="history-tab__block-count">{{ requestHeaders().length }}</span>
+                </button>
+              </div>
+              @if (!isCollapsed('headers')) {
+                @if (requestHeaders().length > 0) {
+                  <div class="history-tab__pair-grid">
+                    @for (header of requestHeaders(); track header.key) {
+                      <div class="history-tab__pair">
+                        <span class="history-tab__pair-key">{{ header.key }}</span>
+                        <span class="history-tab__pair-value">{{ header.value }}</span>
+                      </div>
+                    }
+                  </div>
+                } @else {
+                  <p class="history-tab__pair-empty">No headers were sent.</p>
+                }
+              }
+            </div>
+
+            <div class="history-tab__block">
+              <div class="history-tab__block-header">
+                <button
+                  type="button"
+                  class="history-tab__block-toggle"
+                  [attr.aria-expanded]="!isCollapsed('params')"
+                  (click)="handleToggleSection('params')"
+                >
+                  <tx-icon
+                    class="history-tab__chevron history-tab__chevron--sm"
+                    [class.history-tab__chevron--collapsed]="isCollapsed('params')"
+                    name="chevronDown"
+                    [size]="10"
+                    aria-hidden="true"
+                  />
+                  <h4>Parameters</h4>
+                  <span class="history-tab__block-count">{{ queryParams().length }}</span>
+                </button>
+              </div>
+              @if (!isCollapsed('params')) {
+                @if (queryParams().length > 0) {
+                  <div class="history-tab__pair-grid">
+                    @for (param of queryParams(); track param.id) {
+                      <div class="history-tab__pair">
+                        <span class="history-tab__pair-key">{{ param.key }}</span>
+                        <span class="history-tab__pair-value">{{ param.value }}</span>
+                      </div>
+                    }
+                  </div>
+                } @else {
+                  <p class="history-tab__pair-empty">No query parameters.</p>
+                }
+              }
+            </div>
+
+            @if (requestBody()) {
+              <div class="history-tab__block">
+                <div class="history-tab__block-header">
+                  <button
+                    type="button"
+                    class="history-tab__block-toggle"
+                    [attr.aria-expanded]="!isCollapsed('requestBody')"
+                    (click)="handleToggleSection('requestBody')"
+                  >
+                    <tx-icon
+                      class="history-tab__chevron history-tab__chevron--sm"
+                      [class.history-tab__chevron--collapsed]="isCollapsed('requestBody')"
+                      name="chevronDown"
+                      [size]="10"
+                      aria-hidden="true"
+                    />
+                    <h4>Body</h4>
+                    <span class="history-tab__block-meta">{{ bodySizeLabel() }}</span>
+                  </button>
+                  @if (!isCollapsed('requestBody')) {
+                    <tx-button
+                      variant="secondary"
+                      class="history-tab__copy-btn"
+                      [class.history-tab__copy-btn--copied]="copiedKey() === 'reqBody'"
+                      title="Copy request body"
+                      (pressed)="handleCopy(formatRequestBody(requestBody()), 'reqBody')"
+                    >
+                      <tx-icon [name]="copiedKey() === 'reqBody' ? 'check' : 'copy'" [size]="12" aria-hidden="true" />
+                      {{ copiedKey() === 'reqBody' ? 'Copied' : 'Copy' }}
+                    </tx-button>
+                  }
+                </div>
+                @if (!isCollapsed('requestBody')) {
+                  <pre class="history-tab__code">{{ formatRequestBody(requestBody()) }}</pre>
+                }
+              </div>
+            }
+          </div>
+        }
+      </section>
+
+      <section class="history-tab__section">
+        <button
+          type="button"
+          class="history-tab__section-header"
+          [attr.aria-expanded]="!isCollapsed('response')"
+          (click)="handleToggleSection('response')"
+        >
+          <tx-icon
+            class="history-tab__chevron"
+            [class.history-tab__chevron--collapsed]="isCollapsed('response')"
+            name="chevronDown"
+            [size]="12"
+            aria-hidden="true"
+          />
+          <h3>Response</h3>
+        </button>
+
+        @if (!isCollapsed('response')) {
+          <div class="history-tab__section-body">
+            <div class="history-tab__block">
+              <div class="history-tab__block-header">
+                <button
+                  type="button"
+                  class="history-tab__block-toggle"
+                  [attr.aria-expanded]="!isCollapsed('responseHeaders')"
+                  (click)="handleToggleSection('responseHeaders')"
+                >
+                  <tx-icon
+                    class="history-tab__chevron history-tab__chevron--sm"
+                    [class.history-tab__chevron--collapsed]="isCollapsed('responseHeaders')"
+                    name="chevronDown"
+                    [size]="10"
+                    aria-hidden="true"
+                  />
+                  <h4>Headers</h4>
+                  <span class="history-tab__block-count">{{ responseHeaders().length }}</span>
+                </button>
+              </div>
+              @if (!isCollapsed('responseHeaders')) {
+                @if (responseHeaders().length > 0) {
+                  <div class="history-tab__pair-grid">
+                    @for (header of responseHeaders(); track header.key) {
+                      <div class="history-tab__pair">
+                        <span class="history-tab__pair-key">{{ header.key }}</span>
+                        <span class="history-tab__pair-value">{{ header.value }}</span>
+                      </div>
+                    }
+                  </div>
+                } @else {
+                  <p class="history-tab__pair-empty">No headers were returned.</p>
+                }
+              }
+            </div>
+
+            @if (responseBody()) {
+              <div class="history-tab__block">
+                <div class="history-tab__block-header">
+                  <button
+                    type="button"
+                    class="history-tab__block-toggle"
+                    [attr.aria-expanded]="!isCollapsed('responseBody')"
+                    (click)="handleToggleSection('responseBody')"
+                  >
+                    <tx-icon
+                      class="history-tab__chevron history-tab__chevron--sm"
+                      [class.history-tab__chevron--collapsed]="isCollapsed('responseBody')"
+                      name="chevronDown"
+                      [size]="10"
+                      aria-hidden="true"
+                    />
+                    <h4>Body</h4>
+                    <span class="history-tab__block-meta">{{ bodySizeLabel() }}</span>
+                  </button>
+                  @if (!isCollapsed('responseBody')) {
+                    <tx-button
+                      variant="secondary"
+                      class="history-tab__copy-btn"
+                      [class.history-tab__copy-btn--copied]="copiedKey() === 'resBody'"
+                      title="Copy response body"
+                      (pressed)="handleCopy(responseBody(), 'resBody')"
+                    >
+                      <tx-icon [name]="copiedKey() === 'resBody' ? 'check' : 'copy'" [size]="12" aria-hidden="true" />
+                      {{ copiedKey() === 'resBody' ? 'Copied' : 'Copy' }}
+                    </tx-button>
+                  }
+                </div>
+                @if (!isCollapsed('responseBody')) {
+                  <pre class="history-tab__code">{{ responseBody() }}</pre>
+                }
+              </div>
+            }
+          </div>
+        }
+      </section>
+    </div>
+  </div>
+}

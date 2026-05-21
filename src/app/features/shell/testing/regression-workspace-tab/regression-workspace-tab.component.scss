@@ -1,0 +1,8 @@
+@use '../testing-workspace-tab.shared';
+
+.regression-workspace-tab__flows,
+.regression-workspace-tab__runs {
+  margin: 0;
+  font-size: 13px;
+  color: var(--tx-text-1);
+}

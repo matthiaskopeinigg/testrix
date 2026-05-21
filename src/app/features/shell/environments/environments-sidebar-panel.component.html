@@ -1,0 +1,102 @@
+<app-workspace-sidebar-panel-shell
+  class="environments-sidebar-panel"
+  [searchPlaceholder]="searchPlaceholder()"
+  [searchAriaLabel]="searchAriaLabel()"
+  [showFolderToggle]="false"
+  [useDefaultToolbarActions]="false"
+  (searchChange)="handleSearch($event)"
+>
+  <div workspacePanelToolbarActions class="environments-sidebar-panel__toolbar-actions">
+    <button
+      type="button"
+      class="workspace-panel-shell__icon-btn"
+      [class.is-pressed]="filterToolbarActive()"
+      aria-label="Filter environments"
+      [attr.aria-expanded]="filterMenuOpen()"
+      (click)="handleFilterToolbarClick($event)"
+    >
+      <tx-icon name="filter" [size]="16" />
+    </button>
+    <button
+      type="button"
+      class="workspace-panel-shell__icon-btn"
+      [class.is-pressed]="sortToolbarActive()"
+      aria-label="Sort environments"
+      [attr.aria-expanded]="sortMenuOpen()"
+      (click)="handleSortToolbarClick($event)"
+    >
+      <tx-icon name="list" [size]="16" />
+    </button>
+  </div>
+
+  <div
+    class="environments-sidebar-panel__list tx-entrance-stagger"
+    [class.tx-entrance-stagger--play]="entranceStaggerPlay()"
+    [class.tx-entrance-stagger--settled]="entranceStaggerSettled()"
+    role="list"
+    (contextmenu)="handleListAreaContextMenu($event)"
+  >
+    @if (filteredProfiles().length === 0) {
+      <p class="environments-sidebar-panel__empty">{{ emptyStateMessage() }}</p>
+    } @else {
+      @for (profile of filteredProfiles(); track profile.id) {
+        <button
+          type="button"
+          role="listitem"
+          class="environments-sidebar-panel__row"
+          [class.is-active]="isProfileActive(profile.id)"
+          (click)="handleRowClick(profile.id)"
+          (dblclick)="handleRowDblClick($event, profile.id)"
+          (contextmenu)="handleRowContextMenu($event, profile.id)"
+        >
+          <tx-icon name="globe" [size]="16" aria-hidden="true" class="environments-sidebar-panel__row-icon" />
+          @if (renamingProfileId() === profile.id) {
+            <tx-inline-rename-input
+              class="environments-sidebar-panel__rename"
+              [value]="profile.name"
+              [ariaLabel]="'Rename environment'"
+              (committed)="handleInlineRenameCommit(profile.id, $event)"
+              (cancelled)="handleInlineRenameCancel()"
+            />
+          } @else {
+            <span class="environments-sidebar-panel__row-label">{{ profile.name }}</span>
+          }
+        </button>
+      }
+    }
+  </div>
+</app-workspace-sidebar-panel-shell>
+
+<tx-context-menu
+  [open]="filterMenuOpen()"
+  [position]="filterMenuPosition()"
+  [items]="filterMenuItems()"
+  (itemSelect)="handleFilterMenuSelect($event)"
+  (closed)="handleFilterMenuClosed()"
+/>
+
+<tx-context-menu
+  [open]="sortMenuOpen()"
+  [position]="sortMenuPosition()"
+  [items]="sortMenuItems()"
+  (itemSelect)="handleSortMenuSelect($event)"
+  (closed)="handleSortMenuClosed()"
+/>
+
+<tx-context-menu
+  [open]="contextMenuOpen()"
+  [position]="contextMenuPosition()"
+  [items]="contextMenuItems()"
+  (itemSelect)="handleContextMenuSelect($event)"
+  (closed)="handleContextMenuClosed()"
+/>
+
+<tx-confirm-dialog
+  [open]="deleteOpen()"
+  title="Delete environment"
+  [message]="deleteMessage()"
+  confirmLabel="Delete"
+  variant="danger"
+  (confirmed)="handleDeleteConfirmed()"
+  (closed)="handleDeleteClosed()"
+/>

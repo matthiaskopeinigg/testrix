@@ -1,0 +1,13 @@
+@use '../testing-workspace-tab.shared';
+
+.load-test-workspace-tab__dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.35rem 1rem;
+  margin: 0;
+  font-size: 13px;
+}
+
+.load-test-workspace-tab__dl dt {
+  color: color-mix(in srgb, var(--tx-text-1) 80%, transparent);
+}

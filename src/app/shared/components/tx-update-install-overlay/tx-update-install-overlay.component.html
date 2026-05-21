@@ -1,0 +1,45 @@
+@if (visible()) {
+  <div
+    class="tx-update-install-overlay"
+    role="alertdialog"
+    aria-modal="true"
+    aria-labelledby="tx-update-install-title"
+    aria-describedby="tx-update-install-desc"
+  >
+    <div class="tx-update-install-overlay__scrim" aria-hidden="true"></div>
+
+    <article class="tx-update-install-overlay__card">
+      <div class="tx-update-install-overlay__bg" aria-hidden="true">
+        <div class="tx-update-install-overlay__bg-grid"></div>
+        <div class="tx-update-install-overlay__bg-blob tx-update-install-overlay__bg-blob--a"></div>
+        <div class="tx-update-install-overlay__bg-blob tx-update-install-overlay__bg-blob--b"></div>
+      </div>
+
+      <div class="tx-update-install-overlay__accent" aria-hidden="true">
+        <span class="tx-update-install-overlay__accent-band"></span>
+      </div>
+
+      <div class="tx-update-install-overlay__content">
+        <div class="tx-update-install-overlay__icon-wrap" aria-hidden="true">
+          <tx-icon name="download" [size]="28" />
+        </div>
+
+        <tx-spinner size="md" ariaLabel="Installing update" />
+
+        <h1 id="tx-update-install-title" class="tx-update-install-overlay__title">
+          Installing update
+        </h1>
+
+        <p id="tx-update-install-desc" class="tx-update-install-overlay__desc">
+          @if (versionLabel()) {
+            Updating to {{ versionLabel() }}. The app will restart when ready.
+          } @else {
+            The app will restart when the update is ready.
+          }
+        </p>
+
+        <p class="tx-update-install-overlay__hint">Please keep Testrix open.</p>
+      </div>
+    </article>
+  </div>
+}

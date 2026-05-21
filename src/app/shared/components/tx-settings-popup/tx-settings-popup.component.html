@@ -1,0 +1,1081 @@
+﻿@if (isVisible()) {
+  <div
+    class="tx-settings disable-select"
+    [class.tx-settings--shown]="isShown()"
+    [class.tx-settings--dialog-settled]="dialogMotionSettled()"
+    [class.tx-settings--freeze-motion]="freezePopupMotion()"
+    role="presentation"
+    (click)="handleBackdropClick($event)"
+  >
+    <div
+      class="tx-settings__popup"
+      [class.tx-settings__popup--shown]="isShown()"
+      [class.tx-settings__popup--opening]="popupOpening()"
+      (animationend)="handlePopupAnimationEnd($event)"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="tx-settings-title"
+      (click)="$event.stopPropagation()"
+    >
+      <button
+        type="button"
+        class="tx-settings__close-btn"
+        aria-label="Close settings"
+        (click)="handleClose()"
+      >
+        <tx-icon name="close" [size]="18" />
+      </button>
+
+      <div class="tx-settings__main">
+        <aside class="tx-settings__sidebar" aria-label="Settings sections">
+          <div
+            class="tx-settings__sidebar-body tx-entrance-stagger"
+            [class.tx-entrance-stagger--play]="sidebarStaggerPlay()"
+            [class.tx-entrance-stagger--settled]="sidebarStaggerSettled()"
+          >
+            <header class="tx-settings__brand">
+              <span class="tx-settings__brand-mark" aria-hidden="true">
+                <tx-icon name="settings" [size]="18" />
+              </span>
+              <div class="tx-settings__brand-text">
+                <span id="tx-settings-title" class="tx-settings__brand-title">Settings</span>
+                <span class="tx-settings__brand-sub">Customize your workbench</span>
+              </div>
+            </header>
+
+            @for (group of sidebarSections; track group.title) {
+              <div class="tx-settings__sidebar-group">
+                <div class="tx-settings__sidebar-group-title">{{ group.title }}</div>
+                @for (item of group.items; track item.id) {
+                  <button
+                    type="button"
+                    class="tx-settings__sidebar-item"
+                    [class.is-active]="activeSection() === item.id"
+                    (click)="selectSection(item.id)"
+                  >
+                    <span class="tx-settings__sidebar-item-icon" aria-hidden="true">
+                      <tx-icon [name]="$any(item.icon)" [size]="16" />
+                    </span>
+                    <span class="tx-settings__sidebar-item-label">{{ item.label }}</span>
+                  </button>
+                }
+              </div>
+            }
+          </div>
+        </aside>
+
+        <div class="tx-settings__split" aria-hidden="true"></div>
+
+        <div #contentScroll class="tx-settings__content">
+          @let s = settingsView();
+            <div class="tx-settings__pane">
+              @if (isSectionMountPending(activeSection())) {
+                <div class="tx-settings__section-loading" role="status" aria-busy="true">
+                  <tx-spinner label="Loading section" />
+                </div>
+              }
+              @if (isSectionActive('appearance')) {
+                <section
+                  class="tx-settings__section"
+                  [class.tx-settings__section--active]="isSectionActive('appearance')"
+                  [attr.aria-hidden]="!isSectionActive('appearance')"
+                >
+                  <div
+                    class="tx-settings__section-inner tx-settings__section-inner--appearance tx-entrance-stagger"
+                    [class.tx-entrance-stagger--play]="isSectionContentAnimating('appearance')"
+                    [class.tx-entrance-stagger--settled]="isSectionContentSettled('appearance')"
+                  >
+
+                  <div class="tx-entrance-stagger__block tx-settings__appearance-header">
+                    <div class="tx-settings__appearance-header-text">
+                      <h2 class="tx-settings__tab-title">Appearance</h2>
+                      <p class="tx-settings__tab-description">
+                        Pick a palette by category. Changes apply immediately and are saved to your
+                        config.
+                      </p>
+                    </div>
+                    <tx-button
+                      variant="secondary"
+                      [disabled]="isAppearanceAtDefaults()"
+                      (pressed)="resetAppearanceToDefaults()"
+                    >
+                      Reset to defaults
+                    </tx-button>
+                  </div>
+
+                  <div class="tx-entrance-stagger__block tx-settings__appearance-font">
+                    <h3 class="tx-settings__section-heading">Typography</h3>
+                    <div class="tx-settings__typography-grid">
+                      <tx-form-field label="Interface font" controlId="tx-settings-ui-font">
+                        <tx-dropdown
+                          controlId="tx-settings-ui-font"
+                          [options]="uiFontOptions"
+                          [ngModel]="s.appearance.uiFont"
+                          (ngModelChange)="applyUiFont($event)"
+                        />
+                      </tx-form-field>
+                      <tx-form-field label="Size" controlId="tx-settings-ui-font-size">
+                        <tx-dropdown
+                          controlId="tx-settings-ui-font-size"
+                          [options]="uiFontSizeOptions"
+                          [ngModel]="s.appearance.uiFontSize"
+                          (ngModelChange)="applyUiFontSize($event)"
+                        />
+                      </tx-form-field>
+                      <tx-form-field label="Weight" controlId="tx-settings-ui-font-weight">
+                        <tx-dropdown
+                          controlId="tx-settings-ui-font-weight"
+                          [options]="uiFontWeightOptions"
+                          [ngModel]="s.appearance.uiFontWeight"
+                          (ngModelChange)="applyUiFontWeight($event)"
+                        />
+                      </tx-form-field>
+                      <tx-form-field label="Line height" controlId="tx-settings-ui-line-height">
+                        <tx-dropdown
+                          controlId="tx-settings-ui-line-height"
+                          [options]="uiLineHeightOptions"
+                          [ngModel]="s.appearance.uiLineHeight"
+                          (ngModelChange)="applyUiLineHeight($event)"
+                        />
+                      </tx-form-field>
+                    </div>
+                    <p class="tx-settings__tab-description tx-settings__appearance-font-hint">
+                      Applies to the whole interface. Code editors and monospace fields keep the mono
+                      stack.
+                    </p>
+                  </div>
+
+                  <div class="tx-entrance-stagger__block tx-settings__appearance-theme-intro">
+                    <h3 class="tx-settings__section-heading">Theme</h3>
+                  </div>
+
+                  @for (group of appearanceGroupsToRender(); track group.id) {
+                    <tx-settings-theme-group
+                      [group]="group"
+                      [scrollRoot]="contentScrollRef()?.nativeElement ?? null"
+                      [eager]="eagerThemeGroup(group.id)"
+                      [activeTheme]="settingsView().appearance.theme"
+                      [paletteFor]="paletteFor"
+                      (themeSelect)="applyTheme($event)"
+                    />
+                  }
+
+                  </div>
+                </section>
+              }
+              @if (isSectionActive('ui')) {
+                <section
+                  class="tx-settings__section"
+                  [class.tx-settings__section--active]="isSectionActive('ui')"
+                  [attr.aria-hidden]="!isSectionActive('ui')"
+                >
+                  <div
+                    class="tx-settings__section-inner tx-entrance-stagger"
+                    [class.tx-entrance-stagger--play]="isSectionContentAnimating('ui')"
+                    [class.tx-entrance-stagger--settled]="isSectionContentSettled('ui')"
+                  >
+
+                  <div class="tx-entrance-stagger__block">
+                    <h2 class="tx-settings__tab-title">User Interface</h2>
+                    <p class="tx-settings__tab-description">
+                      Workbench behavior and presentation. Most options apply immediately and are
+                      saved to your config file.
+                    </p>
+                  </div>
+
+                  <div class="tx-entrance-stagger__block">
+                  <h3 class="tx-settings__section-heading">Navigation</h3>
+                  <div class="tx-settings__toggle-stack">
+                    <tx-toggle
+                      label="Close sidebar panel when clicking outside"
+                      [ngModel]="s.ui.closeSidebarPanelOnOutsideClick"
+                      (ngModelChange)="patchUiToggle('closeSidebarPanelOnOutsideClick', $event)"
+                    />
+                    <tx-toggle
+                      label="Restore last sidebar panel on startup"
+                      [ngModel]="s.ui.restoreLastSidebarPanel"
+                      (ngModelChange)="patchUiToggle('restoreLastSidebarPanel', $event)"
+                    />
+                  </div>
+                  </div>
+
+                  <div class="tx-entrance-stagger__block">
+                  <h3 class="tx-settings__section-heading">Motion</h3>
+                  <p class="tx-settings__field-label" id="tx-settings-animation-speed-label">
+                    Animation speed
+                  </p>
+                  <div
+                    class="tx-settings__speed-seg"
+                    role="group"
+                    aria-labelledby="tx-settings-animation-speed-label"
+                  >
+                    @for (opt of animationSpeedOptions; track opt.id) {
+                      <button
+                        type="button"
+                        class="tx-settings__speed-btn"
+                        [class.is-active]="s.ui.animationSpeed === opt.id"
+                        (click)="patchAnimationSpeed(opt.id)"
+                      >
+                        {{ opt.label }}
+                      </button>
+                    }
+                  </div>
+                  </div>
+
+                  <div class="tx-entrance-stagger__block">
+                  <h3 class="tx-settings__section-heading">Tooltips &amp; chrome</h3>
+                  <div class="tx-settings__toggle-stack">
+                    <tx-toggle
+                      label="Show icon tooltips"
+                      [ngModel]="s.ui.showIconTooltips"
+                      (ngModelChange)="patchUiToggle('showIconTooltips', $event)"
+                    />
+                    <tx-toggle
+                      label="Translucent title bar (blur)"
+                      [ngModel]="s.ui.useTranslucentChrome"
+                      (ngModelChange)="patchUiToggle('useTranslucentChrome', $event)"
+                    />
+                  </div>
+                  </div>
+                  </div>
+                </section>
+              }
+              @if (isSectionActive('editorKeyboard')) {
+                <section
+                  class="tx-settings__section"
+                  [class.tx-settings__section--active]="isSectionActive('editorKeyboard')"
+                  [attr.aria-hidden]="!isSectionActive('editorKeyboard')"
+                >
+                  <div
+                    class="tx-settings__section-inner tx-entrance-stagger"
+                    [class.tx-entrance-stagger--play]="isSectionContentAnimating('editorKeyboard')"
+                    [class.tx-entrance-stagger--settled]="isSectionContentSettled('editorKeyboard')"
+                  >
+                    <tx-settings-editor-keyboard-section
+                      [keyboard]="s.editor.keyboard"
+                      (keyboardChange)="patchEditorKeyboard($event)"
+                    />
+                  </div>
+                </section>
+              }
+              @if (isSectionActive('collections')) {
+                <section
+                  class="tx-settings__section"
+                  [class.tx-settings__section--active]="isSectionActive('collections')"
+                  [attr.aria-hidden]="!isSectionActive('collections')"
+                >
+                  <div
+                    class="tx-settings__section-inner tx-entrance-stagger"
+                    [class.tx-entrance-stagger--play]="isSectionContentAnimating('collections')"
+                    [class.tx-entrance-stagger--settled]="isSectionContentSettled('collections')"
+                  >
+                  <div class="tx-entrance-stagger__block">
+                    <h2 class="tx-settings__tab-title">Collections</h2>
+                    <p class="tx-settings__tab-description">
+                      Tree drag-and-drop behavior and sibling sort order in the collections sidebar.
+                    </p>
+                  </div>
+
+                  <div class="tx-entrance-stagger__block">
+                    <h3 class="tx-settings__section-heading">Drag &amp; drop</h3>
+                    <div class="tx-settings__toggle-stack">
+                      <tx-toggle
+                        label="Expand folder on drag"
+                        [ngModel]="s.collections.expandFolderOnDrag"
+                        (ngModelChange)="patchCollectionsToggle('expandFolderOnDrag', $event)"
+                      />
+                      <tx-toggle
+                        label="Move animation"
+                        [ngModel]="s.collections.animateMove"
+                        (ngModelChange)="patchCollectionsToggle('animateMove', $event)"
+                      />
+                      <tx-toggle
+                        label="Expand animation"
+                        [ngModel]="s.collections.animateExpand"
+                        (ngModelChange)="patchCollectionsToggle('animateExpand', $event)"
+                      />
+                    </div>
+                  </div>
+
+                  <div class="tx-entrance-stagger__block">
+                    <h3 class="tx-settings__section-heading">Sort &amp; priority</h3>
+                    <tx-form-field label="Sibling sort mode" controlId="tx-settings-collections-sort">
+                      <tx-dropdown
+                        id="tx-settings-collections-sort"
+                        [options]="collectionSortOptions"
+                        [ngModel]="s.collections.siblingSort"
+                        (ngModelChange)="patchCollectionsSiblingSort($event)"
+                      />
+                    </tx-form-field>
+                    <tx-toggle
+                      label="Folders first"
+                      [ngModel]="s.collections.foldersFirst"
+                      (ngModelChange)="patchCollectionsToggle('foldersFirst', $event)"
+                    />
+                    <p class="tx-settings__tab-description">
+                      Folders stay above requests and websockets. Within each group, sort uses order
+                      and priority fields on nodes.
+                    </p>
+                  </div>
+
+                  <div class="tx-entrance-stagger__block">
+                    <h3 class="tx-settings__section-heading">Folders</h3>
+                    <tx-form-field
+                      label="Folder click behavior"
+                      controlId="tx-settings-collections-folder-click"
+                    >
+                      <tx-dropdown
+                        id="tx-settings-collections-folder-click"
+                        [options]="collectionFolderClickOptions"
+                        [ngModel]="s.collections.folderClickBehavior"
+                        (ngModelChange)="patchCollectionsFolderClickBehavior($event)"
+                      />
+                    </tx-form-field>
+                    <p class="tx-settings__tab-description">
+                      Controls what happens when you click a folder in the collections tree.
+                      <strong>Toggle</strong> expands or collapses the folder without opening a tab.
+                      The chevron still expands and collapses folders.
+                    </p>
+                  </div>
+
+                  <div class="tx-entrance-stagger__block">
+                    <h3 class="tx-settings__section-heading">Editor</h3>
+                    <tx-form-field label="Editor layout" controlId="tx-settings-collections-editor-layout">
+                      <tx-dropdown
+                        id="tx-settings-collections-editor-layout"
+                        [options]="editorLayoutOptions"
+                        [ngModel]="s.collections.editorLayout"
+                        (ngModelChange)="patchCollectionsEditorLayout($event)"
+                      />
+                    </tx-form-field>
+                    <p class="tx-settings__tab-description">
+                      How sections are arranged in collection folder and request workspace tabs
+                      (section menu in the bar or tabs underneath).
+                    </p>
+                  </div>
+
+                  <div class="tx-entrance-stagger__block">
+                    <h3 class="tx-settings__section-heading">Display</h3>
+                    <tx-toggle
+                      label="Show descriptions in tree"
+                      [ngModel]="s.collections.showDescriptions"
+                      (ngModelChange)="patchCollectionsToggle('showDescriptions', $event)"
+                    />
+                    <p class="tx-settings__tab-description">
+                      When enabled, folder and request descriptions appear under names in the
+                      collections sidebar.
+                    </p>
+                    <tx-toggle
+                      label="Show tags in tree"
+                      [ngModel]="s.collections.showTags"
+                      (ngModelChange)="patchCollectionsToggle('showTags', $event)"
+                    />
+                    <p class="tx-settings__tab-description">
+                      When enabled, tags from folder and request overview appear next to names in
+                      the collections sidebar.
+                    </p>
+                    <tx-form-field
+                      label="Display HTTP method"
+                      controlId="tx-settings-collections-http-method"
+                    >
+                      <tx-dropdown
+                        id="tx-settings-collections-http-method"
+                        [options]="httpMethodDisplayOptions"
+                        [ngModel]="s.collections.displayHttpMethod"
+                        (ngModelChange)="patchCollectionsDisplayHttpMethod($event)"
+                      />
+                    </tx-form-field>
+                    <p class="tx-settings__tab-description">
+                      Controls where request verbs (GET, POST, …) appear: collections sidebar rows,
+                      workspace tabs, both, or hidden.
+                    </p>
+                  </div>
+                  </div>
+                </section>
+              }
+              @if (isSectionActive('environments')) {
+                <section
+                  class="tx-settings__section"
+                  [class.tx-settings__section--active]="isSectionActive('environments')"
+                  [attr.aria-hidden]="!isSectionActive('environments')"
+                >
+                  <div
+                    class="tx-settings__section-inner tx-entrance-stagger"
+                    [class.tx-entrance-stagger--play]="isSectionContentAnimating('environments')"
+                    [class.tx-entrance-stagger--settled]="isSectionContentSettled('environments')"
+                  >
+                  <div class="tx-entrance-stagger__block">
+                    <h2 class="tx-settings__tab-title">Environments</h2>
+                    <p class="tx-settings__tab-description">
+                      Tree drag-and-drop behavior and sibling sort order in the environments sidebar.
+                    </p>
+                  </div>
+
+                  <div class="tx-entrance-stagger__block">
+                    <h3 class="tx-settings__section-heading">Drag &amp; drop</h3>
+                    <div class="tx-settings__toggle-stack">
+                      <tx-toggle
+                        label="Expand folder on drag"
+                        [ngModel]="s.environments.expandFolderOnDrag"
+                        (ngModelChange)="patchEnvironmentsToggle('expandFolderOnDrag', $event)"
+                      />
+                      <tx-toggle
+                        label="Move animation"
+                        [ngModel]="s.environments.animateMove"
+                        (ngModelChange)="patchEnvironmentsToggle('animateMove', $event)"
+                      />
+                      <tx-toggle
+                        label="Expand animation"
+                        [ngModel]="s.environments.animateExpand"
+                        (ngModelChange)="patchEnvironmentsToggle('animateExpand', $event)"
+                      />
+                    </div>
+                  </div>
+
+                  <div class="tx-entrance-stagger__block">
+                    <h3 class="tx-settings__section-heading">Sort &amp; priority</h3>
+                    <tx-form-field label="Sibling sort mode" controlId="tx-settings-environments-sort">
+                      <tx-dropdown
+                        id="tx-settings-environments-sort"
+                        [options]="collectionSortOptions"
+                        [ngModel]="s.environments.siblingSort"
+                        (ngModelChange)="patchEnvironmentsSiblingSort($event)"
+                      />
+                    </tx-form-field>
+                    <tx-toggle
+                      label="Folders first"
+                      [ngModel]="s.environments.foldersFirst"
+                      (ngModelChange)="patchEnvironmentsToggle('foldersFirst', $event)"
+                    />
+                    <p class="tx-settings__tab-description">
+                      Folders stay above variables. Within each group, sort uses order and priority
+                      fields on nodes.
+                    </p>
+                  </div>
+
+                  <div class="tx-entrance-stagger__block">
+                    <h3 class="tx-settings__section-heading">Display</h3>
+                    <tx-toggle
+                      label="Show descriptions in tree"
+                      [ngModel]="s.environments.showDescriptions"
+                      (ngModelChange)="patchEnvironmentsToggle('showDescriptions', $event)"
+                    />
+                    <p class="tx-settings__tab-description">
+                      When enabled, folder and variable descriptions appear under names in the
+                      environment variable tree.
+                    </p>
+                  </div>
+                  </div>
+                </section>
+              }
+              @if (isSectionActive('general')) {
+                <section
+                  class="tx-settings__section"
+                  [class.tx-settings__section--active]="isSectionActive('general')"
+                  [attr.aria-hidden]="!isSectionActive('general')"
+                >
+                  <div
+                    class="tx-settings__section-inner tx-entrance-stagger"
+                    [class.tx-entrance-stagger--play]="isSectionContentAnimating('general')"
+                    [class.tx-entrance-stagger--settled]="isSectionContentSettled('general')"
+                  >
+                  <div class="tx-entrance-stagger__block">
+                    <h2 class="tx-settings__tab-title">General</h2>
+                  </div>
+                  <div class="tx-entrance-stagger__block">
+                    <tx-form-field label="Language" controlId="tx-settings-lang">
+                      <p id="tx-settings-lang" class="tx-settings__static">{{ s.general.language }}</p>
+                    </tx-form-field>
+                  </div>
+                  <div class="tx-entrance-stagger__block">
+                    <tx-toggle
+                      label="Open last project on startup"
+                      [ngModel]="s.general.openLastProjectOnStartup"
+                      (ngModelChange)="patchGeneralToggle('openLastProjectOnStartup', $event)"
+                    />
+                  </div>
+                  </div>
+                </section>
+              }
+              @if (isSectionActive('logging')) {
+                <section
+                  class="tx-settings__section"
+                  [class.tx-settings__section--active]="isSectionActive('logging')"
+                  [attr.aria-hidden]="!isSectionActive('logging')"
+                >
+                  <div
+                    class="tx-settings__section-inner tx-entrance-stagger"
+                    [class.tx-entrance-stagger--play]="isSectionContentAnimating('logging')"
+                    [class.tx-entrance-stagger--settled]="isSectionContentSettled('logging')"
+                  >
+                  <div class="tx-entrance-stagger__block">
+                    <h2 class="tx-settings__tab-title">Logging</h2>
+                    <p class="tx-settings__tab-description">
+                      Control main-process logging, log file retention, and diagnostics output.
+                    </p>
+                  </div>
+
+                  <div class="tx-entrance-stagger__block">
+                    <h3 class="tx-settings__section-heading">Output</h3>
+                    <div class="tx-settings__toggle-stack">
+                      <tx-toggle
+                        label="Enable logging"
+                        [ngModel]="s.logging.enabled"
+                        (ngModelChange)="patchLoggingToggle('enabled', $event)"
+                      />
+                      <tx-toggle
+                        label="Write to log file"
+                        [ngModel]="s.logging.writeToFile"
+                        (ngModelChange)="patchLoggingToggle('writeToFile', $event)"
+                      />
+                      <tx-toggle
+                        label="Write to console"
+                        [ngModel]="s.logging.writeToConsole"
+                        (ngModelChange)="patchLoggingToggle('writeToConsole', $event)"
+                      />
+                      <tx-toggle
+                        label="Include timestamps"
+                        [ngModel]="s.logging.includeTimestamps"
+                        (ngModelChange)="patchLoggingToggle('includeTimestamps', $event)"
+                      />
+                    </div>
+                  </div>
+
+                  <div class="tx-entrance-stagger__block">
+                    <h3 class="tx-settings__section-heading">Detail</h3>
+                    <tx-form-field label="Minimum log level" controlId="tx-settings-log-level">
+                      <tx-dropdown
+                        controlId="tx-settings-log-level"
+                        [options]="logLevelOptions"
+                        [ngModel]="s.logging.level"
+                        (ngModelChange)="patchLoggingLevel($event)"
+                      />
+                    </tx-form-field>
+                    <div class="tx-settings__toggle-stack">
+                      <tx-toggle
+                        label="Redact secrets in log lines"
+                        [ngModel]="s.logging.redactSecrets"
+                        (ngModelChange)="patchLoggingToggle('redactSecrets', $event)"
+                      />
+                      <tx-toggle
+                        label="Log IPC invocations in dev"
+                        [disabled]="!bridgeMeta()?.devToolkit"
+                        [ngModel]="s.logging.logIpcInDev"
+                        (ngModelChange)="patchLoggingToggle('logIpcInDev', $event)"
+                      />
+                    </div>
+                  </div>
+
+                  <div class="tx-entrance-stagger__block">
+                    <h3 class="tx-settings__section-heading">Retention</h3>
+                    <tx-form-field label="Max log file size (MB)" controlId="tx-settings-log-size">
+                      <tx-slider
+                        controlId="tx-settings-log-size"
+                        [min]="1"
+                        [max]="50"
+                        [step]="1"
+                        unit=" MB"
+                        [ngModel]="s.logging.maxFileSizeMb"
+                        (ngModelChange)="patchLoggingNumber('maxFileSizeMb', $event)"
+                      />
+                    </tx-form-field>
+                    <tx-form-field label="Retained log files" controlId="tx-settings-log-retain">
+                      <tx-slider
+                        controlId="tx-settings-log-retain"
+                        [min]="1"
+                        [max]="10"
+                        [step]="1"
+                        [ngModel]="s.logging.retainedFiles"
+                        (ngModelChange)="patchLoggingNumber('retainedFiles', $event)"
+                      />
+                    </tx-form-field>
+                  </div>
+
+                  <div class="tx-entrance-stagger__block">
+                    <h3 class="tx-settings__section-heading">Files</h3>
+                    @if (logPaths(); as paths) {
+                      <tx-form-field label="Log directory" controlId="tx-settings-log-dir">
+                        <code id="tx-settings-log-dir" class="tx-settings__path">{{ paths.logDir }}</code>
+                      </tx-form-field>
+                    }
+                    <div class="tx-settings__action-row">
+                      <tx-button variant="secondary" [disabled]="!hasElectronBridge()" (pressed)="handleOpenLogDir()">
+                        Open logs folder
+                      </tx-button>
+                      @if (logPaths(); as paths) {
+                        <tx-button variant="secondary" (pressed)="handleCopyPath(paths.logDir)">Copy path</tx-button>
+                      }
+                      <tx-button variant="secondary" [disabled]="!hasElectronBridge()" (pressed)="handleRefreshLogTail()">
+                        Refresh preview
+                      </tx-button>
+                      <tx-button variant="secondary" [disabled]="!hasElectronBridge()" (pressed)="requestClearLogs()">
+                        Clear logs
+                      </tx-button>
+                    </div>
+                    <tx-form-field label="Recent log lines" controlId="tx-settings-log-tail">
+                      <tx-textarea
+                        controlId="tx-settings-log-tail"
+                        [rows]="8"
+                        [readOnly]="true"
+                        [monospace]="true"
+                        [ngModel]="logTailPreview()"
+                      />
+                    </tx-form-field>
+                  </div>
+                  </div>
+                </section>
+              }
+              @if (isSectionActive('dataConfig')) {
+                <section
+                  class="tx-settings__section"
+                  [class.tx-settings__section--active]="isSectionActive('dataConfig')"
+                  [attr.aria-hidden]="!isSectionActive('dataConfig')"
+                >
+                  <div
+                    class="tx-settings__section-inner tx-entrance-stagger"
+                    [class.tx-entrance-stagger--play]="isSectionContentAnimating('dataConfig')"
+                    [class.tx-entrance-stagger--settled]="isSectionContentSettled('dataConfig')"
+                  >
+                  <div class="tx-entrance-stagger__block">
+                    <h2 class="tx-settings__tab-title">Data &amp; Config</h2>
+                    <p class="tx-settings__tab-description">
+                      Workspace profiles isolate collections, environments, session, and history. Theme and app settings stay global.
+                      Switch profiles from the titlebar.
+                    </p>
+                  </div>
+
+                  <div class="tx-entrance-stagger__block">
+                    <h3 class="tx-settings__section-heading">Workspace profile</h3>
+                    <tx-form-field label="Active profile" controlId="tx-settings-active-profile">
+                      <span id="tx-settings-active-profile">{{ activeProfileName() }}</span>
+                    </tx-form-field>
+                    <tx-form-field label="Profile workspace folder" controlId="tx-settings-config-dir">
+                      <code id="tx-settings-config-dir" class="tx-settings__path">{{ configDir() }}</code>
+                    </tx-form-field>
+                    <div class="tx-settings__action-row">
+                      <tx-button variant="secondary" [disabled]="!hasElectronBridge()" (pressed)="handleOpenConfigDir()">
+                        Open profile folder
+                      </tx-button>
+                    </div>
+                    @if (hasElectronBridge() && workspaceProfiles().length > 0) {
+                      <ul class="tx-settings__profile-list">
+                        @for (profile of workspaceProfiles(); track profile.id) {
+                          <li class="tx-settings__profile-row">
+                            <span class="tx-settings__profile-name">{{ profile.name }}</span>
+                            @if (profile.id === activeProfileId()) {
+                              <tx-tag variant="info">Active</tx-tag>
+                            }
+                            <div class="tx-settings__profile-actions">
+                              <tx-button variant="secondary" (pressed)="handleRenameProfile(profile.id)">
+                                Rename
+                              </tx-button>
+                              <tx-button
+                                variant="secondary"
+                                [disabled]="profile.id === activeProfileId() || workspaceProfiles().length <= 1"
+                                (pressed)="handleDeleteProfile(profile.id)"
+                              >
+                                Delete
+                              </tx-button>
+                            </div>
+                          </li>
+                        }
+                      </ul>
+                    }
+                  </div>
+
+                  <div class="tx-entrance-stagger__block">
+                    <h3 class="tx-settings__section-heading">Global settings</h3>
+                    @if (configFilePaths(); as paths) {
+                      <tx-form-field label="Global settings folder" controlId="tx-settings-shared-config-dir">
+                        <code id="tx-settings-shared-config-dir" class="tx-settings__path">{{ paths.sharedConfigDir }}</code>
+                      </tx-form-field>
+                    }
+                    <div class="tx-settings__action-row">
+                      <tx-button variant="secondary" [disabled]="!hasElectronBridge()" (pressed)="handleChangeConfigDir()">
+                        Change global folder…
+                      </tx-button>
+                    </div>
+                    <tx-form-field label="Workspace data folder" controlId="tx-settings-workspace-dir">
+                      <code id="tx-settings-workspace-dir" class="tx-settings__path">{{
+                        s.general.configFolderPath ?? '(not set)'
+                      }}</code>
+                    </tx-form-field>
+                    <tx-button variant="secondary" [disabled]="!hasElectronBridge()" (pressed)="handleChooseWorkspaceFolder()">
+                      Choose workspace folderâ€¦
+                    </tx-button>
+                    @if (configFilePaths(); as paths) {
+                      <tx-form-field label="settings.json (global)" controlId="tx-settings-settings-path">
+                        <code id="tx-settings-settings-path" class="tx-settings__path">{{ paths.settingsPath }}</code>
+                      </tx-form-field>
+                      <tx-form-field label="session.json (profile)" controlId="tx-settings-session-path">
+                        <code id="tx-settings-session-path" class="tx-settings__path">{{ paths.sessionPath }}</code>
+                      </tx-form-field>
+                      <tx-form-field label="collections.json (profile)" controlId="tx-settings-collections-path">
+                        <code id="tx-settings-collections-path" class="tx-settings__path">{{ paths.collectionsPath }}</code>
+                      </tx-form-field>
+                      <tx-form-field label="history.json (profile)" controlId="tx-settings-history-path">
+                        <code id="tx-settings-history-path" class="tx-settings__path">{{ paths.historyPath }}</code>
+                      </tx-form-field>
+                    }
+                  </div>
+
+                  <div class="tx-entrance-stagger__block">
+                    <h3 class="tx-settings__section-heading">Files</h3>
+                    <tx-button variant="secondary" (pressed)="handleReloadConfig()">Reload configuration</tx-button>
+                  </div>
+
+                  <div class="tx-entrance-stagger__block">
+                    <h3 class="tx-settings__section-heading">Write behavior</h3>
+                    <div class="tx-settings__toggle-stack">
+                      <tx-toggle
+                        label="Validate config on startup"
+                        [ngModel]="s.dataConfig.validateOnStartup"
+                        (ngModelChange)="patchDataConfigToggle('validateOnStartup', $event)"
+                      />
+                      <tx-toggle
+                        label="Pretty-print JSON when saving"
+                        [ngModel]="s.dataConfig.prettyPrintJson"
+                        (ngModelChange)="patchDataConfigToggle('prettyPrintJson', $event)"
+                      />
+                      <tx-toggle
+                        label="Backup config before write"
+                        [ngModel]="s.dataConfig.backupBeforeWrite"
+                        (ngModelChange)="patchDataConfigToggle('backupBeforeWrite', $event)"
+                      />
+                      <tx-toggle
+                        label="Reload when files change externally"
+                        [ngModel]="s.dataConfig.autoReloadOnExternalChange"
+                        (ngModelChange)="patchDataConfigToggle('autoReloadOnExternalChange', $event)"
+                      />
+                    </div>
+                    <p class="tx-settings__tab-description">External file watching is coming soon.</p>
+                  </div>
+
+                  <div class="tx-entrance-stagger__block">
+                    <h3 class="tx-settings__section-heading">Backup &amp; reset</h3>
+                    <div class="tx-settings__action-row">
+                      <tx-button variant="secondary" [disabled]="!hasElectronBridge()" (pressed)="handleExportSettings()">
+                        Export settings
+                      </tx-button>
+                      <label class="tx-settings__file-input">
+                        <input
+                          type="file"
+                          accept="application/json,.json"
+                          [disabled]="!hasElectronBridge()"
+                          (change)="handleImportFileSelected($event)"
+                        />
+                        <tx-button variant="secondary" [disabled]="!hasElectronBridge()">Import settingsâ€¦</tx-button>
+                      </label>
+                      <tx-button variant="secondary" [disabled]="!hasElectronBridge()" (pressed)="requestResetSettings()">
+                        Reset settings
+                      </tx-button>
+                      <tx-button variant="secondary" [disabled]="!hasElectronBridge()" (pressed)="requestResetSession()">
+                        Reset session
+                      </tx-button>
+                    </div>
+                  </div>
+
+                  <div class="tx-entrance-stagger__block">
+                    <h3 class="tx-settings__section-heading">Metadata</h3>
+                    <dl class="tx-settings__meta">
+                      <dt>Schema version</dt>
+                      <dd>{{ settingsSchemaVersion }}</dd>
+                      <dt>Last updated</dt>
+                      <dd>{{ s.meta.updatedAt }}</dd>
+                    </dl>
+                  </div>
+                  </div>
+                </section>
+              }
+              @if (isSectionActive('httpRequest')) {
+                <section
+                  class="tx-settings__section"
+                  [class.tx-settings__section--active]="isSectionActive('httpRequest')"
+                  [attr.aria-hidden]="!isSectionActive('httpRequest')"
+                >
+                  <div
+                    class="tx-settings__section-inner tx-entrance-stagger"
+                    [class.tx-entrance-stagger--play]="isSectionContentAnimating('httpRequest')"
+                    [class.tx-entrance-stagger--settled]="isSectionContentSettled('httpRequest')"
+                  >
+                    <tx-settings-http-request-section
+                      [request]="s.http.request"
+                      (requestChange)="patchHttpRequest($event)"
+                    />
+                  </div>
+                </section>
+              }
+              @if (isSectionActive('httpRetries')) {
+                <section
+                  class="tx-settings__section"
+                  [class.tx-settings__section--active]="isSectionActive('httpRetries')"
+                  [attr.aria-hidden]="!isSectionActive('httpRetries')"
+                >
+                  <div
+                    class="tx-settings__section-inner tx-entrance-stagger"
+                    [class.tx-entrance-stagger--play]="isSectionContentAnimating('httpRetries')"
+                    [class.tx-entrance-stagger--settled]="isSectionContentSettled('httpRetries')"
+                  >
+                    <tx-settings-http-retries-section
+                      [retries]="s.http.retries"
+                      (retriesChange)="patchHttpRetries($event)"
+                    />
+                  </div>
+                </section>
+              }
+              @if (isSectionActive('httpTesting')) {
+                <section
+                  class="tx-settings__section"
+                  [class.tx-settings__section--active]="isSectionActive('httpTesting')"
+                  [attr.aria-hidden]="!isSectionActive('httpTesting')"
+                >
+                  <div
+                    class="tx-settings__section-inner tx-entrance-stagger"
+                    [class.tx-entrance-stagger--play]="isSectionContentAnimating('httpTesting')"
+                    [class.tx-entrance-stagger--settled]="isSectionContentSettled('httpTesting')"
+                  >
+                    <tx-settings-http-testing-section
+                      [testing]="s.http.testing"
+                      [canPickDirectory]="hasElectronBridge()"
+                      (testingChange)="patchHttpTesting($event)"
+                      (pickScreenshotFolder)="handlePickScreenshotFolder()"
+                    />
+                  </div>
+                </section>
+              }
+              @if (isSectionActive('httpHeaders')) {
+                <section
+                  class="tx-settings__section"
+                  [class.tx-settings__section--active]="isSectionActive('httpHeaders')"
+                  [attr.aria-hidden]="!isSectionActive('httpHeaders')"
+                >
+                  <div
+                    class="tx-settings__section-inner tx-entrance-stagger"
+                    [class.tx-entrance-stagger--play]="isSectionContentAnimating('httpHeaders')"
+                    [class.tx-entrance-stagger--settled]="isSectionContentSettled('httpHeaders')"
+                  >
+                    <tx-settings-http-headers-section
+                      [headers]="s.http.headers"
+                      (headersChange)="patchHttpHeaders($event)"
+                    />
+                  </div>
+                </section>
+              }
+              @if (isSectionActive('httpCertificates')) {
+                <section
+                  class="tx-settings__section"
+                  [class.tx-settings__section--active]="isSectionActive('httpCertificates')"
+                  [attr.aria-hidden]="!isSectionActive('httpCertificates')"
+                >
+                  <div
+                    class="tx-settings__section-inner tx-entrance-stagger"
+                    [class.tx-entrance-stagger--play]="isSectionContentAnimating('httpCertificates')"
+                    [class.tx-entrance-stagger--settled]="isSectionContentSettled('httpCertificates')"
+                  >
+                    <tx-settings-http-certificates-section
+                      [certificates]="s.http.certificates"
+                      [canPickDirectory]="hasElectronBridge()"
+                      (certificatesChange)="patchHttpCertificates($event)"
+                    />
+                  </div>
+                </section>
+              }
+              @if (isSectionActive('httpDns')) {
+                <section
+                  class="tx-settings__section"
+                  [class.tx-settings__section--active]="isSectionActive('httpDns')"
+                  [attr.aria-hidden]="!isSectionActive('httpDns')"
+                >
+                  <div
+                    class="tx-settings__section-inner tx-entrance-stagger"
+                    [class.tx-entrance-stagger--play]="isSectionContentAnimating('httpDns')"
+                    [class.tx-entrance-stagger--settled]="isSectionContentSettled('httpDns')"
+                  >
+                    <tx-settings-http-dns-section
+                      [dns]="s.http.dns"
+                      (dnsChange)="patchHttpDns($event)"
+                    />
+                  </div>
+                </section>
+              }
+              @if (isSectionActive('httpProxy')) {
+                <section
+                  class="tx-settings__section"
+                  [class.tx-settings__section--active]="isSectionActive('httpProxy')"
+                  [attr.aria-hidden]="!isSectionActive('httpProxy')"
+                >
+                  <div
+                    class="tx-settings__section-inner tx-entrance-stagger"
+                    [class.tx-entrance-stagger--play]="isSectionContentAnimating('httpProxy')"
+                    [class.tx-entrance-stagger--settled]="isSectionContentSettled('httpProxy')"
+                  >
+                    <tx-settings-http-proxy-section
+                      [proxy]="s.http.proxy"
+                      (proxyChange)="patchHttpProxy($event)"
+                    />
+                  </div>
+                </section>
+              }
+              @if (isSectionActive('privacy')) {
+                <section
+                  class="tx-settings__section"
+                  [class.tx-settings__section--active]="isSectionActive('privacy')"
+                  [attr.aria-hidden]="!isSectionActive('privacy')"
+                >
+                  <div
+                    class="tx-settings__section-inner tx-entrance-stagger"
+                    [class.tx-entrance-stagger--play]="isSectionContentAnimating('privacy')"
+                    [class.tx-entrance-stagger--settled]="isSectionContentSettled('privacy')"
+                  >
+                  <div class="tx-entrance-stagger__block">
+                    <h2 class="tx-settings__tab-title">Privacy</h2>
+                    <p class="tx-settings__tab-description">
+                      Telemetry is off by default in this scaffold.
+                    </p>
+                  </div>
+                  <div class="tx-entrance-stagger__block">
+                    <tx-toggle
+                      label="Send anonymous telemetry"
+                      [ngModel]="s.privacy.telemetryEnabled"
+                      (ngModelChange)="patchPrivacyToggle($event)"
+                    />
+                  </div>
+                  </div>
+                </section>
+              }
+              @if (isSectionActive('about')) {
+                <section
+                  class="tx-settings__section"
+                  [class.tx-settings__section--active]="isSectionActive('about')"
+                  [attr.aria-hidden]="!isSectionActive('about')"
+                >
+                  <div
+                    class="tx-settings__section-inner tx-entrance-stagger"
+                    [class.tx-entrance-stagger--play]="isSectionContentAnimating('about')"
+                    [class.tx-entrance-stagger--settled]="isSectionContentSettled('about')"
+                  >
+                  <div class="tx-entrance-stagger__block tx-settings__about-hero">
+                    <tx-brand-logo [size]="56" />
+                    <h2 class="tx-settings__tab-title">Testrix</h2>
+                    <p class="tx-settings__tab-description">Product information and runtime details.</p>
+                  </div>
+
+                  @if (bridgeMeta(); as meta) {
+                    <div class="tx-entrance-stagger__block">
+                    <h3 class="tx-settings__section-heading">Runtime</h3>
+                    <dl class="tx-settings__meta">
+                      <dt>Application</dt>
+                      <dd>{{ meta.app }}</dd>
+                      <dt>Electron</dt>
+                      <dd>{{ meta.electron }}</dd>
+                      <dt>Chromium</dt>
+                      <dd>{{ meta.chrome }}</dd>
+                      <dt>Platform</dt>
+                      <dd>{{ meta.platform }}</dd>
+                      @if (meta.devToolkit) {
+                        <dt>Dev toolkit</dt>
+                        <dd>Enabled</dd>
+                      }
+                    </dl>
+                    </div>
+                  } @else {
+                    <div class="tx-entrance-stagger__block">
+                      <p class="tx-settings__tab-description">
+                        Running without Electron preload (browser harness).
+                      </p>
+                    </div>
+                  }
+                  <div class="tx-entrance-stagger__block tx-settings__section-block">
+                    <h3 class="tx-settings__section-heading">Updates</h3>
+                    <p class="tx-settings__tab-description">
+                      Choose a release channel and check for new versions of Testrix.
+                    </p>
+                    <h3 class="tx-settings__section-heading">Release channel</h3>
+                    <div class="tx-settings__channel-row" role="group" aria-label="Release channel">
+                      <tx-button
+                        [variant]="isUpdatesChannel('stable') ? 'primary' : 'secondary'"
+                        (pressed)="patchUpdatesChannel('stable')"
+                      >
+                        Stable
+                      </tx-button>
+                      <tx-button
+                        [variant]="isUpdatesChannel('beta') ? 'primary' : 'secondary'"
+                        (pressed)="patchUpdatesChannel('beta')"
+                      >
+                        Beta
+                      </tx-button>
+                    </div>
+                    <h3 class="tx-settings__section-heading">Check</h3>
+                    <p class="tx-settings__update-status">{{ updateStatusMessage() }}</p>
+                    <div class="tx-settings__action-row">
+                      <tx-button variant="primary" (pressed)="handleCheckForUpdates()">
+                        @if (updateStatus().state === 'checking') {
+                          <tx-spinner size="sm" />
+                        }
+                        Check for updates
+                      </tx-button>
+                      @if (updateStatus().state === 'downloaded') {
+                        <tx-button variant="cta" (pressed)="handleInstallUpdate()">Restart to install</tx-button>
+                      }
+                      <tx-button variant="secondary" (pressed)="openReleasesPage()">
+                        View on GitHub
+                      </tx-button>
+                    </div>
+                    <tx-toggle
+                      label="Check for updates on startup"
+                      [ngModel]="s.updates.checkOnStartup"
+                      (ngModelChange)="patchUpdatesToggle($event)"
+                    />
+                  </div>
+
+                  </div>
+                </section>
+              }
+            </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+}
+
+<tx-modal
+  [open]="renameProfileOpen()"
+  title="Rename profile"
+  ariaLabel="Rename workspace profile"
+  layer="stacked"
+  (closed)="handleCloseRenameProfile()"
+>
+  <tx-form-field label="Profile name" controlId="tx-settings-rename-profile-name">
+    <tx-input
+      id="tx-settings-rename-profile-name"
+      [ngModel]="renameProfileDraftName()"
+      (ngModelChange)="renameProfileDraftName.set($event)"
+    />
+  </tx-form-field>
+  <div class="tx-settings__action-row">
+    <tx-button variant="secondary" (pressed)="handleCloseRenameProfile()">Cancel</tx-button>
+    <tx-button
+      variant="primary"
+      [disabled]="!renameProfileDraftName().trim()"
+      (pressed)="handleConfirmRenameProfile()"
+    >
+      Save
+    </tx-button>
+  </div>
+</tx-modal>
+
+@if (pendingConfirm(); as confirm) {
+  <tx-confirm-dialog
+    [open]="confirmOpen()"
+    [title]="confirm.title"
+    [message]="confirm.message"
+    [confirmLabel]="confirm.confirmLabel"
+    [variant]="confirm.variant"
+    [dismissOnBackdrop]="false"
+    (confirmed)="handleConfirmDialogConfirmed()"
+    (cancelled)="handleConfirmDialogClosed()"
+    (closed)="handleConfirmDialogClosed()"
+  />
+}
+

@@ -1,0 +1,66 @@
+// Compact HTTP method chips (tabs, read-only bars). Use `[attr.data-method]="method"`.
+
+@mixin http-method-badge-base($compact: false) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 1px solid transparent;
+  border-radius: calc(var(--tx-radius-sm, 6px) - 1px);
+  font-weight: 700;
+  text-transform: uppercase;
+  line-height: 1;
+  font-family: var(--tx-font-mono, ui-monospace, 'Cascadia Code', monospace);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--tx-text-0) 4%, transparent);
+
+  @if $compact {
+    padding: 0.14rem 0.42rem;
+    min-width: 2.15rem;
+    font-size: 0.625rem;
+    letter-spacing: 0.045em;
+  } @else {
+    padding: 0.22rem 0.52rem;
+    min-width: 2.5rem;
+    font-size: 0.6875rem;
+    letter-spacing: 0.05em;
+  }
+}
+
+@mixin http-method-badge-tones {
+  &[data-method='GET'] {
+    color: color-mix(in srgb, var(--tx-success) 92%, var(--tx-text-0));
+    background: color-mix(in srgb, var(--tx-success) 16%, var(--tx-surface-2));
+    border-color: color-mix(in srgb, var(--tx-success) 36%, transparent);
+  }
+
+  &[data-method='POST'] {
+    color: color-mix(in srgb, var(--tx-warning) 94%, var(--tx-text-0));
+    background: color-mix(in srgb, var(--tx-warning) 18%, var(--tx-surface-2));
+    border-color: color-mix(in srgb, var(--tx-warning) 40%, transparent);
+  }
+
+  &[data-method='PUT'] {
+    color: color-mix(in srgb, var(--tx-link) 92%, var(--tx-text-0));
+    background: color-mix(in srgb, var(--tx-link) 16%, var(--tx-surface-2));
+    border-color: color-mix(in srgb, var(--tx-link) 38%, transparent);
+  }
+
+  &[data-method='PATCH'] {
+    color: color-mix(in srgb, var(--tx-accent) 90%, var(--tx-text-0));
+    background: color-mix(in srgb, var(--tx-accent) 16%, var(--tx-surface-2));
+    border-color: color-mix(in srgb, var(--tx-accent) 36%, transparent);
+  }
+
+  &[data-method='DELETE'] {
+    color: color-mix(in srgb, var(--tx-danger) 92%, var(--tx-text-0));
+    background: color-mix(in srgb, var(--tx-danger) 16%, var(--tx-surface-2));
+    border-color: color-mix(in srgb, var(--tx-danger) 38%, transparent);
+  }
+
+  &[data-method='HEAD'],
+  &[data-method='OPTIONS'] {
+    color: color-mix(in srgb, var(--tx-text-1) 90%, var(--tx-text-0));
+    background: color-mix(in srgb, var(--tx-text-1) 10%, var(--tx-surface-2));
+    border-color: color-mix(in srgb, var(--tx-border-0) 62%, transparent);
+  }
+}

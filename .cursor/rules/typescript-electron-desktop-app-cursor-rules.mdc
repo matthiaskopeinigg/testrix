@@ -1,0 +1,40 @@
+---
+alwaysApply: true
+description: Electron + TypeScript for Testrix desktop layer
+---
+
+You are an expert in TypeScript, Electron, and Desktop App Development for **Testrix** (Angular renderer + Electron shell). See **`testrix-project.mdc`** for layout.
+
+## Code Style and Structure
+
+- Write concise, type-safe TypeScript in **main**, **preload**, and **shared** compilations (`electron/**/*.ts`, `shared/**/*.ts`).
+
+- Layers: **`electron/`** (main IPC, BrowserWindows, boot) · **preload** (narrow `contextBridge` API aligned with `electron/electron-api-bridge.ts`) · **`src/app/`** renderer (no Node APIs).
+
+- Group by feature folders under `electron/` (`windows/`, `ipc/`, `boot/`, …).
+
+## Naming Conventions
+
+- **camelCase** for variables/functions; **PascalCase** for classes and window factories.
+
+- **kebab-case** directories/files where the repo already does (`splash-window/`).
+
+## TypeScript
+
+- Prefer **`ipcMain.handle`** + **`invoke`** with **`wrapInvokeHandler`** and typed **`channels`** objects.
+
+- Avoid `any`; keep IPC payloads typed or validated with **`shared`** Zod envelopes where applicable.
+
+## UI (renderer)
+
+- The shipped shell is **Angular + SCSS** (`src/app/**`). Do not assume React/Vue or CSS-in-JS for renderer work.
+
+## Security
+
+- **contextIsolation: true**, **nodeIntegration: false**, **sandbox** where already enabled.
+
+- Prefer narrow preload surface (`window.testrix`) over ad-hoc `executeJavaScript` bridges.
+
+## Performance
+
+- Prefer async Electron APIs on the **main process** path; lazy-load Angular routes for heavy UI features.

@@ -1,0 +1,131 @@
+<div class="tx-entrance-stagger__block">
+  <h2 class="tx-settings__tab-title">Certificates &amp; SSL</h2>
+</div>
+
+<div class="tx-entrance-stagger__block tx-http-cert-ssl">
+  <label class="tx-http-cert-ssl__option">
+    <input
+      type="checkbox"
+      class="tx-http-cert-ssl__checkbox"
+      [ngModel]="certificates().ignoreInvalidSsl"
+      (ngModelChange)="emit({ ignoreInvalidSsl: $event })"
+    />
+    <span class="tx-http-cert-ssl__label">Ignore Invalid SSL (Allow self-signed)</span>
+  </label>
+
+  <label class="tx-http-cert-ssl__option">
+    <input
+      type="checkbox"
+      class="tx-http-cert-ssl__checkbox"
+      [ngModel]="certificates().verifyHostname"
+      (ngModelChange)="emit({ verifyHostname: $event })"
+    />
+    <span class="tx-http-cert-ssl__label">Verify Hostname</span>
+  </label>
+</div>
+
+<div class="tx-entrance-stagger__block tx-http-cert-managed">
+  <h3 class="tx-settings__section-heading">Managed certificates</h3>
+  <p class="tx-http-cert-managed__intro">
+    Client cert for each hostname (mTLS), like Postman. Server TLS still uses the built-in CA list
+    unless you enable Ignore Invalid SSL above.
+  </p>
+
+  @if (certificates().entries.length > 0) {
+    <ul class="tx-http-cert-managed__list" aria-label="Configured client certificates">
+      @for (entry of certificates().entries; track entry.id) {
+        <li class="tx-http-cert-managed__item">
+          <span class="tx-http-cert-managed__hostname">{{ displayHostname(entry) }}</span>
+          <button
+            type="button"
+            class="tx-http-cert-managed__remove"
+            aria-label="Remove certificate for {{ displayHostname(entry) }}"
+            (click)="handleRemoveEntry(entry.id)"
+          >
+            <tx-icon name="close" [size]="14" />
+          </button>
+        </li>
+      }
+    </ul>
+  }
+
+  <div class="tx-http-cert-form" aria-label="Add client certificate">
+    <div class="tx-http-cert-form__row">
+      <tx-form-field label="Hostname" controlId="tx-settings-http-cert-draft-host">
+        <tx-input
+          controlId="tx-settings-http-cert-draft-host"
+          [ngModel]="draft().hostPattern"
+          (ngModelChange)="handleDraftHostChange($event)"
+          placeholder="example.com"
+        />
+      </tx-form-field>
+
+      <tx-form-field label="Passphrase" controlId="tx-settings-http-cert-draft-pass">
+        <div class="tx-http-cert-form__passphrase">
+          <tx-input
+            controlId="tx-settings-http-cert-draft-pass"
+            [type]="passphraseInputType()"
+            [ngModel]="draft().passphrase"
+            (ngModelChange)="handleDraftPassphraseChange($event)"
+            placeholder="Optional"
+            ariaLabel="Certificate passphrase"
+          />
+          <button
+            type="button"
+            class="tx-http-cert-form__passphrase-toggle"
+            [attr.aria-label]="showPassphrase() ? 'Hide passphrase' : 'Show passphrase'"
+            [attr.aria-pressed]="showPassphrase()"
+            (click)="handleTogglePassphrase()"
+          >
+            <tx-icon [name]="showPassphrase() ? 'eyeOff' : 'eye'" [size]="16" />
+          </button>
+        </div>
+      </tx-form-field>
+    </div>
+
+    <div class="tx-http-cert-files">
+      <div class="tx-http-cert-files__row">
+        <button
+          type="button"
+          class="tx-http-cert-files__badge"
+          [disabled]="!canPickDirectory()"
+          (click)="handleBrowseFile('clientCertPath')"
+        >
+          CRT
+        </button>
+        <span class="tx-http-cert-files__name">{{ displayFileLabel(draft().clientCertPath) }}</span>
+      </div>
+      <div class="tx-http-cert-files__row">
+        <button
+          type="button"
+          class="tx-http-cert-files__badge"
+          [disabled]="!canPickDirectory()"
+          (click)="handleBrowseFile('clientKeyPath')"
+        >
+          KEY
+        </button>
+        <span class="tx-http-cert-files__name">{{ displayFileLabel(draft().clientKeyPath) }}</span>
+      </div>
+      <div class="tx-http-cert-files__row">
+        <button
+          type="button"
+          class="tx-http-cert-files__badge"
+          [disabled]="!canPickDirectory()"
+          (click)="handleBrowseFile('pfxPath')"
+        >
+          PFX
+        </button>
+        <span class="tx-http-cert-files__name">{{ displayFileLabel(draft().pfxPath) }}</span>
+      </div>
+    </div>
+
+    <tx-button
+      class="tx-http-cert-form__add"
+      variant="secondary"
+      [disabled]="!canAddEntry()"
+      (pressed)="handleAddCertificate()"
+    >
+      Add Certificate
+    </tx-button>
+  </div>
+</div>

@@ -1,0 +1,18 @@
+<button
+  class="tx-button"
+  [class.is-loading]="loading()"
+  [attr.type]="buttonType()"
+  [attr.data-variant]="variant()"
+  [disabled]="isInteractionBlocked()"
+  [attr.aria-busy]="loading() ? 'true' : null"
+  (click)="handlePress($event)"
+>
+  @if (loading()) {
+    <span class="tx-button__spinner" aria-hidden="true">
+      <tx-spinner size="sm" [ariaLabel]="loadingLabel()" />
+    </span>
+  }
+  <span class="tx-button__content" [class.is-dimmed]="loading()">
+    <ng-content />
+  </span>
+</button>

@@ -1,0 +1,44 @@
+:host {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+}
+
+.tx-split-pane__leaf,
+.tx-split-pane__split {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+}
+
+.tx-split-pane__split {
+  flex-direction: row;
+
+  &--vertical {
+    flex-direction: column;
+  }
+}
+
+.tx-split-pane__pane {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.tx-split-pane__divider {
+  flex: 0 0 4px;
+  background: color-mix(in srgb, var(--tx-border-0) 55%, transparent);
+  cursor: col-resize;
+
+  .tx-split-pane__split--vertical & {
+    cursor: row-resize;
+  }
+
+  &:hover {
+    background: color-mix(in srgb, var(--tx-primary) 35%, var(--tx-border-0));
+  }
+}

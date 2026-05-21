@@ -1,0 +1,119 @@
+---
+
+description: Testrix renderer tokens plus shared Angular UI primitives
+
+globs:
+
+  - src/app/features/**/*
+
+  - src/app/shared/**
+
+  - src/styles/**/*.scss
+
+  - electron/splash/**
+---
+
+
+
+# Theme + shared Angular UI (`--tx-*` + `tx-*`)
+
+**Policy:** Always use shared `tx-*` components, directives, and pipes in feature work; extend `src/app/shared/` when missing. See **`use-shared-ui.mdc`** (always applied).
+
+Testrix separates **Electron chrome** (`electron/**`) from the **Angular shell** (`src/**`). Renderer styling is token-first (`--tx-*`) and consolidated into reusable `tx-*` atoms under `src/app/shared/`.
+
+
+
+## Token layering
+
+
+
+1. **Foundation** — `src/styles/_tokens.scss` defines `--tx-*` palette + structural colors (surface, text, borders, focus ring, statuses).
+
+2. **Themes** — `src/styles/_themes.scss` swaps palettes for `body.theme-light` plus `prefers-color-scheme` overrides for `body.theme-system`. `ConfigService`-driven switches add `theme-light|dark|system` classes on `<body>`.
+
+3. **Components** — co-located `*.component.scss` files map layout concerns to semantic tokens.
+
+
+
+### Rules for feature authors
+
+
+
+- No one-off `#rrggbb` in `src/app/features/**` unless you are authoring a core token bump in `_tokens.scss`.
+
+- Compose with `color-mix(in srgb, var(--tx-*) …)` when you need tints—not arbitrary RGBA blobs.
+
+- Use host-level `:host { display … }` and keep specificity low; escalate with BEM-ish child selectors only inside the owning component stylesheet.
+
+
+
+## Approved shared widgets (`src/app/shared`)
+
+
+
+| Selector | Responsibility |
+
+| --- | --- |
+
+| `tx-button` | Primary interaction surface (`variant`: `cta` \| `primary` \| `secondary` \| `add`). |
+
+| `tx-modal` | Dialog chrome (backdrop card, ESC, optional backdrop dismissal). |
+
+| `tx-form-field` | Opinionated `<label>` + projected control stacking for prototyping. |
+
+| `tx-brand-logo` | `<img>` wrapper over `/brand/logo.svg` mirrors synced SVG from `npm run sync:brand`. |
+
+| `tx-window-titlebar` | Frameless-shell chrome (`minimize` / maximize toggle / close) via `window.testrix.windowControls`; macOS inset padding for traffic lights. |
+
+| `tx-error-banner` | Displays `ErrorNotificationService` payloads after Angular renders; cannot replace Electron `error.html`. |
+| `tx-banner` | Presentational inline banner (`info` \| `success` \| `warning` \| `error`); optional dismiss and `[bannerActions]` slot. |
+| `tx-input` | Text input with token focus ring; ControlValueAccessor. |
+| `tx-variable-input` | Text input with `$` dynamic-variable autocomplete (`@shared/dynamic-variables`); ControlValueAccessor. |
+| `tx-key-value-list` | Editable key/value rows (optional enable checkbox, add/remove); `valueInput="variables"` uses `tx-variable-input` on the value column. |
+| `tx-textarea` | Multi-line field; optional monospace. |
+| `tx-toggle` | Switch control; ControlValueAccessor. |
+| `tx-slider` | Range input with filled track. |
+| `tx-tag` | Status pill (`default` \| `success` \| `warning` \| `error` \| `info`). |
+| `tx-spinner` | Indeterminate loader. |
+| `tx-divider` | Horizontal rule. |
+| `tx-tree` | Hierarchical list with expand/collapse, selection, and pointer DnD (`TxTreeConfig` drag/drop/sort policies). |
+| `tx-tab` | Editor tab chip (label, optional HTTP method badge, pin, close). |
+| `tx-tab-bar` | Horizontal scrollable tab strip; drag reorder and cross-pane drop. |
+| `tx-split-pane` | Recursive horizontal/vertical split layout with draggable dividers. |
+| `tx-settings-popup` | Settings modal (appearance, UI, collections, HTTP, logging, data, privacy, about). |
+| `tx-theme-layout-preview` | Miniature theme chrome from `ThemePalette` (settings / DS). |
+| `[txAutofocus]` | Simple focus helper |
+| `truncate` pipe (`shared/pipes`) | Display-only truncation for previews |
+
+
+
+## Cross-runtime contracts
+
+
+
+- Renderer code **never imports** filesystem APIs.
+
+- Angular talks to preload exclusively through `window.testrix` typings (`src/types/testrix-window.d.ts`). 
+
+- Canonical settings/session shapes live under `shared/config` (+ Zod schemas) and ship to both Electron and Angular compilations.
+
+
+
+## Anti-patterns
+
+
+
+- Embedding raw SVG/wordmarks directly in Angular features—reuse `tx-brand-logo`.
+
+- Introducing Tailwind/`@apply` ergonomics—the repo standard is plain SCSS + tokens.
+
+- Duplicating enums between `shared/**` (runtime contracts) vs `src/app/shared/**` (UI kit). 
+
+
+
+## Splash / Electron surfaces
+
+
+
+Splash + installer-facing HTML/CSS under `electron/splash/**` deliberately diverges token sources (static bundles). Whenever you brighten/darken the renderer palette, update the Electron CSS mirrors for visual parity—or document deltas in README.
+

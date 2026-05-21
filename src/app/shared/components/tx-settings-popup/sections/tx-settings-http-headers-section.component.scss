@@ -1,0 +1,45 @@
+.tx-settings-http-headers__hint {
+  margin: 0 0 0.75rem;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--tx-text-1);
+
+  code {
+    font-family: var(--tx-font-mono, ui-monospace, monospace);
+    font-size: 0.75rem;
+  }
+}
+
+.tx-settings-http-headers__preview-actions {
+  margin-top: 0.75rem;
+}
+
+.tx-settings-http-headers__preview {
+  margin: 0.5rem 0 0;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid var(--tx-border-0);
+  border-radius: var(--tx-radius-sm, 8px);
+  background: var(--tx-surface-1);
+  list-style: none;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+.tx-settings-http-headers__preview-row {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.2rem 0;
+  font-family: var(--tx-font-mono, ui-monospace, monospace);
+  word-break: break-all;
+}
+
+.tx-settings-http-headers__preview-key {
+  flex-shrink: 0;
+  color: var(--tx-primary);
+}
+
+.tx-settings-http-headers__preview-empty {
+  margin: 0;
+  color: var(--tx-text-1);
+  font-style: italic;
+}

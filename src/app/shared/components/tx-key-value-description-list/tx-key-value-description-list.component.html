@@ -1,0 +1,102 @@
+﻿<div
+  class="tx-kv-desc-list"
+  role="group"
+  [attr.aria-label]="keyLabel() + ', ' + valueLabel() + ', and ' + descriptionLabel()"
+>
+  @if (rows().length === 0) {
+    <p class="tx-kv-desc-list__empty">No rows yet.</p>
+  }
+
+  @for (row of rows(); track row.id) {
+    <div class="tx-kv-desc-list__row">
+      <div class="tx-kv-desc-list__key-cell">
+        <label class="tx-field__label" [for]="'kvdk-' + row.id">{{ keyLabel() }}</label>
+        <div class="tx-kv-desc-list__key-control">
+          @if (showEnabled()) {
+            <label class="tx-kv-desc-list__enabled">
+              <input
+                type="checkbox"
+                class="tx-kv-desc-list__enabled-input"
+                [checked]="row.enabled ?? true"
+                [attr.aria-label]="'Enable ' + keyLabel()"
+                (change)="handleEnabledChange(row.id, $any($event.target).checked)"
+              />
+              <span class="tx-kv-desc-list__enabled-box" aria-hidden="true"></span>
+            </label>
+          }
+          <div class="tx-field__control">
+            <tx-input
+              [controlId]="'kvdk-' + row.id"
+              [ngModel]="row.key"
+              (ngModelChange)="handleKeyChange(row.id, $event)"
+              placeholder="Name"
+            />
+          </div>
+        </div>
+      </div>
+
+      @if (valueInput() === 'variables') {
+        <div class="tx-field tx-kv-desc-list__value-field">
+          <div class="tx-kv-desc-list__label-row">
+            <label class="tx-field__label" [for]="'kvdv-' + row.id">{{ valueLabel() }}</label>
+            <button
+              type="button"
+              class="tx-kv-desc-list__value-hint"
+              aria-label="About dynamic placeholders in values"
+              [txTooltip]="valueHintTooltip()"
+              txTooltipPosition="top"
+            >
+              <tx-icon name="help" [size]="14" aria-hidden="true" />
+            </button>
+          </div>
+          <div class="tx-field__control">
+            <tx-variable-input
+              [controlId]="'kvdv-' + row.id"
+              [catalog]="variableCatalog()"
+              [showPlaceholderHint]="false"
+              [ngModel]="row.value"
+              (ngModelChange)="handleValueChange(row.id, $event)"
+              (environmentVariableClick)="environmentVariableClick.emit($event)"
+              placeholder="Value or $variable"
+            />
+          </div>
+        </div>
+      } @else {
+        <tx-form-field class="tx-kv-desc-list__field" [label]="valueLabel()" [controlId]="'kvdv-' + row.id">
+          <tx-input
+            [controlId]="'kvdv-' + row.id"
+            [ngModel]="row.value"
+            (ngModelChange)="handleValueChange(row.id, $event)"
+            placeholder="Value"
+          />
+        </tx-form-field>
+      }
+
+      <tx-form-field
+        class="tx-kv-desc-list__field"
+        [label]="descriptionLabel()"
+        [controlId]="'kvdd-' + row.id"
+      >
+        <tx-input
+          [controlId]="'kvdd-' + row.id"
+          [ngModel]="row.description ?? ''"
+          (ngModelChange)="handleDescriptionChange(row.id, $event)"
+          placeholder="Optional notes"
+        />
+      </tx-form-field>
+
+      <button
+        type="button"
+        class="tx-kv-desc-list__remove"
+        aria-label="Remove row"
+        (click)="handleRemove(row.id)"
+      >
+        <tx-icon name="trash" [size]="16" />
+      </button>
+    </div>
+  }
+
+  <tx-button variant="add" [disabled]="!canAdd()" (pressed)="handleAdd()">
+    {{ addLabel() }}
+  </tx-button>
+</div>

@@ -1,0 +1,191 @@
+<div class="tx-response-viewer" (click)="closeMenus()">
+  <header class="tx-response-viewer__header">
+    <tx-response-status-strip [snapshot]="snapshot()" [inFlight]="inFlight()">
+      <div txResponseActions class="tx-response-viewer__actions">
+        <tx-button
+          variant="secondary"
+          title="Save this response as a request example (Overview tab)"
+          [disabled]="!canSaveToRequest()"
+          (pressed)="handleSaveExample()"
+        >
+          <tx-icon name="bookmark" [size]="12" aria-hidden="true" />
+          Save as example
+        </tx-button>
+        <tx-button variant="secondary" title="Save body to file" [disabled]="!canSaveToRequest()" (pressed)="handleSaveBody()">
+          <tx-icon name="download" [size]="12" aria-hidden="true" />
+          Save
+        </tx-button>
+        <div class="tx-response-viewer__menu" [class.is-open]="moreMenuOpen()">
+          <tx-button
+            variant="secondary"
+            aria-haspopup="menu"
+            [attr.aria-expanded]="moreMenuOpen()"
+            [disabled]="!canSaveToRequest()"
+            (pressed)="handleToggleMoreMenu($event)"
+          >
+            <tx-icon name="moreHorizontal" [size]="12" aria-hidden="true" />
+            More
+            <span class="tx-response-viewer__caret" aria-hidden="true">▾</span>
+          </tx-button>
+          @if (moreMenuOpen()) {
+            <ul class="tx-response-viewer__menu-list" role="menu" (click)="$event.stopPropagation()">
+              <li role="menuitem">
+                <button type="button" class="tx-response-viewer__menu-item" (click)="handleSaveSnapshot()">
+                  <span class="tx-response-viewer__menu-title">Save snapshot</span>
+                  <span class="tx-response-viewer__menu-hint">Pinned response for diff and replay</span>
+                </button>
+              </li>
+            </ul>
+          }
+        </div>
+        <div class="tx-response-viewer__menu" [class.is-open]="copyMenuOpen()">
+          <tx-button
+            variant="secondary"
+            aria-haspopup="menu"
+            [attr.aria-expanded]="copyMenuOpen()"
+            (pressed)="handleToggleCopyMenu($event)"
+          >
+            <tx-icon name="copy" [size]="12" aria-hidden="true" />
+            Copy
+            <span class="tx-response-viewer__caret" aria-hidden="true">▾</span>
+          </tx-button>
+          @if (copyMenuOpen()) {
+            <ul class="tx-response-viewer__menu-list" role="menu" (click)="$event.stopPropagation()">
+              @for (item of copyActions; track item.id) {
+                <li role="menuitem">
+                  <button type="button" class="tx-response-viewer__menu-item" (click)="handleCopyAction(item.id)">
+                    <span class="tx-response-viewer__menu-title">
+                      @if (copyFlash() === item.id) {
+                        <span class="tx-response-viewer__check">✓</span>
+                      }
+                      {{ item.label }}
+                    </span>
+                    <span class="tx-response-viewer__menu-hint">{{ item.hint }}</span>
+                  </button>
+                </li>
+              }
+            </ul>
+          }
+        </div>
+      </div>
+    </tx-response-status-strip>
+  </header>
+
+  @if (!inFlight() && !snapshot() && runs().length === 0) {
+    <tx-banner variant="info" title="No response yet">
+      Send the request to see the response here.
+    </tx-banner>
+  } @else {
+    <tx-response-tab-bar
+      [tabs]="responseTabs()"
+      [activeTab]="activeTab()"
+      (activeTabChange)="handleTabChange($event)"
+    />
+    <div class="tx-response-viewer__content" [class.is-in-flight]="inFlight()">
+      @if (inFlight()) {
+        <div class="tx-response-viewer__loading" role="status" aria-live="polite">
+          <tx-spinner />
+          <span>Waiting for response…</span>
+        </div>
+      }
+      @switch (activeTab()) {
+        @case ('body') {
+          <div class="tx-response-viewer__pane">
+            <tx-code-editor
+              class="tx-response-viewer__body-editor"
+              [language]="editorLanguage()"
+              [content]="prettyBody()"
+              [framed]="true"
+              [hideToolbarActions]="true"
+              [readOnly]="true"
+              [autoFormat]="false"
+              ariaLabel="Response body (pretty)"
+            />
+          </div>
+        }
+        @case ('raw') {
+          <div class="tx-response-viewer__pane">
+            <tx-code-editor
+              class="tx-response-viewer__body-editor"
+              language="plaintext"
+              [content]="rawBody()"
+              [framed]="true"
+              [hideToolbarActions]="true"
+              [readOnly]="true"
+              [autoFormat]="false"
+              ariaLabel="Response body (raw)"
+            />
+          </div>
+        }
+        @case ('preview') {
+          <div class="tx-response-viewer__pane">
+            @if (previewImageSrc(); as src) {
+              <div class="tx-response-viewer__preview-image">
+                <img [src]="src" alt="Response preview" />
+              </div>
+            } @else if (previewHtml(); as html) {
+              <iframe
+                class="tx-response-viewer__preview-frame"
+                title="HTML response preview"
+                sandbox=""
+                [srcdoc]="html"
+              ></iframe>
+            } @else {
+              <tx-banner variant="info" title="No preview">This response has no HTML or image preview.</tx-banner>
+            }
+          </div>
+        }
+        @case ('headers') {
+          <div class="tx-response-viewer__tab-pane">
+            <tx-response-headers-list [headers]="snapshot()?.headers ?? []" />
+          </div>
+        }
+        @case ('cookies') {
+          <div class="tx-response-viewer__tab-pane">
+            <ul class="tx-response-viewer__cookies">
+              @for (c of cookies(); track c.raw) {
+                <li>
+                  <strong>{{ c.name }}</strong>
+                  <span>{{ c.value }}</span>
+                  <code class="tx-response-viewer__cookie-raw">{{ c.raw }}</code>
+                </li>
+              } @empty {
+                <li class="tx-response-viewer__cookies-empty">No Set-Cookie headers.</li>
+              }
+            </ul>
+          </div>
+        }
+        @case ('diff') {
+          <tx-response-diff-panel
+            [diff]="diff()"
+            [runs]="runs()"
+            [selectedRunId]="selectedRunId()"
+            [pinnedBaselineId]="pinnedBaselineId()"
+            [compareBaselineId]="compareBaselineId()"
+            (compareAgainstChange)="handleCompareAgainst($event)"
+            (refreshDiff)="refreshDiff.emit()"
+          />
+        }
+        @case ('timeline') {
+          <div class="tx-response-viewer__tab-pane">
+            <tx-response-timing-panel [snapshot]="snapshot()" />
+          </div>
+        }
+        @case ('redirects') {
+          <div class="tx-response-viewer__tab-pane">
+            <tx-response-redirects-panel [redirects]="snapshot()?.redirects ?? []" />
+          </div>
+        }
+        @case ('snapshots') {
+          <tx-response-runs-panel
+            [runs]="runs()"
+            [selectedRunId]="selectedRunId()"
+            [pinnedBaselineId]="pinnedBaselineId()"
+            (runSelect)="handleRunSelect($event)"
+            (pinBaseline)="handlePinRun($event)"
+          />
+        }
+      }
+    </div>
+  }
+</div>

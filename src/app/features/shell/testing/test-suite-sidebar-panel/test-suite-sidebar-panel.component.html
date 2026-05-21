@@ -1,0 +1,35 @@
+<app-workspace-sidebar-panel-shell
+  class="test-suite-sidebar-panel"
+  [searchPlaceholder]="searchPlaceholder()"
+  [searchAriaLabel]="searchAriaLabel()"
+  [showFolderToggle]="true"
+  [showFilterButton]="false"
+  [showSortButton]="false"
+  (searchChange)="handleSearch($event)"
+>
+  <div workspacePanelToolbarActions>
+    <button
+      type="button"
+      class="workspace-panel-shell__icon-btn"
+      aria-label="Add flow"
+      title="Add flow"
+      (click)="handleAddFlow()"
+    >
+      <tx-icon name="plus" [size]="16" aria-hidden="true" />
+    </button>
+  </div>
+
+  <div class="test-suite-sidebar-panel__body">
+    @if (treeNodes().length === 0) {
+      <p class="test-suite-sidebar-panel__empty" role="status">No flows yet. Add a flow to get started.</p>
+    } @else {
+      <tx-tree
+        class="test-suite-sidebar-panel__tree"
+        [nodes]="treeNodes()"
+        [selectionIds]="treeSelectionIds()"
+        selectionMode="single"
+        (nodeClick)="handleNodeClick($event)"
+      />
+    }
+  </div>
+</app-workspace-sidebar-panel-shell>

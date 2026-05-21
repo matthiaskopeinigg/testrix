@@ -1,0 +1,92 @@
+<div class="tx-settings-editor-kbd">
+  <div class="tx-entrance-stagger__block">
+    <h2 class="tx-settings__tab-title">Keyboard</h2>
+    <p class="tx-settings__tab-description">
+      Code editor shortcuts for scripts, JSON bodies, and other editors. Bindings follow VS Code; the modifier is
+      <kbd>Ctrl</kbd> on Windows/Linux and <kbd>⌘</kbd> on macOS.
+    </p>
+  </div>
+
+  <div class="tx-entrance-stagger__block">
+    <h3 class="tx-settings__section-heading">Behavior</h3>
+    <div class="tx-settings__toggle-stack">
+      <tx-toggle
+        label="Enable keyboard shortcuts"
+        [ngModel]="keyboard().shortcutsEnabled"
+        (ngModelChange)="emit({ shortcutsEnabled: $event })"
+      />
+      <tx-toggle
+        label="Autocomplete (Ctrl/Cmd+Space)"
+        [ngModel]="keyboard().autocompleteEnabled"
+        (ngModelChange)="emit({ autocompleteEnabled: $event })"
+      />
+      <tx-toggle
+        label="JavaScript Postman API suggestions"
+        [ngModel]="keyboard().jsAutocompleteEnabled"
+        (ngModelChange)="emit({ jsAutocompleteEnabled: $event })"
+      />
+      <tx-toggle
+        label="Open suggestions after typing “.” on pm.*"
+        [ngModel]="keyboard().autocompleteOnDot"
+        (ngModelChange)="emit({ autocompleteOnDot: $event })"
+      />
+      <tx-toggle
+        label="JSON snippet suggestions"
+        [ngModel]="keyboard().jsonSnippetAutocomplete"
+        (ngModelChange)="emit({ jsonSnippetAutocomplete: $event })"
+      />
+      <tx-toggle
+        label="Auto-close quotes, brackets, and tags"
+        [ngModel]="keyboard().autoCloseEnabled"
+        (ngModelChange)="emit({ autoCloseEnabled: $event })"
+      />
+      <tx-toggle
+        label="Smart typing (indent on Enter only)"
+        [ngModel]="keyboard().smartEditingEnabled"
+        (ngModelChange)="emit({ smartEditingEnabled: $event })"
+      />
+      <tx-toggle
+        label="XML/HTML snippet suggestions"
+        [ngModel]="keyboard().markupSnippetAutocomplete"
+        (ngModelChange)="emit({ markupSnippetAutocomplete: $event })"
+      />
+      <tx-toggle
+        label="Template variables ($ and environment placeholders)"
+        [ngModel]="keyboard().templateVariableAutocomplete"
+        (ngModelChange)="emit({ templateVariableAutocomplete: $event })"
+      />
+      <tx-toggle
+        label="JSON closing quote suggestion (Tab to accept)"
+        [ngModel]="keyboard().jsonClosingQuoteSuggest"
+        (ngModelChange)="emit({ jsonClosingQuoteSuggest: $event })"
+      />
+    </div>
+  </div>
+
+  <div class="tx-entrance-stagger__block">
+    <h3 class="tx-settings__section-heading">Shortcut reference</h3>
+    @for (group of shortcutGroups(); track group.category) {
+      <div class="tx-settings-editor-kbd__group">
+        <h4 class="tx-settings-editor-kbd__group-title">{{ group.title }}</h4>
+        <table class="tx-settings-editor-kbd__table">
+          <thead>
+            <tr>
+              <th scope="col">Action</th>
+              <th scope="col">Shortcut</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of group.rows; track row.id) {
+              <tr>
+                <td>{{ row.label }}</td>
+                <td>
+                  <span class="tx-settings-editor-kbd__keys">{{ row.keys }}</span>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </div>
+</div>

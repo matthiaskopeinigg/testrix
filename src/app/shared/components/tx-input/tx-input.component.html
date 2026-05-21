@@ -1,0 +1,27 @@
+<div class="tx-input-field">
+  <input
+    #nativeInput
+    class="tx-input"
+    [class.tx-input--with-clear]="showClear()"
+    [id]="effectiveId()"
+    [type]="type()"
+    [value]="value()"
+    [placeholder]="placeholder()"
+    [disabled]="disabled()"
+    [attr.aria-label]="ariaLabel() || null"
+    (input)="handleInput($event)"
+    (blur)="handleBlur()"
+  />
+
+  @if (showClear()) {
+    <button
+      type="button"
+      class="tx-input__clear"
+      aria-label="Clear"
+      [disabled]="disabled()"
+      (click)="handleClear($event)"
+    >
+      <tx-icon name="close" [size]="14" aria-hidden="true" />
+    </button>
+  }
+</div>

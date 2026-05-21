@@ -1,0 +1,16 @@
+/**
+ * Facon (Alejo Bergmann) — landing hero display face.
+ * Licensed via 1001 Fonts: https://www.1001fonts.com/facon-font.html
+ * See public/fonts/facon/README.md
+ */
+@font-face {
+  font-family: 'Facon';
+  font-style: italic;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/fonts/facon/Facon.ttf') format('truetype');
+}
+
+:root {
+  --tx-font-facon: 'Facon', sans-serif;
+}

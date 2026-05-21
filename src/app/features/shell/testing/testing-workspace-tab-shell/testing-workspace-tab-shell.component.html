@@ -1,0 +1,18 @@
+<section class="testing-workspace-tab" role="region" [attr.aria-label]="title()">
+  <header class="testing-workspace-tab__head">
+    <h2 class="testing-workspace-tab__title">{{ title() }}</h2>
+    <p class="testing-workspace-tab__id">{{ resourceId() }}</p>
+  </header>
+
+  @if (description()) {
+    <tx-banner variant="info">{{ description() }}</tx-banner>
+  }
+
+  <div class="testing-workspace-tab__body">
+    <ng-content />
+
+    @if (primaryActionLabel(); as label) {
+      <tx-button variant="primary" (pressed)="primaryAction.emit()">{{ label }}</tx-button>
+    }
+  </div>
+</section>

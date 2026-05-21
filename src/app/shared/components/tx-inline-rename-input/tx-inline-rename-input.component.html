@@ -1,0 +1,12 @@
+<input
+  #inputEl
+  class="tx-inline-rename-input"
+  type="text"
+  [attr.aria-label]="ariaLabel()"
+  [value]="draft()"
+  (input)="handleInput($event)"
+  (focus)="handleFocus($event)"
+  (mousedown)="handleMouseDown($event)"
+  (keydown)="handleKeydown($event)"
+  (blur)="handleBlur()"
+/>

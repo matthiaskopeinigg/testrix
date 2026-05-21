@@ -1,0 +1,80 @@
+/**
+ * Mirror highlight spans are injected via innerHTML — styles must be global (not encapsulated).
+ * Highlights must not change glyph metrics so the caret aligns with the mirror text.
+ */
+
+.request-tab-url-input__field .request-tab-url-input__control {
+  color: transparent !important;
+  -webkit-text-fill-color: transparent !important;
+}
+
+.request-tab-url-input__mirror,
+.request-tab-url-input__hit {
+  margin: 0;
+}
+
+.request-tab-url-input__mirror {
+  code {
+    font-family: inherit;
+    font-size: inherit;
+    font-weight: inherit;
+    letter-spacing: inherit;
+
+    .tx-url-path-param {
+      color: color-mix(in srgb, var(--tx-accent) 92%, var(--tx-text-0));
+      font-weight: inherit;
+      box-shadow: inset 0 -0.14em 0 color-mix(in srgb, var(--tx-accent) 38%, transparent);
+      transition:
+        color 160ms var(--tx-ease-out-expo, cubic-bezier(0.16, 1, 0.3, 1)),
+        box-shadow 160ms var(--tx-ease-out-expo, cubic-bezier(0.16, 1, 0.3, 1));
+    }
+
+    .tx-url-path-param--hover {
+      color: var(--tx-accent);
+      box-shadow: inset 0 -0.16em 0 color-mix(in srgb, var(--tx-accent) 55%, transparent);
+    }
+
+    .tx-var-token {
+      color: color-mix(in srgb, var(--tx-primary) 92%, var(--tx-text-0));
+      font-weight: inherit;
+      box-shadow: inset 0 -0.14em 0 color-mix(in srgb, var(--tx-primary) 38%, transparent);
+    }
+
+    .tx-var-token--env {
+      color: color-mix(in srgb, var(--tx-info, #5eb8ff) 88%, var(--tx-text-0));
+      box-shadow: inset 0 -0.14em 0 color-mix(in srgb, var(--tx-info, #5eb8ff) 42%, transparent);
+    }
+
+    .tx-var-token--unknown {
+      color: color-mix(in srgb, var(--tx-text-1) 90%, var(--tx-text-0));
+      box-shadow: inset 0 -0.14em 0 color-mix(in srgb, var(--tx-text-1) 28%, transparent);
+    }
+
+    .tx-var-param {
+      color: color-mix(in srgb, var(--tx-warning) 92%, var(--tx-text-0));
+      font-weight: inherit;
+      box-shadow: inset 0 -0.14em 0 color-mix(in srgb, var(--tx-warning) 45%, transparent);
+    }
+  }
+}
+
+.request-tab-url-input__hit {
+  code {
+    color: transparent;
+    font-family: inherit;
+    font-size: inherit;
+    font-weight: inherit;
+    letter-spacing: inherit;
+
+    .tx-url-path-param,
+    .tx-var-token,
+    .tx-var-param {
+      pointer-events: auto;
+      cursor: text;
+    }
+
+    .tx-var-token--env {
+      cursor: pointer;
+    }
+  }
+}

@@ -1,0 +1,101 @@
+<div class="tx-sidebar">
+  <aside class="tx-sidebar__rail" [attr.aria-label]="ariaLabel()">
+    <nav class="tx-sidebar__rail-nav">
+      <ul class="tx-sidebar__rail-list">
+        @for (item of items(); track item.id) {
+          <li class="tx-sidebar__rail-item">
+            <button
+              type="button"
+              class="tx-sidebar__rail-btn"
+              [class.is-active]="isRailActive(item)"
+              [disabled]="item.disabled ?? false"
+              [attr.aria-current]="isRailActive(item) ? 'page' : null"
+              [attr.aria-expanded]="isRailActive(item) ? true : null"
+              [attr.aria-label]="item.label"
+              [txTooltip]="item.label"
+              txTooltipPosition="right"
+              [txTooltipDisabled]="panelOpen()"
+              (click)="handleRailItemClick(item)"
+            >
+              <tx-icon [name]="item.icon" [size]="20" />
+            </button>
+          </li>
+        }
+      </ul>
+    </nav>
+
+    @if (footerItems().length > 0) {
+      <nav class="tx-sidebar__rail-footer" aria-label="Secondary navigation">
+        <ul class="tx-sidebar__rail-list">
+          @for (item of footerItems(); track item.id) {
+            <li class="tx-sidebar__rail-item">
+              <button
+                type="button"
+                class="tx-sidebar__rail-btn"
+                [class.is-active]="isRailActive(item)"
+                [disabled]="item.disabled ?? false"
+                [attr.aria-current]="isRailActive(item) ? 'page' : null"
+                [attr.aria-expanded]="isRailActive(item) ? true : null"
+                [attr.aria-label]="item.label"
+                [txTooltip]="item.label"
+                txTooltipPosition="right"
+                [txTooltipDisabled]="panelOpen()"
+                (click)="handleRailItemClick(item)"
+              >
+                <tx-icon [name]="item.icon" [size]="20" />
+              </button>
+            </li>
+          }
+        </ul>
+      </nav>
+    }
+  </aside>
+
+  @if (panelOpen() && activeItem(); as panel) {
+    <section
+      class="tx-sidebar__panel"
+      [attr.aria-label]="activePanelTitle()"
+      [style.width.px]="panelWidth()"
+    >
+      <header class="tx-sidebar__panel-header">
+        <div class="tx-sidebar__panel-header-start">
+          @if (panelBackHandler(); as onBack) {
+            <button
+              type="button"
+              class="tx-sidebar__panel-back"
+              aria-label="Back"
+              (click)="onBack()"
+            >
+              <tx-icon name="arrowLeft" [size]="16" />
+            </button>
+          }
+          <h2 class="tx-sidebar__panel-title">{{ activePanelTitle() }}</h2>
+        </div>
+        <button
+          type="button"
+          class="tx-sidebar__panel-close"
+          aria-label="Close panel"
+          (click)="handleClosePanel()"
+        >
+          <tx-icon name="close" [size]="16" />
+        </button>
+      </header>
+
+      <div class="tx-sidebar__panel-toolbar">
+        <ng-content select="[txSidebarToolbar]" />
+      </div>
+
+      <div class="tx-sidebar__panel-body">
+        <ng-content />
+      </div>
+
+      <div
+        class="tx-sidebar__resize-handle"
+        role="separator"
+        aria-orientation="vertical"
+        aria-label="Resize panel"
+        (pointerdown)="handleResizeStart($event)"
+      ></div>
+    </section>
+  }
+</div>

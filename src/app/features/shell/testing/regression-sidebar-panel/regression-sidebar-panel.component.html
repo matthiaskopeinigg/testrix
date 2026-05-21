@@ -1,0 +1,37 @@
+<app-workspace-sidebar-panel-shell
+  [searchPlaceholder]="searchPlaceholder()"
+  [searchAriaLabel]="searchAriaLabel()"
+  [showFolderToggle]="false"
+  [showFilterButton]="false"
+  [showSortButton]="false"
+  (searchChange)="handleSearch($event)"
+>
+  <div workspacePanelToolbarActions>
+    <button
+      type="button"
+      class="workspace-panel-shell__icon-btn"
+      aria-label="Add regression"
+      title="Add regression"
+      (click)="handleAdd()"
+    >
+      <tx-icon name="plus" [size]="16" aria-hidden="true" />
+    </button>
+  </div>
+  <ul class="testing-list-sidebar-panel__list" role="list">
+    @for (item of filtered(); track item.id) {
+      <li>
+        <button
+          type="button"
+          class="testing-list-sidebar-panel__item"
+          [class.is-active]="activeItemId() === item.id"
+          (click)="handleOpen(item.id)"
+        >
+          <tx-icon name="target" [size]="16" aria-hidden="true" />
+          <span>{{ item.name }}</span>
+        </button>
+      </li>
+    } @empty {
+      <li class="testing-list-sidebar-panel__empty" role="status">No regressions yet.</li>
+    }
+  </ul>
+</app-workspace-sidebar-panel-shell>

@@ -1,0 +1,37 @@
+@if (open()) {
+  <div
+    #panel
+    class="tx-context-menu tx-menu-popover"
+    role="menu"
+    [style.left.px]="clampedPosition().x"
+    [style.top.px]="clampedPosition().y"
+    tabindex="-1"
+    (keydown)="handlePanelKeydown($event)"
+  >
+    @for (item of items(); track item.id + $index) {
+      @if (item.separator) {
+        <div class="tx-context-menu__separator" role="separator" aria-hidden="true"></div>
+      } @else {
+        <button
+          type="button"
+          class="tx-context-menu__item"
+          role="menuitem"
+          [class.tx-context-menu__item--danger]="item.danger"
+          [class.tx-context-menu__item--active]="isActive($index)"
+          [disabled]="item.disabled"
+          (click)="handleItemClick(item, $event)"
+        >
+          @if (item.icon) {
+            <span class="tx-context-menu__icon-wrap" aria-hidden="true">
+              <tx-icon class="tx-context-menu__icon" [name]="item.icon" [size]="16" />
+            </span>
+          }
+          <span class="tx-context-menu__label">{{ item.label }}</span>
+          @if (item.selected) {
+            <tx-icon class="tx-context-menu__check" name="check" [size]="16" aria-hidden="true" />
+          }
+        </button>
+      }
+    }
+  </div>
+}

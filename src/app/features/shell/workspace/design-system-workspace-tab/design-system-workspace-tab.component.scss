@@ -1,0 +1,119 @@
+:host {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.ds-tab {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  padding: clamp(12px, 1.6vh, 18px) clamp(14px, 2vw, 22px);
+  overflow: auto;
+}
+
+.ds-tab__missing {
+  margin: 1rem;
+  color: color-mix(in srgb, var(--tx-text-1) 85%, transparent);
+}
+
+.ds-tab__header {
+  flex-shrink: 0;
+  margin-bottom: 0.75rem;
+}
+
+.ds-tab__header-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.ds-tab__crumb {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--tx-text-1) 68%, transparent);
+}
+
+.ds-tab__title {
+  margin: 0;
+  font-size: clamp(1.15rem, 1.6vw + 0.35rem, 1.5rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.12;
+  color: var(--tx-text-0);
+}
+
+.ds-tab__lede {
+  margin: 0;
+  max-width: min(72ch, 100%);
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: color-mix(in srgb, var(--tx-text-1) 88%, transparent);
+}
+
+.ds-tab__card {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: min(360px, 50vh);
+  border: 1px solid color-mix(in srgb, var(--tx-border-0) 62%, transparent);
+  border-radius: var(--tx-radius-lg, 14px);
+  background: color-mix(in srgb, var(--tx-surface-1) 78%, transparent);
+  overflow: hidden;
+}
+
+.ds-tab__toolbar {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.65rem 0.85rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--tx-border-0) 50%, transparent);
+  background: color-mix(in srgb, var(--tx-surface-0) 35%, transparent);
+}
+
+.ds-tab__toolbar-leading {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: color-mix(in srgb, var(--tx-text-1) 80%, transparent);
+}
+
+.ds-tab__toolbar-title {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.ds-tab__toolbar-spacer {
+  flex: 1 1 auto;
+}
+
+.ds-tab__canvas {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  padding: 0.85rem 1rem 1.1rem;
+  overflow: auto;
+
+  &--debug :where(.ds-demo) {
+    outline: 1px dashed var(--tx-primary);
+    outline-offset: 4px;
+  }
+}
+
+.ds-tab__canvas-inner {
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+}

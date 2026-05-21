@@ -1,0 +1,52 @@
+@use '../../styles/control-surface' as surface;
+@use '../../styles/interactive-motion' as motion;
+
+:host {
+  display: block;
+  width: 100%;
+}
+
+.tx-tags-input {
+  width: 100%;
+  min-height: var(--tx-control-height-md, 36px);
+  padding: 0.35rem 0.5rem;
+  border-radius: var(--tx-radius-sm, 8px);
+
+  @include surface.control-surface;
+  @include motion.tx-interactive-transition;
+
+  &:focus-within {
+    @include surface.control-surface-focus;
+  }
+
+  &--disabled {
+    @include surface.control-surface-disabled;
+  }
+}
+
+.tx-tags-input__chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.tx-tags-input__control {
+  flex: 1 1 8rem;
+  min-width: 6rem;
+  border: 0;
+  background: transparent;
+  color: var(--tx-text-0);
+  font: inherit;
+  font-size: 0.875rem;
+  outline: none;
+
+  &::placeholder {
+    color: color-mix(in srgb, var(--tx-text-1) 90%, transparent);
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+  }
+}

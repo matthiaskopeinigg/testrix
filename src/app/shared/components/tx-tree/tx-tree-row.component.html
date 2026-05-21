@@ -1,0 +1,137 @@
+@if (debug()) {
+  <div
+    class="tx-tree-row__debug"
+    [style.padding-inline-start.px]="row().depth * indentPx()"
+    aria-hidden="true"
+  >
+    <div class="tx-tree-row__debug-bands">
+      <div class="tx-tree-row__debug-band tx-tree-row__debug-band--top">
+        <span class="tx-tree-row__debug-zone-name">top</span>
+        <span class="tx-tree-row__debug-zone-meta">{{ dropBeforePercent }}%</span>
+      </div>
+      @if (row().hasChildren) {
+        <div class="tx-tree-row__debug-band tx-tree-row__debug-band--center">
+          <span class="tx-tree-row__debug-zone-name">center</span>
+          <span class="tx-tree-row__debug-zone-meta">inside · {{ dropInsidePercent }}%</span>
+        </div>
+      } @else {
+        <div class="tx-tree-row__debug-band tx-tree-row__debug-band--center tx-tree-row__debug-band--leaf">
+          <span class="tx-tree-row__debug-zone-name">center</span>
+          <span class="tx-tree-row__debug-zone-meta">no inside</span>
+        </div>
+      }
+      <div class="tx-tree-row__debug-band tx-tree-row__debug-band--bottom">
+        <span class="tx-tree-row__debug-zone-name">bottom</span>
+        <span class="tx-tree-row__debug-zone-meta">{{ dropAfterPercent }}%</span>
+      </div>
+    </div>
+  </div>
+  <div
+    class="tx-tree-row tx-tree-row--debug-hit"
+    [class.tx-tree-row--debug-target]="isDebugDragTarget()"
+    [style.padding-inline-start.px]="row().depth * indentPx()"
+    (click)="handleRowClick()"
+    (dblclick)="handleRowDblClick($event)"
+    (pointerdown)="handlePointerDownRow($event)"
+    (contextmenu)="handleContextMenu($event)"
+  >
+    <span class="tx-tree-row__sr-only">{{ row().node.label }}</span>
+  </div>
+} @else {
+  <div
+    class="tx-tree-row"
+    [style.padding-inline-start.px]="row().depth * indentPx()"
+    (click)="handleRowClick()"
+    (dblclick)="handleRowDblClick($event)"
+    (pointerdown)="handlePointerDownRow($event)"
+    (contextmenu)="handleContextMenu($event)"
+  >
+    @if (showDragHandle()) {
+      <button
+        type="button"
+        class="tx-tree-row__handle"
+        aria-label="Drag to reorder"
+        (pointerdown)="handlePointerDownHandle($event)"
+      >
+        <tx-icon name="moreVertical" [size]="handleIconSize()" />
+      </button>
+    }
+
+    <button
+      type="button"
+      class="tx-tree-row__chevron"
+      [class.tx-tree-row__chevron--hidden]="!row().hasChildren"
+      [attr.aria-label]="row().expanded ? 'Collapse' : 'Expand'"
+      [attr.aria-hidden]="!row().hasChildren"
+      tabindex="-1"
+      (click)="handleChevronClick($event)"
+    >
+      @if (row().hasChildren) {
+        <tx-icon
+          name="chevronRight"
+          [size]="chevronIconSize()"
+          [class.tx-tree-row__chevron-icon--expanded]="row().expanded"
+        />
+      }
+    </button>
+
+    @if (row().node.icon) {
+      <span class="tx-tree-row__icon" aria-hidden="true">
+        <tx-icon [name]="row().node.icon!" [size]="rowIconSize()" />
+      </span>
+    }
+
+    <span class="tx-tree-row__text">
+      @if (renaming()) {
+        <tx-inline-rename-input
+          class="tx-tree-row__rename"
+          [value]="row().node.label"
+          [ariaLabel]="'Rename ' + row().node.label"
+          (committed)="renameCommit.emit($event)"
+          (cancelled)="renameCancel.emit()"
+        />
+      } @else {
+        <span class="tx-tree-row__primary">
+          @if (row().node.httpMethod; as method) {
+            <span class="tx-tree-row__method" [attr.data-method]="method">{{ method }}</span>
+          }
+          <span class="tx-tree-row__label">{{ row().node.label | truncate: labelTruncate() }}</span>
+          @if (visibleTreeTags().length) {
+            <span
+              class="tx-tree-row__tags"
+              role="list"
+              [attr.aria-label]="'Tags: ' + (row().node.tags ?? []).join(', ')"
+            >
+              @for (tag of visibleTreeTags(); track tag) {
+                <span class="tx-tree-row__tag-chip" role="listitem" [title]="tag">{{ tag }}</span>
+              }
+              @if (treeTagsOverflowCount() > 0) {
+                <span
+                  class="tx-tree-row__tag-more"
+                  role="listitem"
+                  [attr.title]="'+' + treeTagsOverflowCount() + ' more tags'"
+                >
+                  +{{ treeTagsOverflowCount() }}
+                </span>
+              }
+            </span>
+          }
+        </span>
+        @if (row().node.subtitle) {
+          <span class="tx-tree-row__subtitle">{{ row().node.subtitle | truncate: subtitleTruncate() }}</span>
+        }
+      }
+    </span>
+  </div>
+}
+
+<span
+  class="tx-tree-row__insert-line"
+  [style.--row-indicator-depth]="insertLineDepth()"
+  [class.tx-tree-row__insert-line--visible]="
+    dropPosition() === 'before' || dropPosition() === 'after'
+  "
+  [class.tx-tree-row__insert-line--before]="dropPosition() === 'before'"
+  [class.tx-tree-row__insert-line--after]="dropPosition() === 'after'"
+  aria-hidden="true"
+></span>

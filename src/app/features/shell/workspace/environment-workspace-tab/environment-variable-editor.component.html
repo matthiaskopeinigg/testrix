@@ -1,0 +1,50 @@
+<section class="env-var-editor" [attr.aria-label]="title()">
+  <header class="env-var-editor__header">
+    <div class="env-var-editor__title-row">
+      <tx-icon name="hash" [size]="20" />
+      <h2 class="env-var-editor__title">{{ title() }}</h2>
+    </div>
+  </header>
+
+  <div class="env-var-editor__form">
+    <tx-form-field label="Key" controlId="env-var-key">
+      <tx-input
+        id="env-var-key"
+        [ngModel]="key()"
+        (ngModelChange)="handleKeyChange($event)"
+      />
+    </tx-form-field>
+
+    <div class="tx-field env-var-editor__value-field">
+      <div class="env-var-editor__label-row">
+        <label class="tx-field__label" for="env-var-value">Value</label>
+        <button
+          type="button"
+          class="env-var-editor__value-hint"
+          aria-label="About dynamic placeholders in values"
+          [txTooltip]="valueHintTooltip"
+          txTooltipPosition="top"
+        >
+          <tx-icon name="help" [size]="14" aria-hidden="true" />
+        </button>
+      </div>
+      <div class="tx-field__control">
+        <tx-variable-input
+          id="env-var-value"
+          [showPlaceholderHint]="false"
+          [ngModel]="value()"
+          (ngModelChange)="handleValueChange($event)"
+        />
+      </div>
+    </div>
+
+    <tx-form-field label="Description" controlId="env-var-description">
+      <tx-textarea
+        id="env-var-description"
+        [ngModel]="description()"
+        (ngModelChange)="handleDescriptionChange($event)"
+        placeholder="Optional notes about this variable"
+      />
+    </tx-form-field>
+  </div>
+</section>

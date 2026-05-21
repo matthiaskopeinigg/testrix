@@ -1,0 +1,41 @@
+<app-workspace-sidebar-panel-shell
+  [searchPlaceholder]="searchPlaceholder()"
+  [searchAriaLabel]="searchAriaLabel()"
+  [showFolderToggle]="false"
+  [showFilterButton]="false"
+  [showSortButton]="false"
+  (searchChange)="handleSearch($event)"
+>
+  <div workspacePanelToolbarActions class="interceptor-sidebar-panel__toolbar">
+    <tx-button variant="secondary" (pressed)="handleToggle()">{{ running() ? 'Stop' : 'Start' }}</tx-button>
+    <button
+      type="button"
+      class="workspace-panel-shell__icon-btn"
+      aria-label="Add interceptor rule"
+      title="Add interceptor rule"
+      (click)="handleAdd()"
+    >
+      <tx-icon name="plus" [size]="16" aria-hidden="true" />
+    </button>
+  </div>
+  @if (running()) {
+    <p class="interceptor-sidebar-panel__status"><tx-tag variant="success">Active</tx-tag></p>
+  }
+  <ul class="testing-list-sidebar-panel__list" role="list">
+    @for (rule of rules(); track rule.id) {
+      <li>
+        <button
+          type="button"
+          class="testing-list-sidebar-panel__item"
+          [class.is-active]="activeItemId() === rule.id"
+          (click)="handleOpen(rule.id)"
+        >
+          <tx-icon name="interceptor" [size]="16" aria-hidden="true" />
+          <span>{{ rule.name }}</span>
+        </button>
+      </li>
+    } @empty {
+      <li class="testing-list-sidebar-panel__empty" role="status">No interceptor rules yet.</li>
+    }
+  </ul>
+</app-workspace-sidebar-panel-shell>

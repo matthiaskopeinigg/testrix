@@ -1,0 +1,13 @@
+@use '../testing-workspace-tab.shared';
+
+.test-suite-workspace-tab__meta {
+  margin: 0;
+  font-size: 13px;
+  color: var(--tx-text-1);
+}
+
+.test-suite-workspace-tab__nodes {
+  margin: 0;
+  padding-left: 1.25rem;
+  font-size: 13px;
+}

@@ -1,0 +1,8 @@
+<span class="tx-tag">
+  <ng-content />
+  @if (removable()) {
+    <button type="button" class="tx-tag__remove" aria-label="Remove" (click)="handleRemoveClick($event)">
+      ×
+    </button>
+  }
+</span>

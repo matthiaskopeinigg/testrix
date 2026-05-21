@@ -1,0 +1,81 @@
+@if (visible()) {
+  <div class="tx-update-banner-dock" role="status" aria-live="polite">
+    <article class="tx-update-banner__card">
+      <div class="tx-update-banner__bg" aria-hidden="true">
+        <div class="tx-update-banner__bg-grid"></div>
+        <div class="tx-update-banner__bg-blob tx-update-banner__bg-blob--a"></div>
+        <div class="tx-update-banner__bg-blob tx-update-banner__bg-blob--b"></div>
+        <span class="tx-update-banner__bg-orb tx-update-banner__bg-orb--1"></span>
+        <span class="tx-update-banner__bg-orb tx-update-banner__bg-orb--2"></span>
+      </div>
+
+      <div class="tx-update-banner__accent" aria-hidden="true">
+        <span class="tx-update-banner__accent-band"></span>
+        <span class="tx-update-banner__accent-glint"></span>
+      </div>
+
+      <div
+        class="tx-update-banner__body"
+        [class.tx-update-banner__body--available]="isAvailableLayout()"
+      >
+        <div class="tx-update-banner__main">
+          <div class="tx-update-banner__icon-wrap" aria-hidden="true">
+            <tx-icon class="tx-update-banner__icon" name="download" [size]="22" />
+          </div>
+
+          <div class="tx-update-banner__copy">
+            <h2 class="tx-update-banner__title">{{ title() }}</h2>
+
+            @if (showReleaseNotesLink()) {
+              <button
+                type="button"
+                class="tx-update-banner__release-link"
+                (click)="handleReleaseNotes()"
+              >
+                View release notes
+              </button>
+            }
+
+            @if (metaLine()) {
+              <p class="tx-update-banner__meta">{{ metaLine() }}</p>
+            }
+
+            @if (progressPercent() !== null) {
+              <div class="tx-update-banner__progress-block">
+                <div class="tx-update-banner__progress" aria-hidden="true">
+                  <div
+                    class="tx-update-banner__progress-bar"
+                    [style.width.%]="progressPercent()"
+                  ></div>
+                </div>
+                @if (transferLine()) {
+                  <p class="tx-update-banner__transfer">{{ transferLine() }}</p>
+                }
+              </div>
+            }
+          </div>
+        </div>
+
+        <div class="tx-update-banner__actions">
+          @if (showPrimary()) {
+            <button
+              type="button"
+              class="tx-update-banner__btn tx-update-banner__btn--primary"
+              (click)="handlePrimary()"
+            >
+              Download and install
+            </button>
+          }
+          <button
+            type="button"
+            class="tx-update-banner__btn tx-update-banner__btn--secondary"
+            [disabled]="dismissDisabled()"
+            (click)="handleDismiss()"
+          >
+            Dismiss
+          </button>
+        </div>
+      </div>
+    </article>
+  </div>
+}

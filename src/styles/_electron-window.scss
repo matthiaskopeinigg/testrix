@@ -1,0 +1,163 @@
+// Frameless Electron window — transparent corners; visible UI only inside rounded shell.
+
+html.tx-electron-app {
+  --tx-window-radius: var(--tx-radius-lg, 14px);
+
+  height: 100%;
+  background: transparent !important;
+  border-radius: var(--tx-window-radius);
+  overflow: hidden;
+  // Never clip the document on Electron — Win32 loses pointer hit-testing (patchy / dead clicks).
+  clip-path: none;
+
+  &[data-platform='win32'] {
+    background: var(--tx-content-bg, var(--tx-surface-0)) !important;
+    border-radius: 0;
+
+    body {
+      background: var(--tx-content-bg, var(--tx-surface-0)) !important;
+    }
+
+    app-root,
+    .tx-shell {
+      border-radius: 0;
+    }
+  }
+
+  &.tx-electron-app--dev-opaque {
+    border-radius: 0;
+
+    .tx-shell {
+      border-radius: 0;
+    }
+  }
+
+  body {
+    height: 100%;
+    margin: 0;
+    background: transparent !important;
+  }
+
+  app-root {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    overflow: hidden;
+    background: var(--tx-content-bg, var(--tx-surface-0));
+  }
+
+  .tx-shell {
+    box-sizing: border-box;
+    height: 100%;
+    min-height: 100%;
+    border: none;
+    outline: none;
+    border-radius: var(--tx-window-radius);
+    overflow: hidden;
+    background: var(--tx-content-bg, var(--tx-surface-0));
+    box-shadow: none;
+  }
+
+  .tx-settings {
+    border-radius: inherit;
+    overflow: hidden;
+  }
+}
+
+// Win32: backdrop-filter breaks pointer hit-testing in Electron.
+html.tx-electron-app[data-platform='win32']:not(.tx-electron-app--browser-parity) {
+  .tx-titlebar,
+  .tx-shell__stage,
+  .tx-shell__body,
+  .workspace-shell,
+  .welcome {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  /* Welcome GPU layers (transform/will-change) can break Win32 hit-testing even with pointer-events: none. */
+  .welcome__backdrop,
+  .welcome__backdrop * {
+    pointer-events: none !important;
+  }
+
+  .welcome__viewport,
+  .welcome__inner,
+  .welcome__hero,
+  .welcome__section,
+  .welcome__action,
+  .welcome__btn-primary,
+  .welcome__pillar,
+  .tx-sidebar {
+    pointer-events: auto;
+  }
+}
+
+html.tx-electron-app[data-chrome-blur='enabled'] .tx-shell__stage::before {
+  display: none !important;
+}
+
+html.tx-electron-app[data-chrome-blur='disabled'] .tx-shell__stage::before {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html.tx-electron-app[data-chrome-blur='enabled'] .tx-shell__stage::before {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background: var(--tx-content-bg, var(--tx-surface-0));
+  }
+}
+
+html.tx-electron-app[data-platform='win32'] {
+  body,
+  body.theme-github-light,
+  body.theme-github-dark,
+  body.theme-one-dark {
+    background: var(--tx-content-bg, var(--tx-surface-0)) !important;
+  }
+}
+
+// Native OS frame on Win32 — no custom window-control chrome required.
+html.tx-electron-app.tx-electron-app--native-dev-frame {
+  .tx-titlebar {
+    padding-top: 0;
+  }
+}
+
+/*
+ * Win32 Electron: same document rules as a normal browser tab (no frameless shell).
+ * Browser works; Electron failed because tx-electron-app used transparent html, overflow:hidden,
+ * and -webkit-app-region — all absent in Chrome when you open localhost:4720 directly.
+ */
+html.tx-electron-app.tx-electron-app--browser-parity {
+  background: var(--tx-surface-0) !important;
+  border-radius: 0;
+  overflow: visible;
+  clip-path: none;
+
+  body {
+    background: var(--tx-surface-0) !important;
+    overflow: visible;
+  }
+
+  app-root {
+    overflow: visible;
+    border-radius: 0;
+    background: var(--tx-surface-0);
+  }
+
+  .tx-shell {
+    border-radius: 0;
+    overflow: visible;
+    min-height: 100%;
+    background: var(--tx-surface-0);
+  }
+
+  // Remove drag regions entirely on Win32 — do not use no-drag on <html> (still breaks input).
+  *,
+  *::before,
+  *::after {
+    -webkit-app-region: unset !important;
+  }
+}

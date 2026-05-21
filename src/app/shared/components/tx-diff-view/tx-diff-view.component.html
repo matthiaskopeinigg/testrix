@@ -1,0 +1,68 @@
+@if (diff(); as d) {
+  <div class="tx-diff-view" [class.tx-diff-view--workbench]="workbenchLayout()">
+    @if (hasJsonBody() && !hasTextBody()) {
+      <div class="tx-diff-view__json">
+        <ul class="tx-diff-view__paths">
+          @for (row of d.jsonPaths; track row.path) {
+            <li [attr.data-kind]="row.kind">
+              <code>{{ row.path }}</code>
+              @if (row.oldValue !== undefined) {
+                <span class="tx-diff-view__old">{{ row.oldValue }}</span>
+              }
+              @if (row.newValue !== undefined) {
+                <span class="tx-diff-view__new">{{ row.newValue }}</span>
+              }
+            </li>
+          }
+        </ul>
+      </div>
+    } @else if (hasTextBody()) {
+      <div class="tx-diff-view__body">
+        @if (bodyDisplay(); as display) {
+          @if (display.truncated) {
+            <p class="tx-diff-view__truncation" role="status">
+              Diff limited to {{ DIFF_MAX_PAIRED_LINES }} lines per side (previous: {{ display.leftLineCount }},
+              current: {{ display.rightLineCount }}).
+            </p>
+          }
+          <div class="tx-diff-view__grid">
+            <div class="tx-diff-view__grid-head">
+              <div class="tx-diff-view__grid-head-cell">Previous response</div>
+              <div class="tx-diff-view__grid-head-cell">Current response</div>
+            </div>
+            <div class="tx-diff-view__grid-scroll">
+              @for (row of display.rows; track $index) {
+                @if (row.kind === 'pair') {
+                  <div class="tx-diff-view__grid-row">
+                    <div
+                      class="tx-diff-view__cell tx-diff-view__cell--left"
+                      [class.row-empty]="row.pair.left.kind === 'empty'"
+                      [class.row-remove]="row.pair.left.kind === 'remove'"
+                      [class.row-equal]="row.pair.left.kind === 'unchanged'"
+                    >
+                      <span class="tx-diff-view__gutter">{{ row.pair.left.lineNo ?? '' }}</span>
+                      <pre class="tx-diff-view__line">{{ row.pair.left.text }}</pre>
+                    </div>
+                    <div
+                      class="tx-diff-view__cell tx-diff-view__cell--right"
+                      [class.row-empty]="row.pair.right.kind === 'empty'"
+                      [class.row-add]="row.pair.right.kind === 'add'"
+                      [class.row-equal]="row.pair.right.kind === 'unchanged'"
+                    >
+                      <span class="tx-diff-view__gutter">{{ row.pair.right.lineNo ?? '' }}</span>
+                      <pre class="tx-diff-view__line">{{ row.pair.right.text }}</pre>
+                    </div>
+                  </div>
+                }
+              }
+            </div>
+          </div>
+        }
+      </div>
+    } @else if (d.summary.pass) {
+      <p class="tx-diff-view__empty">The two responses are identical.</p>
+    }
+  </div>
+} @else {
+  <p class="tx-diff-view__empty">Pick a prior run in Compare against, or send again to diff with the previous run.</p>
+}

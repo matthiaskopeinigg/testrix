@@ -1,0 +1,92 @@
+<app-workspace-sidebar-panel-shell
+  class="design-system-sidebar-panel"
+  [searchPlaceholder]="searchPlaceholder"
+  [searchAriaLabel]="searchAriaLabel"
+  [showFolderToggle]="false"
+  [showFilterButton]="false"
+  [showSortButton]="false"
+  (searchChange)="handleSearch($event)"
+>
+  <nav
+    class="ds-sidebar-panel__nav tx-entrance-stagger"
+    [class.tx-entrance-stagger--play]="entranceStaggerPlay()"
+    [class.tx-entrance-stagger--settled]="entranceStaggerSettled()"
+    aria-label="Design system sections"
+  >
+    @for (group of filteredNavGroups(); track group.pillar) {
+      <section class="ds-sidebar-panel__group">
+        <div
+          class="ds-sidebar-panel__cat"
+          [class.is-expanded]="isCategoryExpanded(group.pillar)"
+        >
+          <button
+            type="button"
+            class="ds-sidebar-panel__cat-expand"
+            [attr.aria-expanded]="isCategoryExpanded(group.pillar)"
+            [attr.aria-label]="
+              (isCategoryExpanded(group.pillar) ? 'Collapse' : 'Expand') + ' ' + group.label
+            "
+            (click)="toggleCategoryExpanded(group.pillar, $event)"
+          >
+            <tx-icon
+              [name]="isCategoryExpanded(group.pillar) ? 'chevronDown' : 'chevronRight'"
+              [size]="14"
+              aria-hidden="true"
+            />
+          </button>
+          <span class="ds-sidebar-panel__cat-icon" aria-hidden="true">
+            <tx-icon [name]="pillarIcon(group.pillar)" [size]="16" />
+          </span>
+          <span class="ds-sidebar-panel__cat-label">{{ group.label }}</span>
+        </div>
+
+        @if (isCategoryExpanded(group.pillar)) {
+          <ul class="ds-sidebar-panel__sections">
+            @for (section of group.sections; track section.id) {
+              <li>
+                <button
+                  type="button"
+                  class="ds-sidebar-panel__section"
+                  [class.is-active]="activeSectionId() === section.id"
+                  [attr.aria-current]="activeSectionId() === section.id ? 'true' : null"
+                  (click)="handleSectionSelect(section.id)"
+                >
+                  <span class="ds-sidebar-panel__section-label">{{ section.label }}</span>
+                  <span class="ds-sidebar-panel__section-hint">{{ section.description }}</span>
+                </button>
+              </li>
+            }
+          </ul>
+        }
+      </section>
+    } @empty {
+      <p class="ds-sidebar-panel__empty">No sections match your filter.</p>
+    }
+  </nav>
+
+  @if (showDevToolkit()) {
+    <section class="ds-sidebar-panel__simulate" aria-label="Update flow simulation">
+      <h2 class="ds-sidebar-panel__simulate-heading">Simulate</h2>
+      <ul class="ds-sidebar-panel__simulate-list">
+        <li>
+          <button type="button" class="ds-sidebar-panel__simulate-btn" (click)="simulateUpdateAvailable()">
+            <tx-icon name="download" [size]="14" aria-hidden="true" />
+            <span>New update available</span>
+          </button>
+        </li>
+        <li>
+          <button type="button" class="ds-sidebar-panel__simulate-btn" (click)="simulateUpdateDownloading()">
+            <tx-icon name="refresh" [size]="14" aria-hidden="true" />
+            <span>Starting update process</span>
+          </button>
+        </li>
+        <li>
+          <button type="button" class="ds-sidebar-panel__simulate-btn" (click)="simulateUpdateInstalling()">
+            <tx-icon name="rocket" [size]="14" aria-hidden="true" />
+            <span>Installing update</span>
+          </button>
+        </li>
+      </ul>
+    </section>
+  }
+</app-workspace-sidebar-panel-shell>

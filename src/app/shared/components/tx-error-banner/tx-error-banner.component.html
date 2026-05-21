@@ -1,0 +1,19 @@
+@if (active(); as banner) {
+  <div #root class="tx-error-banner-host">
+    <div class="tx-error-banner" role="alert">
+      <div>
+        <p class="tx-error-banner__title">{{ banner.title }}</p>
+        <p class="tx-error-banner__detail">{{ banner.detail }}</p>
+      </div>
+
+      <button
+        type="button"
+        class="tx-error-banner__dismiss"
+        (click)="handleDismiss()"
+        aria-label="Dismiss error banner"
+      >
+        ✕
+      </button>
+    </div>
+  </div>
+}

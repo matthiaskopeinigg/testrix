@@ -1,0 +1,613 @@
+/*
+ * Testrix shared animation utilities.
+ * Every interactive surface in the app should reference these keyframes,
+ * timing curves, and utility classes instead of rolling its own.
+ *
+ * All animations respect `prefers-reduced-motion` via the global reset
+ * in `_base.scss` (which exempts explicitly allow-listed selectors).
+ */
+
+/* ------------------------------------------------------------------ */
+/*  Timing curves                                                      */
+/* ------------------------------------------------------------------ */
+
+:root {
+  --tx-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --tx-ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --tx-ease-in-out-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+  --tx-stagger-delay: 40ms;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Keyframes                                                          */
+/* ------------------------------------------------------------------ */
+
+@keyframes tx-fade-in {
+  from { opacity: 0 }
+  to   { opacity: 1 }
+}
+
+@keyframes tx-fade-out {
+  from { opacity: 1 }
+  to   { opacity: 0 }
+}
+
+@keyframes tx-slide-up {
+  from { opacity: 0; transform: translateY(8px) }
+  to   { opacity: 1; transform: translateY(0) }
+}
+
+@keyframes tx-slide-down {
+  from { opacity: 0; transform: translateY(-8px) }
+  to   { opacity: 1; transform: translateY(0) }
+}
+
+@keyframes tx-slide-right {
+  from { opacity: 0; transform: translateX(-12px) }
+  to   { opacity: 1; transform: translateX(0) }
+}
+
+@keyframes tx-slide-left {
+  from { opacity: 0; transform: translateX(12px) }
+  to   { opacity: 1; transform: translateX(0) }
+}
+
+@keyframes tx-scale-in {
+  from { opacity: 0; transform: scale(0.95) }
+  to   { opacity: 1; transform: scale(1) }
+}
+
+@keyframes tx-pop {
+  0%   { transform: scale(1) }
+  40%  { transform: scale(1.06) }
+  100% { transform: scale(1) }
+}
+
+@keyframes tx-shake {
+  0%, 100% { transform: translateX(0) }
+  20%      { transform: translateX(-4px) }
+  40%      { transform: translateX(4px) }
+  60%      { transform: translateX(-3px) }
+  80%      { transform: translateX(2px) }
+}
+
+@keyframes tx-shimmer {
+  0%   { transform: translateX(-100%) }
+  100% { transform: translateX(100%) }
+}
+
+/** Expanding halo on `:focus-visible` (used by `.tx-focus-glow::after`). */
+@keyframes tx-focus-glow-ring {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--tx-primary), transparent 20%);
+    opacity: 1;
+  }
+
+  70% {
+    box-shadow: 0 0 0 12px transparent;
+    opacity: 0.45;
+  }
+
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+    opacity: 0;
+  }
+}
+
+@keyframes tx-crossfade-in {
+  from { opacity: 0; transform: translateY(4px) }
+  to   { opacity: 1; transform: translateY(0) }
+}
+
+@keyframes tx-pane-enter {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes tx-pane-merge-out {
+  from { opacity: 1; }
+  to { opacity: 0.72; }
+}
+
+/* ------------------------------------------------------------------ */
+/*  Entrance utility                                                   */
+/* ------------------------------------------------------------------ */
+
+.tx-animate-in {
+  animation:
+    tx-slide-up var(--tx-duration-base, 180ms) var(--tx-ease-out-expo) both;
+  animation-delay: var(--tx-delay, 0ms);
+}
+
+.tx-animate-in-right {
+  animation:
+    tx-slide-right var(--tx-duration-base, 180ms) var(--tx-ease-out-expo) both;
+  animation-delay: var(--tx-delay, 0ms);
+}
+
+.tx-animate-in-scale {
+  animation:
+    tx-scale-in var(--tx-duration-base, 180ms) var(--tx-ease-out-expo) both;
+  animation-delay: var(--tx-delay, 0ms);
+}
+
+.tx-animate-fade {
+  animation:
+    tx-fade-in var(--tx-duration-fast, 120ms) ease both;
+  animation-delay: var(--tx-delay, 0ms);
+}
+
+/* ------------------------------------------------------------------ */
+/*  Micro-interaction utilities                                        */
+/* ------------------------------------------------------------------ */
+
+.tx-hover-lift {
+  transition:
+    transform var(--tx-duration-base, 180ms) var(--tx-ease-out-expo, cubic-bezier(0.16, 1, 0.3, 1)),
+    box-shadow var(--tx-duration-base, 180ms) var(--tx-ease-out-expo, cubic-bezier(0.16, 1, 0.3, 1));
+
+  &:hover:not(:disabled):not([disabled]) {
+    transform: translateY(-2px);
+    box-shadow: var(--tx-shadow-md);
+  }
+
+  &:active:not(:disabled):not([disabled]) {
+    transform: translateY(0) scale(0.98);
+    box-shadow: var(--tx-shadow-sm);
+    transition-duration: 70ms;
+    transition-timing-function: cubic-bezier(0.25, 0, 0.2, 1);
+  }
+}
+
+.tx-press-scale {
+  transition: transform var(--tx-duration-base, 180ms) var(--tx-ease-out-expo, cubic-bezier(0.16, 1, 0.3, 1));
+
+  &:hover:not(:disabled):not([disabled]) {
+    transform: scale(1.02);
+  }
+
+  &:active:not(:disabled):not([disabled]) {
+    transform: scale(0.97);
+    transition-duration: 70ms;
+    transition-timing-function: cubic-bezier(0.25, 0, 0.2, 1);
+  }
+}
+
+.tx-hover-lift-subtle {
+  transition:
+    transform var(--tx-duration-base, 180ms) var(--tx-ease-out-expo, cubic-bezier(0.16, 1, 0.3, 1)),
+    box-shadow var(--tx-duration-base, 180ms) var(--tx-ease-out-expo, cubic-bezier(0.16, 1, 0.3, 1));
+
+  &:hover:not(:disabled):not([disabled]) {
+    transform: translateY(-1px);
+    box-shadow: var(--tx-shadow-sm);
+  }
+
+  &:active:not(:disabled):not([disabled]) {
+    transform: translateY(0);
+    transition-duration: 70ms;
+  }
+}
+
+.tx-focus-glow {
+  position: relative;
+  overflow: visible;
+
+  &:focus-visible {
+    outline: none;
+    box-shadow:
+      0 0 0 2px var(--tx-bg, var(--tx-surface-0)),
+      0 0 0 4px var(--tx-focus-ring, var(--tx-primary));
+
+    &::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      pointer-events: none;
+      background: transparent;
+      animation: tx-focus-glow-ring 0.65s var(--tx-ease-out-expo, cubic-bezier(0.16, 1, 0.3, 1));
+    }
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/*  Feedback utilities                                                 */
+/* ------------------------------------------------------------------ */
+
+.tx-success-pop {
+  animation: tx-pop 0.35s var(--tx-spring);
+}
+
+.tx-error-shake {
+  animation: tx-shake 0.4s var(--tx-ease-standard, ease);
+}
+
+.tx-shimmer-bar {
+  position: relative;
+  overflow: hidden;
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(
+      90deg,
+      transparent,
+      color-mix(in srgb, var(--tx-text, var(--tx-text-0)), transparent 88%),
+      transparent
+    );
+    animation: tx-shimmer 1.2s ease-in-out infinite;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/*  Crossfade for tab/section switching                                */
+/* ------------------------------------------------------------------ */
+
+.tx-crossfade-enter {
+  animation:
+    tx-crossfade-in var(--tx-duration-base, 180ms) var(--tx-ease-out-expo) both;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Stagger helper                                                     */
+/*  Usage: add `.tx-stagger` to the container, children get delays     */
+/*  based on their index via `--tx-stagger-delay`.                     */
+/* ------------------------------------------------------------------ */
+
+.tx-stagger > * {
+  animation:
+    tx-slide-up var(--tx-duration-base, 180ms) var(--tx-ease-out-expo) both;
+}
+
+.tx-stagger > *:nth-child(1)  { animation-delay: calc(var(--tx-stagger-delay, 40ms) * 0) }
+.tx-stagger > *:nth-child(2)  { animation-delay: calc(var(--tx-stagger-delay, 40ms) * 1) }
+.tx-stagger > *:nth-child(3)  { animation-delay: calc(var(--tx-stagger-delay, 40ms) * 2) }
+.tx-stagger > *:nth-child(4)  { animation-delay: calc(var(--tx-stagger-delay, 40ms) * 3) }
+.tx-stagger > *:nth-child(5)  { animation-delay: calc(var(--tx-stagger-delay, 40ms) * 4) }
+.tx-stagger > *:nth-child(6)  { animation-delay: calc(var(--tx-stagger-delay, 40ms) * 5) }
+.tx-stagger > *:nth-child(7)  { animation-delay: calc(var(--tx-stagger-delay, 40ms) * 6) }
+.tx-stagger > *:nth-child(8)  { animation-delay: calc(var(--tx-stagger-delay, 40ms) * 7) }
+.tx-stagger > *:nth-child(9)  { animation-delay: calc(var(--tx-stagger-delay, 40ms) * 8) }
+.tx-stagger > *:nth-child(10) { animation-delay: calc(var(--tx-stagger-delay, 40ms) * 9) }
+.tx-stagger > *:nth-child(n+11) { animation-delay: calc(var(--tx-stagger-delay, 40ms) * 10) }
+
+/* ------------------------------------------------------------------ */
+/*  Global motion speed (`settings.ui.animationSpeed`)                 */
+/* ------------------------------------------------------------------ */
+
+:root {
+  --tx-motion-scale: 1;
+  --tx-entrance-stagger-step: 42ms;
+  --tx-entrance-stagger-duration: 0.3s;
+  --tx-duration-fast: calc(120ms * var(--tx-motion-scale));
+  --tx-duration-base: calc(180ms * var(--tx-motion-scale));
+  --tx-duration-slow: calc(280ms * var(--tx-motion-scale));
+  --tx-duration-reorder: calc(260ms * var(--tx-motion-scale));
+}
+
+/* Keep stagger children visible when the popup is already open (avoids flash when leaving `none`). */
+.tx-entrance-stagger.tx-entrance-stagger--settled > * {
+  opacity: 1;
+  transform: none;
+  animation: none;
+}
+
+html[data-animation-speed='super-slow'] {
+  --tx-motion-scale: 1.85;
+  --tx-entrance-stagger-step: 95ms;
+  --tx-entrance-stagger-duration: 0.58s;
+}
+
+html[data-animation-speed='slow'] {
+  --tx-motion-scale: 1.35;
+  --tx-entrance-stagger-step: 62ms;
+  --tx-entrance-stagger-duration: 0.42s;
+}
+
+html[data-animation-speed='normal'] {
+  --tx-motion-scale: 1;
+  --tx-entrance-stagger-step: 42ms;
+  --tx-entrance-stagger-duration: 0.3s;
+}
+
+html[data-animation-speed='fast'] {
+  --tx-motion-scale: 0.72;
+  --tx-entrance-stagger-step: 22ms;
+  --tx-entrance-stagger-duration: 0.2s;
+}
+
+html[data-animation-speed='none'] {
+  --tx-motion-scale: 0;
+  --tx-entrance-stagger-step: 0ms;
+  --tx-entrance-stagger-duration: 0ms;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Entrance stagger (settings, landing, …)                            */
+/*  Toggle `.tx-entrance-stagger--play` from TS after mount / open.    */
+/* ------------------------------------------------------------------ */
+
+.tx-entrance-stagger > * {
+  opacity: 0;
+  transform: translateY(10px);
+  /* Invisible stagger children still capture clicks on Win32/Electron until settled. */
+  pointer-events: none;
+}
+
+.tx-entrance-stagger.tx-entrance-stagger--play > * {
+  animation: tx-slide-up var(--tx-entrance-stagger-duration) var(--tx-ease-out-expo) both;
+}
+
+@for $i from 1 through 24 {
+  .tx-entrance-stagger.tx-entrance-stagger--play > *:nth-child(#{$i}) {
+    animation-delay: calc(var(--tx-entrance-stagger-step) * (#{$i} - 1));
+  }
+}
+
+.tx-entrance-stagger.tx-entrance-stagger--play > *:nth-child(n + 25) {
+  animation-delay: calc(var(--tx-entrance-stagger-step) * 24);
+}
+
+/* Settled locks children visible (with or without --play). */
+.tx-entrance-stagger.tx-entrance-stagger--settled > *,
+.tx-entrance-stagger.tx-entrance-stagger--settled > *:nth-child(n),
+.tx-entrance-stagger.tx-entrance-stagger--settled.tx-entrance-stagger--play > *,
+.tx-entrance-stagger.tx-entrance-stagger--settled.tx-entrance-stagger--play > *:nth-child(n) {
+  opacity: 1;
+  transform: none;
+  animation: none;
+  animation-delay: 0s;
+  pointer-events: auto;
+}
+
+.tx-entrance-stagger__block {
+  min-width: 0;
+}
+
+html[data-animation-speed='none'] .tx-entrance-stagger.tx-entrance-stagger--play > * {
+  animation: none;
+  opacity: 1;
+  transform: none;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Shared divider                                                     */
+/* ------------------------------------------------------------------ */
+
+.tx-divider {
+  height: 1px;
+  background: color-mix(in srgb, var(--tx-border-0), transparent 30%);
+  border: none;
+  margin: 0;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Surface utilities                                                  */
+/* ------------------------------------------------------------------ */
+
+.tx-surface {
+  background: var(--tx-surface, var(--tx-surface-1));
+}
+
+.tx-surface-muted {
+  background: var(--tx-surface-muted, var(--surface-alt, color-mix(in srgb, var(--tx-surface-1), var(--tx-surface-0) 40%)));
+}
+
+.tx-surface-raised {
+  background: var(--tx-surface, var(--tx-surface-1));
+  border: 1px solid var(--tx-border, var(--tx-border-0));
+  border-radius: var(--tx-radius-md, 8px);
+  box-shadow: var(--tx-shadow-sm);
+}
+
+/* ------------------------------------------------------------------ */
+/*  Typography utilities                                               */
+/* ------------------------------------------------------------------ */
+
+.tx-heading-sm {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  opacity: 0.55;
+  margin: 0;
+}
+
+.tx-text-muted {
+  opacity: 0.6;
+  font-size: 0.85rem;
+}
+
+@keyframes tx-menu-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.96);
+    filter: blur(4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+@keyframes tx-dnd-deny-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+
+  20% {
+    transform: translateX(-5px);
+  }
+
+  40% {
+    transform: translateX(5px);
+  }
+
+  60% {
+    transform: translateX(-3px);
+  }
+
+  80% {
+    transform: translateX(2px);
+  }
+}
+
+@keyframes tx-dnd-insert-line-in {
+  from {
+    opacity: 0;
+    transform: scaleX(0.35);
+  }
+
+  to {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+}
+
+@keyframes tx-dnd-insert-line-before-in {
+  from {
+    opacity: 0;
+    transform: translateY(-50%) scaleX(0.35);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(-50%) scaleX(1);
+  }
+}
+
+@keyframes tx-dnd-insert-line-after-in {
+  from {
+    opacity: 0;
+    transform: translateY(50%) scaleX(0.35);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(50%) scaleX(1);
+  }
+}
+
+@keyframes tx-tree-expand-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes tx-dnd-insert-line-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--tx-primary) 28%, transparent);
+  }
+
+  50% {
+    box-shadow: 0 0 12px 2px color-mix(in srgb, var(--tx-primary) 48%, transparent);
+  }
+}
+
+.tx-menu-popover {
+  animation: tx-menu-fade-in var(--tx-duration-fast) var(--tx-ease-standard) both;
+}
+
+.tx-dnd-deny-active {
+  animation: tx-dnd-deny-shake 0.42s var(--tx-ease-standard);
+}
+
+.tx-tree-row-host--moving {
+  z-index: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tx-animate-in,
+  .tx-animate-in-right,
+  .tx-animate-in-scale,
+  .tx-animate-fade,
+  .tx-crossfade-enter,
+  .tx-stagger > *,
+  .tx-entrance-stagger.tx-entrance-stagger--play > *,
+  .tx-success-pop,
+  .tx-error-shake,
+  .tx-shimmer-bar::after,
+  .tx-menu-popover,
+  .tx-dnd-deny-active,
+  .tx-tree-row-host--moving,
+  .tx-tree-row-host--expand-reveal {
+    animation: none !important;
+    transition: none !important;
+    transform: none !important;
+  }
+
+  .tx-entrance-stagger > * {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .tx-hover-lift,
+  .tx-hover-lift-subtle,
+  .tx-press-scale {
+    transition: none !important;
+
+    &:hover,
+    &:active {
+      transform: none !important;
+    }
+  }
+}
+
+html[data-animation-speed='none'] {
+  .tx-animate-in,
+  .tx-animate-in-right,
+  .tx-animate-in-scale,
+  .tx-animate-fade,
+  .tx-crossfade-enter,
+  .tx-split-pane__pane--enter,
+  .tx-split-pane__leaf.tx-split-pane__pane--enter,
+  .workspace-editor--merging .tx-split-pane__pane,
+  .tx-stagger > *,
+  .tx-entrance-stagger.tx-entrance-stagger--play > *,
+  .tx-success-pop,
+  .tx-error-shake,
+  .tx-shimmer-bar::after,
+  .tx-menu-popover,
+  .tx-notification-layer,
+  .tx-dnd-deny-active,
+  .tx-tree-row-host--expand-reveal,
+  .tx-sidebar__panel {
+    animation: none !important;
+  }
+
+  .tx-settings,
+  .tx-settings__popup {
+    transition: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .tx-entrance-stagger > * {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .tx-hover-lift,
+  .tx-hover-lift-subtle,
+  .tx-press-scale {
+    transition: none !important;
+
+    &:hover,
+    &:active {
+      transform: none !important;
+    }
+  }
+}

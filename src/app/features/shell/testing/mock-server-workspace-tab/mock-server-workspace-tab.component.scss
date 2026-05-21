@@ -1,0 +1,18 @@
+@use '../testing-workspace-tab.shared';
+
+.mock-server-workspace-tab__dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.35rem 1rem;
+  margin: 0;
+  font-size: 13px;
+}
+
+.mock-server-workspace-tab__body {
+  margin: 0;
+  padding: 0.75rem;
+  border-radius: var(--tx-radius-sm, 8px);
+  background: color-mix(in srgb, var(--tx-text-0) 4%, transparent);
+  font-size: 12px;
+  overflow: auto;
+}

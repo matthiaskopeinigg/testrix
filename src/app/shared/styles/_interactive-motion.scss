@@ -1,0 +1,41 @@
+/// Shared hover / press motion for buttons, icon controls, and surfaces.
+
+$tx-interactive-ease-out: var(--tx-ease-out-expo, cubic-bezier(0.16, 1, 0.3, 1));
+$tx-interactive-ease-press: cubic-bezier(0.25, 0, 0.2, 1);
+
+@mixin tx-interactive-transition {
+  transition:
+    background-color var(--tx-duration-base, 180ms) $tx-interactive-ease-out,
+    border-color var(--tx-duration-base, 180ms) $tx-interactive-ease-out,
+    color var(--tx-duration-base, 180ms) $tx-interactive-ease-out,
+    box-shadow var(--tx-duration-base, 180ms) $tx-interactive-ease-out,
+    transform var(--tx-duration-base, 180ms) $tx-interactive-ease-out,
+    filter var(--tx-duration-base, 180ms) $tx-interactive-ease-out,
+    opacity var(--tx-duration-fast, 120ms) $tx-interactive-ease-out;
+}
+
+@mixin tx-interactive-hover-lift($y: -2px) {
+  &:not(:disabled):not([disabled]):hover {
+    transform: translateY($y);
+  }
+}
+
+@mixin tx-interactive-press($scale: 0.97) {
+  &:not(:disabled):not([disabled]):active {
+    transform: translateY(0) scale($scale);
+    transition-duration: 70ms;
+    transition-timing-function: $tx-interactive-ease-press;
+  }
+}
+
+@mixin tx-interactive-reduced-motion {
+  @media (prefers-reduced-motion: reduce) {
+    transition-duration: 0.01ms !important;
+
+    &:hover,
+    &:active {
+      transform: none !important;
+      filter: none !important;
+    }
+  }
+}

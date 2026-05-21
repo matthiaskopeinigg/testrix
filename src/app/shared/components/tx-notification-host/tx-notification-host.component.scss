@@ -1,0 +1,55 @@
+// Bottom dock only — never cover the viewport (full-screen fixed layers break Win32 hit-testing).
+:host {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  top: auto;
+  z-index: var(--tx-z-notification, 1300);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 0 1rem 1.5rem;
+  pointer-events: none;
+
+  &:empty,
+  &:not(:has(.tx-notification-layer)) {
+    display: none !important;
+    visibility: hidden;
+    pointer-events: none !important;
+  }
+}
+
+.tx-notification-layer {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  width: max-content;
+  max-width: min(440px, 100%);
+  pointer-events: auto;
+  animation: tx-notification-in var(--tx-duration-base, 180ms) var(--tx-ease-out-expo, cubic-bezier(0.16, 1, 0.3, 1)) both;
+}
+
+@keyframes tx-notification-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.96);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tx-notification-layer {
+    animation: none;
+  }
+}
+
+html[data-animation-speed='none'] .tx-notification-layer {
+  animation: none;
+}

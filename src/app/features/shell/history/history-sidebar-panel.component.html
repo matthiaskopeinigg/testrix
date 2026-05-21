@@ -1,0 +1,117 @@
+<app-workspace-sidebar-panel-shell
+  class="history-sidebar-panel"
+  [searchPlaceholder]="searchPlaceholder()"
+  [searchAriaLabel]="searchAriaLabel()"
+  [showFolderToggle]="false"
+  [useDefaultToolbarActions]="false"
+  (searchChange)="handleSearch($event)"
+>
+  <div workspacePanelToolbarActions class="history-sidebar-panel__toolbar-actions">
+    <tx-button
+      variant="secondary"
+      class="history-sidebar-panel__toolbar-btn"
+      [title]="allCollapsed() ? 'Expand all' : 'Collapse all'"
+      (pressed)="handleCollapseAll()"
+    >
+      <tx-icon [name]="allCollapsed() ? 'maximize' : 'minimize'" [size]="14" aria-hidden="true" />
+      <span>{{ allCollapsed() ? 'Expand all' : 'Collapse all' }}</span>
+    </tx-button>
+    <tx-button
+      variant="secondary"
+      class="history-sidebar-panel__toolbar-btn history-sidebar-panel__toolbar-btn--danger"
+      title="Clear history"
+      aria-label="Clear history"
+      (pressed)="handleClearHistory()"
+    >
+      <tx-icon name="trash" [size]="14" aria-hidden="true" />
+    </tx-button>
+  </div>
+
+  <div class="history-sidebar-panel__body" (contextmenu)="handleListAreaContextMenu($event)">
+    @if (groupedHistory().length === 0) {
+      <div class="history-sidebar-panel__empty">
+        <div class="history-sidebar-panel__empty-icon" aria-hidden="true">
+          <tx-icon name="clock" [size]="32" />
+        </div>
+        <strong>No requests yet</strong>
+        <span>Sent requests will appear here.</span>
+      </div>
+    } @else {
+      <div class="history-sidebar-panel__list">
+        @for (group of groupedHistory(); track group.dateKey) {
+          <button
+            type="button"
+            class="history-sidebar-panel__group-label"
+            (click)="handleToggleGroup(group.dateKey)"
+          >
+            <tx-icon
+              class="history-sidebar-panel__chevron"
+              [class.history-sidebar-panel__chevron--collapsed]="group.collapsed"
+              name="chevronDown"
+              [size]="10"
+              aria-hidden="true"
+            />
+            <span class="history-sidebar-panel__group-name">{{ group.displayLabel }}</span>
+            <span class="history-sidebar-panel__group-count">{{ group.entries.length }}</span>
+          </button>
+
+          @if (!group.collapsed) {
+            <ul class="history-sidebar-panel__entries">
+              @for (entry of group.entries; track entry.id) {
+                <li>
+                  <button
+                    type="button"
+                    class="history-sidebar-panel__entry"
+                    [class.history-sidebar-panel__entry--active]="activeHistoryId() === entry.id"
+                    [title]="entry.url"
+                    (click)="handleSelectEntry(entry.id)"
+                    (contextmenu)="handleEntryContextMenu($event, entry.id)"
+                  >
+                    <span class="history-sidebar-panel__method" [attr.data-method]="entryMethod(entry.id)">
+                      {{ entryMethod(entry.id) }}
+                    </span>
+                    <span class="history-sidebar-panel__middle">
+                      <span class="history-sidebar-panel__url">{{ entryUrl(entry.id) }}</span>
+                      <span class="history-sidebar-panel__time">
+                        {{ entryRequestedAt(entry.id) | date: 'shortTime' }}
+                        @if (entryElapsed(entry.id); as elapsed) {
+                          <small class="history-sidebar-panel__elapsed">· {{ elapsed }}</small>
+                        }
+                      </span>
+                    </span>
+                    @if (entryStatusCode(entry.id); as code) {
+                      <span
+                        class="history-sidebar-panel__status"
+                        [attr.data-tone]="entryStatusTone(entry.id)"
+                      >
+                        {{ code }}
+                      </span>
+                    }
+                  </button>
+                </li>
+              }
+            </ul>
+          }
+        }
+      </div>
+    }
+  </div>
+</app-workspace-sidebar-panel-shell>
+
+<tx-context-menu
+  [open]="contextMenuOpen()"
+  [position]="contextMenuPosition()"
+  [items]="contextMenuItems()"
+  (itemSelect)="handleContextMenuSelect($event)"
+  (closed)="handleContextMenuClosed()"
+/>
+
+<tx-confirm-dialog
+  [open]="confirmOpen()"
+  title="History"
+  [message]="confirmMessage()"
+  confirmLabel="Confirm"
+  variant="danger"
+  (confirmed)="handleConfirmConfirmed()"
+  (closed)="handleConfirmClosed()"
+/>

@@ -1,0 +1,30 @@
+<div class="tx-entrance-stagger__block">
+  <h2 class="tx-settings__tab-title">DNS</h2>
+  <p class="tx-settings__tab-description">
+    Override DNS resolution for requests. Use comma-separated server addresses and host overrides below.
+  </p>
+</div>
+
+<div class="tx-entrance-stagger__block">
+  <tx-toggle
+    label="Override DNS"
+    [ngModel]="dns().overrideEnabled"
+    (ngModelChange)="emit({ overrideEnabled: $event })"
+  />
+  <tx-form-field label="DNS servers" controlId="tx-settings-http-dns-servers">
+    <tx-input
+      controlId="tx-settings-http-dns-servers"
+      [ngModel]="dns().servers"
+      (ngModelChange)="emit({ servers: $event })"
+      placeholder="8.8.8.8, 1.1.1.1"
+    />
+  </tx-form-field>
+  <h3 class="tx-settings__section-heading">Host overrides</h3>
+  <tx-key-value-list
+    keyLabel="Host"
+    valueLabel="IP address"
+    addLabel="Add host"
+    [rows]="dns().hosts"
+    (rowsChange)="handleHostsChange($event)"
+  />
+</div>

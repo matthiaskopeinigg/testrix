@@ -1,0 +1,408 @@
+:host {
+  --tx-sidebar-transition-duration: var(--tx-duration-base);
+  --tx-sidebar-transition-ease: var(--tx-ease-out-expo, cubic-bezier(0.16, 1, 0.3, 1));
+  --tx-sidebar-rail-bg: var(--tx-chrome-bg, var(--tx-surface-1));
+  --tx-sidebar-panel-bg: color-mix(
+    in srgb,
+    var(--tx-chrome-surface, var(--tx-surface-1)) 88%,
+    var(--tx-surface-0, var(--tx-bg, #fff)) 12%
+  );
+  --tx-sidebar-divider: color-mix(in srgb, var(--tx-border-0) 82%, transparent);
+  --tx-sidebar-divider-glow: color-mix(in srgb, var(--tx-text-0) 10%, transparent);
+
+  display: block;
+  background: var(--tx-sidebar-rail-bg);
+  position: relative;
+  flex-shrink: 0;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  transition: width var(--tx-sidebar-transition-duration) var(--tx-sidebar-transition-ease);
+
+  &.tx-sidebar-host--resizing {
+    transition: none;
+
+    .tx-sidebar__panel {
+      transition: none;
+    }
+  }
+}
+
+/* Workspace: icon rail (deeper) → panel (lifted) → content scrim on shell edge */
+:host-context(.workspace-shell) {
+  --tx-sidebar-rail-bg: color-mix(
+    in srgb,
+    var(--tx-chrome-bg, var(--tx-surface-1)) 58%,
+    var(--tx-surface-0) 42%
+  );
+  --tx-sidebar-panel-bg: color-mix(
+    in srgb,
+    var(--tx-chrome-bg, var(--tx-surface-1)) 80%,
+    var(--tx-surface-2, var(--tx-surface-1)) 20%
+  );
+
+  z-index: 6;
+  overflow: visible;
+  filter: none;
+
+  .tx-sidebar {
+    position: relative;
+  }
+
+  /* Backdrop strip: rail → panel (only when panel is open) */
+  .tx-sidebar:has(.tx-sidebar__panel)::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 56px;
+    z-index: 4;
+    width: var(--tx-sidebar-rail-backdrop-width, 14px);
+    pointer-events: none;
+    background: linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--tx-shadow-color, #000) 72%, transparent),
+      color-mix(in srgb, var(--tx-sidebar-rail-bg) 55%, transparent) 28%,
+      color-mix(in srgb, var(--tx-sidebar-panel-bg) 42%, transparent) 62%,
+      transparent
+    );
+    backdrop-filter: blur(10px) saturate(1.08);
+    -webkit-backdrop-filter: blur(10px) saturate(1.08);
+    mask-image: linear-gradient(90deg, #000 0%, #000 18%, transparent 100%);
+  }
+
+  .tx-sidebar__rail::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    left: 0;
+    z-index: 2;
+    height: 1px;
+    background: color-mix(in srgb, var(--tx-border-strong, var(--tx-border-0)) 70%, transparent);
+    box-shadow: 0 1px 0 color-mix(in srgb, var(--tx-text-0) 10%, transparent);
+    pointer-events: none;
+  }
+
+  .tx-sidebar__rail::after {
+    z-index: 5;
+    width: var(--tx-sidebar-rail-seam-width, 1px);
+    background: color-mix(in srgb, var(--tx-border-strong, var(--tx-border-0)) 78%, transparent);
+    box-shadow: 1px 0 0 color-mix(in srgb, var(--tx-text-0) 9%, transparent);
+  }
+
+  .tx-sidebar__panel {
+    z-index: 2;
+    box-shadow: none;
+    border-right: 1px solid color-mix(in srgb, var(--tx-border-strong, var(--tx-border-0)) 72%, transparent);
+
+    &::before {
+      left: 0;
+      width: 1px;
+      background: linear-gradient(
+        180deg,
+        color-mix(in srgb, var(--tx-primary) 28%, transparent) 0%,
+        transparent 42%,
+        transparent 58%,
+        color-mix(in srgb, var(--tx-primary) 22%, transparent) 100%
+      );
+      opacity: 0.65;
+    }
+  }
+}
+
+html.tx-electron-app[data-platform='win32'] :host-context(.workspace-shell) .tx-sidebar:has(.tx-sidebar__panel)::before {
+  display: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+html[data-chrome-blur='disabled'] :host-context(.workspace-shell) .tx-sidebar:has(.tx-sidebar__panel)::before {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--tx-shadow-color, #000) 58%, transparent),
+    color-mix(in srgb, var(--tx-border-0) 48%, transparent) 40%,
+    transparent
+  );
+}
+
+.tx-sidebar {
+  display: flex;
+  height: 100%;
+  min-height: 0;
+}
+
+// —— Icon activity rail ——
+
+.tx-sidebar__rail {
+  position: relative;
+  z-index: 1;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  width: 56px;
+  background: var(--tx-sidebar-rail-bg);
+
+  /* Hairline + soft highlight — reads as a groove between rail and panel */
+  &::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 1px;
+    background: var(--tx-sidebar-divider);
+    box-shadow: 1px 0 0 var(--tx-sidebar-divider-glow);
+    pointer-events: none;
+  }
+}
+
+.tx-sidebar__rail-nav {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  padding: 0.5rem 0.4rem 0.5rem 0.35rem;
+  overflow-y: auto;
+}
+
+.tx-sidebar__rail-footer {
+  flex-shrink: 0;
+  padding: 0.35rem 0.4rem 0.55rem 0.35rem;
+  border-top: 1px solid color-mix(in srgb, var(--tx-border-0) 55%, transparent);
+}
+
+.tx-sidebar__rail-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tx-sidebar__rail-item {
+  margin: 0;
+}
+
+.tx-sidebar__rail-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 2.35rem;
+  padding: 0;
+  border: 0;
+  border-radius: var(--tx-radius-md, 10px);
+  background: transparent;
+  color: color-mix(in srgb, var(--tx-text-0) 68%, transparent);
+  cursor: pointer;
+  transition:
+    background-color var(--tx-duration-fast, 120ms) ease,
+    color var(--tx-duration-fast, 120ms) ease,
+    box-shadow var(--tx-duration-fast, 120ms) ease;
+
+  &:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--tx-text-0) 8%, transparent);
+    color: var(--tx-text-0);
+  }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--tx-focus-ring) 45%, transparent);
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.45;
+  }
+
+  &.is-active {
+    background: color-mix(in srgb, var(--tx-primary) 20%, var(--tx-sidebar-rail-bg));
+    color: var(--tx-primary);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tx-primary) 38%, transparent);
+  }
+}
+
+// —— Contextual panel ——
+
+.tx-sidebar__panel {
+  position: relative;
+  z-index: 0;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  min-width: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--tx-sidebar-panel-bg);
+  border-right: 1px solid color-mix(in srgb, var(--tx-border-strong, var(--tx-border-0)) 75%, transparent);
+  box-shadow: inset 1px 0 0 color-mix(in srgb, var(--tx-text-0) 8%, transparent);
+  animation: tx-sidebar-panel-in var(--tx-sidebar-transition-duration) var(--tx-sidebar-transition-ease);
+
+  /* Accent seam where panel meets the icon rail */
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 2px;
+    background: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--tx-primary) 42%, transparent) 0%,
+      color-mix(in srgb, var(--tx-primary) 12%, transparent) 35%,
+      transparent 50%,
+      color-mix(in srgb, var(--tx-primary) 12%, transparent) 65%,
+      color-mix(in srgb, var(--tx-primary) 38%, transparent) 100%
+    );
+    opacity: 0.85;
+    pointer-events: none;
+  }
+}
+
+@keyframes tx-sidebar-panel-in {
+  from {
+    opacity: 0;
+    transform: translateX(-8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.tx-sidebar__panel-header {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-height: 2.75rem;
+  padding: 0.55rem 0.75rem 0.45rem;
+}
+
+.tx-sidebar__panel-header-start {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.tx-sidebar__panel-back {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+  border: 0;
+  border-radius: var(--tx-radius-sm, 8px);
+  background: transparent;
+  color: color-mix(in srgb, var(--tx-text-0) 62%, transparent);
+  cursor: pointer;
+  transition:
+    background-color var(--tx-duration-fast, 120ms) ease,
+    color var(--tx-duration-fast, 120ms) ease;
+
+  &:hover {
+    background: color-mix(in srgb, var(--tx-text-0) 9%, transparent);
+    color: var(--tx-text-0);
+  }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--tx-focus-ring) 45%, transparent);
+  }
+}
+
+.tx-sidebar__panel-title {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--tx-text-0);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tx-sidebar__panel-close {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+  border: 0;
+  border-radius: var(--tx-radius-sm, 8px);
+  background: transparent;
+  color: color-mix(in srgb, var(--tx-text-0) 62%, transparent);
+  cursor: pointer;
+  transition:
+    background-color var(--tx-duration-fast, 120ms) ease,
+    color var(--tx-duration-fast, 120ms) ease;
+
+  &:hover {
+    background: color-mix(in srgb, var(--tx-text-0) 9%, transparent);
+    color: var(--tx-text-0);
+  }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--tx-focus-ring) 45%, transparent);
+  }
+}
+
+.tx-sidebar__panel-toolbar {
+  flex-shrink: 0;
+  padding: 0;
+
+  &:empty {
+    display: none;
+    padding: 0;
+    border-bottom: 0;
+  }
+}
+
+.tx-sidebar__panel-body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  overflow: auto;
+}
+
+.tx-sidebar__resize-handle {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 2;
+  width: 6px;
+  height: 100%;
+  cursor: col-resize;
+  touch-action: none;
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0 auto 0 2px;
+    width: 2px;
+    border-radius: 999px;
+    background: transparent;
+    transition: background-color var(--tx-duration-fast, 120ms) ease;
+  }
+
+  &:hover::after,
+  :host.tx-sidebar-host--resizing &::after {
+    background: color-mix(in srgb, var(--tx-primary) 55%, transparent);
+  }
+}

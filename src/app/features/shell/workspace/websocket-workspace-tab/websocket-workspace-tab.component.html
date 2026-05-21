@@ -1,0 +1,13 @@
+<section class="ws-tab" [attr.aria-label]="title()">
+  @if (missing()) {
+    <tx-banner variant="warning" title="WebSocket not found">
+      This tab points to a collection entry that no longer exists.
+    </tx-banner>
+  } @else {
+    <div class="ws-tab__bar">
+      <code class="ws-tab__path">{{ wsPath() }}</code>
+      <tx-button variant="primary" (pressed)="handleConnect()">Connect</tx-button>
+    </div>
+    <p class="ws-tab__hint">WebSocket message editor will appear here in a future release.</p>
+  }
+</section>

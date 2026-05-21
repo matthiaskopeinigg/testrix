@@ -1,0 +1,88 @@
+:host {
+  display: block;
+  width: 100%;
+}
+
+.request-code-snippet-modal__content {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  width: 100%;
+}
+
+.request-code-snippet-modal__hint {
+  flex-shrink: 0;
+  margin: 0 0 0.85rem;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--tx-text-1);
+
+  code {
+    font-size: 0.75rem;
+    padding: 0.1em 0.35em;
+    border-radius: 4px;
+    background: color-mix(in srgb, var(--tx-surface-2) 80%, transparent);
+  }
+}
+
+.request-code-snippet-modal__format {
+  flex-shrink: 0;
+  max-width: 20rem;
+}
+
+.request-code-snippet-modal__editor {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 16rem;
+  min-width: 0;
+  margin-top: 0.65rem;
+  overflow: hidden;
+
+  tx-code-editor {
+    flex: 1 1 auto;
+    min-height: 16rem;
+    min-width: 0;
+    width: 100%;
+  }
+}
+
+:host ::ng-deep .request-code-snippet-modal__editor .tx-code-editor__body {
+  min-height: 14rem;
+}
+
+:host ::ng-deep .request-code-snippet-modal__editor .tx-code-editor__field {
+  min-height: 14rem;
+}
+
+:host ::ng-deep .request-code-snippet-modal__editor .tx-code-editor__input,
+:host ::ng-deep .request-code-snippet-modal__editor .tx-code-editor__mirror {
+  overflow: auto;
+  white-space: pre;
+  word-wrap: normal;
+  overflow-wrap: normal;
+}
+
+:host ::ng-deep .request-code-snippet-modal__editor .tx-code-editor__mirror code {
+  display: block;
+  width: max-content;
+  min-width: 100%;
+}
+
+.request-code-snippet-modal__actions {
+  display: flex;
+  flex-shrink: 0;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  padding-top: 0.25rem;
+
+  tx-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+}

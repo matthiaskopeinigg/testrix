@@ -1,0 +1,126 @@
+<div class="tx-entrance-stagger__block">
+  <h2 class="tx-settings__tab-title">Request</h2>
+  <p class="tx-settings__tab-description">
+    Default HTTP behavior when opening and sending requests. Applied globally until per-request overrides exist.
+  </p>
+</div>
+
+<div class="tx-entrance-stagger__block">
+  <h3 class="tx-settings__section-heading">Defaults</h3>
+  <tx-form-field label="Default HTTP method" controlId="tx-settings-http-default-method">
+    <tx-dropdown
+      id="tx-settings-http-default-method"
+      [options]="methodOptions"
+      [ngModel]="request().defaultMethod"
+      (ngModelChange)="emit({ defaultMethod: $event })"
+    />
+  </tx-form-field>
+  <tx-form-field label="Active section when opening request" controlId="tx-settings-http-active-section">
+    <tx-dropdown
+      id="tx-settings-http-active-section"
+      [options]="sectionOptions"
+      [ngModel]="request().activeSectionOnOpen"
+      (ngModelChange)="emit({ activeSectionOnOpen: $event })"
+    />
+  </tx-form-field>
+  <tx-form-field label="Default response tab after send" controlId="tx-settings-http-default-response-tab">
+    <tx-dropdown
+      id="tx-settings-http-default-response-tab"
+      [options]="responseTabOnSendOptions"
+      [ngModel]="request().defaultResponseTabOnSend"
+      (ngModelChange)="emit({ defaultResponseTabOnSend: $event })"
+    />
+  </tx-form-field>
+  <p class="tx-settings__tab-description">
+    Used when the current response tab cannot be shown. Your last tab (for example Timeline) stays selected when you
+    send again.
+  </p>
+  <tx-form-field label="Default URL scheme" controlId="tx-settings-http-default-scheme">
+    <tx-dropdown
+      id="tx-settings-http-default-scheme"
+      [options]="urlSchemeOptions"
+      [ngModel]="request().defaultUrlScheme"
+      (ngModelChange)="emit({ defaultUrlScheme: $event })"
+    />
+  </tx-form-field>
+  <p class="tx-settings__tab-description">
+    When a request URL has no scheme, Send prepends the default scheme and can add <code>www.</code> for bare domains
+    (e.g. <code>google.at</code> → <code>https://www.google.at</code>).
+  </p>
+  <div class="tx-settings__toggle-stack">
+    <tx-toggle
+      label="Auto-fix URL on send"
+      [ngModel]="request().autoFixUrlOnSend"
+      (ngModelChange)="emit({ autoFixUrlOnSend: $event })"
+    />
+    <tx-toggle
+      label="Add www. for bare domains (e.g. google.at)"
+      [disabled]="!request().autoFixUrlOnSend"
+      [ngModel]="request().prependWwwOnSend"
+      (ngModelChange)="emit({ prependWwwOnSend: $event })"
+    />
+  </div>
+  <tx-form-field label="Timeout" controlId="tx-settings-http-timeout">
+    <tx-slider
+      controlId="tx-settings-http-timeout"
+      [min]="0"
+      [max]="300000"
+      [step]="1000"
+      unit=" ms"
+      [ngModel]="request().timeoutMs"
+      (ngModelChange)="emit({ timeoutMs: $event })"
+    />
+  </tx-form-field>
+</div>
+
+<div class="tx-entrance-stagger__block">
+  <h3 class="tx-settings__section-heading">Transport</h3>
+  <div class="tx-settings__toggle-stack">
+    <tx-toggle
+      label="Use cookies"
+      [ngModel]="request().useCookies"
+      (ngModelChange)="emit({ useCookies: $event })"
+    />
+    <tx-toggle
+      label="Enable HTTP/2"
+      [ngModel]="request().http2Enabled"
+      (ngModelChange)="emit({ http2Enabled: $event })"
+    />
+    <tx-toggle
+      label="Fallback to HTTP/1.1"
+      [ngModel]="request().http2FallbackToHttp1"
+      (ngModelChange)="emit({ http2FallbackToHttp1: $event })"
+    />
+  </div>
+</div>
+
+<div class="tx-entrance-stagger__block">
+  <h3 class="tx-settings__section-heading">Redirects &amp; SSL</h3>
+  <div class="tx-settings__toggle-stack">
+    <tx-toggle
+      label="Follow redirects"
+      [ngModel]="request().followRedirects"
+      (ngModelChange)="emit({ followRedirects: $event })"
+    />
+    <tx-toggle
+      label="Strict SSL"
+      [ngModel]="request().strictSsl"
+      (ngModelChange)="emit({ strictSsl: $event })"
+    />
+    <tx-toggle
+      label="Disable cookies globally"
+      [ngModel]="request().disableCookiesGlobally"
+      (ngModelChange)="emit({ disableCookiesGlobally: $event })"
+    />
+  </div>
+  <tx-form-field label="Max redirects" controlId="tx-settings-http-max-redirects">
+    <tx-slider
+      controlId="tx-settings-http-max-redirects"
+      [min]="0"
+      [max]="50"
+      [step]="1"
+      [ngModel]="request().maxRedirects"
+      (ngModelChange)="emit({ maxRedirects: $event })"
+    />
+  </tx-form-field>
+</div>

@@ -1,0 +1,102 @@
+@use '../../workspace/workspace-panel-chrome' as panel;
+@use '../testing-sidebar-shared' as shared;
+
+:host {
+  @include shared.testing-sidebar-host;
+}
+
+.testing-sidebar-panel__hydration {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.testing-sidebar-panel__menu {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  gap: 2px;
+  min-height: 0;
+  padding: 0.2rem 0 0.5rem;
+  overflow-y: auto;
+
+  @include panel.workspace-panel-inset-x;
+}
+
+.testing-sidebar-panel__item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 0.45rem 0.5rem;
+  border: 0;
+  border-radius: var(--tx-radius-sm, 8px);
+  background: transparent;
+  color: var(--tx-text-0);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background-color var(--tx-duration-fast, 120ms) ease,
+    border-color var(--tx-duration-fast, 120ms) ease;
+
+  &:hover {
+    background: color-mix(in srgb, var(--tx-text-0) 6%, transparent);
+
+    .testing-sidebar-panel__icon {
+      transform: scale(1.05);
+    }
+
+    .testing-sidebar-panel__chevron {
+      transform: translateX(2px);
+      color: var(--tx-primary);
+    }
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--tx-primary);
+    outline-offset: 2px;
+  }
+}
+
+.testing-sidebar-panel__icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  color: color-mix(in srgb, var(--tx-text-1) 75%, transparent);
+  transition: transform var(--tx-duration-fast, 120ms) ease;
+}
+
+.testing-sidebar-panel__text {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.testing-sidebar-panel__title {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.testing-sidebar-panel__hint {
+  font-size: 0.6875rem;
+  font-weight: 500;
+  line-height: 1.35;
+  color: color-mix(in srgb, var(--tx-text-1) 78%, transparent);
+}
+
+.testing-sidebar-panel__chevron {
+  flex-shrink: 0;
+  color: color-mix(in srgb, var(--tx-text-1) 50%, transparent);
+  transition:
+    transform var(--tx-duration-fast, 120ms) ease,
+    color var(--tx-duration-fast, 120ms) ease;
+}
+
+.testing-sidebar-panel__drill-in {
+  @include shared.testing-sidebar-host;
+}

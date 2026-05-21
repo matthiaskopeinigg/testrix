@@ -1,0 +1,205 @@
+<div class="workspace-shell">
+  <tx-sidebar
+    [items]="sidebarMainItems"
+    [footerItems]="sidebarFooterItems()"
+    [activeId]="activeSidebarId()"
+    [panelOpen]="sidebarPanelOpen()"
+    [closePanelOnOutsideClick]="closeSidebarPanelOnOutsideClick()"
+    (activeIdChange)="activeSidebarId.set($event)"
+    (panelOpenChange)="sidebarPanelOpen.set($event)"
+    (itemSelect)="handleSidebarSelect($event)"
+  />
+
+  <div class="ds-layout" role="region" aria-label="Design system">
+    <aside class="ds-layout__nav" aria-label="Design system categories">
+      <header class="ds-layout__nav-head">
+        <p class="ds-layout__eyebrow">
+          <tx-icon name="code" [size]="14" aria-hidden="true" />
+          <span>Dev toolkit</span>
+        </p>
+        <h1 class="ds-layout__nav-title">Design system</h1>
+        <p class="ds-layout__nav-lede">Renderer reference — tokens, components, and patterns.</p>
+      </header>
+
+      <div class="ds-layout__search">
+        <tx-input
+          type="search"
+          placeholder="Filter categories or sections…"
+          ariaLabel="Filter design system"
+          [ngModel]="navFilter()"
+          (ngModelChange)="handleNavFilterChange($event)"
+        />
+      </div>
+
+      <nav class="ds-layout__categories">
+        @for (group of filteredNavGroups(); track group.pillar) {
+          <div
+            class="ds-cat"
+            [class.is-expanded]="isCategoryExpanded(group.pillar)"
+            [class.is-active]="activePillar() === group.pillar"
+          >
+            <button
+              type="button"
+              class="ds-cat__expand"
+              [attr.aria-expanded]="isCategoryExpanded(group.pillar)"
+              [attr.aria-label]="
+                (isCategoryExpanded(group.pillar) ? 'Collapse' : 'Expand') + ' ' + group.label
+              "
+              (click)="toggleCategoryExpanded(group.pillar, $event)"
+            >
+              <tx-icon
+                [name]="isCategoryExpanded(group.pillar) ? 'chevronDown' : 'chevronRight'"
+                [size]="14"
+                aria-hidden="true"
+              />
+            </button>
+            <button
+              type="button"
+              class="ds-cat__select"
+              [attr.aria-current]="activePillar() === group.pillar ? 'true' : null"
+              (click)="selectCategory(group.pillar)"
+            >
+              <span class="ds-cat__icon" aria-hidden="true">
+                <tx-icon [name]="pillarIcon(group.pillar)" [size]="16" />
+              </span>
+              <span class="ds-cat__text">
+                <span class="ds-cat__label">{{ group.label }}</span>
+                <span class="ds-cat__meta">{{ group.sections.length }} sections</span>
+              </span>
+            </button>
+          </div>
+        } @empty {
+          <p class="ds-layout__empty">No categories match your filter.</p>
+        }
+      </nav>
+
+      @if (showDevToolkit()) {
+        <section class="ds-layout__simulate" aria-label="Update flow simulation">
+          <h2 class="ds-layout__simulate-heading">Simulate</h2>
+          <ul class="ds-layout__simulate-list">
+            <li>
+              <button type="button" class="ds-layout__simulate-btn" (click)="simulateUpdateAvailable()">
+                <tx-icon name="download" [size]="14" aria-hidden="true" />
+                <span>New update available</span>
+              </button>
+            </li>
+            <li>
+              <button type="button" class="ds-layout__simulate-btn" (click)="simulateUpdateDownloading()">
+                <tx-icon name="refresh" [size]="14" aria-hidden="true" />
+                <span>Starting update process</span>
+              </button>
+            </li>
+            <li>
+              <button type="button" class="ds-layout__simulate-btn" (click)="simulateUpdateInstalling()">
+                <tx-icon name="rocket" [size]="14" aria-hidden="true" />
+                <span>Installing update</span>
+              </button>
+            </li>
+          </ul>
+        </section>
+      }
+    </aside>
+
+    <div class="ds-layout__edge" aria-hidden="true"></div>
+
+    <main class="ds-layout__main">
+      <div class="ds-stage__backdrop" aria-hidden="true">
+        <div class="ds-stage__bd-grid"></div>
+        <div class="ds-stage__bd-aurora ds-stage__bd-aurora--a"></div>
+        <div class="ds-stage__bd-aurora ds-stage__bd-aurora--b"></div>
+        <div class="ds-stage__bd-glow"></div>
+      </div>
+
+      <div class="ds-layout__scroll">
+        <header class="ds-layout__header tx-entrance-stagger" [class.tx-entrance-stagger--play]="contentStaggerPlay()">
+          <div class="tx-entrance-stagger__block ds-layout__header-row">
+            <div class="ds-layout__header-copy">
+              <p class="ds-layout__crumb">{{ activePillarLabel() }}</p>
+              <h2 class="ds-layout__title">{{ activeSectionLabel() }}</h2>
+              <p class="ds-layout__lede">{{ activeSectionDescription() }}</p>
+            </div>
+            <div class="ds-layout__header-aside">
+              @if (sectionIndexLabel(); as indexLabel) {
+                <tx-tag variant="default">{{ indexLabel }}</tx-tag>
+              }
+              <tx-tag variant="info">{{ activePillarLabel() }}</tx-tag>
+            </div>
+          </div>
+        </header>
+
+        @if (activeSectionTabs().length > 0) {
+          <div class="ds-layout__sections-wrap tx-entrance-stagger" [class.tx-entrance-stagger--play]="contentStaggerPlay()">
+            <nav
+              class="tx-entrance-stagger__block ds-layout__sections-bar"
+              role="tablist"
+              [attr.aria-label]="activePillarLabel() + ' sections'"
+            >
+              @for (section of activeSectionTabs(); track section.id) {
+                <button
+                  type="button"
+                  class="ds-layout__section-tab"
+                  role="tab"
+                  [attr.aria-selected]="activeSectionId() === section.id"
+                  [class.is-active]="activeSectionId() === section.id"
+                  (click)="selectSection(section.id)"
+                >
+                  <span>{{ section.label }}</span>
+                </button>
+              }
+            </nav>
+          </div>
+        }
+
+        <article
+          class="ds-stage__card tx-entrance-stagger"
+          [class.tx-entrance-stagger--play]="contentStaggerPlay()"
+        >
+          <div class="tx-entrance-stagger__block ds-stage__toolbar" role="toolbar" aria-label="Section tools">
+            <div class="ds-stage__toolbar-leading">
+              <tx-icon name="layers" [size]="18" aria-hidden="true" />
+              <span class="ds-stage__toolbar-title">Live preview</span>
+            </div>
+            <span class="ds-stage__toolbar-spacer"></span>
+            @if (sectionSupportsDebug()) {
+              <tx-button [variant]="debugEnabled() ? 'primary' : 'secondary'" (pressed)="toggleDebug()">
+                <tx-icon [name]="debugEnabled() ? 'eye' : 'eyeOff'" [size]="16" aria-hidden="true" />
+                {{ debugEnabled() ? 'Debug on' : 'Debug layout' }}
+              </tx-button>
+            }
+          </div>
+
+          <div
+            class="tx-entrance-stagger__block ds-stage__canvas"
+            [class.ds-stage__canvas--debug]="debugEnabled()"
+          >
+            <div class="ds-stage__canvas-inner">
+              @switch (activePillar()) {
+                @case ('style-guide') {
+                  <app-ds-style-guide-panel [sectionId]="activeSectionId()" />
+                }
+                @case ('brand') {
+                  <app-ds-brand-panel [sectionId]="activeSectionId()" />
+                }
+                @case ('components') {
+                  <app-ds-components-panel
+                    [sectionId]="activeSectionId()"
+                    [debugEnabled]="debugEnabled()"
+                  />
+                }
+                @case ('patterns') {
+                  <app-ds-patterns-panel
+                    [sectionId]="activeSectionId()"
+                    [debugEnabled]="debugEnabled()"
+                  />
+                }
+                @case ('ui-kit') {
+                  <app-ds-ui-kit-panel [sectionId]="activeSectionId()" />
+                }
+              }
+            </div>
+          </div>
+        </article>
+      </div>
+    </main>
+  </div>
+</div>

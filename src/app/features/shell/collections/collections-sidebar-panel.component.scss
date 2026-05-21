@@ -1,0 +1,34 @@
+:host {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+}
+
+.collections-sidebar-panel {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.collections-sidebar-panel__body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.collections-sidebar-panel__tree {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding-top: 0.15rem;
+}
+
+.collections-sidebar-panel__modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}

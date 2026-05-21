@@ -1,0 +1,64 @@
+<div class="tx-variable-input">
+  <div
+    class="tx-variable-input__field"
+    [class.tx-variable-input__field--disabled]="disabled()"
+    (mouseenter)="handleFieldMouseEnter($event)"
+    (mouseleave)="handleFieldMouseLeave($event)"
+  >
+    <pre class="tx-variable-input__mirror" aria-hidden="true"><code [innerHTML]="highlightedHtml() | txVariableInputHighlightHtml"></code></pre>
+    <pre
+      class="tx-variable-input__hit"
+      aria-hidden="true"
+      (pointerover)="handleHitPointerOver($event)"
+      (pointerout)="handleHitPointerOut($event)"
+      (pointerdown)="handleHitPointerDown($event)"
+    ><code [innerHTML]="highlightedHtml() | txVariableInputHighlightHtml"></code></pre>
+    <input
+      #nativeInput
+      class="tx-variable-input__control"
+      [id]="effectiveId()"
+      type="text"
+      [value]="value()"
+      [placeholder]="placeholder()"
+      [disabled]="disabled()"
+      [attr.aria-label]="ariaLabel() || null"
+      [attr.aria-expanded]="completionOpen()"
+      [attr.aria-controls]="completionOpen() ? effectiveId() + '-completion' : null"
+      [attr.aria-autocomplete]="completionOpen() ? 'list' : null"
+      (input)="handleInput($event)"
+      (keydown)="handleKeydown($event)"
+      (scroll)="handleScroll()"
+      (blur)="handleBlur()"
+    />
+  </div>
+
+  @if (completionOpen()) {
+    <div
+      [id]="effectiveId() + '-completion'"
+      class="tx-variable-input__completion"
+      role="listbox"
+      aria-label="Dynamic variable suggestions"
+    >
+      <p class="tx-variable-input__completion-hint">↑↓ Enter Tab · Esc dismiss</p>
+      <div class="tx-variable-input__completion-list">
+        @for (item of completionItems(); track item.id; let index = $index) {
+          <button
+            type="button"
+            class="tx-variable-input__completion-item"
+            role="option"
+            [class.is-active]="index === completionIndex()"
+            [attr.aria-selected]="index === completionIndex()"
+            (mouseenter)="completionIndex.set(index)"
+            (mousedown)="$event.preventDefault()"
+            (click)="applyCompletion(item)"
+          >
+            <span class="tx-variable-input__completion-label">{{ item.label }}</span>
+            <span class="tx-variable-input__completion-detail">{{ item.detail }}</span>
+          </button>
+        } @empty {
+          <p class="tx-variable-input__completion-empty">No matches</p>
+        }
+      </div>
+    </div>
+  }
+</div>

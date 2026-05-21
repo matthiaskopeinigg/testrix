@@ -1,0 +1,80 @@
+<div class="tx-dropdown">
+  <button
+    #trigger
+    type="button"
+    class="tx-dropdown__trigger"
+    [id]="effectiveId()"
+    [disabled]="isDisabled()"
+    [attr.aria-label]="ariaLabel() || null"
+    [attr.aria-labelledby]="ariaLabelledById()"
+    [attr.aria-expanded]="isOpen()"
+    [attr.aria-haspopup]="'listbox'"
+    [attr.aria-controls]="isOpen() ? listboxId : null"
+    (click)="handleTriggerClick()"
+    (keydown)="handleTriggerKeydown($event)"
+    (blur)="handleTriggerBlur()"
+    (pointerenter)="handleTriggerPointerEnter()"
+    (pointerleave)="handleTriggerPointerLeave()"
+    (focusin)="handleTriggerPointerEnter()"
+    (focusout)="handleTriggerPointerLeave()"
+  >
+    <span
+      class="tx-dropdown__value"
+      [class.tx-dropdown__value--placeholder]="!hasSelection()"
+    >
+      {{ triggerLabel() }}
+    </span>
+    <tx-icon
+      class="tx-dropdown__chevron"
+      [class.is-open]="isOpen()"
+      name="chevronDown"
+      [size]="16"
+      aria-hidden="true"
+    />
+  </button>
+
+  @if (isOpen()) {
+    <ul
+      #panel
+      class="tx-dropdown__panel tx-menu-popover"
+      [id]="listboxId"
+      role="listbox"
+      [attr.aria-labelledby]="effectiveId()"
+      [attr.aria-activedescendant]="optionId(activeIndex())"
+    >
+      @if (options().length === 0) {
+        <li class="tx-dropdown__empty" role="presentation">
+          <span>{{ emptyLabel() }}</span>
+        </li>
+      } @else {
+        @for (option of options(); track option.value; let index = $index) {
+          <li
+            role="option"
+            [id]="optionId(index)"
+            [attr.aria-selected]="isOptionSelected(option)"
+            [attr.aria-disabled]="option.disabled ? true : null"
+          >
+            <button
+              type="button"
+              class="tx-dropdown__option"
+              [class.is-selected]="isOptionSelected(option)"
+              [class.is-active]="isOptionActive(index)"
+              [disabled]="option.disabled ?? false"
+              (mousedown)="$event.preventDefault()"
+              (click)="handleOptionClick(option, index)"
+              (mouseenter)="handleOptionMouseEnter(index)"
+            >
+              @if (option.icon) {
+                <tx-icon class="tx-dropdown__option-icon" [name]="option.icon" [size]="16" aria-hidden="true" />
+              }
+              <span class="tx-dropdown__option-label">{{ option.label }}</span>
+              @if (isOptionSelected(option)) {
+                <tx-icon class="tx-dropdown__option-check" name="check" [size]="16" aria-hidden="true" />
+              }
+            </button>
+          </li>
+        }
+      }
+    </ul>
+  }
+</div>

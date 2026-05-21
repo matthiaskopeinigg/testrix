@@ -1,0 +1,36 @@
+<div
+  class="tx-settings__theme-group"
+  txLazyVisible
+  #groupLazy="txLazyVisible"
+  [txLazyVisibleRoot]="scrollRoot()"
+  [txLazyVisibleEager]="eager()"
+>
+  <h3 class="tx-settings__theme-group-heading">{{ group().label }}</h3>
+
+  @if (groupLazy.visible()) {
+    <div class="tx-settings__theme-options">
+      @for (themeId of visibleThemes(); track themeId) {
+        @if (paletteFor()(themeId); as palette) {
+          <button
+            type="button"
+            class="tx-settings__theme-option"
+            [class.is-selected]="isActive($any(themeId))"
+            (click)="handleSelect($any(themeId))"
+          >
+            <tx-theme-layout-preview [palette]="palette" [compact]="true" />
+            <span class="tx-settings__theme-name">{{ palette.label }}</span>
+          </button>
+        }
+      }
+    </div>
+  } @else {
+    <div class="tx-settings__theme-options tx-settings__theme-options--placeholder" aria-hidden="true">
+      @for (slot of skeletonSlots(); track slot) {
+        <div class="tx-settings__theme-skeleton">
+          <div class="tx-settings__theme-skeleton-preview tx-shimmer-bar"></div>
+          <div class="tx-settings__theme-skeleton-label tx-shimmer-bar"></div>
+        </div>
+      }
+    </div>
+  }
+</div>

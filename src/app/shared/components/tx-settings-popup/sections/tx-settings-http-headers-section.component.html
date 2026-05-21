@@ -1,0 +1,50 @@
+<div class="tx-entrance-stagger__block">
+  <h2 class="tx-settings__tab-title">Headers</h2>
+  <p class="tx-settings__tab-description">
+    Default headers merged into every request when enabled.
+  </p>
+</div>
+
+<div class="tx-entrance-stagger__block">
+  <tx-toggle
+    label="Apply default headers"
+    [ngModel]="headers().applyDefaultHeaders"
+    (ngModelChange)="emit({ applyDefaultHeaders: $event })"
+  />
+
+  <p class="tx-settings-http-headers__hint">
+    In header values, type <code>$</code> for dynamic placeholders such as
+    <code>$uuid</code>, <code>$timestamp</code>, and <code>$randomInt(6)</code>. They resolve when a
+    request is sent, not when you save settings.
+  </p>
+
+  <tx-key-value-list
+    keyLabel="Header"
+    valueLabel="Value"
+    addLabel="Add header"
+    valueInput="variables"
+    [rows]="headers().rows"
+    (rowsChange)="handleRowsChange($event)"
+  />
+
+  <div class="tx-settings-http-headers__preview-actions">
+    <tx-button variant="secondary" (pressed)="handleToggleResolvedPreview()">
+      {{ showResolvedPreview() ? 'Hide' : 'Preview' }} resolved headers
+    </tx-button>
+  </div>
+
+  @if (showResolvedPreview()) {
+    @if (resolvedPreviewRows().length > 0) {
+      <ul class="tx-settings-http-headers__preview" aria-label="Resolved default headers preview">
+        @for (row of resolvedPreviewRows(); track row.key) {
+          <li class="tx-settings-http-headers__preview-row">
+            <span class="tx-settings-http-headers__preview-key">{{ row.key }}:</span>
+            <span>{{ row.value }}</span>
+          </li>
+        }
+      </ul>
+    } @else {
+      <p class="tx-settings-http-headers__preview-empty">No enabled headers with a name.</p>
+    }
+  }
+</div>

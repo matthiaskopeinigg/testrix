@@ -1,0 +1,68 @@
+<div class="tx-key-value-list" role="group" [attr.aria-label]="keyLabel() + ' and ' + valueLabel()">
+  @if (rows().length === 0) {
+    <p class="tx-key-value-list__empty">No rows yet.</p>
+  }
+
+  @for (row of rows(); track row.id) {
+    <div class="tx-key-value-list__row">
+      <div class="tx-key-value-list__key-cell">
+        <label class="tx-field__label" [for]="'kv-key-' + row.id">{{ keyLabel() }}</label>
+        <div class="tx-key-value-list__key-control">
+          @if (showEnabled()) {
+            <label class="tx-key-value-list__enabled">
+              <input
+                type="checkbox"
+                class="tx-key-value-list__enabled-input"
+                [checked]="row.enabled"
+                [attr.aria-label]="'Enable ' + keyLabel()"
+                (change)="handleEnabledChange(row.id, $any($event.target).checked)"
+              />
+              <span class="tx-key-value-list__enabled-box" aria-hidden="true"></span>
+            </label>
+          }
+          <div class="tx-field__control">
+            <tx-input
+              [controlId]="'kv-key-' + row.id"
+              [ngModel]="row.key"
+              (ngModelChange)="handleKeyChange(row.id, $event)"
+              placeholder="Header name"
+            />
+          </div>
+        </div>
+      </div>
+
+      <tx-form-field class="tx-key-value-list__field" [label]="valueLabel()" [controlId]="'kv-val-' + row.id">
+        @if (valueInput() === 'variables') {
+          <tx-variable-input
+            [controlId]="'kv-val-' + row.id"
+            [catalog]="variableCatalog()"
+            [ngModel]="row.value"
+            (ngModelChange)="handleValueChange(row.id, $event)"
+            (environmentVariableClick)="environmentVariableClick.emit($event)"
+            placeholder="Value or $variable"
+          />
+        } @else {
+          <tx-input
+            [controlId]="'kv-val-' + row.id"
+            [ngModel]="row.value"
+            (ngModelChange)="handleValueChange(row.id, $event)"
+            placeholder="Value"
+          />
+        }
+      </tx-form-field>
+
+      <button
+        type="button"
+        class="tx-key-value-list__remove"
+        aria-label="Remove row"
+        (click)="handleRemove(row.id)"
+      >
+        <tx-icon name="trash" [size]="16" />
+      </button>
+    </div>
+  }
+
+  <tx-button variant="add" [disabled]="!canAdd()" (pressed)="handleAdd()">
+    {{ addLabel() }}
+  </tx-button>
+</div>

@@ -1,0 +1,187 @@
+@use '../../../../shared/styles/control-surface' as surface;
+@use '../../../../shared/styles/interactive-motion' as motion;
+
+:host {
+  display: block;
+  width: 100%;
+  min-width: 0;
+}
+
+.request-tab-url-input {
+  position: relative;
+  width: 100%;
+}
+
+.request-tab-url-input__field {
+  position: relative;
+  width: 100%;
+  min-height: var(--tx-control-height-md, 36px);
+  overflow: hidden;
+
+  @include surface.control-surface;
+  @include motion.tx-interactive-transition;
+
+  &:hover:not(.request-tab-url-input__field--disabled) {
+    @include surface.control-surface-hover;
+  }
+
+  &:focus-within:not(.request-tab-url-input__field--disabled) {
+    @include surface.control-surface-focus;
+  }
+
+  &--disabled {
+    @include surface.control-surface-disabled;
+  }
+}
+
+.request-tab-url-input__mirror,
+.request-tab-url-input__hit,
+.request-tab-url-input__control {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: var(--tx-control-height-md, 36px);
+  margin: 0;
+  padding: 0.5rem 0.75rem;
+  border: none;
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 400;
+  line-height: 1.4;
+  letter-spacing: normal;
+  word-spacing: normal;
+  white-space: pre;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+  font-variant-ligatures: none;
+  font-feature-settings: 'liga' 0, 'calt' 0;
+}
+
+.request-tab-url-input__mirror {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  color: var(--tx-text-0);
+  background: transparent;
+  overflow: hidden;
+
+  code {
+    display: block;
+    width: 100%;
+    min-height: 100%;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    font: inherit;
+    font-size: inherit;
+    line-height: inherit;
+    font-weight: inherit;
+    letter-spacing: inherit;
+    white-space: pre;
+  }
+}
+
+.request-tab-url-input__hit {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  background: transparent;
+  overflow: hidden;
+
+  code {
+    display: block;
+    width: 100%;
+    min-height: 100%;
+    margin: 0;
+    padding: 0;
+    font: inherit;
+    font-size: inherit;
+    line-height: inherit;
+    font-weight: inherit;
+    letter-spacing: inherit;
+    white-space: pre;
+    pointer-events: none;
+  }
+}
+
+.request-tab-url-input__control {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  caret-color: var(--tx-text-0);
+  background: transparent;
+  outline: none;
+
+  &::placeholder {
+    color: color-mix(in srgb, var(--tx-text-1) 85%, transparent);
+    -webkit-text-fill-color: color-mix(in srgb, var(--tx-text-1) 85%, transparent);
+    opacity: 1;
+  }
+
+  &:focus::placeholder {
+    color: color-mix(in srgb, var(--tx-text-1) 65%, transparent);
+    -webkit-text-fill-color: color-mix(in srgb, var(--tx-text-1) 65%, transparent);
+  }
+
+  &::selection {
+    color: transparent;
+    -webkit-text-fill-color: transparent;
+    background: color-mix(in srgb, var(--tx-primary) 35%, transparent);
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+  }
+}
+
+.request-tab-url-input__completion {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  max-height: 12rem;
+  overflow: auto;
+  padding: 0.35rem;
+  border-radius: var(--tx-radius-sm, 8px);
+  background: var(--tx-surface-2);
+  border: 1px solid color-mix(in srgb, var(--tx-border-0) 70%, transparent);
+  box-shadow: var(--tx-shadow-md, 0 8px 24px rgb(0 0 0 / 35%));
+}
+
+.request-tab-url-input__completion-hint {
+  margin: 0 0 0.35rem;
+  padding: 0 0.35rem;
+  font-size: 0.6875rem;
+  color: var(--tx-text-2);
+}
+
+.request-tab-url-input__completion-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  padding: 0.4rem 0.5rem;
+  border: 0;
+  border-radius: var(--tx-radius-sm, 6px);
+  background: transparent;
+  color: var(--tx-text-0);
+  font: inherit;
+  font-size: 0.8125rem;
+  text-align: left;
+  cursor: pointer;
+
+  &.is-active,
+  &:hover {
+    background: color-mix(in srgb, var(--tx-accent) 14%, transparent);
+  }
+}
+
+.request-tab-url-input__completion-detail {
+  font-size: 0.6875rem;
+  color: var(--tx-text-2);
+}

@@ -1,0 +1,129 @@
+@let authConfig = auth();
+
+<div class="folder-auth-panel">
+  <tx-form-field label="Type" controlId="folder-auth-type">
+    <tx-dropdown
+      id="folder-auth-type"
+      [options]="authTypeOptions()"
+      [ngModel]="authConfig.type"
+      (ngModelChange)="handleTypeChange($event)"
+    />
+  </tx-form-field>
+
+  @if (authConfig.type === 'inherit') {
+    <p class="folder-auth-panel__hint">
+      Requests in this folder use the parent folder’s authorization until overridden.
+    </p>
+  }
+
+  @if (authConfig.type === 'bearer') {
+    <tx-form-field label="Token" controlId="folder-auth-bearer-token">
+      <tx-variable-input
+        id="folder-auth-bearer-token"
+        [ngModel]="authConfig.token"
+        (ngModelChange)="patchBearer({ token: $event })"
+        placeholder="Bearer token or $variable"
+      />
+    </tx-form-field>
+  }
+
+  @if (authConfig.type === 'basic') {
+    <tx-form-field label="Username" controlId="folder-auth-basic-user">
+      <tx-input
+        controlId="folder-auth-basic-user"
+        [ngModel]="authConfig.username"
+        (ngModelChange)="patchBasic({ username: $event })"
+      />
+    </tx-form-field>
+    <tx-form-field label="Password" controlId="folder-auth-basic-pass">
+      <tx-input
+        controlId="folder-auth-basic-pass"
+        type="password"
+        [ngModel]="authConfig.password"
+        (ngModelChange)="patchBasic({ password: $event })"
+      />
+    </tx-form-field>
+  }
+
+  @if (authConfig.type === 'apiKey') {
+    <tx-form-field label="Key" controlId="folder-auth-api-name">
+      <tx-input
+        controlId="folder-auth-api-name"
+        [ngModel]="authConfig.name"
+        (ngModelChange)="patchApiKey({ name: $event })"
+      />
+    </tx-form-field>
+    <tx-form-field label="Value" controlId="folder-auth-api-value">
+      <tx-variable-input
+        id="folder-auth-api-value"
+        [ngModel]="authConfig.value"
+        (ngModelChange)="patchApiKey({ value: $event })"
+      />
+    </tx-form-field>
+    <tx-form-field label="Add to" controlId="folder-auth-api-in">
+      <tx-dropdown
+        id="folder-auth-api-in"
+        [options]="apiKeyInOptions"
+        [ngModel]="authConfig.in"
+        (ngModelChange)="patchApiKey({ in: $event })"
+      />
+    </tx-form-field>
+  }
+
+  @if (authConfig.type === 'oauth2') {
+    <tx-form-field label="Grant type" controlId="folder-auth-oauth-grant">
+      <tx-dropdown
+        id="folder-auth-oauth-grant"
+        [options]="oauthGrantOptions"
+        [ngModel]="authConfig.grantType"
+        (ngModelChange)="patchOAuth2({ grantType: $event })"
+      />
+    </tx-form-field>
+    <tx-form-field label="Auth URL" controlId="folder-auth-oauth-auth-url">
+      <tx-input
+        controlId="folder-auth-oauth-auth-url"
+        type="url"
+        [ngModel]="authConfig.authUrl"
+        (ngModelChange)="patchOAuth2({ authUrl: $event })"
+      />
+    </tx-form-field>
+    <tx-form-field label="Token URL" controlId="folder-auth-oauth-token-url">
+      <tx-input
+        controlId="folder-auth-oauth-token-url"
+        type="url"
+        [ngModel]="authConfig.tokenUrl"
+        (ngModelChange)="patchOAuth2({ tokenUrl: $event })"
+      />
+    </tx-form-field>
+    <tx-form-field label="Client ID" controlId="folder-auth-oauth-client-id">
+      <tx-input
+        controlId="folder-auth-oauth-client-id"
+        [ngModel]="authConfig.clientId"
+        (ngModelChange)="patchOAuth2({ clientId: $event })"
+      />
+    </tx-form-field>
+    <tx-form-field label="Client secret" controlId="folder-auth-oauth-client-secret">
+      <tx-input
+        controlId="folder-auth-oauth-client-secret"
+        type="password"
+        [ngModel]="authConfig.clientSecret"
+        (ngModelChange)="patchOAuth2({ clientSecret: $event })"
+      />
+    </tx-form-field>
+    <tx-form-field label="Scope" controlId="folder-auth-oauth-scope">
+      <tx-input
+        controlId="folder-auth-oauth-scope"
+        [ngModel]="authConfig.scope"
+        (ngModelChange)="patchOAuth2({ scope: $event })"
+      />
+    </tx-form-field>
+    <tx-form-field label="Redirect URI" controlId="folder-auth-oauth-redirect">
+      <tx-input
+        controlId="folder-auth-oauth-redirect"
+        type="url"
+        [ngModel]="authConfig.redirectUri"
+        (ngModelChange)="patchOAuth2({ redirectUri: $event })"
+      />
+    </tx-form-field>
+  }
+</div>

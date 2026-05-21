@@ -1,0 +1,33 @@
+@if (missing()) {
+  <tx-banner variant="warning" title="Environment not found">
+    This tab points to an environment that no longer exists. Close the tab or pick another from the
+    sidebar.
+  </tx-banner>
+} @else {
+  <div class="env-workspace" [attr.aria-label]="profileTitle()">
+    <aside class="env-workspace__tree">
+      <app-environment-tree-panel
+        [environmentId]="environmentId()!"
+        [selectedVariableId]="selectedVariableId()"
+        [tabActive]="active()"
+        (selectedVariableIdChange)="handleSelectedVariableChange($event)"
+      />
+    </aside>
+
+    <div class="env-workspace__divider" aria-hidden="true"></div>
+
+    <section class="env-workspace__detail">
+      @if (selectedVariableId(); as variableId) {
+        <app-environment-variable-editor [variableId]="variableId" />
+      } @else {
+        <div class="env-workspace__empty">
+          <tx-icon name="hash" [size]="28" aria-hidden="true" />
+          <p class="env-workspace__empty-title">Select a variable</p>
+          <p class="env-workspace__empty-hint">
+            Choose a variable in the tree to edit its key, value, and description.
+          </p>
+        </div>
+      }
+    </section>
+  </div>
+}

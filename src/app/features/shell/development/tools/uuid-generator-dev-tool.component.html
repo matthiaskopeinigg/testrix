@@ -1,0 +1,47 @@
+<app-dev-tool-layout toolId="uuid-generator">
+  <app-dev-tool-toolbar devToolToolbar>
+    <div leading class="dev-tool-tab__options">
+      <tx-form-field label="Count">
+        <tx-input
+          type="number"
+          [ngModel]="state().count.toString()"
+          (ngModelChange)="handleCountChange($event)"
+        />
+      </tx-form-field>
+      <tx-form-field label="Uppercase">
+        <tx-toggle
+          [ngModel]="state().uppercase"
+          (ngModelChange)="state.update((s) => ({ ...s, uppercase: $event }))"
+        />
+      </tx-form-field>
+      <tx-form-field label="Strip hyphens">
+        <tx-toggle
+          [ngModel]="state().stripHyphens"
+          (ngModelChange)="state.update((s) => ({ ...s, stripHyphens: $event }))"
+        />
+      </tx-form-field>
+    </div>
+    <div trailing>
+      <tx-button variant="primary" (click)="handleGenerate()">Generate</tx-button>
+      <tx-button variant="secondary" (click)="handleBulk10()">×10</tx-button>
+      <tx-button variant="secondary" (click)="handleNil()">NIL</tx-button>
+      <tx-button variant="secondary" (click)="handleCopyAll()">Copy all</tx-button>
+      <tx-button variant="secondary" (click)="handleClear()">Clear</tx-button>
+    </div>
+  </app-dev-tool-toolbar>
+
+  <app-dev-tool-stat-strip>
+    <tx-tag>{{ lines().length }} UUID{{ lines().length === 1 ? '' : 's' }}</tx-tag>
+    <tx-tag>{{ byteSize() }} bytes</tx-tag>
+    <tx-tag>v4</tx-tag>
+  </app-dev-tool-stat-strip>
+
+  <ul class="dev-tool-tab__stack-list" aria-label="Generated UUIDs">
+    @for (line of lines(); track $index) {
+      <li class="dev-tool-tab__uuid-row">
+        <code class="dev-tool-tab__output">{{ line }}</code>
+        <tx-button variant="secondary" (click)="handleCopyLine(line)">Copy</tx-button>
+      </li>
+    }
+  </ul>
+</app-dev-tool-layout>

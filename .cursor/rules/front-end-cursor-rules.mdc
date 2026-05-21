@@ -1,0 +1,28 @@
+---
+alwaysApply: true
+description: Renderer coding habits for Angular + SCSS (not React/Tailwind)
+---
+
+# Front-end conventions (Testrix renderer)
+
+These rules apply to **`src/app/**`** and **`src/styles/**`.** They **replace** generic React/Tailwind guidance for this repository.
+
+## Stack
+
+- **Angular** templates + **SCSS** + **`--tx-*` tokens**. Do **not** add Tailwind, Shadcn, or Radix unless the maintainer explicitly changes stack.
+- See **`use-shared-ui.mdc`** (mandatory shared kit) and **`theme-and-shared-ui.mdc`** for token/widget boundaries.
+
+## TypeScript / templates
+
+- Prefer **early returns** in helpers and IPC-related services.
+- Name UI event handlers **`handle*`** (`handleClick`, `handleSubmit`) to match existing components.
+- Use **`const`** for stable callbacks passed into templates where it improves clarity.
+
+## Accessibility
+
+- Use **semantic HTML** and meaningful **`aria-label` / `title`** on icon-only controls (see `tx-window-titlebar` pattern).
+- Keep **keyboard** access for interactive controls; use native `<button>` for actions.
+
+## Commits
+
+- Follow the repository / user conventions for **`feat:`**, **`fix:`**, **`refactor:`** (see workspace user rules when committing).

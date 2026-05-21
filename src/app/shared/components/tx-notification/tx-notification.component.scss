@@ -1,0 +1,87 @@
+:host {
+  display: block;
+  pointer-events: auto;
+
+  --tx-notification-accent: var(--tx-link);
+
+  &[data-tone='success'] {
+    --tx-notification-accent: var(--tx-success);
+  }
+
+  &[data-tone='warning'] {
+    --tx-notification-accent: var(--tx-warning);
+  }
+
+  &[data-tone='error'] {
+    --tx-notification-accent: var(--tx-danger);
+  }
+}
+
+.tx-notification {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-width: min(100%, 16rem);
+  max-width: min(440px, calc(100vw - 2rem));
+  padding: 0.65rem 0.75rem 0.65rem 0.7rem;
+  border-radius: var(--tx-radius-lg, 14px);
+  border: 1px solid color-mix(in srgb, var(--tx-notification-accent) 36%, transparent);
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--tx-notification-accent) 16%, var(--tx-surface-1)) 0%,
+    color-mix(in srgb, var(--tx-notification-accent) 6%, var(--tx-surface-1)) 45%,
+    var(--tx-surface-1) 100%
+  );
+  color: var(--tx-text-0);
+  box-shadow:
+    inset 3px 0 0 var(--tx-notification-accent),
+    var(--tx-shadow-md);
+}
+
+.tx-notification__icon {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 1.85rem;
+  height: 1.85rem;
+  border-radius: 50%;
+  color: color-mix(in srgb, var(--tx-notification-accent) 90%, var(--tx-text-0));
+  background: color-mix(in srgb, var(--tx-notification-accent) 14%, var(--tx-surface-2));
+  border: 1px solid color-mix(in srgb, var(--tx-notification-accent) 28%, transparent);
+}
+
+.tx-notification__message {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.tx-notification__dismiss {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 1.65rem;
+  height: 1.65rem;
+  padding: 0;
+  border: 0;
+  border-radius: var(--tx-radius-sm, 8px);
+  background: transparent;
+  color: color-mix(in srgb, var(--tx-text-0) 58%, transparent);
+  cursor: pointer;
+  transition:
+    background-color var(--tx-duration-fast, 120ms) ease,
+    color var(--tx-duration-fast, 120ms) ease;
+
+  &:hover {
+    background: color-mix(in srgb, var(--tx-text-0) 8%, transparent);
+    color: var(--tx-text-0);
+  }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--tx-focus-ring) 55%, transparent);
+  }
+}

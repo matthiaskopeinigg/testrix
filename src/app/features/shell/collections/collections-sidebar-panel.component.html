@@ -1,0 +1,49 @@
+<app-workspace-sidebar-panel-shell
+  class="collections-sidebar-panel"
+  [searchPlaceholder]="searchPlaceholder()"
+  [searchAriaLabel]="searchAriaLabel()"
+  [allFoldersExpanded]="allExpanded()"
+  (searchChange)="handleSearch($event)"
+  (allFoldersExpandedChange)="handleExpandAll($event)"
+>
+  <div
+    class="collections-sidebar-panel__body"
+    (contextmenu)="handleTreeAreaContextMenu($event)"
+  >
+    <tx-tree
+      #collectionsTree
+      class="collections-sidebar-panel__tree"
+      [entranceStagger]="true"
+      [nodes]="filteredNodes()"
+      [config]="treeConfig()"
+      [expandedIds]="expandedIds()"
+      [selectionIds]="treeSelectionIds()"
+      [renamingNodeId]="renamingNodeId()"
+      (nodesChange)="handleNodesChange($event)"
+      (expandedChange)="handleExpandedChange($event)"
+      (nodeClick)="handleNodeClick($event)"
+      (nodeDblClick)="handleNodeDblClick($event)"
+      (renameCommit)="handleRenameCommit($event)"
+      (renameCancel)="handleRenameCancel()"
+      (rowContextMenu)="handleRowContextMenu($event)"
+    />
+  </div>
+</app-workspace-sidebar-panel-shell>
+
+<tx-context-menu
+  [open]="contextMenuOpen()"
+  [position]="contextMenuPosition()"
+  [items]="contextMenuItems()"
+  (itemSelect)="handleContextMenuSelect($event)"
+  (closed)="handleContextMenuClosed()"
+/>
+
+<tx-confirm-dialog
+  [open]="deleteOpen()"
+  title="Delete item"
+  [message]="deleteMessage()"
+  confirmLabel="Delete"
+  variant="danger"
+  (confirmed)="handleDeleteConfirmed()"
+  (closed)="handleDeleteClosed()"
+/>

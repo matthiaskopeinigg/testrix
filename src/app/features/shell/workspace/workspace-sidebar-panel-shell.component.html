@@ -1,0 +1,64 @@
+<div txSidebarToolbar class="workspace-panel-shell__toolbar-wrap">
+  <div class="workspace-panel-shell__toolbar-divider-wrap" aria-hidden="true">
+    <tx-divider [decorative]="true" />
+  </div>
+
+  <div class="workspace-panel-shell__toolbar" role="toolbar" [attr.aria-label]="searchAriaLabel() + ' and panel actions'">
+    <div class="workspace-panel-shell__search-wrap">
+      <tx-icon class="workspace-panel-shell__search-icon" name="search" [size]="14" aria-hidden="true" />
+      <tx-input
+        class="workspace-panel-shell__search"
+        type="search"
+        [placeholder]="searchPlaceholder()"
+        [ariaLabel]="searchAriaLabel()"
+        [ngModel]="searchQuery()"
+        (ngModelChange)="handleSearchChange($event)"
+      />
+    </div>
+
+    @if (showFolderToggle()) {
+      <button
+        type="button"
+        class="workspace-panel-shell__icon-btn"
+        [class.is-pressed]="allFoldersExpanded()"
+        [attr.aria-label]="allFoldersExpanded() ? 'Collapse all folders' : 'Expand all folders'"
+        [attr.aria-pressed]="allFoldersExpanded()"
+        (click)="handleToggleFolders()"
+      >
+        <tx-icon [name]="allFoldersExpanded() ? 'chevronDown' : 'chevronRight'" [size]="16" />
+      </button>
+    }
+
+    <ng-content select="[workspacePanelToolbarActions]" />
+
+    @if (showFilterButton() && useDefaultToolbarActions()) {
+      <button
+        type="button"
+        class="workspace-panel-shell__icon-btn"
+        aria-label="Filter"
+        (click)="handleFilter()"
+      >
+        <tx-icon name="filter" [size]="16" />
+      </button>
+    }
+
+    @if (showSortButton() && useDefaultToolbarActions()) {
+      <button
+        type="button"
+        class="workspace-panel-shell__icon-btn"
+        aria-label="Sort"
+        (click)="handleSort()"
+      >
+        <tx-icon name="list" [size]="16" />
+      </button>
+    }
+  </div>
+
+  <div class="workspace-panel-shell__toolbar-divider-wrap" aria-hidden="true">
+    <tx-divider [decorative]="true" />
+  </div>
+</div>
+
+<div class="workspace-panel-shell__body">
+  <ng-content />
+</div>

@@ -1,0 +1,17 @@
+@use './testing-sidebar-shared' as shared;
+
+:host {
+  @include shared.testing-sidebar-host;
+}
+
+.testing-list-sidebar-panel__list {
+  @include shared.testing-sidebar-list;
+}
+
+.testing-list-sidebar-panel__item {
+  @include shared.testing-sidebar-list-item;
+}
+
+.testing-list-sidebar-panel__empty {
+  @include shared.testing-sidebar-empty;
+}

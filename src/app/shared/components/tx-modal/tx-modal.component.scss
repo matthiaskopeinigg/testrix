@@ -1,0 +1,138 @@
+.tx-modal-root {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  z-index: var(--tx-z-modal, 1000);
+
+  &--stacked {
+    z-index: var(--tx-z-modal-stacked, 1200);
+  }
+  padding: 1rem;
+}
+
+.tx-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  padding: 0;
+  background: var(--tx-scrim);
+  backdrop-filter: blur(6px);
+  cursor: default;
+  animation: tx-modal-backdrop-in var(--tx-duration-fast, 120ms) ease both;
+}
+
+.tx-modal-card {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  width: min(92vw, 520px);
+  max-height: min(86vh, 640px);
+  overflow: hidden;
+  border-radius: var(--tx-radius-lg, 14px);
+  border: 1px solid color-mix(in srgb, var(--tx-border-0) 90%, var(--tx-primary) 8%);
+  background: color-mix(in srgb, var(--tx-surface-1) 96%, var(--tx-surface-0));
+  color: var(--tx-text-0);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--tx-text-0) 4%, transparent),
+    var(--tx-shadow-md),
+    0 8px 24px color-mix(in srgb, var(--tx-primary) 12%, transparent);
+  animation: tx-modal-card-in var(--tx-duration-base, 180ms) var(--tx-ease-out-expo) both;
+}
+
+.tx-modal-root--wide .tx-modal-card {
+  width: min(920px, calc(100vw - 2rem));
+  max-height: min(90vh, 780px);
+}
+
+.tx-modal-root--wide .tx-modal-body {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.tx-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 1rem 1.1rem;
+  border-bottom: 1px solid var(--tx-border-0);
+  background: color-mix(in srgb, var(--tx-surface-2) 35%, transparent);
+}
+
+.tx-modal-header h2 {
+  margin: 0;
+  font-size: 1.0625rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.tx-modal-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid transparent;
+  border-radius: var(--tx-radius-sm, 8px);
+  background: transparent;
+  color: var(--tx-text-1);
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+  transition:
+    background-color var(--tx-duration-fast, 120ms) ease,
+    border-color var(--tx-duration-fast, 120ms) ease,
+    color var(--tx-duration-fast, 120ms) ease;
+
+  &:hover {
+    border-color: var(--tx-border-0);
+    background: color-mix(in srgb, var(--tx-surface-2) 80%, transparent);
+    color: var(--tx-text-0);
+  }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--tx-focus-ring) 50%, transparent);
+  }
+}
+
+.tx-modal-body {
+  padding: 1.1rem 1.15rem 1.2rem;
+  overflow: auto;
+  font-size: 0.9375rem;
+  line-height: 1.55;
+  color: var(--tx-text-1);
+}
+
+@keyframes tx-modal-backdrop-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes tx-modal-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.97);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tx-modal-backdrop,
+  .tx-modal-card {
+    animation: none;
+  }
+}

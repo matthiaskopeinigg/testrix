@@ -1,0 +1,24 @@
+<section
+  class="dev-tool-tab tx-workspace-tab"
+  [class.dev-tool-tab--fill]="fillHeight()"
+  [attr.aria-label]="meta()?.label ?? 'Development tool'"
+>
+  <header class="dev-tool-tab__chrome">
+    <div class="dev-tool-tab__header">
+      @if (meta(); as tool) {
+        <div class="dev-tool-tab__title-chip">
+          <tx-icon [name]="tool.icon" [size]="18" aria-hidden="true" />
+          <h1>{{ tool.label }}</h1>
+        </div>
+      }
+    </div>
+    @if (!fillHeight() && meta()?.description; as description) {
+      <p class="dev-tool-tab__lede">{{ description }}</p>
+    }
+    <ng-content select="[devToolSections]" />
+    <ng-content select="[devToolToolbar]" />
+  </header>
+  <div class="dev-tool-tab__body" [class.dev-tool-tab__body--fill]="fillHeight()">
+    <ng-content />
+  </div>
+</section>

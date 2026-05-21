@@ -1,0 +1,47 @@
+---
+alwaysApply: true
+description: Canonical stack and layout for the Testrix repo
+---
+
+# Testrix project (canonical)
+
+Desktop app: **Angular 21** (renderer) + **Electron** (main / preload / static windows), bundled with **esbuild** into `dist/electron/`.
+
+## Repo map
+
+| Area | Role |
+| --- | --- |
+| `src/app/` | Angular application (`@app/*` path alias → `src/app/*`) |
+| `shared/` | Cross-runtime TS: Zod-backed config/session schemas, errors — imported as `@shared/*` |
+| `electron/` | Main process: windows, IPC, boot, preload source |
+| `src/styles/` | Global SCSS tokens (`--tx-*`), themes (`_themes.scss`) |
+| `public/brand/` | Synced raster/SVG branding (`npm run sync:brand`) |
+| `scripts/` | Dev orchestration (`serve-desktop.mjs`, `bundle-electron.mjs`, installer BMP gen, …) |
+| `build/` | Packaged artefacts (icons, NSIS BMPs under `build/installer/`) |
+
+## Renderer (Angular)
+
+- **Standalone components**, **signals** (`signal`, `computed`, `input`, `output`) and **`inject()`** for DI unless existing file uses constructor DI.
+- **Styles:** component **`*.scss`**, **`--tx-*` tokens** and `color-mix` — **not** Tailwind, not `@apply`.
+- **`window.testrix`:** preload bridge typings live in `src/app/core/electron/electron-renderer.types.ts` and `src/types/testrix-window.d.ts`. Do not reference Node/fs in `src/**`.
+- **Feature folders** under `src/app/features/`; reusable UI under `src/app/shared/` (`tx-*` selectors).
+
+## Electron
+
+- **`contextIsolation: true`**, **`nodeIntegration: false`**, preload builds to `dist/electron/preload/`.
+- IPC: **`ipcMain.handle`** + **`ipcRenderer.invoke`**; channel names live in `electron/ipc/channels/*.channels.ts`.
+
+## Naming & files
+
+- **kebab-case** file names (`tx-window-titlebar.component.ts`).
+- **IPC / shared constants:** `as const` channel objects (`AppChannels` pattern).
+
+## Commands (common)
+
+- **`npm start`** — `scripts/serve-desktop.mjs` without `--devtools`; sets **`TESTRIX_SERVE_RENDERER=1`** (loads `ng serve`; default splash; no auto DevTools)
+- **`npm run dev`** — same script **`--devtools`** → adds **`TESTRIX_DEV=1`** (detach DevTools, verbose logs; splash/boot timeout behave like **`npm start`** unless **`TESTRIX_NO_SPLASH=1`**)
+- `npm run start:dist` — Electron loads **already-built** `dist/testrix/browser` (no `ng serve`)
+- `npm run build` — production Angular + Electron bundle (+ `sync:brand`)  
+- `npm run electron:pack` — regenerates Windows NSIS BMP assets, full build, `electron-builder`  
+
+For **tokens + shared widgets**, follow `.cursor/rules/use-shared-ui.mdc` (always) and `.cursor/rules/theme-and-shared-ui.mdc`.

@@ -1,0 +1,209 @@
+@use '../../shell/workspace/workspace-panel-chrome' as panel;
+
+:host {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+}
+
+.design-system-sidebar-panel {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.ds-sidebar-panel__nav {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 0.2rem 0 0.5rem;
+  overflow-y: auto;
+
+  @include panel.workspace-panel-inset-x;
+}
+
+.ds-sidebar-panel__nav.tx-entrance-stagger > .ds-sidebar-panel__empty {
+  opacity: 1;
+  transform: none;
+  animation: none;
+}
+
+.ds-sidebar-panel__empty {
+  margin: 0.5rem 0.35rem;
+  font-size: 12px;
+  line-height: 1.45;
+  color: color-mix(in srgb, var(--tx-text-1) 75%, transparent);
+}
+
+.ds-sidebar-panel__group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ds-sidebar-panel__cat {
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.4rem;
+  border-radius: var(--tx-radius-sm, 8px);
+}
+
+.ds-sidebar-panel__cat-expand {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: color-mix(in srgb, var(--tx-text-1) 72%, transparent);
+  cursor: pointer;
+
+  &:hover {
+    color: var(--tx-text-0);
+    background: color-mix(in srgb, var(--tx-text-0) 8%, transparent);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--tx-primary);
+    outline-offset: 2px;
+  }
+}
+
+.ds-sidebar-panel__cat-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.6rem;
+  height: 1.6rem;
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--tx-surface-2) 88%, transparent);
+  color: color-mix(in srgb, var(--tx-primary) 80%, var(--tx-text-0));
+}
+
+.ds-sidebar-panel__cat-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--tx-text-0);
+}
+
+.ds-sidebar-panel__sections {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0 0 0.25rem;
+  padding: 0 0 0 0.15rem;
+  list-style: none;
+}
+
+.ds-sidebar-panel__section {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  padding: 0.4rem 0.5rem 0.4rem 2rem;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: color-mix(in srgb, var(--tx-text-1) 90%, transparent);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background-color var(--tx-duration-fast) ease,
+    color var(--tx-duration-fast) ease;
+
+  &:hover {
+    background: color-mix(in srgb, var(--tx-surface-2) 90%, var(--tx-surface-1));
+    color: var(--tx-text-0);
+  }
+
+  &.is-active {
+    background: color-mix(in srgb, var(--tx-primary) 12%, var(--tx-surface-1));
+    color: var(--tx-text-0);
+
+    .ds-sidebar-panel__section-label {
+      font-weight: 600;
+      color: var(--tx-primary);
+    }
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--tx-primary);
+    outline-offset: 2px;
+  }
+}
+
+.ds-sidebar-panel__section-label {
+  font-size: 12px;
+  line-height: 1.3;
+}
+
+.ds-sidebar-panel__section-hint {
+  font-size: 10px;
+  line-height: 1.35;
+  color: color-mix(in srgb, var(--tx-text-1) 68%, transparent);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.ds-sidebar-panel__simulate {
+  flex-shrink: 0;
+  margin-top: 0.35rem;
+  padding: 0.65rem panel.$workspace-panel-inset-x 0.75rem;
+  border-top: 1px solid color-mix(in srgb, var(--tx-border-0) 70%, transparent);
+}
+
+.ds-sidebar-panel__simulate-heading {
+  margin: 0 0.35rem 0.35rem;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--tx-text-1) 68%, transparent);
+}
+
+.ds-sidebar-panel__simulate-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ds-sidebar-panel__simulate-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  width: 100%;
+  padding: 0.45rem 0.55rem;
+  border: 1px solid transparent;
+  border-radius: var(--tx-radius-sm, 8px);
+  background: transparent;
+  color: var(--tx-text-0);
+  font-size: 12px;
+  line-height: 1.35;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover {
+    border-color: color-mix(in srgb, var(--tx-primary) 28%, var(--tx-border-0));
+    background: color-mix(in srgb, var(--tx-primary) 10%, var(--tx-surface-1));
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--tx-primary);
+    outline-offset: 2px;
+  }
+}

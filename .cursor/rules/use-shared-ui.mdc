@@ -1,0 +1,67 @@
+---
+description: Always use tx-* shared components, directives, pipes, and icons; extend the kit when missing
+alwaysApply: true
+---
+
+# Use the shared UI kit (`src/app/shared`)
+
+When building or changing **renderer UI** (`src/app/**` templates/SCSS), **always** use existing shared primitives before writing bespoke markup or styles.
+
+## Default workflow
+
+1. **Search** `src/app/shared/` and `@app/shared` exports (`src/app/shared/index.ts`).
+2. **Compose** feature screens from `tx-*` components + `--tx-*` tokens (see `theme-and-shared-ui.mdc`).
+3. **If nothing fits**, add a new shared primitive under `src/app/shared/` — do **not** leave one-off copies in `src/app/features/**`.
+
+## Import paths
+
+- Prefer **`@app/shared`** barrel or `@app/shared/components/...` for components.
+- Icons: **`tx-icon`** + names from `tx-icon.registry.ts` / `TxIconService` — not inline SVG in features.
+- Cross-runtime config/errors: **`@shared/*`** (Zod schemas) — separate from the Angular UI kit.
+
+## Use these instead of raw HTML
+
+| Need | Use |
+| --- | --- |
+| Button / CTA | `tx-button` |
+| Text field | `tx-input` inside `tx-form-field` |
+| `$` dynamic values | `tx-variable-input` (catalog: `@shared/dynamic-variables`) |
+| Textarea | `tx-textarea` + `tx-form-field` |
+| Toggle / switch | `tx-toggle` |
+| Range | `tx-slider` |
+| Modal / dialog | `tx-modal` |
+| Inline status | `tx-banner` |
+| Global errors | `tx-error-banner` + `ErrorNotificationService` |
+| Labels / field stack | `tx-form-field` |
+| Icon | `tx-icon` |
+| Tag / pill | `tx-tag` |
+| Loading | `tx-spinner` |
+| Separator | `tx-divider` |
+| Tree / hierarchy | `tx-tree` |
+| Logo | `tx-brand-logo` |
+| Frameless chrome | `app-tx-window-titlebar` |
+| Settings surface | `tx-settings-popup` |
+| Focus on mount | `[txAutofocus]` |
+| Truncate display text | `truncate` pipe |
+
+## When you must add something new
+
+Create under `src/app/shared/` (kebab-case files, `tx-*` selector):
+
+1. Standalone Angular component/directive/pipe matching existing patterns (signals, `inject()`, SCSS + tokens).
+2. **Export** from `src/app/shared/index.ts`.
+3. **Register** in `src/app/core/design-system/design-system.registry.ts` and add a demo in `ds-components-panel` when user-facing.
+4. Add a minimal **`*.spec.ts`** (Vitest + `TestBed`; mock `TxIconService` if icons load).
+5. Document in `theme-and-shared-ui.mdc` widget table.
+
+## Do not
+
+- Add raw `<button>`, `<input>`, or icon SVGs in `src/app/features/**` when a `tx-*` equivalent exists or should exist.
+- Use Tailwind, `@apply`, or hard-coded `#hex` in features (tokens only).
+- Put reusable UI only in a single feature folder — promote to `shared/` first.
+
+## Related rules
+
+- **`theme-and-shared-ui.mdc`** — tokens, full widget list, anti-patterns.
+- **`angular.mdc`** / **`front-end-cursor-rules.mdc`** — renderer conventions.
+- **`testrix-project.mdc`** — repo layout (`features/` vs `shared/`).

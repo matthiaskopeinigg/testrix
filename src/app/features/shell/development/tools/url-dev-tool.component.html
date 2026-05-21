@@ -1,0 +1,70 @@
+<app-dev-tool-layout toolId="url">
+  <app-dev-tool-toolbar devToolToolbar>
+    <div leading class="dev-tool-tab__options">
+      <app-dev-tool-mode-chip [active]="state().mode === 'encode'" (selected)="setMode('encode')">Encode</app-dev-tool-mode-chip>
+      <app-dev-tool-mode-chip [active]="state().mode === 'decode'" (selected)="setMode('decode')">Decode</app-dev-tool-mode-chip>
+      <app-dev-tool-mode-chip [active]="state().mode === 'parse'" (selected)="setMode('parse')">Parse</app-dev-tool-mode-chip>
+      @if (state().mode !== 'parse') {
+        <tx-form-field label="Component only">
+          <tx-toggle
+            [ngModel]="state().componentOnly"
+            (ngModelChange)="state.update((s) => ({ ...s, componentOnly: $event }))"
+          />
+        </tx-form-field>
+      }
+    </div>
+    <div trailing>
+      <tx-button variant="secondary" (click)="handleCopyOutput()">Copy</tx-button>
+      <tx-button variant="secondary" (click)="handleClear()">Clear</tx-button>
+    </div>
+  </app-dev-tool-toolbar>
+
+  @if (state().mode !== 'parse' && transform().error; as message) {
+    <tx-banner variant="error" [title]="message" />
+  }
+  @if (state().mode === 'parse' && parsed().error; as message) {
+    <tx-banner variant="error" [title]="message" />
+  }
+
+  <tx-form-field label="URL or text">
+    <tx-textarea
+      [rows]="4"
+      [ngModel]="state().input"
+      (ngModelChange)="state.update((s) => ({ ...s, input: $event }))"
+    />
+  </tx-form-field>
+
+  @if (state().mode === 'parse') {
+    @if (!parsed().error && parsed().href) {
+      <dl class="dev-tool-tab__viewer-dl">
+        <dt>href</dt><dd>{{ parsed().href }}</dd>
+        <dt>protocol</dt><dd>{{ parsed().protocol }}</dd>
+        <dt>host</dt><dd>{{ parsed().host }}</dd>
+        <dt>port</dt><dd>{{ parsed().port || '—' }}</dd>
+        <dt>pathname</dt><dd>{{ parsed().pathname }}</dd>
+        <dt>search</dt><dd>{{ parsed().search || '—' }}</dd>
+        <dt>hash</dt><dd>{{ parsed().hash || '—' }}</dd>
+      </dl>
+      @if (parsed().queryEntries.length > 0) {
+        <table class="dev-tool-tab__match-table">
+          <thead>
+            <tr><th>Query</th><th>Value</th></tr>
+          </thead>
+          <tbody>
+            @for (entry of parsed().queryEntries; track entry.key) {
+              <tr>
+                <td>{{ entry.key }}</td>
+                <td>{{ entry.value }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    }
+  } @else {
+    <div class="dev-tool-tab__pane">
+      <span class="dev-tool-tab__pane-label">Output</span>
+      <pre class="dev-tool-tab__output">{{ transform().output }}</pre>
+    </div>
+  }
+</app-dev-tool-layout>

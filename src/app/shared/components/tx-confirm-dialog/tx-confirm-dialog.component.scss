@@ -1,0 +1,18 @@
+.tx-confirm-dialog__message {
+  margin: 0 0 1.25rem;
+  font-size: 0.9375rem;
+  line-height: 1.55;
+  color: color-mix(in srgb, var(--tx-text-0) 88%, transparent);
+}
+
+.tx-confirm-dialog__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+:host ::ng-deep .tx-confirm-dialog__confirm--danger.tx-button {
+  --tx-btn-bg: var(--tx-danger, #c42b1c);
+  --tx-btn-bg-hover: color-mix(in srgb, var(--tx-danger, #c42b1c) 88%, #000);
+}

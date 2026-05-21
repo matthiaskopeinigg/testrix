@@ -1,0 +1,48 @@
+<div class="tx-response-redirects-panel">
+  @if (redirects().length > 0) {
+    <ol class="tx-response-redirects-panel__list">
+      @for (hop of redirects(); track hop.from + hop.to + hop.statusCode; let i = $index) {
+        <li class="tx-response-redirects-panel__hop">
+          <div class="tx-response-redirects-panel__meta">
+            <span class="tx-response-redirects-panel__index">#{{ i + 1 }}</span>
+            <span class="tx-response-redirects-panel__status">{{ hop.statusCode }}</span>
+            <span class="tx-response-redirects-panel__ms">{{ hop.timeMs }} ms</span>
+            <span class="tx-response-redirects-panel__arrow" aria-hidden="true">→</span>
+          </div>
+          <div class="tx-response-redirects-panel__url-row">
+            <span class="tx-response-redirects-panel__label">From</span>
+            <code class="tx-response-redirects-panel__url" [title]="hop.from">{{ hop.from }}</code>
+            <tx-button
+              variant="secondary"
+              [title]="copiedUrl() === hop.from ? 'Copied' : 'Copy URL'"
+              (pressed)="handleCopy(hop.from)"
+            >
+              <tx-icon name="copy" [size]="12" aria-hidden="true" />
+            </tx-button>
+            <tx-button variant="secondary" title="Open in browser" (pressed)="handleOpen(hop.from)">
+              <tx-icon name="externalLink" [size]="12" aria-hidden="true" />
+            </tx-button>
+          </div>
+          <div class="tx-response-redirects-panel__url-row">
+            <span class="tx-response-redirects-panel__label">To</span>
+            <code class="tx-response-redirects-panel__url" [title]="hop.to">{{ hop.to }}</code>
+            <tx-button
+              variant="secondary"
+              [title]="copiedUrl() === hop.to ? 'Copied' : 'Copy URL'"
+              (pressed)="handleCopy(hop.to)"
+            >
+              <tx-icon name="copy" [size]="12" aria-hidden="true" />
+            </tx-button>
+            <tx-button variant="secondary" title="Open in browser" (pressed)="handleOpen(hop.to)">
+              <tx-icon name="externalLink" [size]="12" aria-hidden="true" />
+            </tx-button>
+          </div>
+        </li>
+      }
+    </ol>
+  } @else {
+    <p class="tx-response-redirects-panel__empty">
+      No redirects were followed for this response. Enable “Follow redirects” in request settings if you expect a chain.
+    </p>
+  }
+</div>

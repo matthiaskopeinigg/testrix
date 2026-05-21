@@ -1,0 +1,10 @@
+---
+alwaysApply: false
+description: Cursor-only commit reminder — workspace user rules take precedence when committing
+---
+
+# Commits
+
+When preparing commits, prefer the **user’s Cursor git safety + conventional-commit rules** (`feat:` / `fix:` / `refactor:` imperatives, body as needed).
+
+Do **not** enable `alwaysApply` duplicate commit policies that conflict with those instructions.

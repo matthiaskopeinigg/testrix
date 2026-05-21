@@ -1,0 +1,247 @@
+@if (missing()) {
+  <tx-banner variant="warning" title="Folder not found">
+    This tab points to a collection folder that no longer exists. Close the tab or pick another from the
+    sidebar.
+  </tx-banner>
+} @else {
+  <section
+    class="folder-tab tx-workspace-tab"
+    [class.folder-tab--titlebar]="useTitlebarLayout()"
+    [class.folder-tab--sidebar]="useSidebarLayout()"
+    [attr.aria-label]="title()"
+  >
+    <div
+      class="tx-workspace-tab__chrome tx-entrance-stagger"
+      [class.tx-entrance-stagger--play]="tabMotion.loadStaggerPlay()"
+      [class.tx-entrance-stagger--settled]="tabMotion.loadStaggerSettled()"
+    >
+      <header class="tx-entrance-stagger__block folder-tab__header">
+      <div class="folder-tab__header-row">
+        <div class="folder-tab__title-chip">
+          <tx-icon name="folder" [size]="18" aria-hidden="true" />
+          <h1 class="folder-tab__title">{{ title() }}</h1>
+        </div>
+      </div>
+    </header>
+
+    @if (useTitlebarLayout()) {
+      <div class="tx-entrance-stagger__block folder-tab__sections-wrap">
+        <nav class="folder-tab__sections-bar" role="tablist" aria-label="Folder settings sections">
+          @for (item of navItems; track item.id) {
+            <button
+              type="button"
+              class="folder-tab__section-tab"
+              role="tab"
+              [attr.aria-selected]="activeSection() === item.id"
+              [class.is-active]="activeSection() === item.id"
+              (click)="handleSectionSelect(item.id)"
+            >
+              <tx-icon [name]="$any(item.icon)" [size]="14" aria-hidden="true" />
+              <span>{{ item.label }}</span>
+            </button>
+          }
+        </nav>
+      </div>
+    }
+    </div>
+
+    <div class="folder-tab__body">
+      @if (useSidebarLayout()) {
+        <nav class="folder-tab__nav" role="tablist" aria-label="Folder settings sections">
+          @for (item of navItems; track item.id) {
+            <button
+              type="button"
+              class="folder-tab__nav-item"
+              role="tab"
+              [attr.aria-selected]="activeSection() === item.id"
+              [class.is-active]="activeSection() === item.id"
+              (click)="handleSectionSelect(item.id)"
+            >
+              <span class="folder-tab__nav-icon">
+                <tx-icon [name]="$any(item.icon)" [size]="14" aria-hidden="true" />
+              </span>
+              <span>{{ item.label }}</span>
+            </button>
+          }
+        </nav>
+        <div class="folder-tab__divider" aria-hidden="true"></div>
+      }
+      <div
+        class="folder-tab__pane tx-workspace-tab__pane"
+        [class.tx-workspace-tab__pane--switch]="tabMotion.paneSwitchActive()"
+      >
+        @switch (activeSection()) {
+          @case ('overview') {
+            <div
+              class="tx-workspace-tab__section-shell tx-entrance-stagger"
+              [class.tx-entrance-stagger--play]="isSectionContentAnimating('overview')"
+              [class.tx-entrance-stagger--settled]="isSectionContentSettled('overview')"
+            >
+              <div class="tx-entrance-stagger__block">
+            <app-folder-tab-overview-panel
+              [description]="description()"
+              [tags]="tags()"
+              [auth]="auth()"
+              [variableCount]="variableCount()"
+              [headerCount]="headerCount()"
+              (descriptionChange)="handleDescriptionChange($event)"
+              (tagsChange)="handleTagsChange($event)"
+            />
+              </div>
+            </div>
+          }
+          @case ('variables') {
+            <div
+              class="tx-workspace-tab__section-shell tx-entrance-stagger"
+              [class.tx-entrance-stagger--play]="isSectionContentAnimating('variables')"
+              [class.tx-entrance-stagger--settled]="isSectionContentSettled('variables')"
+            >
+              <div class="tx-entrance-stagger__block folder-tab__section">
+              <h2 class="folder-tab__section-title">Variables</h2>
+              <p class="folder-tab__section-hint">
+                Collection variables apply to this folder and its descendants. Use
+                <code>$</code> dynamic variables or <code ngNonBindable>{{key}}</code> environment
+                placeholders in values.
+              </p>
+              </div>
+              <div class="tx-entrance-stagger__block">
+              <tx-key-value-description-list
+                keyLabel="Key"
+                valueLabel="Value"
+                descriptionLabel="Description"
+                addLabel="Add variable"
+                valueInput="variables"
+                [rows]="variableRows()"
+                [variableCatalog]="variableCatalog()"
+                (rowsChange)="handleVariablesChange($event)"
+                (environmentVariableClick)="handleEnvironmentVariableClick($event)"
+              />
+              </div>
+            </div>
+          }
+          @case ('headers') {
+            <div
+              class="tx-workspace-tab__section-shell tx-entrance-stagger"
+              [class.tx-entrance-stagger--play]="isSectionContentAnimating('headers')"
+              [class.tx-entrance-stagger--settled]="isSectionContentSettled('headers')"
+            >
+              <div class="tx-entrance-stagger__block folder-tab__section">
+              <h2 class="folder-tab__section-title">Headers</h2>
+              <p class="folder-tab__section-hint">
+                Default headers merged into requests under this folder when enabled at send time.
+              </p>
+              </div>
+              <div class="tx-entrance-stagger__block">
+              <tx-key-value-description-list
+                keyLabel="Key"
+                valueLabel="Value"
+                descriptionLabel="Description"
+                addLabel="Add header"
+                valueInput="variables"
+                [rows]="headerRows()"
+                [variableCatalog]="variableCatalog()"
+                (rowsChange)="handleHeadersChange($event)"
+                (environmentVariableClick)="handleEnvironmentVariableClick($event)"
+              />
+              </div>
+            </div>
+          }
+          @case ('auth') {
+            <div
+              class="tx-workspace-tab__section-shell tx-entrance-stagger"
+              [class.tx-entrance-stagger--play]="isSectionContentAnimating('auth')"
+              [class.tx-entrance-stagger--settled]="isSectionContentSettled('auth')"
+            >
+              <div class="tx-entrance-stagger__block folder-tab__section">
+              <h2 class="folder-tab__section-title">Authorization</h2>
+              <p class="folder-tab__section-hint">
+                Configure how requests in this folder authenticate unless overridden per request.
+              </p>
+              </div>
+              <div class="tx-entrance-stagger__block">
+              <app-folder-tab-auth-panel
+                [auth]="auth()"
+                [hasParentFolder]="hasParentFolder()"
+                (authChange)="handleAuthChange($event)"
+              />
+              </div>
+            </div>
+          }
+          @case ('script') {
+            <div
+              class="tx-workspace-tab__section-shell tx-entrance-stagger folder-tab__section--script"
+              [class.tx-entrance-stagger--play]="isSectionContentAnimating('script')"
+              [class.tx-entrance-stagger--settled]="isSectionContentSettled('script')"
+            >
+              <div class="tx-entrance-stagger__block folder-tab__section">
+              <h2 class="folder-tab__section-title">Scripts</h2>
+              <p class="folder-tab__section-hint">
+                JavaScript run before requests or after responses for items in this folder.
+              </p>
+              </div>
+              <div class="tx-entrance-stagger__block folder-tab__script-nav" role="tablist" aria-label="Script timing">
+                <button
+                  type="button"
+                  class="folder-tab__script-tab"
+                  role="tab"
+                  [attr.aria-selected]="activeScriptPane() === 'pre'"
+                  [class.is-active]="activeScriptPane() === 'pre'"
+                  (click)="handleScriptPaneSelect('pre')"
+                >
+                  Pre-request
+                </button>
+                <button
+                  type="button"
+                  class="folder-tab__script-tab"
+                  role="tab"
+                  [attr.aria-selected]="activeScriptPane() === 'post'"
+                  [class.is-active]="activeScriptPane() === 'post'"
+                  (click)="handleScriptPaneSelect('post')"
+                >
+                  Post-response
+                </button>
+              </div>
+              <div class="tx-entrance-stagger__block folder-tab__editor">
+                <tx-code-editor
+                  language="js"
+                  languageBadgeLabel="Javascript"
+                  [placeholder]="scriptEditorPlaceholder"
+                  [hideToolbarActions]="true"
+                  [framed]="false"
+                  [extraCompletionItems]="scriptCompletionItems()"
+                  [ngModel]="activeScriptSource()"
+                  (ngModelChange)="handleScriptChange($event)"
+                />
+              </div>
+            </div>
+          }
+          @case ('settings') {
+            <div
+              class="tx-workspace-tab__section-shell tx-entrance-stagger"
+              [class.tx-entrance-stagger--play]="isSectionContentAnimating('settings')"
+              [class.tx-entrance-stagger--settled]="isSectionContentSettled('settings')"
+            >
+              <div class="tx-entrance-stagger__block">
+            <app-folder-tab-settings-panel
+              [transport]="transport()"
+              (transportChange)="handleTransportChange($event)"
+            />
+              </div>
+            </div>
+          }
+          @case ('docs') {
+            <div
+              class="tx-workspace-tab__section-shell tx-entrance-stagger"
+              [class.tx-entrance-stagger--play]="isSectionContentAnimating('docs')"
+              [class.tx-entrance-stagger--settled]="isSectionContentSettled('docs')"
+            >
+              <div class="tx-entrance-stagger__block">
+            <app-folder-tab-docs-panel [docs]="docs()" (docsChange)="handleDocsChange($event)" />
+              </div>
+            </div>
+          }
+        }
+      </div>
+    </div>
+  </section>
+}

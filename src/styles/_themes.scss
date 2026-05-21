@@ -1,0 +1,625 @@
+@use './tokens';
+
+@mixin tx-theme-palette(
+  $bg,
+  $surface,
+  $text,
+  $primary,
+  $secondary,
+  $accent,
+  $border,
+  $on-primary
+) {
+  --tx-surface-0: #{$bg};
+  --tx-surface-1: #{$surface};
+  --tx-surface-2: #{color-mix(in srgb, #{$surface} 88%, #{$bg})};
+  --tx-text-0: #{$text};
+  --tx-text-1: #{color-mix(in srgb, #{$text} 72%, #{$bg})};
+  --tx-border-0: #{color-mix(in srgb, #{$border} 70%, transparent)};
+  --tx-border-strong: #{color-mix(in srgb, #{$border} 90%, transparent)};
+  --tx-focus-ring: #{color-mix(in srgb, #{$primary} 55%, transparent)};
+  --tx-link: #{$primary};
+  --tx-primary: #{$primary};
+  --tx-primary-strong: #{color-mix(in srgb, #{$primary} 72%, #{$text})};
+  --tx-primary-muted: #{color-mix(in srgb, #{$primary} 16%, #{$surface})};
+  --tx-primary-subtle: #{color-mix(in srgb, #{$primary} 8%, #{$surface})};
+  --tx-secondary: #{$secondary};
+  --tx-accent: #{$accent};
+  --tx-danger: #{color-mix(in srgb, #f87171 72%, #{$accent} 28%)};
+  --tx-success: #{color-mix(in srgb, #4ade80 72%, #{$accent} 28%)};
+  --tx-warning: #{color-mix(in srgb, #fbbf24 70%, #{$secondary} 30%)};
+  --tx-scrim: #{color-mix(in srgb, #{$bg} 68%, transparent)};
+  --tx-shadow-color: #{$bg};
+  --tx-content-bg: #{$bg};
+  --tx-chrome-bg: #{$surface};
+  --tx-chrome-surface: #{color-mix(in srgb, #{$surface} 96%, transparent)};
+  --tx-highlight: #{color-mix(in srgb, #{$text} 14%, #{$surface} 86%)};
+  --tx-control-face: #{color-mix(in srgb, #{$text} 6%, #{$surface} 94%)};
+  --tx-scrollbar-track: #{color-mix(in srgb, #{$surface} 94%, #{$bg} 6%)};
+  --tx-scrollbar-thumb: #{color-mix(in srgb, #{$primary} 48%, #{$surface} 52%)};
+  --tx-scrollbar-thumb-hover: #{color-mix(in srgb, #{$primary} 62%, #{$surface} 38%)};
+  --tx-scrollbar-thumb-active: #{color-mix(in srgb, #{$secondary} 55%, #{$primary} 45%)};
+  --tx-on-primary: #{$on-primary};
+  --tx-shadow-sm: 0 1px 3px #{color-mix(in srgb, #{$bg} 88%, transparent)};
+  --tx-shadow-md: 0 4px 14px #{color-mix(in srgb, #{$bg} 78%, transparent)};
+
+  --tx-btn-focus-ring: #{color-mix(in srgb, #{$primary} 50%, transparent)};
+  --tx-btn-secondary-bg: #{$surface};
+  --tx-btn-secondary-fg: #{$text};
+  --tx-btn-secondary-border: #{color-mix(in srgb, #{$border} 88%, transparent)};
+  --tx-btn-secondary-hover-bg: #{color-mix(in srgb, #{$surface} 72%, #{$text} 10%)};
+  --tx-btn-secondary-active-bg: #{color-mix(in srgb, #{$surface} 58%, #{$bg} 42%)};
+  --tx-btn-primary-bg: #{color-mix(in srgb, #{$primary} 14%, #{$surface})};
+  --tx-btn-primary-fg: #{color-mix(in srgb, #{$primary} 94%, #{$text})};
+  --tx-btn-primary-border: #{color-mix(in srgb, #{$primary} 46%, #{$border})};
+  --tx-btn-primary-hover-bg: #{color-mix(in srgb, #{$primary} 22%, #{$surface})};
+  --tx-btn-primary-active-bg: #{color-mix(in srgb, #{$primary} 30%, #{$surface})};
+  --tx-btn-cta-bg: #{$primary};
+  --tx-btn-cta-fg: #{$on-primary};
+  --tx-btn-cta-border: #{color-mix(in srgb, #{$primary} 92%, #{$border})};
+  --tx-btn-cta-hover-bg: #{color-mix(in srgb, #{$primary} 88%, #{$text} 12%)};
+  --tx-btn-cta-active-bg: #{color-mix(in srgb, #{$primary} 82%, #{$bg} 18%)};
+  --tx-btn-add-bg: #{color-mix(in srgb, #{$accent} 10%, #{$surface})};
+  --tx-btn-add-fg: #{color-mix(in srgb, #{$accent} 82%, #{$text})};
+  --tx-btn-add-border: #{color-mix(in srgb, #{$accent} 52%, #{$border})};
+  --tx-btn-add-hover-bg: #{color-mix(in srgb, #{$accent} 16%, #{$surface})};
+}
+
+html.theme-dark,
+body.theme-dark,
+html.theme-ayu-dark,
+body.theme-ayu-dark,
+html.theme-one-dark,
+body.theme-one-dark,
+html.theme-github-dark,
+body.theme-github-dark,
+html.theme-tokyo-night,
+body.theme-tokyo-night,
+html.theme-catppuccin-mocha,
+body.theme-catppuccin-mocha,
+html.theme-gruvbox-dark,
+body.theme-gruvbox-dark,
+html.theme-nord,
+body.theme-nord,
+html.theme-dracula,
+body.theme-dracula,
+html.theme-night-owl-dark,
+body.theme-night-owl-dark,
+html.theme-solarized-dark,
+body.theme-solarized-dark,
+html.theme-monokai,
+body.theme-monokai,
+html.theme-high-contrast-dark,
+body.theme-high-contrast-dark,
+html.theme-high-contrast-darklight,
+body.theme-high-contrast-darklight,
+html.theme-material-palenight,
+body.theme-material-palenight,
+html.theme-material-ocean,
+body.theme-material-ocean,
+html.theme-synthwave-84,
+body.theme-synthwave-84,
+html.theme-rose-pine-moon,
+body.theme-rose-pine-moon,
+html.theme-everforest-dark,
+body.theme-everforest-dark,
+html.theme-kanagawa-wave,
+body.theme-kanagawa-wave,
+html.theme-vscode-dark,
+body.theme-vscode-dark,
+html.theme-flexoki-dark,
+body.theme-flexoki-dark,
+html.theme-catppuccin-frappe,
+body.theme-catppuccin-frappe,
+html.theme-catppuccin-macchiato,
+body.theme-catppuccin-macchiato,
+html.theme-paper-color-dark,
+body.theme-paper-color-dark,
+html.theme-spacemacs,
+body.theme-spacemacs,
+html.theme-noctis,
+body.theme-noctis,
+html.theme-min-dark,
+body.theme-min-dark,
+html.theme-bluloco-dark,
+body.theme-bluloco-dark,
+html.theme-monokai-pro,
+body.theme-monokai-pro,
+html.theme-gruvbox-material-dark,
+body.theme-gruvbox-material-dark,
+html.theme-ayu-mirage,
+body.theme-ayu-mirage,
+html.theme-ayu-wild,
+body.theme-ayu-wild,
+html.theme-edge-dark,
+body.theme-edge-dark,
+html.theme-github-dark-dimmed,
+body.theme-github-dark-dimmed,
+html.theme-jetbrains-dark,
+body.theme-jetbrains-dark,
+html.theme-cobalt2,
+body.theme-cobalt2,
+html.theme-winter-is-coming,
+body.theme-winter-is-coming,
+html.theme-panda-syntax,
+body.theme-panda-syntax,
+html.theme-horizon,
+body.theme-horizon,
+html.theme-vesper,
+body.theme-vesper,
+html.theme-poimandres,
+body.theme-poimandres,
+html.theme-city-lights,
+body.theme-city-lights,
+html.theme-aura,
+body.theme-aura,
+html.theme-hop-dark,
+body.theme-hop-dark {
+  color-scheme: dark;
+}
+
+html.theme-light,
+body.theme-light {
+  @include tx-theme-palette(#f7f3eb, #fffcf7, #1c1814, #9a7209, #6d5f4f, #2d8a5c, #ddd2c0, #1c1814);
+}
+
+html.theme-dark,
+body.theme-dark {
+  @include tx-theme-palette(#0a0908, #14110f, #f3ece2, #d4a647, #b8956a, #5cb88a, #2c2620, #0a0908);
+}
+
+html.theme-ayu-light,
+body.theme-ayu-light {
+  @include tx-theme-palette(#f0f0f0, #ffffff, #3b4252, #f07178, #ffb454, #57c7ff, #d0d4d8, #3b4252);
+}
+
+html.theme-ayu-dark,
+body.theme-ayu-dark {
+  @include tx-theme-palette(#0d1017, #10141c, #bfbdb6, #e6b450, #59c2ff, #39bae6, #1b1f29, #0d1017);
+}
+
+html.theme-one-light,
+body.theme-one-light {
+  @include tx-theme-palette(#fafafa, #ffffff, #383a42, #4078f2, #a626a4, #50a14f, #e5e5e6, #383a42);
+}
+
+html.theme-one-dark,
+body.theme-one-dark {
+  @include tx-theme-palette(#282c34, #21252b, #abb2bf, #61afef, #c678dd, #98c379, #181a1f, #282c34);
+}
+
+html.theme-github-light,
+body.theme-github-light {
+  @include tx-theme-palette(#ffffff, #f6f8fa, #1f2328, #0969da, #8250df, #1a7f37, #d0d7de, #1f2328);
+}
+
+html.theme-github-dark,
+body.theme-github-dark {
+  @include tx-theme-palette(#0d1117, #161b22, #e6edf3, #2f81f7, #a371f7, #3fb950, #30363d, #0d1117);
+}
+
+html.theme-tokyo-night-light,
+body.theme-tokyo-night-light {
+  @include tx-theme-palette(#e1e2e7, #d5d6db, #343b59, #2e7de9, #9854f1, #007197, #c4c8da, #343b59);
+}
+
+html.theme-tokyo-night,
+body.theme-tokyo-night {
+  @include tx-theme-palette(#1a1b26, #16161e, #a9b1d6, #7aa2f7, #bb9af7, #7dcfff, #292e42, #1a1b26);
+}
+
+html.theme-catppuccin-latte,
+body.theme-catppuccin-latte {
+  @include tx-theme-palette(#eff1f5, #e6e9ef, #4c4f69, #8839ef, #1e66f5, #40a02b, #bcc0cc, #4c4f69);
+}
+
+html.theme-catppuccin-mocha,
+body.theme-catppuccin-mocha {
+  @include tx-theme-palette(#1e1e2e, #181825, #cdd6f4, #cba6f7, #89b4fa, #a6e3a1, #45475a, #1e1e2e);
+}
+
+html.theme-gruvbox-light,
+body.theme-gruvbox-light {
+  @include tx-theme-palette(#fbf1c7, #f9f5d7, #3c3836, #b57614, #79740e, #af3a03, #d5c4a1, #3c3836);
+}
+
+html.theme-gruvbox-dark,
+body.theme-gruvbox-dark {
+  @include tx-theme-palette(#282828, #32302f, #ebdbb2, #fabd2f, #b8bb26, #fe8019, #3c3836, #282828);
+}
+
+html.theme-nord,
+body.theme-nord {
+  @include tx-theme-palette(#2e3440, #3b4252, #eceff4, #88c0d0, #81a1c1, #a3be8c, #4c566a, #2e3440);
+}
+
+html.theme-dracula,
+body.theme-dracula {
+  @include tx-theme-palette(#282a36, #373844, #f8f8f2, #ff79c6, #bd93f9, #8be9fd, #6272a4, #282a36);
+}
+
+html.theme-night-owl-light,
+body.theme-night-owl-light {
+  @include tx-theme-palette(#fdf6ff, #ffffff, #5c6773, #8250df, #36b7b7, #ef6155, #dcdde1, #5c6773);
+}
+
+html.theme-night-owl-dark,
+body.theme-night-owl-dark {
+  @include tx-theme-palette(#000c1d, #001122, #8badc1, #82aaff, #c792ea, #ffcb6b, #102a44, #000c1d);
+}
+
+html.theme-solarized-light,
+body.theme-solarized-light {
+  @include tx-theme-palette(#fdf6e3, #eee8d5, #657b83, #b58900, #2aa198, #cb4b16, #93a1a1, #657b83);
+}
+
+html.theme-solarized-dark,
+body.theme-solarized-dark {
+  @include tx-theme-palette(#002b36, #073642, #839496, #268bd2, #2aa198, #cb4b16, #586e75, #002b36);
+}
+
+html.theme-monokai,
+body.theme-monokai {
+  @include tx-theme-palette(#272822, #3e3d32, #f8f8f2, #f92672, #fd971f, #a6e22e, #49483e, #272822);
+}
+
+html.theme-high-contrast-dark,
+body.theme-high-contrast-dark {
+  @include tx-theme-palette(#000000, #1a1a1a, #ffffff, #ffff00, #00ff00, #ff00ff, #555555, #000000);
+}
+
+html.theme-high-contrast-darklight,
+body.theme-high-contrast-darklight {
+  @include tx-theme-palette(#1a1a1a, #2a2a2a, #ffffff, #ffcc00, #00ffcc, #ff00cc, #666666, #1a1a1a);
+}
+
+html.theme-material-palenight,
+body.theme-material-palenight {
+  @include tx-theme-palette(#292d3e, #32374d, #bfc7d5, #82aaff, #c792ea, #89ddff, #3b3f51, #292d3e);
+}
+
+html.theme-material-ocean,
+body.theme-material-ocean {
+  @include tx-theme-palette(#0f111a, #1a1f2e, #8f93a2, #84ffff, #c792ea, #ffcb6b, #2a2f3f, #0f111a);
+}
+
+html.theme-synthwave-84,
+body.theme-synthwave-84 {
+  @include tx-theme-palette(#241b2f, #2a2139, #f0eff1, #ff7edb, #36f9f6, #fede5d, #34294f, #241b2f);
+}
+
+html.theme-rose-pine-dawn,
+body.theme-rose-pine-dawn {
+  @include tx-theme-palette(#faf4ed, #fffaf3, #575279, #907aa9, #286983, #d7827e, #dfdad9, #575279);
+}
+
+html.theme-rose-pine-moon,
+body.theme-rose-pine-moon {
+  @include tx-theme-palette(#232136, #2a273f, #e0def4, #c4a7e7, #9ccfd8, #f6c177, #393552, #232136);
+}
+
+html.theme-everforest-light,
+body.theme-everforest-light {
+  @include tx-theme-palette(#efebd4, #fdf6e3, #5c6a72, #8da101, #3a94c5, #f85552, #d8d4c4, #5c6a72);
+}
+
+html.theme-everforest-dark,
+body.theme-everforest-dark {
+  @include tx-theme-palette(#2d353b, #343f44, #d3c6aa, #a7c080, #83c092, #e69875, #4f585e, #2d353b);
+}
+
+html.theme-kanagawa-wave,
+body.theme-kanagawa-wave {
+  @include tx-theme-palette(#1f1f28, #2a2a37, #dcd7ba, #7e9cd8, #957fb8, #98bb6c, #363646, #1f1f28);
+}
+
+html.theme-kanagawa-lotus,
+body.theme-kanagawa-lotus {
+  @include tx-theme-palette(#f2ecbc, #e7e0c7, #545464, #4d699b, #b35b79, #6a9589, #d7cfb0, #545464);
+}
+
+html.theme-quiet-light,
+body.theme-quiet-light {
+  @include tx-theme-palette(#f5f5f5, #ffffff, #333333, #4078c0, #6a9fb5, #4d9375, #e0e0e0, #333333);
+}
+
+html.theme-vscode-light,
+body.theme-vscode-light {
+  @include tx-theme-palette(#ffffff, #f3f3f3, #333333, #006ab1, #795e26, #098658, #e5e5e5, #333333);
+}
+
+html.theme-vscode-dark,
+body.theme-vscode-dark {
+  @include tx-theme-palette(#1e1e1e, #252526, #d4d4d4, #569cd6, #c586c0, #4ec9b0, #3c3c3c, #1e1e1e);
+}
+
+html.theme-flexoki-light,
+body.theme-flexoki-light {
+  @include tx-theme-palette(#fffcf0, #f2f0e5, #100f0f, #205ea6, #66800b, #bc5215, #e6e4d9, #100f0f);
+}
+
+html.theme-flexoki-dark,
+body.theme-flexoki-dark {
+  @include tx-theme-palette(#100f0f, #1c1b1a, #cecdc3, #66a0c8, #879a39, #da702c, #2d2c2b, #100f0f);
+}
+
+html.theme-catppuccin-frappe,
+body.theme-catppuccin-frappe {
+  @include tx-theme-palette(#303446, #292c3c, #c6d0f5, #ca9ee6, #8caaee, #a6d189, #45475a, #303446);
+}
+
+html.theme-catppuccin-macchiato,
+body.theme-catppuccin-macchiato {
+  @include tx-theme-palette(#24273a, #1e2030, #cad3f5, #c6a0f6, #8aadf4, #a6da95, #494d64, #24273a);
+}
+
+html.theme-nord-light,
+body.theme-nord-light {
+  @include tx-theme-palette(#eceff4, #e5e9f0, #4c566a, #5e81ac, #81a1c1, #a3be8c, #d8dee9, #4c566a);
+}
+
+html.theme-slack-light,
+body.theme-slack-light {
+  @include tx-theme-palette(#ffffff, #f8f8f8, #1d1c1d, #1264a3, #e01e5a, #007a5a, #e0e0e0, #1d1c1d);
+}
+
+html.theme-paper-color-light,
+body.theme-paper-color-light {
+  @include tx-theme-palette(#fbf1c7, #ffffff, #444444, #1976d2, #e91e63, #4caf50, #e0e0e0, #444444);
+}
+
+html.theme-paper-color-dark,
+body.theme-paper-color-dark {
+  @include tx-theme-palette(#1e1e1e, #2d2d2d, #d4d4d4, #42a5f5, #f48fb1, #66bb6a, #404040, #1e1e1e);
+}
+
+html.theme-base16-eighties-light,
+body.theme-base16-eighties-light {
+  @include tx-theme-palette(#f2f0ec, #ffffff, #515151, #6c9ef8, #f2777a, #99cc99, #e0e0e0, #515151);
+}
+
+html.theme-spacemacs,
+body.theme-spacemacs {
+  @include tx-theme-palette(#292b2e, #34393e, #b2b2b2, #4f97d7, #a31db1, #2d9574, #474747, #292b2e);
+}
+
+html.theme-noctis,
+body.theme-noctis {
+  @include tx-theme-palette(#1e2736, #283142, #c5cdd8, #52a8c6, #e9ae58, #84b37b, #354458, #1e2736);
+}
+
+html.theme-arctic,
+body.theme-arctic {
+  @include tx-theme-palette(#ffffff, #f5f7fa, #2e3440, #5e81ac, #81a1c1, #a3be8c, #d8dee9, #2e3440);
+}
+
+html.theme-min-light,
+body.theme-min-light {
+  @include tx-theme-palette(#ffffff, #fafafa, #24292e, #0366d6, #6f42c1, #22863a, #e1e4e8, #24292e);
+}
+
+html.theme-min-dark,
+body.theme-min-dark {
+  @include tx-theme-palette(#1f1f1f, #2b2b2b, #e0e0e0, #3794ff, #b392f0, #3fb950, #404040, #1f1f1f);
+}
+
+html.theme-material-light,
+body.theme-material-light {
+  @include tx-theme-palette(#fafafa, #ffffff, #546e7a, #039be5, #e91e63, #43a047, #e0e0e0, #546e7a);
+}
+
+html.theme-hop-light,
+body.theme-hop-light {
+  @include tx-theme-palette(#fafafa, #ffffff, #333333, #7c4dff, #00bfa5, #ff6d00, #e0e0e0, #333333);
+}
+
+html.theme-bluloco-light,
+body.theme-bluloco-light {
+  @include tx-theme-palette(#f7f7f7, #ffffff, #383a42, #0099dd, #d52753, #23974a, #e0e0e0, #383a42);
+}
+
+html.theme-bluloco-dark,
+body.theme-bluloco-dark {
+  @include tx-theme-palette(#282c34, #31353f, #abb2bf, #3fc56b, #10b1fe, #ff78f8, #3e4451, #282c34);
+}
+
+html.theme-monokai-pro,
+body.theme-monokai-pro {
+  @include tx-theme-palette(#2d2a2e, #403e41, #fcfcfa, #ffd866, #ab9df2, #a9dc76, #5b595c, #2d2a2e);
+}
+
+html.theme-gruvbox-material-dark,
+body.theme-gruvbox-material-dark {
+  @include tx-theme-palette(#292828, #32302f, #d4be98, #fabd2f, #b8bb26, #fe8019, #3c3836, #292828);
+}
+
+html.theme-ayu-mirage,
+body.theme-ayu-mirage {
+  @include tx-theme-palette(#1f2430, #242936, #cccac2, #ffcc66, #5ccfe6, #95e6cb, #2d3340, #1f2430);
+}
+
+html.theme-ayu-wild,
+body.theme-ayu-wild {
+  @include tx-theme-palette(#161a1e, #1c2028, #c7c7c7, #ffcc66, #5ccfe6, #95e6cb, #242930, #161a1e);
+}
+
+html.theme-edge-light,
+body.theme-edge-light {
+  @include tx-theme-palette(#fafafa, #ffffff, #5f6368, #375fad, #5f6368, #375fad, #e0e0e0, #5f6368);
+}
+
+html.theme-edge-dark,
+body.theme-edge-dark {
+  @include tx-theme-palette(#1e2127, #2c2f36, #b3b9c5, #6cb6eb, #a0a8b7, #6cb6eb, #3a3f4b, #1e2127);
+}
+
+html.theme-coldark-light,
+body.theme-coldark-light {
+  @include tx-theme-palette(#f5f7fa, #ffffff, #3b4252, #409fff, #e6b450, #4cbf99, #e0e4eb, #3b4252);
+}
+
+html.theme-github-dark-dimmed,
+body.theme-github-dark-dimmed {
+  @include tx-theme-palette(#22272e, #2d333b, #adbac7, #539bf5, #b083f0, #57ab5a, #444c56, #22272e);
+}
+
+html.theme-jetbrains-dark,
+body.theme-jetbrains-dark {
+  @include tx-theme-palette(#1e1f22, #2b2d30, #bcbec4, #548af7, #c77dbb, #6aab73, #43454a, #1e1f22);
+}
+
+html.theme-jetbrains-light,
+body.theme-jetbrains-light {
+  @include tx-theme-palette(#ffffff, #f7f8fa, #1e1f22, #3574f0, #8347c5, #2d9f50, #e0e0e0, #1e1f22);
+}
+
+html.theme-atom-one-light,
+body.theme-atom-one-light {
+  @include tx-theme-palette(#fafafa, #ffffff, #383a42, #4078f2, #a626a4, #50a14f, #e5e5e6, #383a42);
+}
+
+html.theme-gruvbox-material-light,
+body.theme-gruvbox-material-light {
+  @include tx-theme-palette(#fbf1c7, #f9f5d7, #654735, #b57614, #79740e, #af3a03, #d5c4a1, #654735);
+}
+
+html.theme-chalk,
+body.theme-chalk {
+  @include tx-theme-palette(#f9f9f9, #ffffff, #333333, #3b82f6, #8b5cf6, #10b981, #e5e7eb, #333333);
+}
+
+html.theme-dayfox,
+body.theme-dayfox {
+  @include tx-theme-palette(#f6f2ee, #ffffff, #423f3c, #955f61, #6a848e, #e4b692, #e7e2dd, #423f3c);
+}
+
+html.theme-iceberg-light,
+body.theme-iceberg-light {
+  @include tx-theme-palette(#e8e9ec, #ffffff, #33374c, #2e63a6, #5890c8, #5a8e3e, #d8dae1, #33374c);
+}
+
+html.theme-blush,
+body.theme-blush {
+  @include tx-theme-palette(#f8f0f3, #ffffff, #5c4a52, #d4476a, #8e6a8f, #e8a87c, #ead6de, #5c4a52);
+}
+
+html.theme-cotton-candy,
+body.theme-cotton-candy {
+  @include tx-theme-palette(#f7f4ff, #ffffff, #4a4458, #9b6dff, #ff7eb6, #5ed4d4, #e8e0f5, #4a4458);
+}
+
+html.theme-fairy-floss,
+body.theme-fairy-floss {
+  @include tx-theme-palette(#fff5fb, #ffffff, #5b4a5f, #e84a8a, #7c6cff, #ffb86c, #f0d9e8, #5b4a5f);
+}
+
+html.theme-rem-light,
+body.theme-rem-light {
+  @include tx-theme-palette(#fafafa, #ffffff, #3a3a3a, #007acc, #6a9955, #ce9178, #e0e0e0, #3a3a3a);
+}
+
+html.theme-vitesse-light,
+body.theme-vitesse-light {
+  @include tx-theme-palette(#ffffff, #f7f7f7, #222222, #1c6b48, #a16928, #b31d28, #e5e5e5, #222222);
+}
+
+html.theme-solarized-light-hc,
+body.theme-solarized-light-hc {
+  @include tx-theme-palette(#fdf6e3, #eee8d5, #586e75, #657b83, #2aa198, #cb4b16, #93a1a1, #586e75);
+}
+
+html.theme-catppuccin-rosewater,
+body.theme-catppuccin-rosewater {
+  @include tx-theme-palette(#f5eff0, #ffffff, #575279, #dc8a78, #8839ef, #40a02b, #e0d8da, #575279);
+}
+
+html.theme-latte-macchiato,
+body.theme-latte-macchiato {
+  @include tx-theme-palette(#f4f0e8, #ffffff, #4a4035, #8b5a2b, #6b8e23, #c97b63, #e0d8cc, #4a4035);
+}
+
+html.theme-unikitty-light,
+body.theme-unikitty-light {
+  @include tx-theme-palette(#ffffff, #f8f8f8, #333333, #e45649, #4078f2, #50a14f, #e0e0e0, #333333);
+}
+
+html.theme-serendipity-light,
+body.theme-serendipity-light {
+  @include tx-theme-palette(#f5f0e8, #ffffff, #4a4540, #7d6b8c, #5a8f8f, #c9a227, #e5ddd0, #4a4540);
+}
+
+html.theme-pear-light,
+body.theme-pear-light {
+  @include tx-theme-palette(#f5f7f0, #ffffff, #3d4a3a, #6b8e23, #8fbc8f, #daa520, #dce5d4, #3d4a3a);
+}
+
+html.theme-carbonight-light,
+body.theme-carbonight-light {
+  @include tx-theme-palette(#f0f0f0, #ffffff, #333333, #0e639c, #811f3f, #098658, #d4d4d4, #333333);
+}
+
+html.theme-pandora-light,
+body.theme-pandora-light {
+  @include tx-theme-palette(#f7f5fa, #ffffff, #4a4458, #7c4dff, #00bfa5, #ff6d00, #e8e4ef, #4a4458);
+}
+
+html.theme-cobalt2,
+body.theme-cobalt2 {
+  @include tx-theme-palette(#193549, #1f3d5c, #e1efff, #ffc600, #ff9d00, #3ad900, #2d4a6a, #193549);
+}
+
+html.theme-winter-is-coming,
+body.theme-winter-is-coming {
+  @include tx-theme-palette(#011627, #0b2942, #d6deeb, #82aaff, #c792ea, #21c7a8, #1d3b53, #011627);
+}
+
+html.theme-panda-syntax,
+body.theme-panda-syntax {
+  @include tx-theme-palette(#292a2b, #323436, #e6e6e6, #19f9d8, #ffb86c, #ff6ac1, #3c3d40, #292a2b);
+}
+
+html.theme-horizon,
+body.theme-horizon {
+  @include tx-theme-palette(#1c1e26, #232530, #c4c3c4, #e95678, #25b0bc, #fab795, #2e303e, #1c1e26);
+}
+
+html.theme-vesper,
+body.theme-vesper {
+  @include tx-theme-palette(#101010, #1a1a1a, #ffffff, #ffc799, #99ffe4, #ff8080, #2a2a2a, #101010);
+}
+
+html.theme-poimandres,
+body.theme-poimandres {
+  @include tx-theme-palette(#1b1e28, #24283b, #b4b9c9, #a6accd, #89ddff, #c3e88d, #303348, #1b1e28);
+}
+
+html.theme-city-lights,
+body.theme-city-lights {
+  @include tx-theme-palette(#1e252b, #28323a, #b7c5d3, #5ec4ff, #e27e8a, #70e1e8, #323d46, #1e252b);
+}
+
+html.theme-aura,
+body.theme-aura {
+  @include tx-theme-palette(#15141b, #1f1d2e, #edecee, #a277ff, #61ffca, #ffca85, #2d2a3e, #15141b);
+}
+
+html.theme-hop-dark,
+body.theme-hop-dark {
+  @include tx-theme-palette(#1a1b26, #24283b, #a9b1d6, #bb9af7, #7dcfff, #9ece6a, #292e42, #1a1b26);
+}
+
+@media (prefers-color-scheme: light) {
+  html.theme-system,
+  body.theme-system {
+    @include tx-theme-palette(#f3efe6, #faf7f1, #1a1612, #8f6808, #6a5c4c, #2f7a52, #ddd2c0, #1a1612);
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  html.theme-system,
+  body.theme-system {
+    @include tx-theme-palette(#1a1714, #221e1a, #ede5d8, #e0b85a, #a89070, #6b9e82, #3d3530, #1a1714);
+    /* Welcome backdrop: extra lift above unified shell/chrome. */
+    --tx-surface-2: #{color-mix(in srgb, #221e1a 72%, #1a1714 28%)};
+  }
+}

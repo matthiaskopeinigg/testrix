@@ -1,0 +1,13 @@
+<ng-content />
+
+@if (dragActive() && activeZone()) {
+  <div class="workspace-editor-pane-drop__overlay" aria-hidden="true">
+    <div class="workspace-editor-pane-drop__zones">
+      <span class="workspace-editor-pane-drop__zone workspace-editor-pane-drop__zone--left"></span>
+      <span class="workspace-editor-pane-drop__zone workspace-editor-pane-drop__zone--right"></span>
+      <span class="workspace-editor-pane-drop__zone workspace-editor-pane-drop__zone--top"></span>
+      <span class="workspace-editor-pane-drop__zone workspace-editor-pane-drop__zone--bottom"></span>
+    </div>
+    <p class="workspace-editor-pane-drop__hint">{{ zoneLabel() }}</p>
+  </div>
+}

@@ -1,0 +1,28 @@
+export const ConfigChannels = {
+  getCollections: 'config:getCollections',
+  setCollections: 'config:setCollections',
+  getEnvironments: 'config:getEnvironments',
+  setEnvironments: 'config:setEnvironments',
+  getConfigDir: 'config:getConfigDir',
+  setConfigDir: 'config:setConfigDir',
+  getSettings: 'config:getSettings',
+  setSettings: 'config:setSettings',
+  getSession: 'config:getSession',
+  setSession: 'config:setSession',
+  getFilePaths: 'config:getFilePaths',
+  openConfigDir: 'config:openConfigDir',
+  pickDirectory: 'config:pickDirectory',
+  exportSettings: 'config:exportSettings',
+  importSettings: 'config:importSettings',
+  resetSettings: 'config:resetSettings',
+  resetSession: 'config:resetSession',
+  getHistory: 'config:getHistory',
+  setHistory: 'config:setHistory',
+  getProfiles: 'config:getProfiles',
+  setActiveProfile: 'config:setActiveProfile',
+  createProfile: 'config:createProfile',
+  renameProfile: 'config:renameProfile',
+  deleteProfile: 'config:deleteProfile',
+} as const;
+
+export type ConfigChannel = (typeof ConfigChannels)[keyof typeof ConfigChannels];

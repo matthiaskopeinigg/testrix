@@ -1,0 +1,66 @@
+// Themed overlay scrollbars (Chromium / Electron + Firefox).
+// Thumb colors come from --tx-scrollbar-* in tx-theme-palette (_themes.scss).
+
+:root {
+  --tx-scrollbar-size: 8px;
+}
+
+@mixin tx-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: var(--tx-scrollbar-thumb) var(--tx-scrollbar-track);
+
+  &::-webkit-scrollbar {
+    width: var(--tx-scrollbar-size);
+    height: var(--tx-scrollbar-size);
+  }
+
+  &::-webkit-scrollbar-track {
+    background: var(--tx-scrollbar-track);
+  }
+
+  &::-webkit-scrollbar-thumb {
+    min-height: 40px;
+    border: 2px solid transparent;
+    border-radius: 999px;
+    background: var(--tx-scrollbar-thumb);
+    background-clip: padding-box;
+    transition: background-color var(--tx-duration-fast, 120ms) ease;
+  }
+
+  &::-webkit-scrollbar-thumb:hover {
+    background: var(--tx-scrollbar-thumb-hover);
+    background-clip: padding-box;
+  }
+
+  &::-webkit-scrollbar-thumb:active {
+    background: var(--tx-scrollbar-thumb-active);
+    background-clip: padding-box;
+  }
+
+  &::-webkit-scrollbar-corner {
+    background: var(--tx-scrollbar-track);
+  }
+}
+
+html {
+  scrollbar-gutter: stable only-if-overflow;
+  @include tx-scrollbar;
+}
+
+body,
+:where(
+  main,
+  aside,
+  nav,
+  section,
+  article,
+  ul,
+  ol,
+  dl,
+  div,
+  textarea,
+  pre,
+  code
+) {
+  @include tx-scrollbar;
+}

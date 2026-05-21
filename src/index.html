@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en" data-animation-speed="normal">
+  <head>
+    <meta charset="utf-8" />
+    <title>Testrix</title>
+    <base href="/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="testrix-app" content="1" />
+    <link rel="icon" type="image/x-icon" href="favicon.ico" />
+    <style>
+      html.tx-electron-app,
+      html.tx-electron-app body {
+        background-color: #0d1117;
+        color-scheme: dark;
+      }
+      html.tx-electron-app[data-theme='light'],
+      html.tx-electron-app[data-theme='light'] body {
+        background-color: #ffffff;
+        color-scheme: light;
+      }
+    </style>
+    <script>
+      if (typeof window.testrix !== 'undefined') {
+        var root = document.documentElement;
+        root.dataset.platform = window.testrix.platform;
+        root.classList.add('tx-electron-app');
+        if (window.testrix.opaqueDevWindow) {
+          root.classList.add('tx-electron-app--dev-opaque');
+        }
+        if (window.testrix.bootTheme) {
+          var themeClass = 'theme-' + window.testrix.bootTheme;
+          root.classList.add(themeClass);
+          if (window.testrix.bootThemeMode) {
+            root.setAttribute('data-theme', window.testrix.bootThemeMode);
+          }
+        }
+      }
+    </script>
+  </head>
+  <body class="theme-github-light">
+    <script>
+      if (typeof window.testrix !== 'undefined' && window.testrix.bootTheme) {
+        document.body.className = 'theme-' + window.testrix.bootTheme;
+      }
+    </script>
+    <app-root></app-root>
+  </body>
+</html>

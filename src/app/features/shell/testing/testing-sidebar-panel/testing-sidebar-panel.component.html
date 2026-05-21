@@ -1,0 +1,41 @@
+@if (!sessionHydrated()) {
+  <div class="testing-sidebar-panel__hydration" aria-hidden="true"></div>
+} @else if (activeView() === 'menu') {
+  <div
+    class="testing-sidebar-panel__menu tx-entrance-stagger"
+    [class.tx-entrance-stagger--play]="entranceStaggerPlay()"
+    [class.tx-entrance-stagger--settled]="entranceStaggerSettled()"
+    role="list"
+    aria-label="Testing tools"
+  >
+    @for (item of menuItems; track item.id) {
+      <button
+        type="button"
+        role="listitem"
+        class="testing-sidebar-panel__item"
+        (click)="handleMenuClick(item)"
+      >
+        <span class="testing-sidebar-panel__icon" aria-hidden="true">
+          <tx-icon [name]="item.icon" [size]="20" />
+        </span>
+        <span class="testing-sidebar-panel__text">
+          <span class="testing-sidebar-panel__title">{{ item.title }}</span>
+          <span class="testing-sidebar-panel__hint">{{ item.hint }}</span>
+        </span>
+        <tx-icon class="testing-sidebar-panel__chevron" name="chevronRight" [size]="12" aria-hidden="true" />
+      </button>
+    }
+  </div>
+} @else if (activeView() === 'test-suite') {
+  <app-test-suite-sidebar-panel
+    class="testing-sidebar-panel__drill-in"
+    [searchPlaceholder]="searchPlaceholder()"
+    [searchAriaLabel]="searchAriaLabel()"
+  />
+} @else {
+  <app-load-test-sidebar-panel
+    class="testing-sidebar-panel__drill-in"
+    [searchPlaceholder]="searchPlaceholder()"
+    [searchAriaLabel]="searchAriaLabel()"
+  />
+}

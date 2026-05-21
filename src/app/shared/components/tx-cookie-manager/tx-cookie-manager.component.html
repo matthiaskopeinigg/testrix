@@ -1,0 +1,84 @@
+<tx-modal
+  [open]="open()"
+  title="Cookie jar"
+  ariaLabel="Cookie jar"
+  layer="stacked"
+  (closed)="handleClose()"
+>
+  <p class="tx-cookie-manager__intro">
+    Cookies stored for the active workspace profile. Sent automatically when
+    <strong>Use cookies</strong> is enabled on a request.
+  </p>
+
+  <tx-form-field label="Search" controlId="tx-cookie-manager-search">
+    <tx-input
+      id="tx-cookie-manager-search"
+      type="search"
+      placeholder="Search by domain or name…"
+      [ngModel]="searchTerm()"
+      (ngModelChange)="handleSearchChange($event)"
+    />
+  </tx-form-field>
+
+  <div class="tx-cookie-manager__toolbar">
+    <tx-button
+      variant="secondary"
+      [disabled]="cookies().length === 0 || isLoading()"
+      (pressed)="handleClearAll()"
+    >
+      Clear all
+    </tx-button>
+    <tx-button variant="secondary" [disabled]="isLoading()" (pressed)="loadCookies()">
+      Refresh
+    </tx-button>
+  </div>
+
+  <div class="tx-cookie-manager__list" aria-live="polite">
+    @if (isLoading()) {
+      <div class="tx-cookie-manager__status">
+        <tx-spinner />
+        <span>Loading cookies…</span>
+      </div>
+    } @else if (loadError(); as err) {
+      <p class="tx-cookie-manager__status tx-cookie-manager__status--error">{{ err }}</p>
+    } @else if (filteredGroups().length === 0) {
+      <p class="tx-cookie-manager__status">
+        @if (searchTerm().trim()) {
+          No cookies match your search.
+        } @else {
+          No cookies stored yet. Send a request with cookies enabled to populate the jar.
+        }
+      </p>
+    } @else {
+      @for (group of filteredGroups(); track group.domain) {
+        <section class="tx-cookie-manager__group">
+          <header class="tx-cookie-manager__group-header">
+            <span class="tx-cookie-manager__domain">{{ group.domain }}</span>
+            <span class="tx-cookie-manager__count">
+              {{ group.cookies.length }} cookie{{ group.cookies.length === 1 ? '' : 's' }}
+            </span>
+          </header>
+          <ul class="tx-cookie-manager__cookies">
+            @for (cookie of group.cookies; track cookie.domain + cookie.path + cookie.key) {
+              <li class="tx-cookie-manager__cookie">
+                <div class="tx-cookie-manager__cookie-main">
+                  <span class="tx-cookie-manager__name">{{ cookie.key }}</span>
+                  <span class="tx-cookie-manager__value">{{ cookie.value }}</span>
+                  <span class="tx-cookie-manager__path">Path: {{ cookie.path }}</span>
+                </div>
+                <tx-button
+                  variant="secondary"
+                  title="Delete cookie"
+                  [attr.aria-label]="'Delete ' + cookie.key"
+                  (pressed)="handleDeleteCookie(cookie)"
+                >
+                  <tx-icon name="trash" [size]="14" aria-hidden="true" />
+                </tx-button>
+              </li>
+            }
+          </ul>
+        </section>
+      }
+    }
+  </div>
+</tx-modal>

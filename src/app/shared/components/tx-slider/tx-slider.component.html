@@ -1,0 +1,33 @@
+<div class="tx-slider" [class.tx-slider--disabled]="disabled()">
+  @if (label() || showValue()) {
+    <div class="tx-slider__header">
+      @if (label()) {
+        <label class="tx-slider__label" [attr.for]="effectiveId()">{{ label() }}</label>
+      }
+      @if (showValue()) {
+        <span class="tx-slider__value" aria-hidden="true">{{ displayValue() }}</span>
+      }
+    </div>
+  }
+
+  <div class="tx-slider__track-wrap" [style.--tx-slider-fill]="fillPercent() + '%'">
+    <input
+      class="tx-slider__input"
+      [id]="effectiveId()"
+      type="range"
+      [attr.min]="effectiveMin()"
+      [attr.max]="effectiveMax()"
+      [attr.step]="effectiveStep()"
+      [attr.aria-label]="!label() ? ariaLabel() || null : null"
+      [attr.aria-valuemin]="effectiveMin()"
+      [attr.aria-valuemax]="effectiveMax()"
+      [attr.aria-valuenow]="value()"
+      [attr.aria-valuetext]="displayValue()"
+      [disabled]="disabled()"
+      [value]="value()"
+      (input)="handleInput($event)"
+      (change)="handleBlur()"
+      (blur)="handleBlur()"
+    />
+  </div>
+</div>

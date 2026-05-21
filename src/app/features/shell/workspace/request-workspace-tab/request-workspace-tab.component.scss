@@ -1,0 +1,237 @@
+@use '../workspace-tab-chrome' as tab-chrome;
+@use '../workspace-tab-motion';
+@use '../../../../shared/styles/http-method-badge' as method-badge;
+
+:host {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  min-width: 0;
+}
+
+.request-tab {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  min-width: 0;
+}
+
+.request-tab__split {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.request-tab__split-primary {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  position: relative;
+}
+
+.request-tab__response-slot {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.request-tab__bar {
+  @include tab-chrome.workspace-tab-toolbar-row;
+}
+
+.request-tab__bar-cluster {
+  @include tab-chrome.workspace-tab-bar-cluster;
+
+  &--grow {
+    @include tab-chrome.workspace-tab-bar-cluster-grow;
+  }
+
+  &--trailing {
+    @include tab-chrome.workspace-tab-bar-cluster-trailing;
+  }
+}
+
+.request-tab__method-field {
+  flex: 0 0 auto;
+  width: 5.5rem;
+  min-width: 5.5rem;
+  max-width: 6rem;
+
+  @include tab-chrome.workspace-tab-toolbar-dropdown;
+
+  ::ng-deep .tx-dropdown-host {
+    min-width: 0;
+  }
+
+  ::ng-deep .tx-dropdown__trigger {
+    min-width: 0;
+    padding-inline: 0.5rem 0.4rem;
+  }
+
+  ::ng-deep .tx-dropdown__value {
+    font-weight: 700;
+    letter-spacing: 0.03em;
+  }
+
+  ::ng-deep .tx-dropdown__panel {
+    min-width: 7rem;
+  }
+
+  ::ng-deep .tx-dropdown__option {
+    white-space: nowrap;
+  }
+}
+
+.request-tab__method {
+  @include method-badge.http-method-badge-base($compact: false);
+  @include method-badge.http-method-badge-tones;
+}
+
+.request-tab__url-field {
+  flex: 1 1 auto;
+  min-width: 8rem;
+}
+
+.request-tab__environment-field {
+  flex: 0 0 auto;
+  width: 10rem;
+  min-width: 8rem;
+  max-width: 13rem;
+
+  @include tab-chrome.workspace-tab-toolbar-dropdown;
+
+  ::ng-deep .tx-dropdown-host {
+    min-width: 0;
+  }
+
+  ::ng-deep .tx-dropdown__trigger {
+    min-width: 0;
+  }
+
+  ::ng-deep .tx-dropdown__value {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  ::ng-deep .tx-dropdown__panel {
+    min-width: 10rem;
+    max-width: 18rem;
+  }
+}
+
+.request-tab__bar-cluster--trailing tx-button {
+  flex-shrink: 0;
+  align-self: flex-end;
+  margin-bottom: 1px;
+}
+
+.request-tab__url-input {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: var(--tx-radius-sm, 6px);
+  border: 1px solid color-mix(in srgb, var(--tx-border-0) 90%, transparent);
+  background: var(--tx-surface-1);
+  color: var(--tx-text-0);
+  font: inherit;
+  font-size: var(--tx-font-size-sm, 0.8125rem);
+}
+
+.request-tab--sidebar .request-tab__workspace {
+  flex-direction: row;
+}
+
+.request-tab__sections-wrap {
+  @include tab-chrome.workspace-tab-sections-wrap;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.request-tab__sections-bar {
+  @include tab-chrome.workspace-tab-sections-bar;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.request-tab__code-btn {
+  @include tab-chrome.workspace-tab-chip-surface;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-shrink: 0;
+  padding: 0.32rem 0.65rem;
+  border: 0;
+  color: color-mix(in srgb, var(--tx-text-0) 72%, transparent);
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color var(--tx-duration-base, 180ms) ease,
+    color var(--tx-duration-base, 180ms) ease;
+
+  &:hover {
+    color: var(--tx-text-0);
+    background: color-mix(in srgb, var(--tx-primary) 14%, var(--tx-surface-2));
+  }
+
+  &:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--tx-focus-ring) 75%, transparent);
+    outline-offset: 1px;
+  }
+}
+
+.request-tab__bar-cluster--trailing tx-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.request-tab__section-tab {
+  @include tab-chrome.workspace-tab-section-tab;
+}
+
+.request-tab__workspace {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+}
+
+.request-tab__nav {
+  @include tab-chrome.workspace-tab-section-sidebar-nav;
+}
+
+.request-tab__nav-item {
+  @include tab-chrome.workspace-tab-section-sidebar-nav-item;
+}
+
+.request-tab__nav-icon {
+  display: flex;
+  flex-shrink: 0;
+}
+
+.request-tab__divider {
+  @include tab-chrome.workspace-tab-section-sidebar-divider;
+}
+
+.request-tab__pane {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  padding: 14px 18px 18px;
+}
