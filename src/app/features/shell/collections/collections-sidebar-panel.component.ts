@@ -515,9 +515,19 @@ export class CollectionsSidebarPanelComponent {
   }
 }
 
+function collectionTreeKind(
+  node: TxTreeDropContext<CollectionTreeNodeMeta>['target'],
+): CollectionTreeKind | undefined {
+  const kind = node.data?.kind ?? node.kind;
+  if (kind === 'folder' || kind === 'request' || kind === 'websocket') {
+    return kind;
+  }
+  return undefined;
+}
+
 function collectionsCanDrop(ctx: TxTreeDropContext<CollectionTreeNodeMeta>): boolean {
   if (ctx.position === 'inside') {
-    return ctx.target.kind === 'folder';
+    return collectionTreeKind(ctx.target) === 'folder';
   }
-  return ctx.target.kind !== undefined;
+  return collectionTreeKind(ctx.source) !== undefined;
 }

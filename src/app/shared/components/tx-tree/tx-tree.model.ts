@@ -264,10 +264,7 @@ export class TxTreeModel<TMeta = unknown> {
       return false;
     }
 
-    if (
-      this.config.sort.foldersFirst &&
-      wouldViolateFoldersFirst(this.nodes, sourceLoc, targetLoc, position)
-    ) {
+    if (wouldViolateFoldersFirst(this.nodes, sourceLoc, targetLoc, position, this.config.sort)) {
       return false;
     }
 
@@ -311,7 +308,7 @@ export class TxTreeModel<TMeta = unknown> {
       return null;
     }
 
-    working = insertNode(working, targetAfterRemove, position, extracted.node);
+    working = insertNode(working, targetAfterRemove, position, extracted.node, this.config.sort);
     if (this.config.sort.siblingSort === 'manual') {
       renumberSiblingOrders(working);
     } else {
@@ -622,10 +619,12 @@ function insertNode<TMeta>(
   targetLoc: NodeLocation<TMeta>,
   position: TxTreeDropPosition,
   node: MutableTxTreeNode<TMeta>,
+  sort: TxTreeSortConfig,
 ): MutableTxTreeNode<TMeta>[] {
   if (position === 'inside') {
     const children = targetLoc.node.children ? [...targetLoc.node.children] : [];
-    children.push(node);
+    const insertIndex = resolveInsideChildInsertIndex(children, node.id, node, sort);
+    children.splice(insertIndex, 0, node);
     targetLoc.node.children = children;
     return nodes;
   }
@@ -667,8 +666,9 @@ export function wouldViolateFoldersFirst<TMeta>(
   sourceLoc: NodeLocation<TMeta>,
   targetLoc: NodeLocation<TMeta>,
   position: TxTreeDropPosition,
+  sort: TxTreeSortConfig,
 ): boolean {
-  if (!isFolderSortGroup(sourceLoc.node)) {
+  if (!sort.foldersFirst || !isFolderSortGroup(sourceLoc.node)) {
     return false;
   }
 
@@ -678,7 +678,7 @@ export function wouldViolateFoldersFirst<TMeta>(
     targetLoc,
     position,
   );
-  const insertIndex = computeSiblingInsertIndex(sourceLoc, targetLoc, position);
+  const insertIndex = computeSiblingInsertIndex(sourceLoc, targetLoc, position, sort);
   const hypothetical = [
     ...withoutSource.slice(0, insertIndex),
     sourceLoc.node,
@@ -728,14 +728,38 @@ function getDestinationSiblingsWithoutSource<TMeta>(
   return siblings;
 }
 
+/**
+ * Index for nesting `source` inside `target` while honoring folders-first ordering.
+ */
+function resolveInsideChildInsertIndex<TMeta>(
+  children: readonly TxTreeNode<TMeta>[],
+  sourceId: string,
+  sourceNode: TxTreeNode<TMeta>,
+  sort: TxTreeSortConfig,
+): number {
+  const withoutSource = children.filter((child) => child.id !== sourceId);
+  if (!sort.foldersFirst || !isFolderSortGroup(sourceNode)) {
+    return withoutSource.length;
+  }
+
+  const firstNonFolder = withoutSource.findIndex((child) => !isFolderSortGroup(child));
+  return firstNonFolder === -1 ? withoutSource.length : firstNonFolder;
+}
+
 function computeSiblingInsertIndex<TMeta>(
   sourceLoc: NodeLocation<TMeta>,
   targetLoc: NodeLocation<TMeta>,
   position: TxTreeDropPosition,
+  sort?: TxTreeSortConfig,
 ): number {
   if (position === 'inside') {
     const children = targetLoc.node.children ?? [];
-    return children.filter((child) => child.id !== sourceLoc.node.id).length;
+    return resolveInsideChildInsertIndex(
+      children,
+      sourceLoc.node.id,
+      sourceLoc.node,
+      sort ?? { siblingSort: 'manual', foldersFirst: false },
+    );
   }
 
   let insertIndex = position === 'before' ? targetLoc.index : targetLoc.index + 1;

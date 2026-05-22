@@ -406,4 +406,25 @@ describe('TxTreeModel', () => {
 
     expect(model.canDrop('folder-users', 'req-path', 'after')).toBe(true);
   });
+
+  it('allows nesting a folder inside a folder that already has requests when foldersFirst is enabled', () => {
+    const model = new TxTreeModel(mergeTxTreeConfig({ sort: { foldersFirst: true } }));
+    model.setNodes([
+      {
+        id: 'parent',
+        label: 'Parent',
+        kind: 'folder',
+        order: 0,
+        children: [{ id: 'req', label: 'GET /x', kind: 'request', order: 0 }],
+      },
+      { id: 'nested', label: 'Nested', kind: 'folder', order: 10, children: [] },
+    ]);
+    model.expand('parent');
+
+    expect(model.canDrop('nested', 'parent', 'inside')).toBe(true);
+    const result = model.moveNode('nested', 'parent', 'inside');
+    expect(result).not.toBeNull();
+    const parent = result!.nodes.find((n) => n.id === 'parent');
+    expect(parent?.children?.map((n) => n.id)).toEqual(['nested', 'req']);
+  });
 });
