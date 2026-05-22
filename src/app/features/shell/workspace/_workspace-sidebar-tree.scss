@@ -1,0 +1,17 @@
+@use './workspace-panel-chrome' as panel;
+
+/** Standard tx-tree host inside workspace sidebar panels (Collections, Environments, Testing, …). */
+@mixin workspace-sidebar-tree-host {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding-top: 0.15rem;
+
+  @include panel.workspace-sidebar-tree-tokens;
+}
+
+@mixin workspace-sidebar-panel-body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+}

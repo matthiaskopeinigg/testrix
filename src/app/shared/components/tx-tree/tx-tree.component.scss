@@ -26,8 +26,7 @@
 }
 
 /* DnD overlay lines are not list items — skip entrance stagger motion. */
-.tx-tree.tx-entrance-stagger > .tx-tree__folder-exit-line,
-.tx-tree.tx-entrance-stagger > .tx-tree__empty {
+.tx-tree.tx-entrance-stagger > .tx-tree__folder-exit-line {
   opacity: 1;
   transform: none;
   animation: none;
@@ -54,6 +53,7 @@
 .tx-tree__empty {
   margin: 0.5rem 0;
   font-size: 0.8125rem;
+  line-height: 1.45;
   color: var(--tx-text-1);
 }
 

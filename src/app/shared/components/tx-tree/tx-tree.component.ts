@@ -75,6 +75,8 @@ export class TxTreeComponent<TMeta = unknown> {
   readonly debug = input(false);
   /** Stagger row entrance when the tree mounts (e.g. sidebar panel open). */
   readonly entranceStagger = input(false);
+  /** Shown when `nodes` is empty (e.g. panel-specific copy). */
+  readonly emptyMessage = input('No items');
   /** When set, the matching row shows an inline rename field. */
   readonly renamingNodeId = input<string | null>(null);
 
@@ -183,7 +185,7 @@ export class TxTreeComponent<TMeta = unknown> {
       startEntranceStaggerAnimation(this.entranceStaggerPlay, this.entranceStaggerSettled, {
         enabled: () => this.uiPreferences.entranceStaggerEnabled(),
         destroyRef: this.destroyRef,
-        childCount: () => this.visibleRows().length,
+        childCount: () => Math.max(1, this.visibleRows().length),
       });
     });
   }

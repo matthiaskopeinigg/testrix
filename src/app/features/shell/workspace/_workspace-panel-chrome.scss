@@ -4,6 +4,15 @@
 
 $workspace-panel-inset-x: 0.75rem;
 
+/** Single-line sidebar tree / list row metrics (Collections tx-tree, Environments profile rows). */
+$workspace-sidebar-tree-row-min-height: 34px;
+$workspace-sidebar-tree-row-padding-block: 0.3rem;
+$workspace-sidebar-tree-row-font-size: 0.875rem;
+$workspace-sidebar-tree-row-line-height: 1.35;
+$workspace-sidebar-tree-row-gap: 0.4rem;
+$workspace-sidebar-tree-row-margin-inline: 0.35rem;
+$workspace-sidebar-tree-row-radius: var(--tx-radius-md, 10px);
+
 @mixin workspace-panel-inset-x {
   padding-left: $workspace-panel-inset-x;
   padding-right: $workspace-panel-inset-x;
@@ -81,4 +90,35 @@ $workspace-panel-inset-x: 0.75rem;
       inset 0 1px 3px color-mix(in srgb, #000 28%, transparent),
       0 0 0 1px color-mix(in srgb, var(--tx-primary) 28%, transparent);
   }
+}
+
+/** CSS variables for {@link TxTreeComponent} rows inside workspace sidebar panels. */
+@mixin workspace-sidebar-tree-tokens {
+  --tx-tree-row-min-height: #{$workspace-sidebar-tree-row-min-height};
+  --tx-tree-row-padding-block: #{$workspace-sidebar-tree-row-padding-block};
+  --tx-tree-row-font-size: #{$workspace-sidebar-tree-row-font-size};
+  --tx-tree-row-line-height: #{$workspace-sidebar-tree-row-line-height};
+  --tx-tree-row-gap: #{$workspace-sidebar-tree-row-gap};
+}
+
+/** Flat list row aligned with workspace sidebar tx-tree single-line rows. */
+@mixin workspace-sidebar-list-row {
+  display: flex;
+  align-items: center;
+  gap: $workspace-sidebar-tree-row-gap;
+  width: auto;
+  margin-inline: $workspace-sidebar-tree-row-margin-inline;
+  min-height: $workspace-sidebar-tree-row-min-height;
+  padding-block: $workspace-sidebar-tree-row-padding-block;
+  padding-inline: 0.5rem;
+  border: 1px solid transparent;
+  border-radius: $workspace-sidebar-tree-row-radius;
+  background: transparent;
+  color: var(--tx-text-0);
+  font-family: var(--tx-font-body);
+  font-size: $workspace-sidebar-tree-row-font-size;
+  line-height: $workspace-sidebar-tree-row-line-height;
+  font-weight: inherit;
+  text-align: left;
+  cursor: pointer;
 }

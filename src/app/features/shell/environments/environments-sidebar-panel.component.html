@@ -29,41 +29,21 @@
     </button>
   </div>
 
-  <div
-    class="environments-sidebar-panel__list tx-entrance-stagger"
-    [class.tx-entrance-stagger--play]="entranceStaggerPlay()"
-    [class.tx-entrance-stagger--settled]="entranceStaggerSettled()"
-    role="list"
-    (contextmenu)="handleListAreaContextMenu($event)"
-  >
-    @if (filteredProfiles().length === 0) {
-      <p class="environments-sidebar-panel__empty">{{ emptyStateMessage() }}</p>
-    } @else {
-      @for (profile of filteredProfiles(); track profile.id) {
-        <button
-          type="button"
-          role="listitem"
-          class="environments-sidebar-panel__row"
-          [class.is-active]="isProfileActive(profile.id)"
-          (click)="handleRowClick(profile.id)"
-          (dblclick)="handleRowDblClick($event, profile.id)"
-          (contextmenu)="handleRowContextMenu($event, profile.id)"
-        >
-          <tx-icon name="globe" [size]="16" aria-hidden="true" class="environments-sidebar-panel__row-icon" />
-          @if (renamingProfileId() === profile.id) {
-            <tx-inline-rename-input
-              class="environments-sidebar-panel__rename"
-              [value]="profile.name"
-              [ariaLabel]="'Rename environment'"
-              (committed)="handleInlineRenameCommit(profile.id, $event)"
-              (cancelled)="handleInlineRenameCancel()"
-            />
-          } @else {
-            <span class="environments-sidebar-panel__row-label">{{ profile.name }}</span>
-          }
-        </button>
-      }
-    }
+  <div class="environments-sidebar-panel__body" (contextmenu)="handleTreeAreaContextMenu($event)">
+    <tx-tree
+      class="environments-sidebar-panel__tree"
+      [entranceStagger]="true"
+      [emptyMessage]="emptyStateMessage()"
+      [nodes]="treeNodes()"
+      [config]="treeConfig()"
+      [selectionIds]="treeSelectionIds()"
+      [renamingNodeId]="renamingProfileId()"
+      (nodeClick)="handleNodeClick($event)"
+      (nodeDblClick)="handleNodeDblClick($event)"
+      (renameCommit)="handleRenameCommit($event)"
+      (renameCancel)="handleRenameCancel()"
+      (rowContextMenu)="handleRowContextMenu($event)"
+    />
   </div>
 </app-workspace-sidebar-panel-shell>
 

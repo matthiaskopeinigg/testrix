@@ -1,9 +1,7 @@
 import {
-  afterNextRender,
   ChangeDetectionStrategy,
   Component,
   computed,
-  DestroyRef,
   effect,
   inject,
   input,
@@ -13,14 +11,18 @@ import {
 
 import { ConfigService } from '@app/core/config/config.service';
 import { EnvironmentsService } from '@app/core/environments/environments.service';
-import { startEntranceStaggerAnimation } from '@app/core/ui/entrance-stagger';
-import { UiPreferencesService } from '@app/core/ui/ui-preferences.service';
 import { WorkspaceEditorService } from '@app/core/workspace/workspace-editor.service';
 import { TxContextMenuComponent } from '@app/shared/components/tx-context-menu/tx-context-menu.component';
 import type { TxContextMenuItem } from '@app/shared/components/tx-context-menu/tx-context-menu.types';
 import { TxConfirmDialogComponent } from '@app/shared/components/tx-confirm-dialog/tx-confirm-dialog.component';
 import { TxIconComponent } from '@app/shared/components/tx-icon/tx-icon.component';
-import { TxInlineRenameInputComponent } from '@app/shared/components/tx-inline-rename-input/tx-inline-rename-input.component';
+import { mergeTxTreeConfig } from '@app/shared/components/tx-tree/tx-tree.config';
+import { TxTreeComponent } from '@app/shared/components/tx-tree/tx-tree.component';
+import type {
+  TxTreeNodeClickEvent,
+  TxTreeNodeRenameCommitEvent,
+  TxTreeRowContextMenuEvent,
+} from '@app/shared/components/tx-tree/tx-tree.types';
 import { WorkspacePanelToolbarActionsDirective } from '@app/features/shell/workspace/workspace-panel-toolbar-actions.directive';
 import { WorkspaceSidebarPanelShellComponent } from '@app/features/shell/workspace/workspace-sidebar-panel-shell.component';
 import { environmentsSidebarSelectionIds } from '@app/features/shell/workspace/workspace-sidebar-selection';
@@ -41,12 +43,12 @@ import {
   buildEnvironmentListFilterMenuItems,
   buildEnvironmentListSortMenuItems,
 } from './environment-list-sidebar-menus';
+import { environmentListItemsToTreeNodes } from './environment-list-tree.adapter';
+import type { EnvironmentListTreeNodeMeta } from './environment-list-tree.types';
 import { applyEnvironmentListView } from './environment-list.view';
 import { getEnvironmentDefinition } from './environment-profile.utils';
 
-const ROW_CLICK_DELAY_MS = 250;
 const SEARCH_DEBOUNCE_MS = 100;
-const LARGE_LIST_STAGGER_THRESHOLD = 40;
 
 @Component({
   selector: 'app-environments-sidebar-panel',
@@ -55,7 +57,7 @@ const LARGE_LIST_STAGGER_THRESHOLD = 40;
     WorkspaceSidebarPanelShellComponent,
     WorkspacePanelToolbarActionsDirective,
     TxIconComponent,
-    TxInlineRenameInputComponent,
+    TxTreeComponent,
     TxContextMenuComponent,
     TxConfirmDialogComponent,
   ],
@@ -64,10 +66,8 @@ const LARGE_LIST_STAGGER_THRESHOLD = 40;
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class EnvironmentsSidebarPanelComponent {
-  private readonly destroyRef = inject(DestroyRef);
   private readonly configService = inject(ConfigService);
   private readonly environmentsService = inject(EnvironmentsService);
-  private readonly uiPreferences = inject(UiPreferencesService);
   private readonly workspaceEditor = inject(WorkspaceEditorService);
 
   readonly searchPlaceholder = input('Search environments…');
@@ -99,11 +99,6 @@ export class EnvironmentsSidebarPanelComponent {
   protected readonly deleteProfileId = signal<string | null>(null);
   protected readonly deleteMessage = signal('');
 
-  private rowClickTimer: ReturnType<typeof setTimeout> | null = null;
-
-  protected readonly entranceStaggerPlay = signal(false);
-  protected readonly entranceStaggerSettled = signal(false);
-
   protected readonly filterMenuItems = computed(() =>
     buildEnvironmentListFilterMenuItems(this.listSidebarFilter()),
   );
@@ -128,6 +123,26 @@ export class EnvironmentsSidebarPanelComponent {
     }),
   );
 
+  protected readonly treeNodes = computed(() =>
+    environmentListItemsToTreeNodes(
+      this.filteredProfiles(),
+      this.environmentsService.environments(),
+    ),
+  );
+
+  protected readonly treeConfig = computed(() =>
+    mergeTxTreeConfig<EnvironmentListTreeNodeMeta>({
+      ariaLabel: 'Environments',
+      expansion: { expandOnClick: false },
+      visual: { showDragHandle: false },
+      drag: { enabled: false },
+    }),
+  );
+
+  protected readonly treeSelectionIds = computed(() =>
+    environmentsSidebarSelectionIds(this.workspaceEditor.activeTab()),
+  );
+
   protected readonly emptyStateMessage = computed(() => {
     const query = this.searchQuery().trim();
     if (query) {
@@ -141,10 +156,6 @@ export class EnvironmentsSidebarPanelComponent {
     }
     return 'No environments yet. Right-click to create one.';
   });
-
-  protected readonly activeEnvironmentId = computed(
-    () => environmentsSidebarSelectionIds(this.workspaceEditor.activeTab())[0] ?? null,
-  );
 
   constructor() {
     effect(() => {
@@ -160,23 +171,6 @@ export class EnvironmentsSidebarPanelComponent {
       this.listSidebarSortBy.set(
         envSession.listSidebarSortBy ?? DEFAULT_ENVIRONMENT_LIST_SIDEBAR_SORT_BY,
       );
-    });
-
-    afterNextRender(() => {
-      const count = this.filteredProfiles().length;
-      if (count > LARGE_LIST_STAGGER_THRESHOLD) {
-        this.entranceStaggerPlay.set(false);
-        this.entranceStaggerSettled.set(true);
-        return;
-      }
-      startEntranceStaggerAnimation(this.entranceStaggerPlay, this.entranceStaggerSettled, {
-        enabled: () => this.uiPreferences.entranceStaggerEnabled(),
-        destroyRef: this.destroyRef,
-        childCount: () => {
-          const profileCount = this.filteredProfiles().length;
-          return profileCount > 0 ? profileCount : 1;
-        },
-      });
     });
   }
 
@@ -229,59 +223,40 @@ export class EnvironmentsSidebarPanelComponent {
     this.sortMenuOpen.set(false);
   }
 
-  protected isProfileActive(profileId: string): boolean {
-    return this.activeEnvironmentId() === profileId;
-  }
-
-  protected handleRowClick(profileId: string): void {
+  protected handleNodeClick(event: TxTreeNodeClickEvent<EnvironmentListTreeNodeMeta>): void {
     if (this.renamingProfileId()) {
       return;
     }
-
-    if (this.rowClickTimer !== null) {
-      clearTimeout(this.rowClickTimer);
-    }
-
-    this.rowClickTimer = setTimeout(() => {
-      this.rowClickTimer = null;
-      this.workspaceEditor.openResource({ resourceId: profileId, kind: 'environment' });
-    }, ROW_CLICK_DELAY_MS);
+    this.workspaceEditor.openResource({ resourceId: event.nodeId, kind: 'environment' });
   }
 
-  protected handleRowDblClick(event: MouseEvent, profileId: string): void {
-    event.preventDefault();
-    event.stopPropagation();
-
-    if (this.rowClickTimer !== null) {
-      clearTimeout(this.rowClickTimer);
-      this.rowClickTimer = null;
-    }
-
-    this.startInlineRename(profileId);
+  protected handleNodeDblClick(event: TxTreeNodeClickEvent<EnvironmentListTreeNodeMeta>): void {
+    this.startInlineRename(event.nodeId);
   }
 
-  protected handleInlineRenameCommit(profileId: string, name: string): void {
-    this.environmentsService.updateEnvironment(profileId, { name });
+  protected handleRenameCommit(event: TxTreeNodeRenameCommitEvent): void {
+    const trimmed = event.value.trim();
+    if (trimmed) {
+      this.environmentsService.updateEnvironment(event.nodeId, { name: trimmed });
+    }
     this.renamingProfileId.set(null);
   }
 
-  protected handleInlineRenameCancel(): void {
+  protected handleRenameCancel(): void {
     this.renamingProfileId.set(null);
   }
 
-  protected handleListAreaContextMenu(event: MouseEvent): void {
+  protected handleTreeAreaContextMenu(event: MouseEvent): void {
     const target = event.target as HTMLElement | null;
-    if (target?.closest('.environments-sidebar-panel__row')) {
+    if (target?.closest('.tx-tree-row-host, .tx-tree-row, .tx-tree__custom-row')) {
       return;
     }
     event.preventDefault();
     this.openContextMenu(event.clientX, event.clientY, null);
   }
 
-  protected handleRowContextMenu(event: MouseEvent, profileId: string): void {
-    event.preventDefault();
-    event.stopPropagation();
-    this.openContextMenu(event.clientX, event.clientY, profileId);
+  protected handleRowContextMenu(event: TxTreeRowContextMenuEvent): void {
+    this.openContextMenu(event.clientX, event.clientY, event.nodeId);
   }
 
   protected handleContextMenuSelect(actionId: string): void {

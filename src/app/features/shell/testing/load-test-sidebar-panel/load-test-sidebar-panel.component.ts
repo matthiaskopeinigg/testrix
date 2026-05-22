@@ -121,6 +121,12 @@ export class LoadTestSidebarPanelComponent {
     testingSidebarSelectionIds(this.workspaceEditor.activeTab()),
   );
 
+  protected readonly treeEmptyMessage = computed(() =>
+    this.searchQueryDebounced().trim()
+      ? 'No load tests match your search.'
+      : 'No load tests yet. Add a folder or load test to get started.',
+  );
+
   constructor() {
     effect(() => {
       void this.configService.sessionRevision();

@@ -78,7 +78,7 @@ describe('EnvironmentsSidebarPanelComponent', () => {
     await fixture.whenStable();
     fixture.detectChanges();
 
-    const labels = [...fixture.nativeElement.querySelectorAll('.environments-sidebar-panel__row-label')].map(
+    const labels = [...fixture.nativeElement.querySelectorAll('.tx-tree-row__label')].map(
       (el: Element) => el.textContent?.trim() ?? '',
     );
 
@@ -87,23 +87,22 @@ describe('EnvironmentsSidebarPanelComponent', () => {
   });
 
   it('opens an environment tab when a profile row is clicked', async () => {
-    vi.useFakeTimers();
-    const row = [...fixture.nativeElement.querySelectorAll('.environments-sidebar-panel__row')].find(
-      (el: Element) => el.textContent?.includes('Local'),
+    const row = [...fixture.nativeElement.querySelectorAll('.tx-tree-row')].find((el: Element) =>
+      el.textContent?.includes('Local'),
     ) as HTMLElement | undefined;
     expect(row).toBeTruthy();
     row?.click();
-    await vi.advanceTimersByTimeAsync(250);
+    await fixture.whenStable();
+    fixture.detectChanges();
     expect(openResource).toHaveBeenCalledWith({
       resourceId: 'env-local',
       kind: 'environment',
     });
-    vi.useRealTimers();
   });
 
   it('clones an environment from the row context menu', () => {
-    const row = [...fixture.nativeElement.querySelectorAll('.environments-sidebar-panel__row')].find(
-      (el: Element) => el.textContent?.includes('Local'),
+    const row = [...fixture.nativeElement.querySelectorAll('.tx-tree-row')].find((el: Element) =>
+      el.textContent?.includes('Local'),
     ) as HTMLElement | undefined;
     row?.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, clientX: 10, clientY: 10 }));
     fixture.detectChanges();
@@ -123,7 +122,7 @@ describe('EnvironmentsSidebarPanelComponent', () => {
     fixture.detectChanges();
     vi.useRealTimers();
 
-    const labels = [...fixture.nativeElement.querySelectorAll('.environments-sidebar-panel__row-label')].map(
+    const labels = [...fixture.nativeElement.querySelectorAll('.tx-tree-row__label')].map(
       (el: Element) => el.textContent?.trim() ?? '',
     );
 
@@ -134,7 +133,7 @@ describe('EnvironmentsSidebarPanelComponent', () => {
     fixture.componentInstance['handleSortMenuSelect']('name');
     fixture.detectChanges();
 
-    const labels = [...fixture.nativeElement.querySelectorAll('.environments-sidebar-panel__row-label')].map(
+    const labels = [...fixture.nativeElement.querySelectorAll('.tx-tree-row__label')].map(
       (el: Element) => el.textContent?.trim() ?? '',
     );
 
@@ -145,7 +144,7 @@ describe('EnvironmentsSidebarPanelComponent', () => {
     fixture.componentInstance['handleFilterMenuSelect']('with-variables');
     fixture.detectChanges();
 
-    const labels = [...fixture.nativeElement.querySelectorAll('.environments-sidebar-panel__row-label')].map(
+    const labels = [...fixture.nativeElement.querySelectorAll('.tx-tree-row__label')].map(
       (el: Element) => el.textContent?.trim() ?? '',
     );
 

@@ -42,7 +42,7 @@ export async function waitForDevServerReady(origin: string, timeoutMs: number): 
       /* Dev server still starting or wrong process on the port */
     }
     await new Promise<void>((resolve) => {
-      setTimeout(resolve, 300);
+      setTimeout(resolve, 100);
     });
   }
 

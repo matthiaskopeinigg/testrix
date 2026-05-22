@@ -29,7 +29,7 @@
       (renameCancel)="handleRenameCancel(row)"
     />
   } @empty {
-    <p class="tx-tree__empty">No items</p>
+    <p class="tx-tree__empty" role="status">{{ emptyMessage() }}</p>
   }
   @if (showFolderExitSeam()) {
     <span

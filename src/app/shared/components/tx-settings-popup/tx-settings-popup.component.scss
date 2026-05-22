@@ -87,6 +87,12 @@
     transform: translateY(18px) scale(0.94);
   }
 
+  &:not(.tx-settings__popup--opening) {
+    transition:
+      opacity var(--tx-settings-popup-duration) var(--tx-ease-out-expo, cubic-bezier(0.16, 1, 0.3, 1)),
+      transform var(--tx-settings-popup-duration) var(--tx-ease-out-expo, cubic-bezier(0.16, 1, 0.3, 1));
+  }
+
   &.tx-settings__popup--opening {
     animation: tx-settings-popup-in var(--tx-settings-popup-duration) var(--tx-spring, cubic-bezier(0.34, 1.56, 0.64, 1)) both;
   }

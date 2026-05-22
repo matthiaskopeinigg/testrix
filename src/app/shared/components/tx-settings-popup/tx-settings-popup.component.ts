@@ -135,7 +135,6 @@ export interface SettingsSidebarSection {
   readonly items: readonly SettingsSidebarItem[];
 }
 
-const CLOSE_ANIMATION_MS = 300;
 const THEME_PERSIST_DEBOUNCE_MS = 280;
 
 @Component({
@@ -1144,7 +1143,13 @@ export class TxSettingsPopupComponent {
     this.cancelDialogSettleTimer();
     this.cancelCloseTimer();
 
-    const duration = this.uiPreferences.animationsEnabled() ? CLOSE_ANIMATION_MS : 0;
+    const duration = this.uiPreferences.animationsEnabled() ? this.popupCloseMs() : 0;
+    if (duration === 0) {
+      this.isVisible.set(false);
+      this.isClosing.set(false);
+      return;
+    }
+
     this.closeTimer = setTimeout(() => {
       this.closeTimer = null;
       this.isVisible.set(false);
@@ -1367,6 +1372,14 @@ export class TxSettingsPopupComponent {
       clearTimeout(this.closeTimer);
       this.closeTimer = null;
     }
+  }
+
+  /** Aligns unmount with `--tx-settings-popup-duration` (popup + backdrop close). */
+  private popupCloseMs(): number {
+    const root = typeof document !== 'undefined' ? document.documentElement : null;
+    const styles = root ? getComputedStyle(root) : null;
+    const motionScale = styles ? Number.parseFloat(styles.getPropertyValue('--tx-motion-scale')) || 1 : 1;
+    return Math.round(340 * motionScale);
   }
 
   private cancelOpenTimer(): void {

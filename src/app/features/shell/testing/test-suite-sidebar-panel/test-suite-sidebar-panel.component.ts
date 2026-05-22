@@ -130,6 +130,12 @@ export class TestSuiteSidebarPanelComponent {
     testingSidebarSelectionIds(this.workspaceEditor.activeTab()),
   );
 
+  protected readonly treeEmptyMessage = computed(() =>
+    this.searchQueryDebounced().trim()
+      ? 'No items match your search.'
+      : 'No flows yet. Add a folder or flow to get started.',
+  );
+
   constructor() {
     effect(() => {
       void this.configService.sessionRevision();

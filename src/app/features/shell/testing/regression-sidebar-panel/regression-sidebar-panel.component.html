@@ -44,29 +44,24 @@
     class="regression-sidebar-panel__body"
     (contextmenu)="handleTreeAreaContextMenu($event)"
   >
-    @if (filteredNodes().length === 0) {
-      <p class="regression-sidebar-panel__empty" role="status">
-        {{ emptyStateMessage() }}
-      </p>
-    } @else {
-      <tx-tree
-        #regressionTree
-        class="regression-sidebar-panel__tree"
-        [entranceStagger]="true"
-        [nodes]="filteredNodes()"
-        [config]="treeConfig()"
-        [expandedIds]="expandedIds()"
-        [selectionIds]="treeSelectionIds()"
-        [renamingNodeId]="renamingNodeId()"
-        (nodesChange)="handleNodesChange($event)"
-        (expandedChange)="handleExpandedChange($event)"
-        (nodeClick)="handleNodeClick($event)"
-        (nodeDblClick)="handleNodeDblClick($event)"
-        (renameCommit)="handleRenameCommit($event)"
-        (renameCancel)="handleRenameCancel()"
-        (rowContextMenu)="handleRowContextMenu($event)"
-      />
-    }
+    <tx-tree
+      #regressionTree
+      class="regression-sidebar-panel__tree"
+      [entranceStagger]="true"
+      [emptyMessage]="emptyStateMessage()"
+      [nodes]="filteredNodes()"
+      [config]="treeConfig()"
+      [expandedIds]="expandedIds()"
+      [selectionIds]="treeSelectionIds()"
+      [renamingNodeId]="renamingNodeId()"
+      (nodesChange)="handleNodesChange($event)"
+      (expandedChange)="handleExpandedChange($event)"
+      (nodeClick)="handleNodeClick($event)"
+      (nodeDblClick)="handleNodeDblClick($event)"
+      (renameCommit)="handleRenameCommit($event)"
+      (renameCancel)="handleRenameCancel()"
+      (rowContextMenu)="handleRowContextMenu($event)"
+    />
 
     @if (archivedCount() > 0) {
       <section class="regression-sidebar-panel__archive">

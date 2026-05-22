@@ -26,8 +26,8 @@ const extraArgs = process.argv.slice(2);
 let child = null;
 let restartTimer = null;
 
-/** Win32 needs a beat after SIGTERM so Chromium can release cache locks. */
-const RESTART_DEBOUNCE_MS = process.platform === 'win32' ? 750 : 150;
+/** Coalesce rapid rebuild signals only — restart runs as soon as the prior process exits. */
+const RESTART_DEBOUNCE_MS = 0;
 
 function startElectron() {
   child = spawn('npx', ['electron', '--enable-logging', '.', ...extraArgs], {

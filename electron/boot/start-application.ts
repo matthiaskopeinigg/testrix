@@ -171,7 +171,7 @@ export async function startApplication(getBootSplash?: () => BrowserWindow | nul
 
     const coordinator = new AppReadyCoordinator({
       showSplash: Boolean(splashWindow),
-      minSplashMs: 600,
+      minSplashMs: 0,
       bootTimeoutMs: usesAngularDevServer() ? 120_000 : 45_000,
       splashWindow,
       mainWindow,

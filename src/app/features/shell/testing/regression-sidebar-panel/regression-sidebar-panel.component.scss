@@ -1,3 +1,5 @@
+@use '../workspace/workspace-sidebar-tree' as sidebar-tree;
+
 :host {
   display: flex;
   flex: 1 1 auto;
@@ -14,22 +16,11 @@
 }
 
 .regression-sidebar-panel__body {
-  display: flex;
-  flex: 1 1 auto;
-  flex-direction: column;
-  min-height: 0;
+  @include sidebar-tree.workspace-sidebar-panel-body;
 }
 
 .regression-sidebar-panel__tree {
-  flex: 1 1 auto;
-  min-height: 0;
-  padding-top: 0.15rem;
-}
-
-.regression-sidebar-panel__empty {
-  margin: 0.75rem 0.85rem;
-  color: var(--tx-text-2);
-  font-size: 0.8125rem;
+  @include sidebar-tree.workspace-sidebar-tree-host;
 }
 
 .regression-sidebar-panel__archive {
@@ -74,7 +65,9 @@
 }
 
 .regression-sidebar-panel__archive-tree {
+  @include sidebar-tree.workspace-sidebar-tree-host;
   max-height: 40vh;
   min-height: 0;
   overflow: auto;
+  flex: 0 1 auto;
 }

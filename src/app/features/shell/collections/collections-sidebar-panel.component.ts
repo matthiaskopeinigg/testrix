@@ -161,6 +161,14 @@ export class CollectionsSidebarPanelComponent {
     collectionsSidebarSelectionIds(this.workspaceEditor.activeTab()),
   );
 
+  protected readonly hasFolders = computed(() => collectFolderIds(this.nodes()).length > 0);
+
+  protected readonly treeEmptyMessage = computed(() =>
+    this.searchQueryDebounced().trim()
+      ? 'No items match your search.'
+      : 'No collections yet. Right-click to create one.',
+  );
+
   constructor() {
     effect(() => {
       void this.configService.sessionRevision();

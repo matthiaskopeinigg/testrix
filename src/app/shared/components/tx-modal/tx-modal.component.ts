@@ -153,6 +153,12 @@ export class TxModalComponent {
     this.cancelCloseTimer();
 
     const duration = this.motionEnabled() ? this.cardTransitionMs() : 0;
+    if (duration === 0) {
+      this.isVisible.set(false);
+      this.isClosing = false;
+      return;
+    }
+
     this.closeTimer = setTimeout(() => {
       this.closeTimer = null;
       this.isVisible.set(false);

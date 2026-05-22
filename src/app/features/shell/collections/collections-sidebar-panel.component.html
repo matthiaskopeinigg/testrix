@@ -2,6 +2,7 @@
   class="collections-sidebar-panel"
   [searchPlaceholder]="searchPlaceholder()"
   [searchAriaLabel]="searchAriaLabel()"
+  [showFolderToggle]="hasFolders()"
   [allFoldersExpanded]="allExpanded()"
   (searchChange)="handleSearch($event)"
   (allFoldersExpandedChange)="handleExpandAll($event)"
@@ -14,6 +15,7 @@
       #collectionsTree
       class="collections-sidebar-panel__tree"
       [entranceStagger]="true"
+      [emptyMessage]="treeEmptyMessage()"
       [nodes]="filteredNodes()"
       [config]="treeConfig()"
       [expandedIds]="expandedIds()"

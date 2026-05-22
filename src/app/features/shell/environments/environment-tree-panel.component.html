@@ -31,25 +31,23 @@
   </div>
 
   <div class="environment-tree-panel__body" (contextmenu)="handleTreeAreaContextMenu($event)">
-    @if (displayNodes().length === 0) {
-      <p class="environment-tree-panel__empty">{{ emptyStateMessage() }}</p>
-    } @else {
-      <tx-tree
-        class="environment-tree-panel__tree"
-        [nodes]="displayNodes()"
-        [config]="treeConfig()"
-        [expandedIds]="expandedIds()"
-        [selectionIds]="treeSelectionIds()"
-        [renamingNodeId]="renamingNodeId()"
-        (nodesChange)="handleNodesChange($event)"
-        (expandedChange)="handleExpandedChange($event)"
-        (nodeClick)="handleNodeClick($event)"
-        (nodeDblClick)="handleNodeDblClick($event)"
-        (renameCommit)="handleRenameCommit($event)"
-        (renameCancel)="handleRenameCancel()"
-        (rowContextMenu)="handleRowContextMenu($event)"
-      />
-    }
+    <tx-tree
+      class="environment-tree-panel__tree"
+      [entranceStagger]="true"
+      [emptyMessage]="emptyStateMessage()"
+      [nodes]="displayNodes()"
+      [config]="treeConfig()"
+      [expandedIds]="expandedIds()"
+      [selectionIds]="treeSelectionIds()"
+      [renamingNodeId]="renamingNodeId()"
+      (nodesChange)="handleNodesChange($event)"
+      (expandedChange)="handleExpandedChange($event)"
+      (nodeClick)="handleNodeClick($event)"
+      (nodeDblClick)="handleNodeDblClick($event)"
+      (renameCommit)="handleRenameCommit($event)"
+      (renameCancel)="handleRenameCancel()"
+      (rowContextMenu)="handleRowContextMenu($event)"
+    />
   </div>
 </app-workspace-sidebar-panel-shell>
 

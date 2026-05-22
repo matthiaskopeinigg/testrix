@@ -33,29 +33,24 @@
     class="load-test-sidebar-panel__body"
     (contextmenu)="handleTreeAreaContextMenu($event)"
   >
-    @if (filteredNodes().length === 0) {
-      <p class="load-test-sidebar-panel__empty" role="status">
-        No load tests match your search.
-      </p>
-    } @else {
-      <tx-tree
-        #loadTestTree
-        class="load-test-sidebar-panel__tree"
-        [entranceStagger]="true"
-        [nodes]="filteredNodes()"
-        [config]="treeConfig()"
-        [expandedIds]="expandedIds()"
-        [selectionIds]="treeSelectionIds()"
-        [renamingNodeId]="renamingNodeId()"
-        (nodesChange)="handleNodesChange($event)"
-        (expandedChange)="handleExpandedChange($event)"
-        (nodeClick)="handleNodeClick($event)"
-        (nodeDblClick)="handleNodeDblClick($event)"
-        (renameCommit)="handleRenameCommit($event)"
-        (renameCancel)="handleRenameCancel()"
-        (rowContextMenu)="handleRowContextMenu($event)"
-      />
-    }
+    <tx-tree
+      #loadTestTree
+      class="load-test-sidebar-panel__tree"
+      [entranceStagger]="true"
+      [emptyMessage]="treeEmptyMessage()"
+      [nodes]="filteredNodes()"
+      [config]="treeConfig()"
+      [expandedIds]="expandedIds()"
+      [selectionIds]="treeSelectionIds()"
+      [renamingNodeId]="renamingNodeId()"
+      (nodesChange)="handleNodesChange($event)"
+      (expandedChange)="handleExpandedChange($event)"
+      (nodeClick)="handleNodeClick($event)"
+      (nodeDblClick)="handleNodeDblClick($event)"
+      (renameCommit)="handleRenameCommit($event)"
+      (renameCancel)="handleRenameCancel()"
+      (rowContextMenu)="handleRowContextMenu($event)"
+    />
   </div>
 </app-workspace-sidebar-panel-shell>
 
