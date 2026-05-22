@@ -109,6 +109,7 @@ export * from './components/tx-split-pane/tx-split-pane.component';
 export type { TxSplitPaneLeafContext } from './components/tx-split-pane/tx-split-pane.component';
 
 export * from './components/tx-vertical-split-pane/tx-vertical-split-pane.component';
+export * from './components/tx-horizontal-split-pane/tx-horizontal-split-pane.component';
 
 export * from './components/tx-response-status-strip/tx-response-status-strip.component';
 

@@ -1,0 +1,245 @@
+@if (parsed(); as tab) {
+  @if (tab.kind === 'folder') {
+    @if (folder(); as fld) {
+      <app-testing-workspace-tab-shell
+        [title]="title()"
+        [resourceId]="resourceId()"
+        [description]="''"
+      >
+        <section class="ts-folder-tab-meta">
+          <tx-form-field label="Description" controlId="ts-folder-description">
+            <tx-textarea
+              controlId="ts-folder-description"
+              [ngModel]="fld.description"
+              (ngModelChange)="handleFolderDescriptionChange($event)"
+              [rows]="3"
+              placeholder="Describe this folder…"
+            />
+          </tx-form-field>
+          <tx-form-field label="Tags" controlId="ts-folder-tags">
+            <tx-tags-input
+              controlId="ts-folder-tags"
+              placeholder="Add tag"
+              [maxTags]="5"
+              [ngModel]="fld.tags"
+              (ngModelChange)="handleFolderTagsChange($event)"
+            />
+          </tx-form-field>
+        </section>
+        <app-test-suite-folder-tab
+          [children]="folderChildren()"
+          (openItem)="handleOpenFolderCard($event)"
+        />
+      </app-testing-workspace-tab-shell>
+    }
+  } @else if (flowMissing()) {
+    <tx-banner variant="warning" title="Flow not found">
+      This tab points to a flow that no longer exists. Close the tab or pick another from the sidebar.
+    </tx-banner>
+  } @else if (flow(); as f) {
+    <section
+      class="ts-flow-tab tx-workspace-tab tx-entrance-stagger"
+      role="region"
+      [class.tx-entrance-stagger--play]="tabMotion.loadStaggerPlay()"
+      [class.tx-entrance-stagger--settled]="tabMotion.loadStaggerSettled()"
+      [attr.aria-label]="title()"
+    >
+      <div class="tx-entrance-stagger__block ts-flow-tab__toolbar-chrome tx-workspace-tab__chrome ts-flow-tab__toolbar">
+        <div class="ts-flow-tab__bar-row ts-flow-tab__bar-row--primary">
+          <div class="ts-flow-tab__bar-group ts-flow-tab__bar-group--identity">
+            <div class="ts-flow-tab__badge" aria-hidden="true">
+              <tx-icon name="play" [size]="14" aria-hidden="true" />
+              <span>Flow</span>
+            </div>
+            <tx-form-field class="ts-flow-tab__name-field" label="Name" controlId="ts-flow-name">
+              <tx-input
+                controlId="ts-flow-name"
+                placeholder="Untitled flow"
+                [ngModel]="f.name"
+                (ngModelChange)="handleFlowNameChange($event)"
+              />
+            </tx-form-field>
+            <tx-form-field
+              class="ts-flow-tab__description-field"
+              label="Description"
+              controlId="ts-flow-description"
+            >
+              <tx-input
+                controlId="ts-flow-description"
+                placeholder="Description…"
+                [ngModel]="f.description"
+                (ngModelChange)="handleFlowDescriptionChange($event)"
+              />
+            </tx-form-field>
+          </div>
+          <div class="ts-flow-tab__bar-group ts-flow-tab__bar-group--actions">
+            @if (running()) {
+              <div class="ts-flow-tab__status" aria-label="Flow run in progress">
+                <tx-tag class="ts-flow-status-tag--running" variant="info" casing="normal">Running</tx-tag>
+              </div>
+            } @else if (f.lastRunAt || runSummary()) {
+              <div class="ts-flow-tab__status" aria-label="Last run">
+                @if (f.lastRunAt) {
+                  <tx-tag [variant]="flowStatusVariant()" casing="normal">
+                    {{ flowStatusLabel() }}
+                  </tx-tag>
+                }
+                @if (runSummary(); as summary) {
+                  <div class="ts-flow-tab__metrics">
+                    @if (summary.durationLabel) {
+                      <span class="ts-flow-tab__metrics-time">{{ summary.durationLabel }}</span>
+                    }
+                    @if (summary.passedCount > 0) {
+                      <span class="ts-flow-tab__metrics-pass">{{ summary.passedCount }} passed</span>
+                    }
+                    @if (summary.failedCount > 0) {
+                      <span class="ts-flow-tab__metrics-fail">{{ summary.failedCount }} failed</span>
+                    }
+                    @if (summary.skippedCount > 0) {
+                      <span class="ts-flow-tab__metrics-skip">{{ summary.skippedCount }} skipped</span>
+                    }
+                  </div>
+                }
+              </div>
+            }
+            <tx-form-field class="ts-flow-tab__env-field" label="Environment" controlId="ts-flow-env">
+              <tx-dropdown
+                controlId="ts-flow-env"
+                placeholder="No environment"
+                ariaLabel="Flow environment"
+                [options]="environmentOptions()"
+                [ngModel]="f.environmentId ?? ''"
+                (ngModelChange)="handleFlowEnvironmentChange($event)"
+              />
+            </tx-form-field>
+            @if (running()) {
+              <tx-button variant="secondary" (pressed)="handleRun()">Cancel</tx-button>
+            }
+            <tx-button
+              [variant]="runButtonVariant()"
+              [loading]="running()"
+              loadingLabel="Running"
+              [disabled]="!running() && !canRun()"
+              [title]="runBlockReason() ?? 'Run all enabled steps in order'"
+              (pressed)="handleRun()"
+            >
+              {{ runLabel() }}
+            </tx-button>
+          </div>
+        </div>
+      </div>
+
+      <div class="tx-entrance-stagger__block ts-flow-tab__toolbar-chrome tx-workspace-tab__chrome ts-flow-tab__toolbar">
+        <div class="ts-flow-tab__bar-row ts-flow-tab__bar-row--options">
+          <app-ts-flow-settings-panel
+            [flow]="f"
+            [hasE2eSteps]="flowHasE2eSteps()"
+            (criticalChange)="handleFlowCriticalChange($event)"
+            (tagsChange)="handleFlowTagsChange($event)"
+            (e2eShowWindowChange)="handleFlowE2eShowWindowChange($event)"
+            (e2eKeepWindowOpenChange)="handleFlowE2eKeepWindowOpenChange($event)"
+          />
+        </div>
+      </div>
+
+      @if (running() && runProgress(); as progress) {
+        <div
+          class="ts-flow-tab__progress"
+          role="progressbar"
+          [attr.aria-valuenow]="progress.completed"
+          [attr.aria-valuemin]="0"
+          [attr.aria-valuemax]="progress.total"
+          [attr.aria-label]="'Flow run progress ' + progress.completed + ' of ' + progress.total"
+        >
+          <span class="ts-flow-tab__progress-fill" [style.width.%]="progress.percent"></span>
+        </div>
+      }
+
+      <div class="tx-entrance-stagger__block ts-flow-tab__workspace tx-workspace-tab__section-shell">
+        <tx-vertical-split-pane
+          class="ts-flow-tab__split"
+          revealLabel="Run log"
+          [secondaryVisible]="showResultsPanel()"
+          [secondaryHidden]="resultsPanelHidden()"
+          [secondaryHeight]="resultsPanelHeight()"
+          (secondaryHeightChange)="handleResultsPanelHeight($event)"
+          (secondaryHeightCommit)="handleResultsPanelHeightCommit($event)"
+          (secondaryHiddenChange)="handleResultsPanelHidden($event)"
+        >
+          <tx-horizontal-split-pane
+            class="ts-flow-tab__h-split"
+            txSplitPrimary
+            [secondaryWidth]="stepsPanelWidth()"
+            (secondaryWidthChange)="handleStepsPanelWidth($event)"
+            (secondaryWidthCommit)="handleStepsPanelWidthCommit($event)"
+          >
+            <aside
+              class="ts-flow-tab__steps ts-flow-tab__stagger-panel"
+              txSplitSecondary
+              (contextmenu)="handleTreeAreaContextMenu($event)"
+            >
+              <app-ts-flow-step-tree
+                [nodes]="f.nodes"
+                [liveStepStatuses]="liveStepStatuses()"
+                [selectedStepId]="selectedStepId()"
+                (selectedStepIdChange)="handleTreeStepSelected($event)"
+                (nodesChange)="handleFlowNodesChange($event)"
+                (rowContextMenu)="handleRowContextMenu($event)"
+              />
+            </aside>
+            <main class="ts-flow-tab__editor ts-flow-tab__stagger-panel" txSplitPrimary>
+              <app-ts-flow-step-editor
+                [step]="selectedStep()"
+                [flow]="f"
+                [suiteItems]="suiteItems()"
+                [lastRunMessage]="lastRunMessage()"
+                [liveStepError]="selectedStepLiveError()"
+                [failureAlertDismissed]="stepFailureDismissed()"
+                (stepChange)="handleStepChange($event)"
+                (removeStep)="handleRemoveStep()"
+                (failureDismissed)="handleFailureDismissed()"
+                (failureReopened)="handleFailureReopened()"
+              />
+            </main>
+          </tx-horizontal-split-pane>
+
+          <div class="ts-flow-tab__run-slot ts-flow-tab__stagger-panel" txSplitSecondary>
+            <app-ts-flow-run-panel
+              [flow]="f"
+              [running]="running()"
+              [liveStepStatuses]="liveStepStatuses()"
+              [liveStepErrors]="liveStepErrors()"
+              [lastRunMessage]="lastRunMessage()"
+              [selectedStepId]="selectedStepId()"
+              (stepSelect)="handleRunPanelStepSelect($event)"
+            />
+          </div>
+        </tx-vertical-split-pane>
+      </div>
+    </section>
+
+    <app-ts-add-flow-step-modal
+      [open]="addStepModalOpen()"
+      (select)="handleAddStepType($event)"
+      (closed)="handleAddStepModalClosed()"
+    />
+
+    <tx-context-menu
+      [open]="contextMenuOpen()"
+      [position]="contextMenuPosition()"
+      [items]="contextMenuItems()"
+      (itemSelect)="handleContextMenuSelect($event)"
+      (closed)="handleContextMenuClosed()"
+    />
+
+    <tx-confirm-dialog
+      [open]="deleteOpen()"
+      title="Delete item"
+      [message]="deleteMessage()"
+      confirmLabel="Delete"
+      variant="danger"
+      (confirmed)="handleDeleteConfirmed()"
+      (closed)="handleDeleteClosed()"
+    />
+  }
+}

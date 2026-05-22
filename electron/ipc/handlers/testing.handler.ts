@@ -15,13 +15,12 @@ import { TestingChannels } from '../channels/testing.channels';
 import { wrapInvokeHandler } from '../wrap-ipc-handler';
 import type { IpcMainBinder } from '../register-ipc';
 
-const runtime = new TestingRuntimeService();
-
 export interface TestingHandlerDeps {
   readonly files: ConfigFileService;
 }
 
 export function registerTestingHandlers(ipc: IpcMainBinder, deps: TestingHandlerDeps): void {
+  const runtime = new TestingRuntimeService(deps.files);
   ipc.handle(
     TestingChannels.getTestSuites,
     wrapInvokeHandler(TestingChannels.getTestSuites, async () => deps.files.readTestSuites()),
@@ -140,7 +139,7 @@ export function registerTestingHandlers(ipc: IpcMainBinder, deps: TestingHandler
   ipc.handle(
     TestingChannels.loadTestStart,
     wrapInvokeHandler(TestingChannels.loadTestStart, async (_e, options: unknown) =>
-      runtime.loadTestStart(options),
+      await runtime.loadTestStart(options),
     ),
   );
   ipc.handle(
@@ -149,11 +148,11 @@ export function registerTestingHandlers(ipc: IpcMainBinder, deps: TestingHandler
   );
   ipc.handle(
     TestingChannels.e2eExecuteFlow,
-    wrapInvokeHandler(TestingChannels.e2eExecuteFlow, async (_e, flowId: unknown) => {
+    wrapInvokeHandler(TestingChannels.e2eExecuteFlow, async (event, flowId: unknown) => {
       if (typeof flowId !== 'string') {
         return { ok: false, message: 'Invalid flow id.' };
       }
-      return runtime.e2eExecuteFlow(flowId);
+      return runtime.e2eExecuteFlow(flowId, event.sender);
     }),
   );
   ipc.handle(
@@ -162,5 +161,19 @@ export function registerTestingHandlers(ipc: IpcMainBinder, deps: TestingHandler
       runtime.e2eCancel();
       return undefined;
     }),
+  );
+  ipc.handle(
+    TestingChannels.regressionStatus,
+    wrapInvokeHandler(TestingChannels.regressionStatus, async () => runtime.regressionStatus()),
+  );
+  ipc.handle(
+    TestingChannels.regressionStart,
+    wrapInvokeHandler(TestingChannels.regressionStart, async (event, options: unknown) =>
+      runtime.regressionStart(options, event.sender),
+    ),
+  );
+  ipc.handle(
+    TestingChannels.regressionCancel,
+    wrapInvokeHandler(TestingChannels.regressionCancel, async () => runtime.regressionCancel()),
   );
 }

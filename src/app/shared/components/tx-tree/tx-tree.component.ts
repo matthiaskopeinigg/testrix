@@ -1,4 +1,3 @@
-import { NgTemplateOutlet } from '@angular/common';
 import {
   afterNextRender,
   ChangeDetectionStrategy,
@@ -53,7 +52,7 @@ const TX_TREE_ENTRANCE_STAGGER_MAX_ROWS = 40;
 @Component({
   selector: 'tx-tree',
   standalone: true,
-  imports: [NgTemplateOutlet, TxTreeRowComponent],
+  imports: [TxTreeRowComponent],
   templateUrl: './tx-tree.component.html',
   styleUrl: './tx-tree.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

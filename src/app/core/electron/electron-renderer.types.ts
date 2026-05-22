@@ -23,6 +23,9 @@ import type {
   LoadTestStartOptions,
   LoadTestsFile,
   MockServerFile,
+  RegressionRun,
+  RegressionRunMetrics,
+  RegressionStartOptions,
   RegressionsFile,
   TestSuitesFile,
 } from '@shared/testing';
@@ -171,8 +174,32 @@ export interface ElectronRendererBridge {
     loadTestMetrics: () => Promise<LoadTestRunMetrics>;
     loadTestStart: (options?: LoadTestStartOptions) => Promise<LoadTestRunMetrics>;
     loadTestCancel: () => Promise<LoadTestRunMetrics>;
-    e2eExecuteFlow: (flowId: string) => Promise<{ readonly ok: boolean; readonly message: string }>;
+    regressionStatus: () => Promise<RegressionRunMetrics>;
+    regressionStart: (
+      options?: RegressionStartOptions,
+    ) => Promise<{ readonly metrics: RegressionRunMetrics; readonly run: RegressionRun }>;
+    regressionCancel: () => Promise<RegressionRunMetrics>;
+    onRegressionMetrics: (listener: (metrics: RegressionRunMetrics) => void) => () => void;
+    onRegressionRunProgress: (listener: (event: unknown) => void) => () => void;
+    e2eExecuteFlow: (flowId: string) => Promise<{
+      readonly ok: boolean;
+      readonly message: string;
+      readonly stepStatuses?: Readonly<Record<string, import('@shared/testing').TestSuiteStepStatus>>;
+      readonly stepCaptures?: Readonly<Record<string, import('@shared/testing').FlowStepRunCapture>>;
+      readonly stepDurations?: Readonly<Record<string, number>>;
+      readonly stepErrors?: Readonly<Record<string, string>>;
+      readonly durationMs?: number;
+    }>;
     e2eCancel: () => Promise<void>;
+    onFlowRunProgress: (
+      listener: (event: import('@shared/testing').FlowRunProgressEvent) => void,
+    ) => () => void;
+    e2eExecute: (payload: import('@shared/testing').E2eExecutePayload) => Promise<import('@shared/testing').E2eExecuteResult>;
+    e2eSignalCancel: () => void;
+    clearE2eRunnerSession: () => Promise<{ readonly ok: boolean }>;
+    e2ePickElement: (
+      payload: import('@shared/testing').E2ePickElementPayload,
+    ) => Promise<import('@shared/testing').E2ePickElementResult>;
   };
 }
 

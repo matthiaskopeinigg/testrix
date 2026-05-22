@@ -1,0 +1,44 @@
+:host {
+  display: block;
+  width: 100%;
+  min-width: 0;
+}
+
+.ts-flow-settings {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.5rem;
+  width: 100%;
+  min-width: 0;
+}
+
+.ts-flow-settings__tags {
+  flex: 0 1 7rem;
+  min-width: 0;
+  max-width: 9rem;
+  position: relative;
+}
+
+.ts-flow-settings__toggles {
+  display: flex;
+  flex: 1 1 auto;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.55rem;
+  min-width: 0;
+}
+
+.ts-flow-settings__toggle {
+  flex-shrink: 0;
+
+  ::ng-deep .tx-toggle {
+    gap: 0.4rem;
+  }
+
+  ::ng-deep .tx-toggle__label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+}

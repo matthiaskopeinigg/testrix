@@ -128,7 +128,6 @@ export class LoadTestService {
         docs: '',
         profile: { durationSec: 60, virtualUsers: 10, rampUpSec: 0 },
         thresholds: {},
-        scenarios: [],
         runs: [],
         updatedAt: ts,
       };
@@ -200,10 +199,6 @@ export class LoadTestService {
       targetRequestId: existing.targetRequestId,
       profile: existing.profile,
       thresholds: existing.thresholds,
-      scenarios: existing.scenarios.map((scenario) => ({
-        ...scenario,
-        id: newTestingId(),
-      })),
       runs: [],
     });
     return this.findArtifact(result.nodeId);

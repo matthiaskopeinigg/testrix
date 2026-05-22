@@ -153,8 +153,34 @@ export interface ElectronAPI {
     loadTestMetrics: () => Promise<LoadTestRunMetrics>;
     loadTestStart: (options?: LoadTestStartOptions) => Promise<LoadTestRunMetrics>;
     loadTestCancel: () => Promise<LoadTestRunMetrics>;
-    e2eExecuteFlow: (flowId: string) => Promise<{ readonly ok: boolean; readonly message: string }>;
+    regressionStatus: () => Promise<import('@shared/testing').RegressionRunMetrics>;
+    regressionStart: (
+      options?: import('@shared/testing').RegressionStartOptions,
+    ) => Promise<{ readonly metrics: import('@shared/testing').RegressionRunMetrics; readonly run: import('@shared/testing').RegressionRun }>;
+    regressionCancel: () => Promise<import('@shared/testing').RegressionRunMetrics>;
+    onRegressionMetrics: (
+      listener: (metrics: import('@shared/testing').RegressionRunMetrics) => void,
+    ) => () => void;
+    onRegressionRunProgress: (listener: (event: unknown) => void) => () => void;
+    e2eExecuteFlow: (flowId: string) => Promise<{
+      readonly ok: boolean;
+      readonly message: string;
+      readonly stepStatuses: Readonly<Record<string, string>>;
+      readonly stepCaptures?: Readonly<Record<string, import('@shared/testing').FlowStepRunCapture>>;
+      readonly stepDurations?: Readonly<Record<string, number>>;
+      readonly stepErrors?: Readonly<Record<string, string>>;
+      readonly durationMs?: number;
+    }>;
     e2eCancel: () => Promise<void>;
+    onFlowRunProgress: (
+      listener: (event: import('@shared/testing').FlowRunProgressEvent) => void,
+    ) => () => void;
+    e2eExecute: (payload: import('@shared/testing').E2eExecutePayload) => Promise<import('@shared/testing').E2eExecuteResult>;
+    e2eSignalCancel: () => void;
+    clearE2eRunnerSession: () => Promise<{ readonly ok: boolean }>;
+    e2ePickElement: (
+      payload: import('@shared/testing').E2ePickElementPayload,
+    ) => Promise<import('@shared/testing').E2ePickElementResult>;
   };
 }
 

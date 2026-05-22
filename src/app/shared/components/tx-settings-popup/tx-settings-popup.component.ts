@@ -87,6 +87,7 @@ export type SettingsPopupSection =
   | 'editorKeyboard'
   | 'collections'
   | 'environments'
+  | 'testSuite'
   | 'general'
   | 'logging'
   | 'dataConfig'
@@ -321,6 +322,7 @@ export class TxSettingsPopupComponent {
         { id: 'editorKeyboard', label: 'Keyboard', icon: 'code' },
         { id: 'collections', label: 'Collections', icon: 'folder' },
         { id: 'environments', label: 'Environments', icon: 'globe' },
+        { id: 'testSuite', label: 'Test Suite', icon: 'testing' },
         { id: 'general', label: 'General', icon: 'folder' },
       ],
     },
@@ -655,6 +657,25 @@ export class TxSettingsPopupComponent {
     value: SettingsFile['environments']['siblingSort'],
   ): Promise<void> {
     await this.patch({ environments: { siblingSort: value } });
+  }
+
+  protected async patchTestSuiteToggle(
+    key:
+      | 'expandFolderOnDrag'
+      | 'animateMove'
+      | 'animateExpand'
+      | 'foldersFirst'
+      | 'showDescriptions'
+      | 'showTags',
+    value: boolean,
+  ): Promise<void> {
+    await this.patch({ testSuite: { [key]: value } });
+  }
+
+  protected async patchTestSuiteSiblingSort(
+    value: SettingsFile['testSuite']['siblingSort'],
+  ): Promise<void> {
+    await this.patch({ testSuite: { siblingSort: value } });
   }
 
   protected async patchHttpRequest(patch: Partial<SettingsFile['http']['request']>): Promise<void> {
@@ -1328,6 +1349,10 @@ export class TxSettingsPopupComponent {
 
     if (patch.environments != null) {
       return 'Environments settings saved';
+    }
+
+    if (patch.testSuite != null) {
+      return 'Test Suite settings saved';
     }
 
     if (patch.dataConfig != null) {

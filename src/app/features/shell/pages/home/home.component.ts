@@ -25,6 +25,7 @@ import {
   workspaceSidebarFooterItems,
 } from '@app/features/shell/workspace/workspace-sidebar.constants';
 import { WorkspaceEditorService } from '@app/core/workspace/workspace-editor.service';
+import { WorkspaceSidebarSessionService } from '@app/core/workspace/workspace-sidebar-session.service';
 import { WorkspaceEditorComponent } from '@app/features/shell/workspace/workspace-editor/workspace-editor.component';
 import { workspaceSidebarPanelSearch } from '@app/features/shell/workspace/workspace-sidebar-panel-search';
 import { TxSpinnerComponent } from '@app/shared/components/tx-spinner/tx-spinner.component';
@@ -69,11 +70,16 @@ export class HomeComponent {
   private readonly uiPreferences = inject(UiPreferencesService);
   private readonly electron = inject(ElectronService);
   private readonly route = inject(ActivatedRoute);
+  private readonly sidebarSession = inject(WorkspaceSidebarSessionService);
 
   protected readonly modalOpen = signal(false);
   protected readonly toast = signal<WelcomeToast | null>(null);
-  protected readonly activeSidebarId = signal<string | undefined>(undefined);
-  protected readonly sidebarPanelOpen = signal(false);
+
+  protected readonly activeSidebarId = computed(
+    () => this.sidebarSession.activeSidebarPanelId() ?? undefined,
+  );
+
+  protected readonly sidebarPanelOpen = this.sidebarSession.sidebarPanelOpen;
 
   protected readonly sidebarMainItems = WORKSPACE_SIDEBAR_MAIN_ITEMS;
 
@@ -99,6 +105,7 @@ export class HomeComponent {
 
   constructor() {
     afterNextRender(() => {
+      this.sanitizeSidebarSessionForRuntime();
       this.applyDebugPanelFromRoute();
     });
 
@@ -142,13 +149,29 @@ export class HomeComponent {
     };
   }
 
+  protected handleActiveSidebarIdChange(id: string | undefined): void {
+    this.sidebarSession.setActiveSidebarPanelId(id ?? null);
+  }
+
+  protected handleSidebarPanelOpenChange(open: boolean): void {
+    this.sidebarSession.setSidebarPanelOpen(open);
+  }
+
   private applyDebugPanelFromRoute(): void {
     const panel = this.route.snapshot.queryParamMap.get('panel');
     if (panel !== 'debug' || !this.showDevToolkit()) {
       return;
     }
-    this.activeSidebarId.set('debug');
-    this.sidebarPanelOpen.set(true);
+    this.sidebarSession.setActiveSidebarPanelId('debug');
+    this.sidebarSession.setSidebarPanelOpen(true);
+  }
+
+  private sanitizeSidebarSessionForRuntime(): void {
+    if (this.sidebarSession.activeSidebarPanelId() !== 'debug' || this.showDevToolkit()) {
+      return;
+    }
+    this.sidebarSession.setActiveSidebarPanelId(null);
+    this.sidebarSession.setSidebarPanelOpen(false);
   }
 
   protected readonly appVersion = computed(() => {
@@ -184,8 +207,8 @@ export class HomeComponent {
       this.showToast('Run `npm run dev` to enable the design system debug panel.', 'error');
       return;
     }
-    this.activeSidebarId.set('debug');
-    this.sidebarPanelOpen.set(true);
+    this.sidebarSession.setActiveSidebarPanelId('debug');
+    this.sidebarSession.setSidebarPanelOpen(true);
   }
 
   protected async handleRefreshConfig(): Promise<void> {

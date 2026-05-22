@@ -13,6 +13,7 @@ import {
 
 import { ConfigService } from '@app/core/config/config.service';
 import { LoadTestService } from '@app/core/testing/load-test.service';
+import { TestingSessionService } from '@app/core/testing/testing-session.service';
 import { WorkspaceEditorService } from '@app/core/workspace/workspace-editor.service';
 import {
   buildEmptyLoadTestContextMenu,
@@ -69,6 +70,7 @@ const SEARCH_DEBOUNCE_MS = 100;
 })
 export class LoadTestSidebarPanelComponent {
   private readonly configService = inject(ConfigService);
+  private readonly testingSession = inject(TestingSessionService);
   private readonly loadTest = inject(LoadTestService);
   private readonly workspaceEditor = inject(WorkspaceEditorService);
   private readonly cdr = inject(ChangeDetectorRef);
@@ -450,6 +452,7 @@ export class LoadTestSidebarPanelComponent {
     void this.configService.patchSession({
       workspace: {
         testing: {
+          ...this.testingSession.navigationFields(),
           loadTest: {
             ...currentLoadTest,
             expandedIds: pruned,

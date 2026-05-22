@@ -56,7 +56,7 @@ import { TxToggleComponent } from '@app/shared/components/tx-toggle/tx-toggle.co
 
       <h2 class="request-panel__title">Custom profile</h2>
       <p class="request-panel__hint">
-        Default load profile applied when no scenario overrides are set.
+        Virtual users, duration, and ramp-up used when the load test runs.
       </p>
 
       <tx-form-field label="Virtual users" controlId="lt-virtual-users">

@@ -16,19 +16,20 @@ import {
   type LoadTestTabSectionId,
   type WorkspaceEditorLayoutId,
 } from '@shared/config';
-import type { LoadTestProfile, LoadTestRunRecord, LoadTestScenario, LoadTestThresholds } from '@shared/testing';
+import type { LoadTestProfile, LoadTestRunRecord, LoadTestThresholds } from '@shared/testing';
 import {
-  LoadTestRunSimulator,
   createIdleLoadTestRunMetrics,
   createLoadTestRunRecord,
   createStartingLoadTestRunMetrics,
-  loadTestScenarioSchema,
   type LoadTestRunMetrics,
+  type LoadTestStartOptions,
 } from '@shared/testing';
 
 import { CollectionsService } from '@app/core/collections/collections.service';
 import { ConfigService } from '@app/core/config/config.service';
+import { TestingSessionService } from '@app/core/testing/testing-session.service';
 import { ElectronService } from '@app/core/electron/electron.service';
+import { ErrorNotificationService } from '@app/core/errors/error-notification.service';
 import { LoadTestService } from '@app/core/testing/load-test.service';
 import { newTestingId } from '@app/core/testing/testing-id';
 import { freezeWhileTabInactive } from '@app/core/ui/workspace-tab-active.util';
@@ -47,7 +48,6 @@ import { LtTabDocsPanelComponent } from './lt-tab-docs-panel.component';
 import { LtTabOverviewPanelComponent } from './lt-tab-overview-panel.component';
 import { LtTabProfilePanelComponent } from './lt-tab-profile-panel.component';
 import { LtTabResultsPanelComponent, type LtRunState } from './lt-tab-results-panel.component';
-import { LtTabScenariosPanelComponent } from './lt-tab-scenarios-panel.component';
 import { LtTabTargetPanelComponent } from './lt-tab-target-panel.component';
 import { LtTabThresholdsPanelComponent } from './lt-tab-thresholds-panel.component';
 
@@ -62,7 +62,6 @@ const NAV_ITEMS: readonly LtTabNavItem[] = [
   { id: 'target', label: 'Target', icon: 'http' },
   { id: 'profile', label: 'Profile', icon: 'sliders' },
   { id: 'thresholds', label: 'Thresholds', icon: 'checkCircle' },
-  { id: 'scenarios', label: 'Scenarios', icon: 'layers' },
   { id: 'docs', label: 'Docs', icon: 'file-text' },
 ];
 
@@ -85,7 +84,6 @@ const METRICS_POLL_MS = 500;
     LtTabTargetPanelComponent,
     LtTabProfilePanelComponent,
     LtTabThresholdsPanelComponent,
-    LtTabScenariosPanelComponent,
     LtTabDocsPanelComponent,
     LtTabResultsPanelComponent,
   ],
@@ -96,8 +94,10 @@ const METRICS_POLL_MS = 500;
 export class LoadTestWorkspaceTabComponent {
   private readonly collectionsService = inject(CollectionsService);
   private readonly configService = inject(ConfigService);
+  private readonly testingSession = inject(TestingSessionService);
   private readonly loadTest = inject(LoadTestService);
   private readonly electron = inject(ElectronService);
+  private readonly notifier = inject(ErrorNotificationService);
   private readonly workspaceEditor = inject(WorkspaceEditorService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly uiPreferences = inject(UiPreferencesService);
@@ -123,7 +123,6 @@ export class LoadTestWorkspaceTabComponent {
   protected readonly compareSelection = signal<{ readonly a: string; readonly b: string } | null>(null);
   protected readonly resultsView = signal<'live' | 'history' | 'compare'>('live');
 
-  private readonly browserSimulator = new LoadTestRunSimulator();
   private metricsPollTimer: ReturnType<typeof setInterval> | null = null;
   private activeRunId: string | null = null;
   private runStartedAt: string | null = null;
@@ -186,6 +185,23 @@ export class LoadTestWorkspaceTabComponent {
   protected readonly runButtonVariant = computed((): 'primary' | 'secondary' =>
     this.running() ? 'secondary' : 'primary',
   );
+
+  protected readonly canStartLoadTest = computed(
+    () => Boolean(this.artifact()?.targetRequestId) && Boolean(this.electron.bridge()?.testing),
+  );
+
+  protected readonly runButtonTitle = computed(() => {
+    if (this.running()) {
+      return 'Cancel load test';
+    }
+    if (!this.electron.bridge()?.testing) {
+      return 'Load tests require the Electron desktop app';
+    }
+    if (!this.artifact()?.targetRequestId) {
+      return 'Select a target request before starting';
+    }
+    return 'Start load test';
+  });
 
   constructor() {
     effect(() => {
@@ -366,26 +382,8 @@ export class LoadTestWorkspaceTabComponent {
     this.scheduleTabUiPersist();
   }
 
-  protected handleScenariosChange(scenarios: readonly LoadTestScenario[]): void {
-    this.scheduleArtifactPatch({ scenarios: [...scenarios] });
-  }
-
   protected handleDocsChange(docs: string): void {
     this.scheduleArtifactPatch({ docs });
-  }
-
-  protected handleAddScenario(): void {
-    const scenarios = this.artifact()?.scenarios ?? [];
-    const next = loadTestScenarioSchema.parse({
-      id: newTestingId(),
-      name: `Scenario ${scenarios.length + 1}`,
-    });
-    this.scheduleArtifactPatch({ scenarios: [...scenarios, next] });
-  }
-
-  protected handleRemoveScenario(id: string): void {
-    const scenarios = this.artifact()?.scenarios ?? [];
-    this.scheduleArtifactPatch({ scenarios: scenarios.filter((scenario) => scenario.id !== id) });
   }
 
   protected handleOpenTargetRequest(): void {
@@ -409,33 +407,50 @@ export class LoadTestWorkspaceTabComponent {
       return;
     }
 
-    const profile = this.artifact()?.profile;
+    const artifact = this.artifact();
+    const profile = artifact?.profile;
     if (!profile) {
       return;
     }
 
     const api = this.electron.bridge()?.testing;
+    if (!api) {
+      this.notifier.reportUnknown(
+        new Error('Load tests require the Electron desktop app with HTTP execution enabled.'),
+      );
+      return;
+    }
+
     this.runActionPending.set(true);
 
     if (this.running()) {
       this.runCancelled = true;
-      if (api) {
-        void api
-          .loadTestCancel()
-          .then((snapshot) => {
-            this.applyMetricsSnapshot(snapshot);
-            this.finalizeRun(snapshot);
-          })
-          .finally(() => this.runActionPending.set(false));
-      } else {
-        const snapshot = this.browserSimulator.cancel();
-        this.applyMetricsSnapshot(snapshot);
-        this.finalizeRun(snapshot);
-        this.runActionPending.set(false);
-      }
+      void api
+        .loadTestCancel()
+        .then((snapshot) => {
+          this.applyMetricsSnapshot(snapshot);
+          this.finalizeRun(snapshot);
+        })
+        .finally(() => this.runActionPending.set(false));
       this.stopMetricsPolling();
       return;
     }
+
+    const targetRequestId = artifact?.targetRequestId;
+    if (!targetRequestId) {
+      this.runActionPending.set(false);
+      this.notifier.reportUnknown(new Error('Select a target request before starting a load test.'));
+      this.activeSection.set('target');
+      this.scheduleTabUiPersist();
+      return;
+    }
+
+    const startOptions: LoadTestStartOptions = {
+      targetRequestId,
+      virtualUsers: profile.virtualUsers,
+      durationSec: profile.durationSec,
+      rampUpSec: profile.rampUpSec,
+    };
 
     this.runCancelled = false;
     this.activeRunId = newTestingId();
@@ -448,20 +463,18 @@ export class LoadTestWorkspaceTabComponent {
     this.running.set(true);
     this.scheduleTabUiPersist();
 
-    if (api) {
-      void api
-        .loadTestStart(profile)
-        .then((snapshot) => {
-          this.applyMetricsSnapshot(snapshot);
-          this.startMetricsPolling();
-        })
-        .finally(() => this.runActionPending.set(false));
-      return;
-    }
-
-    this.applyMetricsSnapshot(this.browserSimulator.start(profile));
-    this.startMetricsPolling();
-    this.runActionPending.set(false);
+    void api
+      .loadTestStart(startOptions)
+      .then((snapshot) => {
+        this.applyMetricsSnapshot(snapshot);
+        this.startMetricsPolling();
+      })
+      .catch((error: unknown) => {
+        this.notifier.reportUnknown(error);
+        this.resetLiveMetrics();
+        this.resetRunTracking();
+      })
+      .finally(() => this.runActionPending.set(false));
   }
 
   protected handleResultsPanelHeight(height: number): void {
@@ -523,7 +536,6 @@ export class LoadTestWorkspaceTabComponent {
     this.stopMetricsPolling();
     this.running.set(false);
     this.metrics.set(createIdleLoadTestRunMetrics());
-    this.browserSimulator.reset();
   }
 
   private resetRunTracking(): void {
@@ -536,14 +548,8 @@ export class LoadTestWorkspaceTabComponent {
   private async syncRunStateFromBackend(): Promise<void> {
     const api = this.electron.bridge()?.testing;
     if (!api) {
-      const snapshot = this.browserSimulator.snapshot();
-      if (!snapshot.running && (this.artifact()?.runs.length ?? 0) === 0) {
+      if ((this.artifact()?.runs.length ?? 0) === 0) {
         this.resetLiveMetrics();
-        return;
-      }
-      this.applyMetricsSnapshot(snapshot);
-      if (snapshot.running) {
-        this.startMetricsPolling();
       }
       return;
     }
@@ -573,16 +579,11 @@ export class LoadTestWorkspaceTabComponent {
 
   private async pollMetrics(): Promise<void> {
     const api = this.electron.bridge()?.testing;
-    if (api) {
-      const snapshot = await api.loadTestMetrics();
-      this.applyMetricsSnapshot(snapshot);
-      if (!snapshot.running) {
-        this.stopMetricsPolling();
-      }
+    if (!api) {
+      this.stopMetricsPolling();
       return;
     }
-
-    const snapshot = this.browserSimulator.snapshot();
+    const snapshot = await api.loadTestMetrics();
     this.applyMetricsSnapshot(snapshot);
     if (!snapshot.running) {
       this.stopMetricsPolling();
@@ -626,6 +627,7 @@ export class LoadTestWorkspaceTabComponent {
     await this.configService.patchSession({
       workspace: {
         testing: {
+          ...this.testingSession.navigationFields(),
           loadTestTabsById: {
             [resourceId]: {
               activeSection: this.activeSection(),

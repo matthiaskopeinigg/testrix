@@ -79,7 +79,6 @@ function fromLoadTestTreeNode(node: LoadTestTreeNode, existing?: LoadTestTreeIte
     targetRequestId: prev?.targetRequestId,
     profile: prev?.profile ?? createDefaultLoadTestProfile(),
     thresholds: prev?.thresholds ?? createDefaultLoadTestThresholds(),
-    scenarios: prev?.scenarios ?? [],
     runs: prev?.runs ?? [],
     updatedAt: prev?.updatedAt ?? ts,
   };

@@ -2,12 +2,22 @@
   class="test-suite-sidebar-panel"
   [searchPlaceholder]="searchPlaceholder()"
   [searchAriaLabel]="searchAriaLabel()"
-  [showFolderToggle]="true"
+  [allFoldersExpanded]="allExpanded()"
   [showFilterButton]="false"
   [showSortButton]="false"
   (searchChange)="handleSearch($event)"
+  (allFoldersExpandedChange)="handleExpandAll($event)"
 >
   <div workspacePanelToolbarActions>
+    <button
+      type="button"
+      class="workspace-panel-shell__icon-btn"
+      aria-label="Add folder"
+      title="Add folder"
+      (click)="handleAddFolder()"
+    >
+      <tx-icon name="folder" [size]="16" aria-hidden="true" />
+    </button>
     <button
       type="button"
       class="workspace-panel-shell__icon-btn"
@@ -19,17 +29,50 @@
     </button>
   </div>
 
-  <div class="test-suite-sidebar-panel__body">
-    @if (treeNodes().length === 0) {
-      <p class="test-suite-sidebar-panel__empty" role="status">No flows yet. Add a flow to get started.</p>
+  <div class="test-suite-sidebar-panel__body" (contextmenu)="handleTreeAreaContextMenu($event)">
+    @if (filteredNodes().length === 0) {
+      <p class="test-suite-sidebar-panel__empty" role="status">
+        @if (nodes().length === 0) {
+          No flows yet. Add a folder or flow to get started.
+        } @else {
+          No items match your search.
+        }
+      </p>
     } @else {
       <tx-tree
         class="test-suite-sidebar-panel__tree"
-        [nodes]="treeNodes()"
+        [entranceStagger]="true"
+        [nodes]="filteredNodes()"
+        [config]="treeConfig()"
+        [expandedIds]="expandedIds()"
         [selectionIds]="treeSelectionIds()"
-        selectionMode="single"
+        [renamingNodeId]="renamingNodeId()"
+        (nodesChange)="handleNodesChange($event)"
+        (expandedChange)="handleExpandedChange($event)"
         (nodeClick)="handleNodeClick($event)"
+        (nodeDblClick)="handleNodeDblClick($event)"
+        (renameCommit)="handleRenameCommit($event)"
+        (renameCancel)="handleRenameCancel()"
+        (rowContextMenu)="handleRowContextMenu($event)"
       />
     }
   </div>
 </app-workspace-sidebar-panel-shell>
+
+<tx-context-menu
+  [open]="contextMenuOpen()"
+  [position]="contextMenuPosition()"
+  [items]="contextMenuItems()"
+  (itemSelect)="handleContextMenuSelect($event)"
+  (closed)="handleContextMenuClosed()"
+/>
+
+<tx-confirm-dialog
+  [open]="deleteOpen()"
+  title="Delete item"
+  [message]="deleteMessage()"
+  confirmLabel="Delete"
+  variant="danger"
+  (confirmed)="handleDeleteConfirmed()"
+  (closed)="handleDeleteClosed()"
+/>

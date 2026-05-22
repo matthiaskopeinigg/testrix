@@ -8,6 +8,8 @@ import { EnvironmentsService } from '../environments/environments.service';
 import { ElectronService } from '../electron/electron.service';
 import { ErrorNotificationService } from '../errors/error-notification.service';
 import { HistoryService } from '../history/history.service';
+import { TestingSessionService } from '../testing/testing-session.service';
+import { WorkspaceSidebarSessionService } from '../workspace/workspace-sidebar-session.service';
 import { WorkspaceEditorService } from '../workspace/workspace-editor.service';
 
 @Injectable({ providedIn: 'root' })
@@ -19,6 +21,8 @@ export class ProfileService {
   private readonly environmentsService = inject(EnvironmentsService);
   private readonly historyService = inject(HistoryService);
   private readonly workspaceEditor = inject(WorkspaceEditorService);
+  private readonly testingSession = inject(TestingSessionService);
+  private readonly sidebarSession = inject(WorkspaceSidebarSessionService);
 
   private readonly profilesState = signal<readonly ProfileEntry[]>([]);
   private readonly activeProfileIdState = signal<string | null>(null);
@@ -145,6 +149,8 @@ export class ProfileService {
       this.configService.hydrateSession(),
       this.historyService.hydrate(),
     ]);
+    this.testingSession.rehydrateFromSession();
+    this.sidebarSession.rehydrateFromSession();
   }
 
   private async flushWorkspaceWrites(): Promise<void> {
@@ -153,6 +159,8 @@ export class ProfileService {
       this.environmentsService.flushPending(),
       this.historyService.flushPending(),
       this.workspaceEditor.flushPendingSession(),
+      this.testingSession.flushPending(),
+      this.sidebarSession.flushPending(),
     ]);
   }
 }

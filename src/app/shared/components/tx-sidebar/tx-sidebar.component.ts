@@ -14,6 +14,7 @@ import {
 
 import { WorkspaceSidebarPanelHeaderService } from '@app/core/workspace/workspace-sidebar-panel-header.service';
 
+import { shouldSuppressTxTreeOutsideInteraction } from '../tx-tree/tx-tree-dnd.controller';
 import { TxIconComponent } from '../tx-icon/tx-icon.component';
 import { TxTooltipDirective } from '../tx-tooltip/tx-tooltip.directive';
 
@@ -112,6 +113,10 @@ export class TxSidebarComponent {
       return;
     }
 
+    if (shouldSuppressTxTreeOutsideInteraction()) {
+      return;
+    }
+
     const target = event.target;
     if (!(target instanceof Node) || this.host.nativeElement.contains(target)) {
       return;
@@ -166,6 +171,11 @@ export class TxSidebarComponent {
   }
 
   protected handleClosePanel(): void {
+    const onBack = this.panelBackHandler();
+    if (onBack) {
+      onBack();
+      return;
+    }
     this.closePanel();
   }
 

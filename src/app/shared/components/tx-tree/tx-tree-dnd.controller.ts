@@ -23,6 +23,23 @@ export interface TxTreeDragEndContext {
   readonly dropEvent?: TxTreeNodeDropEvent;
 }
 
+/** Brief window after a tree drag ends where sidebar outside-click close is ignored. */
+const TX_TREE_OUTSIDE_INTERACTION_SUPPRESS_MS = 200;
+
+let outsideInteractionSuppressUntil = 0;
+
+/** Returns true while a tree drag is active or just finished (avoids closing side panels on drop). */
+export function shouldSuppressTxTreeOutsideInteraction(): boolean {
+  return (
+    document.body.classList.contains('tx-tree-dnd-active') ||
+    performance.now() < outsideInteractionSuppressUntil
+  );
+}
+
+function suppressTxTreeOutsideInteractionBriefly(): void {
+  outsideInteractionSuppressUntil = performance.now() + TX_TREE_OUTSIDE_INTERACTION_SUPPRESS_MS;
+}
+
 export interface TxTreeDnDCallbacks {
   readonly onStateChange: (state: TxTreeDnDState) => void;
   readonly getDebugEnabled?: () => boolean;
@@ -428,6 +445,7 @@ export class TxTreeDnDController<TMeta = unknown> {
   }
 
   private endDrag(completed: boolean, dropEvent?: TxTreeNodeDropEvent): void {
+    const wasDragging = this.dragActivated;
     this.cancelPendingDrag();
     this.clearHoverExpand();
     if (this.rafId !== null) {
@@ -439,6 +457,9 @@ export class TxTreeDnDController<TMeta = unknown> {
     this.removeGhost();
     this.setState({ ...TX_TREE_INITIAL_DND_STATE });
     this.emitDebugTrace(null, null);
+    if (wasDragging) {
+      suppressTxTreeOutsideInteractionBriefly();
+    }
     this.callbacks.onDragEnd?.({ completed, dropEvent });
   }
 

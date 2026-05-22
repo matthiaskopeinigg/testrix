@@ -89,6 +89,22 @@ describe('TxSidebarComponent', () => {
     expect(host.querySelector('.tx-sidebar__panel')).toBeNull();
   });
 
+  it('keeps the panel open while a tree drag is active', () => {
+    fixture.componentRef.setInput('closePanelOnOutsideClick', true);
+    const collectionsBtn = host.querySelector(
+      '.tx-sidebar__rail-btn[aria-label="Collections"]',
+    ) as HTMLButtonElement;
+    collectionsBtn.click();
+    fixture.detectChanges();
+
+    document.body.classList.add('tx-tree-dnd-active');
+    document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+    fixture.detectChanges();
+    document.body.classList.remove('tx-tree-dnd-active');
+
+    expect(host.querySelector('.tx-sidebar__panel')).not.toBeNull();
+  });
+
   it('keeps the panel open when pointerdown targets a portaled overlay', () => {
     fixture.componentRef.setInput('closePanelOnOutsideClick', true);
     const collectionsBtn = host.querySelector(

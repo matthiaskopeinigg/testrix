@@ -1,0 +1,29 @@
+<tx-modal [open]="open()" [title]="modalTitle()" cardSize="wide" (closed)="closed.emit()">
+  <div class="ts-add-step-modal__intro">
+    <span class="ts-add-step-modal__intro-label">Adding to</span>
+    <span class="ts-add-step-modal__context">
+      <tx-icon name="list" [size]="14" aria-hidden="true" />
+      {{ parentLabel() }}
+    </span>
+  </div>
+
+  <div class="ts-add-step-modal__grid" role="listbox" aria-label="Step types">
+    @for (tile of addTiles; track tile.type) {
+      <button
+        type="button"
+        class="ts-add-step-modal__tile"
+        role="option"
+        [attr.aria-label]="tile.label + '. ' + tile.hint"
+        (click)="handleSelect(tile.type)"
+      >
+        <span class="ts-add-step-modal__tile-icon" aria-hidden="true">
+          <tx-icon [name]="tile.icon" [size]="18" />
+        </span>
+        <span class="ts-add-step-modal__tile-body">
+          <span class="ts-add-step-modal__tile-label">{{ tile.label }}</span>
+          <span class="ts-add-step-modal__tile-hint">{{ tile.hint }}</span>
+        </span>
+      </button>
+    }
+  </div>
+</tx-modal>

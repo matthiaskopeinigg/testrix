@@ -1,0 +1,26 @@
+<div class="request-panel ts-flow-step-panel">
+  <h2 class="request-panel__title">Database</h2>
+  <tx-form-field label="Connection ID" controlId="ts-db-conn">
+    <tx-input
+      controlId="ts-db-conn"
+      [ngModel]="cfg().connectionId"
+      (ngModelChange)="patch({ connectionId: $event })"
+    />
+  </tx-form-field>
+  <tx-form-field label="Query" controlId="ts-db-query">
+    <tx-textarea
+      controlId="ts-db-query"
+      [ngModel]="cfg().query"
+      (ngModelChange)="patch({ query: $event })"
+      [rows]="8"
+    />
+  </tx-form-field>
+  <tx-form-field label="Cache as variable" controlId="ts-db-cache">
+    <tx-input
+      controlId="ts-db-cache"
+      [ngModel]="cfg().cacheAs ?? ''"
+      (ngModelChange)="patch({ cacheAs: $event || undefined })"
+      placeholder="Optional variable name"
+    />
+  </tx-form-field>
+</div>

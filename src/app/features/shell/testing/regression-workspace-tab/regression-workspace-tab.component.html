@@ -1,0 +1,296 @@
+@if (missing()) {
+  <tx-banner variant="warning" title="Regression not found">
+    This tab points to a regression that no longer exists. Close the tab or pick another from the sidebar.
+  </tx-banner>
+} @else {
+  <section
+    class="rg-tab tx-workspace-tab"
+    [class.rg-tab--titlebar]="useTitlebarLayout()"
+    [class.rg-tab--sidebar]="useSidebarLayout()"
+    [attr.aria-label]="title()"
+  >
+    <div
+      class="tx-workspace-tab__chrome tx-entrance-stagger"
+      [class.tx-entrance-stagger--play]="tabMotion.loadStaggerPlay()"
+      [class.tx-entrance-stagger--settled]="tabMotion.loadStaggerSettled()"
+    >
+      <div class="tx-entrance-stagger__block rg-tab__bar">
+        <div class="rg-tab__bar-cluster rg-tab__bar-cluster--grow">
+          <div class="rg-tab__protocol-chip" aria-hidden="true">
+            <tx-icon name="target" [size]="14" aria-hidden="true" />
+            <span>RG</span>
+          </div>
+          <tx-form-field class="rg-tab__name-field" label="Name" controlId="rg-name">
+            <tx-input
+              id="rg-name"
+              [ngModel]="title()"
+              (ngModelChange)="handleNameChange($event)"
+            />
+          </tx-form-field>
+        </div>
+        <div class="rg-tab__bar-cluster rg-tab__bar-cluster--trailing">
+          @if (canRerunFailed()) {
+            <tx-button
+              variant="secondary"
+              [title]="'Rerun flows that failed in the last run'"
+              [disabled]="runActionPending()"
+              (pressed)="handleRerunFailed()"
+            >
+              {{ rerunFailedLabel() }}
+            </tx-button>
+          }
+          <tx-button
+            [variant]="runButtonVariant()"
+            [loading]="running() || runActionPending()"
+            loadingLabel="Working"
+            [title]="runButtonTitle()"
+            [disabled]="!running() && !canStartRegression()"
+            (pressed)="handleRunToggle()"
+          >
+            {{ runButtonLabel() }}
+          </tx-button>
+        </div>
+      </div>
+
+      @if (running()) {
+        <div
+          class="rg-tab__progress"
+          role="progressbar"
+          [attr.aria-valuenow]="runProgressPercent()"
+          aria-valuemin="0"
+          aria-valuemax="100"
+          [attr.aria-label]="'Regression run progress ' + runProgressPercent() + ' percent'"
+        >
+          <span class="rg-tab__progress-fill" [style.width.%]="runProgressPercent()"></span>
+        </div>
+      }
+
+      @if (completionBanner(); as banner) {
+        <tx-banner
+          class="rg-tab__completion-banner"
+          [variant]="banner.variant"
+          [title]="banner.title"
+        />
+      }
+
+      @if (isArchived()) {
+        <tx-banner
+          class="rg-tab__archived-banner"
+          variant="warning"
+          title="Archived"
+        >
+          This regression is archived. Restore it from the sidebar to run again.
+        </tx-banner>
+      }
+
+      @if (useTitlebarLayout()) {
+        <div class="tx-entrance-stagger__block rg-tab__sections-wrap">
+          <nav class="rg-tab__sections-bar" role="tablist" aria-label="Regression sections">
+            @for (item of navItems; track item.id) {
+              <button
+                type="button"
+                class="rg-tab__section-tab"
+                role="tab"
+                [attr.aria-selected]="activeSection() === item.id"
+                [class.is-active]="activeSection() === item.id"
+                (click)="handleSectionSelect(item.id)"
+              >
+                <tx-icon [name]="$any(item.icon)" [size]="14" aria-hidden="true" />
+                <span>{{ item.label }}</span>
+              </button>
+            }
+          </nav>
+        </div>
+      }
+    </div>
+
+    <tx-vertical-split-pane
+      class="rg-tab__split"
+      [secondaryVisible]="showResultsPanel()"
+      [secondaryHidden]="resultsPanelHidden()"
+      [secondaryHeight]="resultsPanelHeight()"
+      (secondaryHeightChange)="handleResultsPanelHeight($event)"
+      (secondaryHeightCommit)="handleResultsPanelHeightCommit($event)"
+      (secondaryHiddenChange)="handleResultsPanelHidden($event)"
+    >
+      <div class="rg-tab__workspace rg-tab__split-primary" txSplitPrimary>
+        @if (useSidebarLayout()) {
+          <nav class="rg-tab__nav" role="tablist" aria-label="Regression sections">
+            @for (item of navItems; track item.id) {
+              <button
+                type="button"
+                class="rg-tab__nav-item"
+                role="tab"
+                [attr.aria-selected]="activeSection() === item.id"
+                [class.is-active]="activeSection() === item.id"
+                (click)="handleSectionSelect(item.id)"
+              >
+                <span class="rg-tab__nav-icon">
+                  <tx-icon [name]="$any(item.icon)" [size]="14" aria-hidden="true" />
+                </span>
+                <span>{{ item.label }}</span>
+              </button>
+            }
+          </nav>
+          <div class="rg-tab__divider" aria-hidden="true"></div>
+        }
+        <div
+          class="rg-tab__pane tx-workspace-tab__pane"
+          [class.tx-workspace-tab__pane--switch]="tabMotion.paneSwitchActive()"
+        >
+          @switch (activeSection()) {
+            @case ('overview') {
+              <div
+                class="tx-workspace-tab__section-shell tx-entrance-stagger"
+                [class.tx-entrance-stagger--play]="isSectionContentAnimating('overview')"
+                [class.tx-entrance-stagger--settled]="isSectionContentSettled('overview')"
+              >
+                <div class="tx-entrance-stagger__block">
+                  <app-rg-tab-overview-panel
+                    [description]="artifact()?.description ?? ''"
+                    [release]="artifact()?.release ?? ''"
+                    [tags]="artifact()?.tags ?? []"
+                    [profile]="artifact()?.profile"
+                    [thresholds]="artifact()?.thresholds"
+                    [flowCount]="artifact()?.flowIds?.length ?? 0"
+                    [runs]="artifact()?.runs ?? []"
+                    [pinnedBaselineRunId]="pinnedBaselineRunId()"
+                    (openResults)="handleOpenResultsView()"
+                    (sectionSelect)="handleSectionSelect($event)"
+                  />
+                </div>
+              </div>
+            }
+            @case ('flows') {
+              <div
+                class="tx-workspace-tab__section-shell tx-entrance-stagger"
+                [class.tx-entrance-stagger--play]="isSectionContentAnimating('flows')"
+                [class.tx-entrance-stagger--settled]="isSectionContentSettled('flows')"
+              >
+                <div class="tx-entrance-stagger__block">
+                  <app-rg-tab-flows-panel
+                    [flowIds]="artifact()?.flowIds ?? []"
+                    [expandedIds]="flowsExpandedIds()"
+                    (flowIdsChange)="handleFlowIdsChange($event)"
+                    (expandedIdsChange)="handleFlowsExpandedIdsChange($event)"
+                  />
+                </div>
+              </div>
+            }
+            @case ('settings') {
+              <div
+                class="tx-workspace-tab__section-shell tx-entrance-stagger"
+                [class.tx-entrance-stagger--play]="isSectionContentAnimating('settings')"
+                [class.tx-entrance-stagger--settled]="isSectionContentSettled('settings')"
+              >
+                <div class="tx-entrance-stagger__block">
+                  <app-rg-tab-settings-panel
+                    [name]="artifact()!.name"
+                    [release]="artifact()?.release ?? ''"
+                    [tags]="artifact()?.tags ?? []"
+                    [description]="artifact()?.description ?? ''"
+                    [profile]="artifact()!.profile"
+                    [thresholds]="artifact()!.thresholds"
+                    [environmentOptions]="environmentOptions()"
+                    (nameChange)="handleNameChange($event)"
+                    (releaseChange)="handleReleaseChange($event)"
+                    (tagsChange)="handleTagsChange($event)"
+                    (descriptionChange)="handleDescriptionChange($event)"
+                    (profileChange)="handleProfileChange($event)"
+                    (thresholdsChange)="handleThresholdsChange($event)"
+                  />
+                </div>
+              </div>
+            }
+            @case ('docs') {
+              <div
+                class="tx-workspace-tab__section-shell tx-entrance-stagger"
+                [class.tx-entrance-stagger--play]="isSectionContentAnimating('docs')"
+                [class.tx-entrance-stagger--settled]="isSectionContentSettled('docs')"
+              >
+                <div class="tx-entrance-stagger__block">
+                  <app-rg-tab-docs-panel
+                    [docs]="artifact()?.docs ?? ''"
+                    (docsChange)="handleDocsChange($event)"
+                  />
+                </div>
+              </div>
+            }
+            @case ('results') {
+              <div
+                class="tx-workspace-tab__section-shell tx-entrance-stagger"
+                [class.tx-entrance-stagger--play]="isSectionContentAnimating('results')"
+                [class.tx-entrance-stagger--settled]="isSectionContentSettled('results')"
+              >
+                <div class="tx-entrance-stagger__block rg-tab__results-slot">
+                  <app-rg-tab-results-panel
+                    [runState]="runState()"
+                    [metrics]="metrics()"
+                    [thresholds]="artifact()?.thresholds ?? { acceptancePercent: 100 }"
+                    [runs]="artifact()?.runs ?? []"
+                    [resultsView]="resultsView()"
+                    [selectedRunId]="selectedRunId()"
+                    [pinnedBaselineRunId]="pinnedBaselineRunId()"
+                    [compareSelection]="compareSelection()"
+                    [liveFlowTimeline]="liveFlowTimeline()"
+                    [liveFlowResults]="liveFlowResults()"
+                    [canRerunFailed]="canRerunFailed()"
+                    [rerunFailedLabel]="rerunFailedLabel()"
+                    [diffFilter]="diffFilter()"
+                    [selectedFlowDiffId]="selectedFlowDiffId()"
+                    [selectedStepDiffId]="selectedStepDiffId()"
+                    [captureDiffNormalizeJson]="captureDiffNormalizeJson()"
+                    (resultsViewChange)="handleResultsViewChange($event)"
+                    (selectedRunIdChange)="handleSelectedRunChange($event)"
+                    (compareSelectionChange)="handleCompareSelectionChange($event)"
+                    (pinnedBaselineRunIdChange)="handlePinnedBaselineChange($event)"
+                    (diffFilterChange)="handleDiffFilterChange($event)"
+                    (selectedFlowDiffIdChange)="handleSelectedFlowDiffIdChange($event)"
+                    (selectedStepDiffIdChange)="handleSelectedStepDiffIdChange($event)"
+                    (captureDiffNormalizeJsonChange)="handleCaptureDiffNormalizeJsonChange($event)"
+                    (clearRuns)="handleClearRuns()"
+                    (deleteRun)="handleDeleteRun($event)"
+                    (rerunFailed)="handleRerunFailed($event)"
+                  />
+                </div>
+              </div>
+            }
+          }
+        </div>
+      </div>
+      @if (showResultsSplit()) {
+        <div class="rg-tab__results-slot" txSplitSecondary>
+          <app-rg-tab-results-panel
+            [runState]="runState()"
+            [metrics]="metrics()"
+            [thresholds]="artifact()?.thresholds ?? { acceptancePercent: 100 }"
+            [runs]="artifact()?.runs ?? []"
+            [resultsView]="resultsView()"
+            [selectedRunId]="selectedRunId()"
+            [pinnedBaselineRunId]="pinnedBaselineRunId()"
+            [compareSelection]="compareSelection()"
+            [liveFlowTimeline]="liveFlowTimeline()"
+            [liveFlowResults]="liveFlowResults()"
+            [canRerunFailed]="canRerunFailed()"
+            [rerunFailedLabel]="rerunFailedLabel()"
+            [diffFilter]="diffFilter()"
+            [selectedFlowDiffId]="selectedFlowDiffId()"
+            [selectedStepDiffId]="selectedStepDiffId()"
+            [captureDiffNormalizeJson]="captureDiffNormalizeJson()"
+            (resultsViewChange)="handleResultsViewChange($event)"
+            (selectedRunIdChange)="handleSelectedRunChange($event)"
+            (compareSelectionChange)="handleCompareSelectionChange($event)"
+            (pinnedBaselineRunIdChange)="handlePinnedBaselineChange($event)"
+            (diffFilterChange)="handleDiffFilterChange($event)"
+            (selectedFlowDiffIdChange)="handleSelectedFlowDiffIdChange($event)"
+            (selectedStepDiffIdChange)="handleSelectedStepDiffIdChange($event)"
+            (captureDiffNormalizeJsonChange)="handleCaptureDiffNormalizeJsonChange($event)"
+            (clearRuns)="handleClearRuns()"
+            (deleteRun)="handleDeleteRun($event)"
+            (rerunFailed)="handleRerunFailed($event)"
+          />
+        </div>
+      }
+    </tx-vertical-split-pane>
+  </section>
+}

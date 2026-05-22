@@ -1,0 +1,21 @@
+<div class="request-panel ts-flow-step-panel">
+  <h2 class="request-panel__title">Wait</h2>
+  <tx-form-field label="Duration (ms)" controlId="ts-wait-ms">
+    <tx-input
+      controlId="ts-wait-ms"
+      type="number"
+      [ngModel]="cfg().durationMs"
+      (ngModelChange)="patchDurationMs(toNumber($event))"
+    />
+  </tx-form-field>
+  <tx-form-field label="Duration (seconds)" controlId="ts-wait-sec">
+    <tx-slider
+      controlId="ts-wait-sec"
+      [min]="0"
+      [max]="60"
+      [step]="1"
+      [ngModel]="durationSeconds()"
+      (ngModelChange)="handleSecondsChange($event)"
+    />
+  </tx-form-field>
+</div>

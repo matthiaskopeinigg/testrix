@@ -1,0 +1,80 @@
+<div class="request-panel ts-flow-step-panel">
+  <h2 class="request-panel__title">Validation</h2>
+  <p class="request-panel__hint">{{ referenceHint() }}</p>
+
+  <tx-form-field label="Reference step" controlId="ts-val-ref">
+    <tx-dropdown
+      controlId="ts-val-ref"
+      [options]="refStepOptions()"
+      placeholder="Select prior step…"
+      [ngModel]="cfg().refStepId ?? ''"
+      (ngModelChange)="handleRefStepChange($event)"
+    />
+  </tx-form-field>
+
+  @if (refStepCapture(); as capture) {
+    <p class="ts-flow-step-panel__capture-preview" role="status">
+      Cached from last run:
+      @if (capture.kind === 'http_response') {
+        <span>HTTP {{ capture.statusCode }}</span>
+        @if (capture.bodyText) {
+          <span> · {{ capture.bodyText.length }} chars body</span>
+        }
+      } @else {
+        <span>{{ capturePreview() }}</span>
+      }
+    </p>
+  } @else if (cfg().refStepId) {
+    <p class="ts-flow-step-panel__capture-preview ts-flow-step-panel__capture-preview--empty" role="status">
+      No cached data yet — run the flow so the reference step executes first.
+    </p>
+  }
+
+  @if (sourceOptions().length === 0) {
+    <p class="ts-flow-step-panel__hint-inline">Select a reference step to configure rules.</p>
+  } @else {
+    <div class="ts-flow-step-panel__rules">
+      @for (rule of rules(); track $index) {
+        <div class="ts-flow-step-panel__rule">
+          <tx-form-field label="Source" [controlId]="'ts-val-src-' + $index">
+            <tx-dropdown
+              [controlId]="'ts-val-src-' + $index"
+              [options]="sourceOptions()"
+              [ngModel]="rule.source"
+              (ngModelChange)="patchRule($index, { source: $event })"
+            />
+          </tx-form-field>
+          @if (expressionLabel(rule.source); as exprLabel) {
+            <tx-form-field [label]="exprLabel" [controlId]="'ts-val-expr-' + $index">
+              <tx-input
+                [controlId]="'ts-val-expr-' + $index"
+                [ngModel]="rule.expression"
+                (ngModelChange)="patchRule($index, { expression: $event })"
+              />
+            </tx-form-field>
+          }
+          <tx-form-field label="Operator" [controlId]="'ts-val-op-' + $index">
+            <tx-dropdown
+              [controlId]="'ts-val-op-' + $index"
+              [options]="operatorOptions"
+              [ngModel]="rule.operator"
+              (ngModelChange)="patchRule($index, { operator: $event })"
+            />
+          </tx-form-field>
+          <tx-form-field label="Expected" [controlId]="'ts-val-exp-' + $index">
+            <tx-input
+              [controlId]="'ts-val-exp-' + $index"
+              [ngModel]="rule.expected"
+              (ngModelChange)="patchRule($index, { expected: $event })"
+            />
+          </tx-form-field>
+          <tx-button variant="secondary" size="icon" ariaLabel="Remove rule" (pressed)="handleRemoveRule($index)">
+            <tx-icon name="close" [size]="14" aria-hidden="true" />
+          </tx-button>
+        </div>
+      }
+    </div>
+
+    <tx-button variant="add" [disabled]="!refStepType()" (pressed)="handleAddRule()">Add rule</tx-button>
+  }
+</div>

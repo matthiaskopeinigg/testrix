@@ -31,6 +31,7 @@ import {
   type TestingSidebarPanelComponent as TestingProgrammaticPanelComponent,
 } from '@app/features/shell/pages/home/resolve-testing-sidebar-panel';
 import { LoadTestSidebarPanelComponent } from '../load-test-sidebar-panel/load-test-sidebar-panel.component';
+import { RegressionSidebarPanelComponent } from '../regression-sidebar-panel/regression-sidebar-panel.component';
 import { TestSuiteSidebarPanelComponent } from '../test-suite-sidebar-panel/test-suite-sidebar-panel.component';
 
 interface TestingHubItem {
@@ -46,6 +47,7 @@ const VIEW_TITLES: Record<TestingActiveViewId, string> = {
   menu: 'Testing',
   'test-suite': 'Test Suite',
   'load-test': 'Load Test',
+  regression: 'Regression',
 };
 
 @Component({
@@ -57,6 +59,7 @@ const VIEW_TITLES: Record<TestingActiveViewId, string> = {
     TxSpinnerComponent,
     TestSuiteSidebarPanelComponent,
     LoadTestSidebarPanelComponent,
+    RegressionSidebarPanelComponent,
   ],
   templateUrl: './testing-sidebar-panel.component.html',
   styleUrl: './testing-sidebar-panel.component.scss',
@@ -101,7 +104,7 @@ export class TestingSidebarPanelComponent implements OnDestroy {
       icon: 'target',
       title: 'Regression',
       hint: 'Saved regressions and run history',
-      subpanel: 'regression',
+      drillIn: 'regression',
     },
     {
       id: 'test-suite',

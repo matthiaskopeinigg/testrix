@@ -56,6 +56,18 @@ describe('TxTreeModel', () => {
     expect(childIds).toEqual(['b', 'a', 'folder']);
   });
 
+  it('moves the first sibling down when dropping before the next row', () => {
+    const model = new TxTreeModel(mergeTxTreeConfig());
+    model.setNodes(SAMPLE);
+    model.expand('root');
+    const logical = model.resolveLogicalDrop('a', 'b', 'before');
+    expect(logical).toEqual({ targetId: 'b', position: 'after' });
+    const result = model.moveNode('a', logical.targetId, logical.position);
+    expect(result).not.toBeNull();
+    const childIds = result!.nodes[0].children!.map((n) => n.id);
+    expect(childIds).toEqual(['b', 'a', 'folder']);
+  });
+
   it('reparents into a folder', () => {
     const model = new TxTreeModel(mergeTxTreeConfig({ drop: { reparentAllowed: true } }));
     model.setNodes(SAMPLE);

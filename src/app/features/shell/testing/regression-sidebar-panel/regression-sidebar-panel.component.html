@@ -1,37 +1,136 @@
 <app-workspace-sidebar-panel-shell
+  class="regression-sidebar-panel"
   [searchPlaceholder]="searchPlaceholder()"
   [searchAriaLabel]="searchAriaLabel()"
-  [showFolderToggle]="false"
+  [allFoldersExpanded]="allExpanded()"
   [showFilterButton]="false"
   [showSortButton]="false"
   (searchChange)="handleSearch($event)"
+  (allFoldersExpandedChange)="handleExpandAll($event)"
 >
   <div workspacePanelToolbarActions>
     <button
       type="button"
       class="workspace-panel-shell__icon-btn"
+      [class.is-pressed]="filterToolbarActive()"
+      aria-label="Filter regressions"
+      title="Filter regressions"
+      [attr.aria-expanded]="filterMenuOpen()"
+      (click)="handleFilterToolbarClick($event)"
+    >
+      <tx-icon name="filter" [size]="16" aria-hidden="true" />
+    </button>
+    <button
+      type="button"
+      class="workspace-panel-shell__icon-btn"
+      aria-label="Add folder"
+      title="Add folder"
+      (click)="handleAddFolder()"
+    >
+      <tx-icon name="folder" [size]="16" aria-hidden="true" />
+    </button>
+    <button
+      type="button"
+      class="workspace-panel-shell__icon-btn"
       aria-label="Add regression"
       title="Add regression"
-      (click)="handleAdd()"
+      (click)="handleAddArtifact()"
     >
       <tx-icon name="plus" [size]="16" aria-hidden="true" />
     </button>
   </div>
-  <ul class="testing-list-sidebar-panel__list" role="list">
-    @for (item of filtered(); track item.id) {
-      <li>
+
+  <div
+    class="regression-sidebar-panel__body"
+    (contextmenu)="handleTreeAreaContextMenu($event)"
+  >
+    @if (filteredNodes().length === 0) {
+      <p class="regression-sidebar-panel__empty" role="status">
+        {{ emptyStateMessage() }}
+      </p>
+    } @else {
+      <tx-tree
+        #regressionTree
+        class="regression-sidebar-panel__tree"
+        [entranceStagger]="true"
+        [nodes]="filteredNodes()"
+        [config]="treeConfig()"
+        [expandedIds]="expandedIds()"
+        [selectionIds]="treeSelectionIds()"
+        [renamingNodeId]="renamingNodeId()"
+        (nodesChange)="handleNodesChange($event)"
+        (expandedChange)="handleExpandedChange($event)"
+        (nodeClick)="handleNodeClick($event)"
+        (nodeDblClick)="handleNodeDblClick($event)"
+        (renameCommit)="handleRenameCommit($event)"
+        (renameCancel)="handleRenameCancel()"
+        (rowContextMenu)="handleRowContextMenu($event)"
+      />
+    }
+
+    @if (archivedCount() > 0) {
+      <section class="regression-sidebar-panel__archive">
         <button
           type="button"
-          class="testing-list-sidebar-panel__item"
-          [class.is-active]="activeItemId() === item.id"
-          (click)="handleOpen(item.id)"
+          class="regression-sidebar-panel__archive-header"
+          [attr.aria-expanded]="archiveSectionExpanded()"
+          (click)="handleToggleArchiveSection()"
         >
-          <tx-icon name="target" [size]="16" aria-hidden="true" />
-          <span>{{ item.name }}</span>
+          <tx-icon
+            name="chevronDown"
+            [size]="14"
+            class="regression-sidebar-panel__archive-chevron"
+            [class.is-collapsed]="!archiveSectionExpanded()"
+            aria-hidden="true"
+          />
+          <span>Archive</span>
+          <span class="regression-sidebar-panel__archive-count">{{ archivedCount() }}</span>
         </button>
-      </li>
-    } @empty {
-      <li class="testing-list-sidebar-panel__empty" role="status">No regressions yet.</li>
+
+        @if (archiveSectionExpanded()) {
+          <tx-tree
+            #archiveTree
+            class="regression-sidebar-panel__archive-tree"
+            [nodes]="archivedFilteredNodes()"
+            [config]="treeConfig()"
+            [expandedIds]="archiveExpandedIds()"
+            [selectionIds]="treeSelectionIds()"
+            [renamingNodeId]="renamingNodeId()"
+            (expandedChange)="handleArchiveExpandedChange($event)"
+            (nodeClick)="handleNodeClick($event)"
+            (nodeDblClick)="handleNodeDblClick($event)"
+            (renameCommit)="handleRenameCommit($event)"
+            (renameCancel)="handleRenameCancel()"
+            (rowContextMenu)="handleRowContextMenu($event)"
+          />
+        }
+      </section>
     }
-  </ul>
+  </div>
 </app-workspace-sidebar-panel-shell>
+
+<tx-context-menu
+  [open]="contextMenuOpen()"
+  [position]="contextMenuPosition()"
+  [items]="contextMenuItems()"
+  (itemSelect)="handleContextMenuSelect($event)"
+  (closed)="handleContextMenuClosed()"
+/>
+
+<tx-context-menu
+  [open]="filterMenuOpen()"
+  [position]="filterMenuPosition()"
+  [items]="filterMenuItems()"
+  (itemSelect)="handleFilterMenuSelect($event)"
+  (closed)="handleFilterMenuClosed()"
+/>
+
+<tx-confirm-dialog
+  [open]="deleteOpen()"
+  title="Delete item"
+  [message]="deleteMessage()"
+  confirmLabel="Delete"
+  variant="danger"
+  (confirmed)="handleDeleteConfirmed()"
+  (closed)="handleDeleteClosed()"
+/>

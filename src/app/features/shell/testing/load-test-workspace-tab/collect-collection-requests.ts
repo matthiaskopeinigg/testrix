@@ -1,11 +1,12 @@
 import type { CollectionTreeNode } from '@app/features/shell/collections/collection-tree.types';
 import type { TxDropdownOption } from '@app/shared/components/tx-dropdown/tx-dropdown.types';
 
-/** Collects collection HTTP requests as dropdown options for load test target picker. */
+/** Collects collection HTTP requests as dropdown options. */
 export function collectCollectionRequestOptions(
   nodes: readonly CollectionTreeNode[],
+  emptyLabel = 'No target request',
 ): readonly TxDropdownOption[] {
-  const options: TxDropdownOption[] = [{ value: '', label: 'No target request' }];
+  const options: TxDropdownOption[] = [{ value: '', label: emptyLabel }];
   const walk = (list: readonly CollectionTreeNode[], prefix = ''): void => {
     for (const node of list) {
       const kind = node.data?.kind ?? node.kind;

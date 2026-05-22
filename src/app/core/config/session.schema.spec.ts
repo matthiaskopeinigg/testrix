@@ -17,6 +17,8 @@ describe('migrateSession', () => {
     const migrated = migrateSession(legacy);
     expect(migrated.workspace.collections.expandedFolderIds).toEqual([]);
     expect(migrated.workspace.collections.folderTabsById).toEqual({});
+    expect(migrated.workspace.activeSidebarPanelId).toBeNull();
+    expect(migrated.workspace.sidebarPanelOpen).toBe(false);
     expect(migrated.workspace.environments.expandedFolderIds).toEqual([]);
     expect(migrated.workspace.designSystem.activePillar).toBe('style-guide');
     expect(migrated.workspace.designSystem.expandedPillars.length).toBe(5);

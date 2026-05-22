@@ -1,0 +1,525 @@
+<section class="rg-results-panel" aria-label="Regression results">
+  <header class="rg-results-panel__chrome">
+    <div class="rg-results-panel__chrome-top">
+      <div class="rg-results-panel__brand">
+        <span class="rg-results-panel__brand-icon" aria-hidden="true">
+          <tx-icon name="target" [size]="16" />
+        </span>
+        <div>
+          <h2 class="rg-results-panel__title">Results dashboard</h2>
+          <p class="rg-results-panel__subtitle">
+            {{ resultsViewLabel() }}
+            @if (hasDisplayableData()) {
+              <span> · {{ elapsedLabel() }} elapsed</span>
+            }
+          </p>
+        </div>
+      </div>
+
+      <div class="rg-results-panel__status-group">
+        @if (healthOverview(); as health) {
+          <tx-tag [variant]="overallTagVariant()" casing="normal">{{ health.label }}</tx-tag>
+        }
+        <span
+          class="rg-results-panel__status-pill"
+          [class.is-running]="runState() === 'running'"
+          [class.is-completed]="runState() === 'completed'"
+        >
+          {{ statusLabel() }}
+        </span>
+      </div>
+    </div>
+
+    <div class="rg-results-panel__chrome-bottom">
+      <div class="rg-results-panel__view-toggle" role="tablist" aria-label="Results view">
+        <button
+          type="button"
+          class="rg-results-panel__view-btn"
+          role="tab"
+          [class.is-active]="resultsView() === 'live'"
+          [attr.aria-selected]="resultsView() === 'live'"
+          (click)="handleViewChange('live')"
+        >
+          Live
+        </button>
+        <button
+          type="button"
+          class="rg-results-panel__view-btn"
+          role="tab"
+          [class.is-active]="resultsView() === 'history'"
+          [attr.aria-selected]="resultsView() === 'history'"
+          (click)="handleViewChange('history')"
+        >
+          History
+          @if (runs().length > 0) {
+            <span class="rg-results-panel__view-count">{{ runs().length }}</span>
+          }
+        </button>
+        <button
+          type="button"
+          class="rg-results-panel__view-btn"
+          role="tab"
+          [class.is-active]="resultsView() === 'compare'"
+          [attr.aria-selected]="resultsView() === 'compare'"
+          [disabled]="!canCompare()"
+          [title]="canCompare() ? 'Compare two saved runs' : 'Save at least two runs to compare'"
+          (click)="handleViewChange('compare')"
+        >
+          Compare
+        </button>
+      </div>
+
+      <span class="rg-results-panel__chrome-divider" aria-hidden="true"></span>
+
+      <app-rg-results-export-toolbar
+        class="rg-results-panel__export"
+        [record]="exportRecord()"
+        [compareRecord]="compareExportRecord()"
+      />
+
+      @if (canRerunFailed()) {
+        <tx-button variant="secondary" (pressed)="handleRerunFailedClick()">
+          {{ rerunFailedLabel() }}
+        </tx-button>
+      }
+
+      @if (runs().length > 0) {
+        <tx-button variant="secondary" (pressed)="handleClearRunsRequest()">Clear history</tx-button>
+      }
+    </div>
+  </header>
+
+  <div class="rg-results-panel__scroll">
+    @if (runs().length > 0) {
+      @if (resultsView() === 'compare' && canCompare()) {
+        <section class="rg-results-panel__compare-picker" aria-label="Choose runs to compare">
+          <tx-form-field label="Run A (baseline)" controlId="rg-compare-run-a">
+            <tx-dropdown
+              id="rg-compare-run-a"
+              ariaLabel="Baseline run"
+              [options]="runOptions()"
+              [ngModel]="compareRunAId()"
+              (ngModelChange)="handleCompareRunAChange($event)"
+            />
+          </tx-form-field>
+          <tx-button variant="secondary" title="Swap baseline and comparison runs" (pressed)="handleSwapCompareRuns()">
+            Swap
+          </tx-button>
+          <tx-form-field label="Run B (comparison)" controlId="rg-compare-run-b">
+            <tx-dropdown
+              id="rg-compare-run-b"
+              ariaLabel="Comparison run"
+              [options]="runOptions()"
+              [ngModel]="compareRunBId()"
+              (ngModelChange)="handleCompareRunBChange($event)"
+            />
+          </tx-form-field>
+        </section>
+      }
+
+      <app-rg-results-run-timeline
+        class="rg-results-panel__timeline"
+        [runs]="runs()"
+        [selectedId]="selectedRunId() ?? runs()[0]?.id ?? null"
+        [pinnedId]="pinnedBaselineRunId()"
+        [compareMode]="resultsView() === 'compare'"
+        [compareSelection]="compareSelection()"
+        (selectedIdChange)="handleSelectedRunChange($event)"
+        (compareRuns)="handleCompareSelection($event)"
+        (pinRun)="handlePinRun($event)"
+      />
+    }
+
+    <div class="rg-results-panel__body" [class.is-empty]="isDashboardEmpty()">
+      @if (isDashboardEmpty()) {
+        <tx-banner variant="info" title="No results yet">
+          Run this regression to populate pass rates, flow results, and run history.
+        </tx-banner>
+      }
+
+      @if (resultsView() === 'compare' && compareDeltas().length > 0) {
+        <section class="rg-results-panel__section" aria-label="Run comparison summary">
+          <button
+            type="button"
+            class="rg-results-panel__section-header"
+            [attr.aria-expanded]="!isSectionCollapsed('compareSummary')"
+            (click)="handleToggleSection('compareSummary')"
+          >
+            <tx-icon
+              class="rg-results-panel__chevron"
+              [class.rg-results-panel__chevron--collapsed]="isSectionCollapsed('compareSummary')"
+              name="chevronDown"
+              [size]="12"
+              aria-hidden="true"
+            />
+            <h3 class="rg-results-panel__section-title">Summary deltas</h3>
+          </button>
+          @if (!isSectionCollapsed('compareSummary')) {
+            <div class="rg-results-panel__section-body">
+              <ul class="rg-results-panel__compare-deltas">
+                @for (delta of compareDeltas(); track delta.label) {
+                  <li [attr.data-direction]="delta.direction">
+                    <span>{{ delta.label }}</span>
+                    <tx-tag
+                      [variant]="delta.direction === 'better' ? 'success' : delta.direction === 'worse' ? 'error' : 'default'"
+                      casing="normal"
+                    >
+                      {{ delta.aValue }} → {{ delta.bValue }} ({{ delta.delta }})
+                    </tx-tag>
+                  </li>
+                }
+              </ul>
+            </div>
+          }
+        </section>
+
+        <section class="rg-results-panel__section" aria-label="Flow comparison">
+          <button
+            type="button"
+            class="rg-results-panel__section-header"
+            [attr.aria-expanded]="!isSectionCollapsed('compareFlowDiff')"
+            (click)="handleToggleSection('compareFlowDiff')"
+          >
+            <tx-icon
+              class="rg-results-panel__chevron"
+              [class.rg-results-panel__chevron--collapsed]="isSectionCollapsed('compareFlowDiff')"
+              name="chevronDown"
+              [size]="12"
+              aria-hidden="true"
+            />
+            <h3 class="rg-results-panel__section-title">Flow comparison</h3>
+          </button>
+          @if (!isSectionCollapsed('compareFlowDiff')) {
+            <div class="rg-results-panel__section-body">
+              <app-rg-results-flow-diff-table
+                [runA]="compareRuns()?.a ?? null"
+                [runB]="compareRuns()?.b ?? null"
+                [filter]="diffFilter()"
+                (filterChange)="diffFilterChange.emit($event)"
+              />
+
+              @if (selectedFlowDiffId(); as flowId) {
+                <app-rg-flow-step-diff-panel
+                  [flowId]="flowId"
+                  [flowName]="selectedFlowName()"
+                  [runA]="compareRuns()?.a ?? null"
+                  [runB]="compareRuns()?.b ?? null"
+                />
+                <app-rg-step-capture-diff-panel
+                  [flowId]="flowId"
+                  [runA]="compareRuns()?.a ?? null"
+                  [runB]="compareRuns()?.b ?? null"
+                  [selectedStepId]="selectedStepDiffId()"
+                  [normalizeJson]="captureDiffNormalizeJson()"
+                  (selectedStepIdChange)="selectedStepDiffIdChange.emit($event)"
+                  (normalizeJsonChange)="captureDiffNormalizeJsonChange.emit($event)"
+                />
+              }
+            </div>
+          }
+        </section>
+      } @else if (resultsView() === 'compare' && canCompare()) {
+        <tx-banner variant="info" title="Pick two runs">
+          Choose run A and run B above, or click chips in the timeline to compare pass rates and duration.
+        </tx-banner>
+      }
+
+      @if (hasDisplayableData()) {
+        @if (baselineDeltas().length > 0) {
+          <section class="rg-results-panel__section" aria-label="Vs pinned baseline">
+            <button
+              type="button"
+              class="rg-results-panel__section-header"
+              [attr.aria-expanded]="!isSectionCollapsed('baselineDeltas')"
+              (click)="handleToggleSection('baselineDeltas')"
+            >
+              <tx-icon
+                class="rg-results-panel__chevron"
+                [class.rg-results-panel__chevron--collapsed]="isSectionCollapsed('baselineDeltas')"
+                name="chevronDown"
+                [size]="12"
+                aria-hidden="true"
+              />
+              <h3 class="rg-results-panel__section-title">Vs pinned baseline</h3>
+            </button>
+            @if (!isSectionCollapsed('baselineDeltas')) {
+              <div class="rg-results-panel__section-body">
+                <ul class="rg-results-panel__compare-deltas">
+                  @for (delta of baselineDeltas(); track delta.label) {
+                    <li [attr.data-direction]="delta.direction">
+                      <span>{{ delta.label }}</span>
+                      <tx-tag
+                        [variant]="delta.direction === 'better' ? 'success' : delta.direction === 'worse' ? 'error' : 'default'"
+                        casing="normal"
+                      >
+                        {{ delta.aValue }} → {{ delta.bValue }} ({{ delta.delta }})
+                      </tx-tag>
+                    </li>
+                  }
+                </ul>
+              </div>
+            }
+          </section>
+        }
+
+        @if (thresholdChecks().length > 0) {
+          <section class="rg-results-panel__section" aria-label="Threshold checks">
+            <button
+              type="button"
+              class="rg-results-panel__section-header"
+              [attr.aria-expanded]="!isSectionCollapsed('thresholdChecks')"
+              (click)="handleToggleSection('thresholdChecks')"
+            >
+              <tx-icon
+                class="rg-results-panel__chevron"
+                [class.rg-results-panel__chevron--collapsed]="isSectionCollapsed('thresholdChecks')"
+                name="chevronDown"
+                [size]="12"
+                aria-hidden="true"
+              />
+              <h3 class="rg-results-panel__section-title">Threshold checks</h3>
+            </button>
+            @if (!isSectionCollapsed('thresholdChecks')) {
+              <div class="rg-results-panel__section-body">
+                <ul class="rg-results-panel__compare-deltas">
+                  @for (check of thresholdChecks(); track check.label) {
+                    <li>
+                      <span>{{ check.label }}</span>
+                      <tx-tag [variant]="check.pass ? 'success' : 'error'" casing="normal">
+                        {{ check.value }}
+                      </tx-tag>
+                    </li>
+                  }
+                </ul>
+              </div>
+            }
+          </section>
+        }
+
+        <section class="rg-results-panel__section" aria-label="Run statistics">
+          <button
+            type="button"
+            class="rg-results-panel__section-header"
+            [attr.aria-expanded]="!isSectionCollapsed('stats')"
+            (click)="handleToggleSection('stats')"
+          >
+            <tx-icon
+              class="rg-results-panel__chevron"
+              [class.rg-results-panel__chevron--collapsed]="isSectionCollapsed('stats')"
+              name="chevronDown"
+              [size]="12"
+              aria-hidden="true"
+            />
+            <h3 class="rg-results-panel__section-title">Statistics</h3>
+          </button>
+          @if (!isSectionCollapsed('stats')) {
+            <div class="rg-results-panel__section-body">
+              <div class="rg-results-panel__stats">
+                <app-rg-results-stat-card
+                  label="Pass rate"
+                  icon="checkCircle"
+                  [tone]="displayMetrics().passRatePercent >= displayMetrics().acceptancePercent ? 'success' : 'error'"
+                  [value]="formatStat(displayMetrics().passRatePercent.toFixed(1) + '%')"
+                />
+                <app-rg-results-stat-card
+                  label="Completed flows"
+                  icon="testing"
+                  [value]="formatStat(displayMetrics().completed + ' / ' + displayMetrics().total)"
+                />
+                <app-rg-results-stat-card
+                  label="Passed"
+                  icon="checkCircle"
+                  tone="success"
+                  [value]="formatStat('' + displayMetrics().passed)"
+                />
+                <app-rg-results-stat-card
+                  label="Failed"
+                  icon="xCircle"
+                  [tone]="displayMetrics().failed > 0 ? 'error' : 'default'"
+                  [value]="formatStat('' + displayMetrics().failed)"
+                />
+                <app-rg-results-stat-card
+                  label="Skipped"
+                  icon="minus"
+                  tone="warning"
+                  [value]="formatStat('' + displayMetrics().skipped)"
+                />
+                <app-rg-results-stat-card
+                  label="Parallelism"
+                  icon="users"
+                  [value]="formatStat('' + displayMetrics().activeParallelism)"
+                />
+                @if (displayRun()?.summary; as summary) {
+                  <app-rg-results-stat-card
+                    label="P95 flow"
+                    icon="clock"
+                    [value]="formatStat(Math.round(summary.p95FlowDurationMs) + ' ms')"
+                  />
+                  <app-rg-results-stat-card
+                    label="Avg flow"
+                    icon="clock"
+                    [value]="formatStat(Math.round(summary.avgFlowDurationMs) + ' ms')"
+                  />
+                  <app-rg-results-stat-card
+                    label="Steps"
+                    icon="list"
+                    [value]="formatStat(summary.passedSteps + ' / ' + summary.totalSteps + ' passed')"
+                  />
+                }
+              </div>
+            </div>
+          }
+        </section>
+
+        <section class="rg-results-panel__section" aria-label="Run charts">
+          <button
+            type="button"
+            class="rg-results-panel__section-header"
+            [attr.aria-expanded]="!isSectionCollapsed('charts')"
+            (click)="handleToggleSection('charts')"
+          >
+            <tx-icon
+              class="rg-results-panel__chevron"
+              [class.rg-results-panel__chevron--collapsed]="isSectionCollapsed('charts')"
+              name="chevronDown"
+              [size]="12"
+              aria-hidden="true"
+            />
+            <h3 class="rg-results-panel__section-title">Charts</h3>
+          </button>
+          @if (!isSectionCollapsed('charts')) {
+            <div class="rg-results-panel__section-body">
+              <div class="rg-results-panel__charts">
+                <app-rg-results-gantt-chart
+                  [timeline]="ganttTimeline()"
+                  [compareTimeline]="compareGanttTimeline()"
+                  [totalDurationMs]="ganttTotalDurationMs()"
+                  [selectedFlowId]="selectedFlowDiffId()"
+                  (flowSelected)="handleFlowSelected($event)"
+                />
+                <div class="rg-results-panel__chart-row">
+                  <app-rg-results-line-chart
+                    title="Pass rate"
+                    unit="%"
+                    [values]="passRateSeries()"
+                    [secondaryValues]="comparePassRateSeries()"
+                    [elapsedSec]="displayMetrics().elapsedSec"
+                    strokeColor="var(--tx-success)"
+                  />
+                  <app-rg-results-line-chart
+                    title="Parallelism"
+                    unit="slots"
+                    [values]="parallelismSeries()"
+                    [elapsedSec]="displayMetrics().elapsedSec"
+                    strokeColor="var(--tx-accent)"
+                  />
+                  <app-rg-results-line-chart
+                    title="Avg flow duration"
+                    unit="ms"
+                    [values]="avgDurationSeries()"
+                    [elapsedSec]="displayMetrics().elapsedSec"
+                    strokeColor="var(--tx-warning)"
+                  />
+                </div>
+                <app-rg-results-flow-duration-bars
+                  [flowResults]="flowResults()"
+                  [durationThresholdMs]="durationThresholdMs()"
+                />
+              </div>
+            </div>
+          }
+        </section>
+      }
+
+      @if (flowResults().length > 0) {
+        <section class="rg-results-panel__section" aria-label="Flow results">
+          <button
+            type="button"
+            class="rg-results-panel__section-header"
+            [attr.aria-expanded]="!isSectionCollapsed('flowResults')"
+            (click)="handleToggleSection('flowResults')"
+          >
+            <tx-icon
+              class="rg-results-panel__chevron"
+              [class.rg-results-panel__chevron--collapsed]="isSectionCollapsed('flowResults')"
+              name="chevronDown"
+              [size]="12"
+              aria-hidden="true"
+            />
+            <h3 class="rg-results-panel__section-title">Flow results</h3>
+            <span class="rg-results-panel__section-count">{{ flowResults().length }}</span>
+          </button>
+          @if (!isSectionCollapsed('flowResults')) {
+            <div class="rg-results-panel__section-body">
+              <div class="rg-results-panel__flows-table-wrap">
+                <table class="rg-results-panel__flows-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Flow</th>
+                      <th scope="col">Status</th>
+                      <th scope="col">Duration</th>
+                      <th scope="col">Steps</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (flow of flowResults(); track flow.flowId) {
+                      <tr>
+                        <td>{{ flow.flowName }}</td>
+                        <td>
+                          <tx-tag [variant]="flowStatusVariant(flow.status)" casing="normal">
+                            {{ flow.status }}
+                          </tx-tag>
+                        </td>
+                        <td>{{ flow.durationMs }} ms</td>
+                        <td>
+                          {{ flow.passedStepCount }} pass · {{ flow.failedStepCount }} fail
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          }
+        </section>
+      }
+
+      @if (runState() === 'running' && resultsView() === 'live') {
+        <section class="rg-results-panel__section" aria-label="Live regression status">
+          <button
+            type="button"
+            class="rg-results-panel__section-header"
+            [attr.aria-expanded]="!isSectionCollapsed('liveBanner')"
+            (click)="handleToggleSection('liveBanner')"
+          >
+            <tx-icon
+              class="rg-results-panel__chevron"
+              [class.rg-results-panel__chevron--collapsed]="isSectionCollapsed('liveBanner')"
+              name="chevronDown"
+              [size]="12"
+              aria-hidden="true"
+            />
+            <h3 class="rg-results-panel__section-title">Live status</h3>
+          </button>
+          @if (!isSectionCollapsed('liveBanner')) {
+            <div class="rg-results-panel__section-body">
+              <tx-banner variant="info" title="Live regression">
+                Progress updates while flows execute. Saved runs appear in History; compare two runs with the Compare tab.
+              </tx-banner>
+            </div>
+          }
+        </section>
+      }
+    </div>
+  </div>
+
+  <tx-confirm-dialog
+    [open]="clearConfirmOpen()"
+    title="Clear run history?"
+    message="This removes all saved runs for this regression. This action cannot be undone."
+    confirmLabel="Clear history"
+    variant="danger"
+    (confirmed)="handleClearRunsConfirm()"
+    (cancelled)="handleClearRunsCancel()"
+  />
+</section>

@@ -1,0 +1,18 @@
+.rg-export-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.rg-export-toolbar__feedback {
+  font-size: 0.6875rem;
+  color: var(--tx-success);
+  white-space: nowrap;
+}
+
+:host ::ng-deep tx-button .tx-button {
+  min-height: 1.75rem;
+  padding: 0.2rem 0.55rem;
+  font-size: 0.6875rem;
+}

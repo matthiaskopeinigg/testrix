@@ -1,0 +1,186 @@
+<section class="ts-flow-run-panel" aria-label="Flow run log">
+  <header class="ts-flow-run-panel__chrome">
+    <div class="ts-flow-run-panel__head">
+      <span class="ts-flow-run-panel__title">Run log</span>
+      @if (running()) {
+        <tx-tag class="ts-flow-status-tag--running" variant="info" casing="normal">Running</tx-tag>
+      } @else if (summary(); as s) {
+        <tx-tag [variant]="s.statusVariant" casing="normal">{{ s.statusLabel }}</tx-tag>
+        @if (s.durationLabel) {
+          <span class="ts-flow-run-panel__meta">{{ s.durationLabel }}</span>
+        }
+        @if (s.countsLabel) {
+          <span class="ts-flow-run-panel__meta">{{ s.countsLabel }}</span>
+        }
+        @if (s.runAtLabel) {
+          <span class="ts-flow-run-panel__meta ts-flow-run-panel__meta--time">{{ s.runAtLabel }}</span>
+        }
+      }
+    </div>
+    @if (running() && progress(); as p) {
+      <div
+        class="ts-flow-run-panel__progress"
+        role="progressbar"
+        [attr.aria-valuenow]="p.completed"
+        [attr.aria-valuemin]="0"
+        [attr.aria-valuemax]="p.total"
+        [attr.aria-label]="'Flow run progress ' + p.completed + ' of ' + p.total"
+      >
+        <span class="ts-flow-run-panel__progress-fill" [style.width.%]="p.percent"></span>
+      </div>
+    }
+  </header>
+
+  <div class="ts-flow-run-panel__body">
+    @if (lastRunMessage(); as message) {
+      <tx-banner variant="error" title="Run failed">{{ message }}</tx-banner>
+    }
+
+    @if (showIdleEmpty()) {
+      <div class="ts-flow-run-panel__empty">
+        <span class="ts-flow-run-panel__empty-icon" aria-hidden="true">
+          <tx-icon name="play" [size]="20" aria-hidden="true" />
+        </span>
+        <p class="ts-flow-run-panel__empty-title">No runs yet</p>
+        <p class="ts-flow-run-panel__empty-hint">Run the flow to see step results here.</p>
+      </div>
+    } @else {
+      <ul class="ts-flow-run-panel__timeline">
+        @for (row of timelineRows(); track row.id) {
+          <li>
+            <button
+              type="button"
+              class="ts-flow-run-panel__row"
+              [class.is-selected]="selectedStepId() === row.id"
+              [class.is-status-running]="row.status === 'running'"
+              [class.is-status-waiting]="row.status === 'waiting'"
+              [class.is-status-passed]="row.status === 'passed'"
+              [class.is-status-failed]="row.status === 'failed'"
+              [class.is-status-skipped]="row.status === 'skipped'"
+              [attr.aria-label]="row.name + ' — ' + row.subtitle"
+              (click)="handleRowClick(row.id)"
+            >
+              @if (row.index !== null) {
+                <span class="ts-flow-run-panel__index" aria-hidden="true">{{ row.index }}</span>
+              }
+              <span class="ts-flow-run-panel__row-icon" aria-hidden="true">
+                <tx-icon [name]="row.icon" [size]="14" />
+              </span>
+              <span class="ts-flow-run-panel__row-main">
+                <span class="ts-flow-run-panel__row-name">{{ row.name }}</span>
+                <span
+                  class="ts-flow-run-panel__row-sub"
+                  [class.is-error]="row.status === 'failed' && row.errorLabel"
+                >
+                  {{ row.subtitle }}
+                </span>
+              </span>
+              @if (row.durationLabel) {
+                <span class="ts-flow-run-panel__row-duration">{{ row.durationLabel }}</span>
+              }
+              @if (statusTag(row.status); as tag) {
+                <tx-tag
+                  class="ts-flow-run-panel__row-tag"
+                  [class.ts-flow-status-tag--running]="row.status === 'running'"
+                  [class.ts-flow-status-tag--waiting]="row.status === 'waiting'"
+                  [class.ts-flow-status-tag--passed]="row.status === 'passed'"
+                  [class.ts-flow-status-tag--failed]="row.status === 'failed'"
+                  [class.ts-flow-status-tag--skipped]="row.status === 'skipped'"
+                  [variant]="tag.variant"
+                  casing="normal"
+                >
+                  {{ tag.label }}
+                </tx-tag>
+              }
+            </button>
+          </li>
+        }
+      </ul>
+
+      @if (selectedStepDetails(); as details) {
+        <section class="ts-flow-run-panel__details" aria-label="Step run details">
+          <header class="ts-flow-run-panel__details-head">
+            <span class="ts-flow-run-panel__details-title">Step details</span>
+            @if (details.durationLabel) {
+              <span class="ts-flow-run-panel__meta">{{ details.durationLabel }}</span>
+            }
+          </header>
+
+          @if (details.error) {
+            <tx-banner variant="error" title="Step error">{{ details.error }}</tx-banner>
+          } @else if (details.status === 'failed') {
+            <tx-banner variant="error" title="Step error">This step failed.</tx-banner>
+          }
+
+          @if (details.validationChecks.length > 0) {
+            <div class="ts-flow-run-panel__section">
+              <h3 class="ts-flow-run-panel__section-title">Validation checks</h3>
+              <table class="ts-flow-run-panel__diff-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Check</th>
+                    <th scope="col">Expected</th>
+                    <th scope="col">Actual</th>
+                    <th scope="col">Result</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (check of details.validationChecks; track check.label + check.expected) {
+                    <tr [class.is-failed]="!check.passed">
+                      <th scope="row">
+                        <span class="ts-flow-run-panel__diff-label">{{ check.label }}</span>
+                        <span class="ts-flow-run-panel__diff-operator">{{ check.operatorLabel }}</span>
+                      </th>
+                      <td>
+                        <code class="ts-flow-run-panel__diff-value">{{ check.expected || '—' }}</code>
+                      </td>
+                      <td>
+                        <code class="ts-flow-run-panel__diff-value">{{ check.actual || '—' }}</code>
+                      </td>
+                      <td>
+                        <tx-tag [variant]="check.passed ? 'success' : 'error'" casing="normal">
+                          {{ check.passed ? 'Pass' : 'Fail' }}
+                        </tx-tag>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+
+          @if (details.captureLines.length > 0) {
+            <div class="ts-flow-run-panel__section">
+              <h3 class="ts-flow-run-panel__section-title">Capture</h3>
+              <dl class="ts-flow-run-panel__kv">
+                @for (line of details.captureLines; track line.label) {
+                  <div class="ts-flow-run-panel__kv-row">
+                    <dt>{{ line.label }}</dt>
+                    <dd>{{ line.value }}</dd>
+                  </div>
+                }
+              </dl>
+            </div>
+          }
+
+          @if (details.capturePreview; as preview) {
+            <div class="ts-flow-run-panel__section">
+              <tx-code-editor
+                [title]="preview.title"
+                [content]="preview.content"
+                [language]="preview.language"
+                [readOnly]="true"
+                [hideToolbar]="false"
+                [hideToolbarActions]="true"
+                [framed]="true"
+                [overlaySyntaxHighlight]="true"
+              />
+            </div>
+          }
+        </section>
+      } @else if (selectedStepId()) {
+        <p class="ts-flow-run-panel__details-hint">No run output for this step yet.</p>
+      }
+    }
+  </div>
+</section>

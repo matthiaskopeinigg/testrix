@@ -22,6 +22,12 @@ export class TxButtonComponent {
 
   readonly buttonType = input<'button' | 'submit' | 'reset'>('button');
 
+  /** Accessible name when the visible label is icon-only. */
+  readonly ariaLabel = input<string | undefined>(undefined);
+
+  /** Compact square control for icon-only toolbar actions. */
+  readonly size = input<'default' | 'icon'>('default');
+
   readonly pressed = output<MouseEvent>();
 
   protected readonly isInteractionBlocked = computed(() => this.disabled() || this.loading());

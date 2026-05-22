@@ -1,13 +1,443 @@
 @use '../testing-workspace-tab.shared';
+@use '../../workspace/workspace-tab-chrome' as tab-chrome;
+@use '../../workspace/workspace-tab-motion';
+@use './ts-flow-tab.shared' as flow-shared;
 
-.test-suite-workspace-tab__meta {
-  margin: 0;
-  font-size: 13px;
-  color: var(--tx-text-1);
+$toolbar-control-h: tab-chrome.$workspace-tab-chip-height;
+
+@mixin ts-flow-toolbar-sr-label {
+  ::ng-deep .tx-field__label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
 }
 
-.test-suite-workspace-tab__nodes {
-  margin: 0;
-  padding-left: 1.25rem;
-  font-size: 13px;
+@mixin ts-flow-toolbar-control {
+  ::ng-deep .tx-field {
+    gap: 0;
+  }
+
+  ::ng-deep .tx-input {
+    min-height: $toolbar-control-h;
+    padding: 0.28rem 0.55rem;
+    font-size: 0.8125rem;
+  }
+}
+
+:host {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  min-width: 0;
+
+  @include flow-shared.ts-flow-status-tag-modifiers;
+}
+
+.ts-flow-tab {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.ts-flow-tab__toolbar-stack {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-width: 0;
+}
+
+// Workspace shell is a stagger child but inner panels carry the motion sequence.
+.ts-flow-tab.tx-entrance-stagger.tx-entrance-stagger--play > .ts-flow-tab__workspace {
+  opacity: 1;
+  transform: none;
+  animation: none;
+  pointer-events: auto;
+}
+
+.ts-flow-tab.tx-entrance-stagger:not(.tx-entrance-stagger--settled) .ts-flow-tab__stagger-panel {
+  opacity: 0;
+  transform: translateY(6px);
+  pointer-events: none;
+}
+
+.ts-flow-tab.tx-entrance-stagger.tx-entrance-stagger--play:not(.tx-entrance-stagger--settled)
+  .ts-flow-tab__stagger-panel {
+  animation: tx-slide-up var(--tx-entrance-stagger-duration) var(--tx-ease-out-expo) both;
+}
+
+.ts-flow-tab.tx-entrance-stagger.tx-entrance-stagger--play:not(.tx-entrance-stagger--settled)
+  .ts-flow-tab__steps.ts-flow-tab__stagger-panel {
+  animation-delay: calc(var(--tx-entrance-stagger-step) * 2);
+}
+
+.ts-flow-tab.tx-entrance-stagger.tx-entrance-stagger--play:not(.tx-entrance-stagger--settled)
+  .ts-flow-tab__editor.ts-flow-tab__stagger-panel {
+  animation-delay: calc(var(--tx-entrance-stagger-step) * 3);
+}
+
+.ts-flow-tab.tx-entrance-stagger.tx-entrance-stagger--play:not(.tx-entrance-stagger--settled)
+  .ts-flow-tab__run-slot.ts-flow-tab__stagger-panel {
+  animation-delay: calc(var(--tx-entrance-stagger-step) * 4);
+}
+
+.ts-flow-tab.tx-entrance-stagger.tx-entrance-stagger--settled .ts-flow-tab__stagger-panel {
+  opacity: 1;
+  transform: none;
+  animation: none;
+  pointer-events: auto;
+}
+
+.ts-flow-tab.tx-entrance-stagger > .ts-flow-tab__progress {
+  opacity: 1;
+  transform: none;
+  animation: none;
+  pointer-events: auto;
+}
+
+.ts-flow-tab__toolbar-chrome {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.ts-flow-tab__toolbar-chrome + .ts-flow-tab__toolbar-chrome {
+  padding-top: 0;
+}
+
+.ts-flow-tab__toolbar-chrome:first-of-type {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.ts-flow-tab__toolbar-chrome:last-of-type {
+  border-bottom: 1px solid color-mix(in srgb, var(--tx-border-0) 48%, transparent);
+}
+
+.ts-flow-tab__toolbar {
+  flex-shrink: 0;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  container-type: inline-size;
+  container-name: ts-flow-toolbar;
+
+  @include tab-chrome.workspace-tab-toolbar-popover-stack;
+}
+
+.ts-flow-tab__progress {
+  flex-shrink: 0;
+  height: 3px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--tx-text-0) 8%, transparent);
+}
+
+.ts-flow-tab__progress-fill {
+  display: block;
+  height: 100%;
+  border-radius: 0 999px 999px 0;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--tx-accent) 72%, var(--tx-text-0)) 0%,
+    var(--tx-accent) 100%
+  );
+  transition: width 180ms ease;
+}
+
+.tx-workspace-tab__chrome.ts-flow-tab__toolbar {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  gap: 0;
+  padding: 0.35rem tab-chrome.$workspace-tab-inset-x 0.38rem;
+
+  @include ts-flow-toolbar-sr-label;
+}
+
+.ts-flow-tab__toolbar-block {
+  width: 100%;
+  min-width: 0;
+}
+
+.ts-flow-tab__bar-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+
+  @include tab-chrome.workspace-tab-toolbar-popover-row;
+
+  &--primary {
+    justify-content: space-between;
+  }
+
+  &--options {
+    @include tab-chrome.workspace-tab-chip-surface;
+    padding: 0.28rem 0.4rem;
+  }
+}
+
+.ts-flow-tab__bar-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+  max-width: 100%;
+
+  &--identity {
+    @include tab-chrome.workspace-tab-chip-surface;
+    flex: 1 1 10rem;
+    padding: 0.28rem 0.4rem;
+  }
+
+  &--actions {
+    @include tab-chrome.workspace-tab-chip-surface;
+    flex: 0 1 auto;
+    justify-content: flex-end;
+    padding: 0.28rem 0.4rem;
+    margin-inline-start: auto;
+  }
+}
+
+.ts-flow-tab__badge {
+  @include flow-shared.ts-flow-type-chip(var(--tx-secondary));
+  flex: 0 0 auto;
+}
+
+.ts-flow-tab__name-field {
+  @include flow-shared.ts-flow-inline-name;
+  @include ts-flow-toolbar-control;
+  flex: 0 1 8rem;
+  min-width: 0;
+  max-width: 10rem;
+}
+
+.ts-flow-tab__description-field {
+  @include ts-flow-toolbar-control;
+  flex: 1 1 6rem;
+  min-width: 0;
+  max-width: 14rem;
+}
+
+.ts-flow-tab__env-field {
+  flex: 0 1 9rem;
+  width: 9rem;
+  min-width: 0;
+  max-width: 100%;
+
+  @include ts-flow-toolbar-sr-label;
+  @include tab-chrome.workspace-tab-toolbar-dropdown;
+
+  ::ng-deep .tx-field {
+    gap: 0;
+  }
+
+  ::ng-deep .tx-dropdown-host {
+    min-width: 0;
+    width: 100%;
+  }
+
+  ::ng-deep .tx-dropdown__trigger {
+    min-width: 0;
+    width: 100%;
+  }
+
+  ::ng-deep .tx-dropdown__value {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.ts-flow-tab__bar-group--actions tx-button {
+  flex-shrink: 0;
+}
+
+.ts-flow-tab__status {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.3rem 0.45rem;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.ts-flow-tab__metrics {
+  @include flow-shared.ts-flow-run-metrics;
+  gap: 0.3rem 0.45rem;
+  font-size: 0.6875rem;
+}
+
+.ts-flow-tab__metrics-pass {
+  @include flow-shared.ts-flow-run-metrics-pass;
+}
+
+.ts-flow-tab__metrics-fail {
+  @include flow-shared.ts-flow-run-metrics-fail;
+}
+
+.ts-flow-tab__metrics-skip {
+  @include flow-shared.ts-flow-run-metrics-skip;
+}
+
+@container ts-flow-toolbar (max-width: 720px) {
+  .ts-flow-tab__description-field {
+    display: none;
+  }
+}
+
+@container ts-flow-toolbar (max-width: 540px) {
+  .ts-flow-tab__bar-row--primary {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .ts-flow-tab__bar-group--identity,
+  .ts-flow-tab__bar-group--actions {
+    flex: 1 1 auto;
+    width: 100%;
+    margin-inline-start: 0;
+  }
+
+  .ts-flow-tab__bar-group--actions {
+    justify-content: flex-end;
+  }
+
+  .ts-flow-tab__name-field {
+    flex: 1 1 5rem;
+    max-width: none;
+  }
+
+  .ts-flow-tab__env-field {
+    flex: 1 1 6rem;
+    width: auto;
+    max-width: none;
+  }
+}
+
+@container ts-flow-toolbar (max-width: 360px) {
+  .ts-flow-tab__status {
+    flex: 1 1 100%;
+  }
+}
+
+@container ts-flow-toolbar (max-width: 540px) {
+  ::ng-deep .ts-flow-settings__tags {
+    flex: 1 1 6rem;
+    max-width: none;
+  }
+}
+
+@container ts-flow-toolbar (max-width: 420px) {
+  ::ng-deep .ts-flow-settings__toggle--e2e .tx-toggle__label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  ::ng-deep .ts-flow-settings__toggle .tx-toggle {
+    gap: 0;
+  }
+}
+
+.ts-folder-tab-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  max-width: 36rem;
+}
+
+.ts-flow-tab__workspace {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  overflow: hidden;
+}
+
+html[data-animation-speed='none'] {
+  .ts-flow-tab.tx-entrance-stagger.tx-entrance-stagger--play:not(.tx-entrance-stagger--settled)
+    .ts-flow-tab__stagger-panel {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ts-flow-tab.tx-entrance-stagger.tx-entrance-stagger--play:not(.tx-entrance-stagger--settled)
+    .ts-flow-tab__stagger-panel {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.ts-flow-tab__split {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.ts-flow-tab__h-split {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.ts-flow-tab__steps {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--tx-surface-1) 88%, #000 12%);
+  border-right: 1px solid color-mix(in srgb, var(--tx-border-0) 48%, transparent);
+}
+
+.ts-flow-tab__editor {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--tx-content-bg, var(--tx-surface-0));
+}
+
+.ts-flow-tab__run-slot {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
 }

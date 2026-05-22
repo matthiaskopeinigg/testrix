@@ -455,6 +455,86 @@
                   </div>
                 </section>
               }
+              @if (isSectionActive('testSuite')) {
+                <section
+                  class="tx-settings__section"
+                  [class.tx-settings__section--active]="isSectionActive('testSuite')"
+                  [attr.aria-hidden]="!isSectionActive('testSuite')"
+                >
+                  <div
+                    class="tx-settings__section-inner tx-entrance-stagger"
+                    [class.tx-entrance-stagger--play]="isSectionContentAnimating('testSuite')"
+                    [class.tx-entrance-stagger--settled]="isSectionContentSettled('testSuite')"
+                  >
+                  <div class="tx-entrance-stagger__block">
+                    <h2 class="tx-settings__tab-title">Test Suite</h2>
+                    <p class="tx-settings__tab-description">
+                      Tree drag-and-drop behavior and display options in the test suite sidebar.
+                    </p>
+                  </div>
+
+                  <div class="tx-entrance-stagger__block">
+                    <h3 class="tx-settings__section-heading">Drag &amp; drop</h3>
+                    <div class="tx-settings__toggle-stack">
+                      <tx-toggle
+                        label="Expand folder on drag"
+                        [ngModel]="s.testSuite.expandFolderOnDrag"
+                        (ngModelChange)="patchTestSuiteToggle('expandFolderOnDrag', $event)"
+                      />
+                      <tx-toggle
+                        label="Move animation"
+                        [ngModel]="s.testSuite.animateMove"
+                        (ngModelChange)="patchTestSuiteToggle('animateMove', $event)"
+                      />
+                      <tx-toggle
+                        label="Expand animation"
+                        [ngModel]="s.testSuite.animateExpand"
+                        (ngModelChange)="patchTestSuiteToggle('animateExpand', $event)"
+                      />
+                    </div>
+                  </div>
+
+                  <div class="tx-entrance-stagger__block">
+                    <h3 class="tx-settings__section-heading">Sort &amp; priority</h3>
+                    <tx-form-field label="Sibling sort mode" controlId="tx-settings-test-suite-sort">
+                      <tx-dropdown
+                        id="tx-settings-test-suite-sort"
+                        [options]="collectionSortOptions"
+                        [ngModel]="s.testSuite.siblingSort"
+                        (ngModelChange)="patchTestSuiteSiblingSort($event)"
+                      />
+                    </tx-form-field>
+                    <tx-toggle
+                      label="Folders first"
+                      [ngModel]="s.testSuite.foldersFirst"
+                      (ngModelChange)="patchTestSuiteToggle('foldersFirst', $event)"
+                    />
+                  </div>
+
+                  <div class="tx-entrance-stagger__block">
+                    <h3 class="tx-settings__section-heading">Display</h3>
+                    <tx-toggle
+                      label="Show descriptions in tree"
+                      [ngModel]="s.testSuite.showDescriptions"
+                      (ngModelChange)="patchTestSuiteToggle('showDescriptions', $event)"
+                    />
+                    <p class="tx-settings__tab-description">
+                      When enabled, folder and flow descriptions appear under names in the test suite
+                      sidebar.
+                    </p>
+                    <tx-toggle
+                      label="Show tags in tree"
+                      [ngModel]="s.testSuite.showTags"
+                      (ngModelChange)="patchTestSuiteToggle('showTags', $event)"
+                    />
+                    <p class="tx-settings__tab-description">
+                      When enabled, folder and flow tags (including Critical on flows) appear in the
+                      test suite sidebar.
+                    </p>
+                  </div>
+                  </div>
+                </section>
+              }
               @if (isSectionActive('general')) {
                 <section
                   class="tx-settings__section"

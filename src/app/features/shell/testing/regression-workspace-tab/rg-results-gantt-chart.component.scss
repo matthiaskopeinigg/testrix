@@ -1,0 +1,117 @@
+.rg-gantt {
+  padding: 0.65rem 0.75rem;
+  border-radius: var(--tx-radius-sm, 8px);
+  border: 1px solid color-mix(in srgb, var(--tx-border-0) 55%, transparent);
+  background: color-mix(in srgb, var(--tx-surface-1) 88%, #000 12%);
+}
+
+.rg-gantt__title {
+  margin: 0 0 0.55rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--tx-text-2);
+}
+
+.rg-gantt__empty {
+  margin: 0;
+  padding: 0.75rem 0;
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--tx-text-2);
+}
+
+.rg-gantt__lanes {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.rg-gantt__lane {
+  display: grid;
+  grid-template-columns: 4.5rem 1fr;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.rg-gantt__lane-label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--tx-text-2);
+}
+
+.rg-gantt__track {
+  position: relative;
+  height: 1.65rem;
+  border-radius: var(--tx-radius-sm, 8px);
+  background: color-mix(in srgb, var(--tx-surface-0) 55%, transparent);
+  border: 1px solid color-mix(in srgb, var(--tx-border-0) 35%, transparent);
+  overflow: hidden;
+}
+
+.rg-gantt__bar {
+  position: absolute;
+  top: 0.2rem;
+  bottom: 0.2rem;
+  min-width: 0.35rem;
+  padding: 0 0.35rem;
+  border: 0;
+  border-radius: calc(var(--tx-radius-sm, 8px) - 2px);
+  background: var(--rg-bar-color, var(--tx-secondary));
+  color: var(--tx-text-on-accent, #fff);
+  cursor: pointer;
+  overflow: hidden;
+  text-align: left;
+
+  &[data-status='passed'] {
+    --rg-bar-color: var(--tx-success);
+  }
+
+  &[data-status='failed'] {
+    --rg-bar-color: var(--tx-danger);
+  }
+
+  &[data-status='skipped'],
+  &[data-status='cancelled'] {
+    --rg-bar-color: color-mix(in srgb, var(--tx-text-2) 55%, var(--tx-surface-1));
+    color: var(--tx-text-0);
+  }
+
+  &[data-status='running'] {
+    --rg-bar-color: var(--tx-accent);
+    animation: rg-gantt-pulse 1.2s ease-in-out infinite;
+  }
+
+  &.is-ghost {
+    opacity: 0.35;
+    pointer-events: none;
+    border: 1px dashed color-mix(in srgb, var(--tx-border-0) 70%, transparent);
+    background: transparent;
+    color: var(--tx-text-2);
+  }
+
+  &.is-selected {
+    outline: 2px solid color-mix(in srgb, var(--tx-accent) 65%, transparent);
+    outline-offset: 1px;
+  }
+}
+
+.rg-gantt__bar-label {
+  display: block;
+  font-size: 0.625rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@keyframes rg-gantt-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.65;
+  }
+}

@@ -1,0 +1,107 @@
+.rg-step-diff {
+  padding: 0.65rem 0.75rem;
+  border-radius: var(--tx-radius-sm, 8px);
+  border: 1px solid color-mix(in srgb, var(--tx-border-0) 55%, transparent);
+  background: color-mix(in srgb, var(--tx-surface-1) 88%, #000 12%);
+}
+
+.rg-step-diff__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.55rem;
+}
+
+.rg-step-diff__title {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--tx-text-2);
+}
+
+.rg-step-diff__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.6875rem;
+  color: var(--tx-text-2);
+}
+
+.rg-step-diff__list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rg-step-diff__item {
+  padding: 0.45rem 0.55rem;
+  border-radius: calc(var(--tx-radius-sm, 8px) - 2px);
+  border: 1px solid color-mix(in srgb, var(--tx-border-0) 35%, transparent);
+  background: color-mix(in srgb, var(--tx-surface-0) 45%, transparent);
+
+  &.is-changed {
+    border-color: color-mix(in srgb, var(--tx-warning) 35%, transparent);
+  }
+}
+
+.rg-step-diff__row-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.35rem;
+}
+
+.rg-step-diff__name {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--tx-text-0);
+}
+
+.rg-step-diff__statuses {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.rg-step-diff__meta {
+  margin: 0.35rem 0 0;
+  font-size: 0.6875rem;
+  color: var(--tx-text-2);
+}
+
+.rg-step-diff__errors {
+  margin-top: 0.35rem;
+  font-size: 0.6875rem;
+  color: var(--tx-text-1);
+
+  p {
+    margin: 0.2rem 0;
+  }
+}
+
+.rg-step-diff__expand {
+  margin-top: 0.35rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--tx-accent);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.rg-step-diff__empty {
+  margin: 0;
+  padding: 0.75rem 0;
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--tx-text-2);
+}

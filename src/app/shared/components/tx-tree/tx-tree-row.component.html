@@ -75,14 +75,18 @@
       }
     </button>
 
-    @if (row().node.icon) {
+    @if (row().node.icon && !nodeBodyTemplate()) {
       <span class="tx-tree-row__icon" aria-hidden="true">
         <tx-icon [name]="row().node.icon!" [size]="rowIconSize()" />
       </span>
     }
 
-    <span class="tx-tree-row__text">
-      @if (renaming()) {
+    <span class="tx-tree-row__text" [class.tx-tree-row__text--custom]="!!nodeBodyTemplate()">
+      @if (nodeBodyTemplate(); as tpl) {
+        <ng-container
+          *ngTemplateOutlet="tpl; context: nodeBodyContext() ?? { $implicit: row() }"
+        />
+      } @else if (renaming()) {
         <tx-inline-rename-input
           class="tx-tree-row__rename"
           [value]="row().node.label"
@@ -96,29 +100,35 @@
             <span class="tx-tree-row__method" [attr.data-method]="method">{{ method }}</span>
           }
           <span class="tx-tree-row__label">{{ row().node.label | truncate: labelTruncate() }}</span>
-          @if (visibleTreeTags().length) {
-            <span
-              class="tx-tree-row__tags"
-              role="list"
-              [attr.aria-label]="'Tags: ' + (row().node.tags ?? []).join(', ')"
-            >
-              @for (tag of visibleTreeTags(); track tag) {
-                <span class="tx-tree-row__tag-chip" role="listitem" [title]="tag">{{ tag }}</span>
-              }
-              @if (treeTagsOverflowCount() > 0) {
-                <span
-                  class="tx-tree-row__tag-more"
-                  role="listitem"
-                  [attr.title]="'+' + treeTagsOverflowCount() + ' more tags'"
-                >
-                  +{{ treeTagsOverflowCount() }}
-                </span>
-              }
+          @if (isCritical()) {
+            <span class="tx-tree-row__critical" title="Critical flow">
+              <tx-icon name="alertCircle" [size]="12" aria-hidden="true" />
+              <span class="tx-tree-row__critical-label">Critical</span>
             </span>
           }
         </span>
         @if (row().node.subtitle) {
           <span class="tx-tree-row__subtitle">{{ row().node.subtitle | truncate: subtitleTruncate() }}</span>
+        }
+        @if (hasMetaRow()) {
+          <span
+            class="tx-tree-row__meta"
+            role="list"
+            [attr.aria-label]="'Tags: ' + (row().node.tags ?? []).join(', ')"
+          >
+            @for (tag of visibleTreeTags(); track tag) {
+              <span class="tx-tree-row__tag-chip" role="listitem" [title]="tag">{{ tag }}</span>
+            }
+            @if (treeTagsOverflowCount() > 0) {
+              <span
+                class="tx-tree-row__tag-more"
+                role="listitem"
+                [attr.title]="'+' + treeTagsOverflowCount() + ' more tags'"
+              >
+                +{{ treeTagsOverflowCount() }}
+              </span>
+            }
+          </span>
         }
       }
     </span>

@@ -30,17 +30,6 @@ export const loadTestThresholdsSchema = z.object({
 
 export type LoadTestThresholds = z.infer<typeof loadTestThresholdsSchema>;
 
-export const loadTestScenarioSchema = z.object({
-  id: z.string().min(1),
-  name: boundedText(256),
-  weight: z.number().min(0).max(100).default(100),
-  virtualUsers: z.number().int().min(1).max(10_000).optional(),
-  durationSec: z.number().int().min(1).max(86_400).optional(),
-  notes: boundedText(4_000).default(''),
-});
-
-export type LoadTestScenario = z.infer<typeof loadTestScenarioSchema>;
-
 export const loadTestRunSummarySchema = z.object({
   successRatePercent: z.number().min(0).max(100),
   errorRatePercent: z.number().min(0).max(100),
@@ -90,7 +79,6 @@ export const loadTestArtifactSchema = z.object({
   targetRequestId: z.string().optional(),
   profile: loadTestProfileSchema,
   thresholds: loadTestThresholdsSchema.default({}),
-  scenarios: z.array(loadTestScenarioSchema).default([]),
   runs: z.array(loadTestRunRecordSchema).max(LOAD_TEST_RUN_HISTORY_MAX).default([]),
   updatedAt: z.string(),
 });

@@ -1,0 +1,105 @@
+@use '../../workspace/request-workspace-tab/request-tab-panels';
+
+.ts-flow-step-panel {
+  max-width: 56rem;
+}
+
+.ts-flow-step-panel__hero {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.7rem;
+  margin-bottom: 0.35rem;
+}
+
+.ts-flow-step-panel__hero-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: var(--tx-radius-sm, 8px);
+  color: color-mix(in srgb, var(--tx-link) 88%, var(--tx-text-0));
+  background: color-mix(in srgb, var(--tx-link) 12%, var(--tx-surface-2));
+  border: 1px solid color-mix(in srgb, var(--tx-link) 22%, transparent);
+}
+
+.ts-flow-step-panel__hero-hint {
+  margin: 0.25rem 0 0;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--tx-text-2);
+}
+
+.ts-flow-step-panel__section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  padding: 0.8rem 0.9rem;
+  border-radius: var(--tx-radius-md, 10px);
+  border: 1px solid color-mix(in srgb, var(--tx-border-0) 48%, transparent);
+  background: color-mix(in srgb, var(--tx-surface-0) 55%, transparent);
+}
+
+.ts-flow-step-panel__row-2 {
+  display: grid;
+  grid-template-columns: minmax(6.5rem, 8rem) minmax(0, 1fr);
+  gap: 0.65rem;
+  align-items: end;
+}
+
+.ts-flow-step-panel__grow {
+  min-width: 0;
+}
+
+.ts-flow-step-panel__selector-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.5rem;
+  align-items: end;
+}
+
+.ts-flow-step-panel__rules {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.ts-flow-step-panel__rule {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 1fr) auto;
+  gap: 0.5rem;
+  align-items: end;
+  padding: 0.65rem;
+  border-radius: var(--tx-radius-sm, 8px);
+  border: 1px solid color-mix(in srgb, var(--tx-border-0) 42%, transparent);
+  background: color-mix(in srgb, var(--tx-surface-0) 65%, transparent);
+}
+
+.ts-flow-step-panel__capture-preview {
+  margin: 0 0 0.75rem;
+  padding: 0.45rem 0.6rem;
+  border-radius: var(--tx-radius-sm, 8px);
+  border: 1px solid color-mix(in srgb, var(--tx-success) 28%, var(--tx-border-0));
+  background: color-mix(in srgb, var(--tx-success) 8%, var(--tx-surface-0));
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: var(--tx-text-1);
+
+  &--empty {
+    border-color: color-mix(in srgb, var(--tx-warning) 30%, var(--tx-border-0));
+    background: color-mix(in srgb, var(--tx-warning) 8%, var(--tx-surface-0));
+  }
+}
+
+.ts-flow-step-panel__hint-inline {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--tx-text-2);
+}
+
+@media (max-width: 48rem) {
+  .ts-flow-step-panel__rule {
+    grid-template-columns: 1fr;
+  }
+}

@@ -47,6 +47,7 @@ import {
   createDefaultMockServerFile,
   createDefaultRegressionsFile,
   createDefaultTestSuitesFile,
+  migrateRegressionsFile,
   interceptorFileSchema,
   loadTestsFileSchema,
   mockServerFileSchema,
@@ -335,7 +336,13 @@ export class ConfigFileService {
   }
 
   async readRegressions(): Promise<RegressionsFile> {
-    return this.readJsonFile(this.regressionsPath(), createDefaultRegressionsFile, regressionsFileSchema);
+    const filePath = this.regressionsPath();
+    try {
+      const raw = await fs.readFile(filePath, 'utf8');
+      return migrateRegressionsFile(JSON.parse(raw));
+    } catch {
+      return createDefaultRegressionsFile();
+    }
   }
 
   async saveRegressions(data: RegressionsFile): Promise<RegressionsFile> {

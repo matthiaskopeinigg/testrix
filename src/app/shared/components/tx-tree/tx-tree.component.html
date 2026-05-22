@@ -6,36 +6,28 @@
   [class.tx-entrance-stagger--settled]="entranceStagger() && entranceStaggerSettled()"
 >
   @for (row of visibleRows(); track trackRow($index, row)) {
-    @if (nodeTemplate(); as tpl) {
-      <div
-        class="tx-tree__custom-row"
-        [style.padding-inline-start.px]="row.depth * resolvedConfig().visual.indentPx"
-        role="presentation"
-      >
-        <ng-container *ngTemplateOutlet="tpl.template; context: templateContext(row)" />
-      </div>
-    } @else {
-      <tx-tree-row
-        [row]="row"
-        [config]="resolvedConfig()"
-        [debug]="debug()"
-        [selected]="isSelected(row.id)"
-        [renaming]="isRenaming(row.id)"
-        [dndState]="dndState()"
-        [indentPx]="resolvedConfig().visual.indentPx"
-        [expandRevealIndex]="expandRevealIndex(row.id)"
-        (rowClick)="handleRowClick(row)"
-        (rowDblClick)="handleRowDblClick(row)"
-        (chevronClick)="handleChevronClick(row)"
-        (pointerDownRow)="handlePointerDownRow(row, $event)"
-        (pointerDownHandle)="handlePointerDownHandle(row, $event)"
-        (registerElement)="handleRegisterRow(row.id, $event)"
-        (unregisterElement)="handleUnregisterRow(row.id)"
-        (rowContextMenu)="handleRowContextMenu(row.id, $event)"
-        (renameCommit)="handleRenameCommit(row, $event)"
-        (renameCancel)="handleRenameCancel(row)"
-      />
-    }
+    <tx-tree-row
+      [row]="row"
+      [config]="resolvedConfig()"
+      [debug]="debug()"
+      [selected]="isSelected(row.id)"
+      [renaming]="isRenaming(row.id)"
+      [dndState]="dndState()"
+      [indentPx]="resolvedConfig().visual.indentPx"
+      [expandRevealIndex]="expandRevealIndex(row.id)"
+      [nodeBodyTemplate]="nodeTemplate()?.template ?? null"
+      [nodeBodyContext]="templateContext(row)"
+      (rowClick)="handleRowClick(row)"
+      (rowDblClick)="handleRowDblClick(row)"
+      (chevronClick)="handleChevronClick(row)"
+      (pointerDownRow)="handlePointerDownRow(row, $event)"
+      (pointerDownHandle)="handlePointerDownHandle(row, $event)"
+      (registerElement)="handleRegisterRow(row.id, $event)"
+      (unregisterElement)="handleUnregisterRow(row.id)"
+      (rowContextMenu)="handleRowContextMenu(row.id, $event)"
+      (renameCommit)="handleRenameCommit(row, $event)"
+      (renameCancel)="handleRenameCancel(row)"
+    />
   } @empty {
     <p class="tx-tree__empty">No items</p>
   }

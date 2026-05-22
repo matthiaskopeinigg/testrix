@@ -7,14 +7,16 @@ import {
   input,
   OnDestroy,
   output,
+  TemplateRef,
 } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
 
 import { TxIconComponent } from '@app/shared/components/tx-icon/tx-icon.component';
 import { TxInlineRenameInputComponent } from '@app/shared/components/tx-inline-rename-input/tx-inline-rename-input.component';
 import { TruncatePipe } from '@app/shared/pipes/truncate.pipe';
 
-/** Max tag chips shown inline on a tree row; additional tags collapse to +N. */
-const TX_TREE_ROW_MAX_VISIBLE_TAGS = 2;
+/** Max tag chips shown on a tree row meta line; additional tags collapse to +N. */
+const TX_TREE_ROW_MAX_VISIBLE_TAGS = 6;
 
 import type {
   TxTreeConfig,
@@ -31,7 +33,7 @@ import {
 @Component({
   selector: 'tx-tree-row',
   standalone: true,
-  imports: [TxIconComponent, TxInlineRenameInputComponent, TruncatePipe],
+  imports: [NgTemplateOutlet, TxIconComponent, TxInlineRenameInputComponent, TruncatePipe],
   templateUrl: './tx-tree-row.component.html',
   styleUrl: './tx-tree-row.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -58,6 +60,7 @@ import {
     '[class.tx-tree-row-host--expand-reveal]': 'expandRevealIndex() !== null',
     '[style.--tx-tree-expand-reveal-index]': 'expandRevealIndex() ?? 0',
     '[class.tx-tree-row-host--has-subtitle]': '!!row().node.subtitle',
+    '[class.tx-tree-row-host--has-meta]': 'hasMetaRow()',
     '[class.tx-tree-row-host--renaming]': 'renaming()',
   },
 })
@@ -72,6 +75,9 @@ export class TxTreeRowComponent<TMeta = unknown> implements AfterViewInit, OnDes
   readonly indentPx = input(16);
   readonly expandRevealIndex = input<number | null>(null);
   readonly renaming = input(false);
+  /** When set, replaces the default label/icon body while keeping row chrome and DnD. */
+  readonly nodeBodyTemplate = input<TemplateRef<unknown> | null>(null);
+  readonly nodeBodyContext = input<unknown>(null);
 
   readonly rowClick = output<void>();
   readonly rowDblClick = output<void>();
@@ -192,6 +198,14 @@ export class TxTreeRowComponent<TMeta = unknown> implements AfterViewInit, OnDes
 
   protected labelTruncate(): number {
     return this.debug() ? 80 : 48;
+  }
+
+  protected hasMetaRow(): boolean {
+    return this.visibleTreeTags().length > 0 || this.treeTagsOverflowCount() > 0;
+  }
+
+  protected isCritical(): boolean {
+    return this.row().node.critical === true;
   }
 
   protected visibleTreeTags(): readonly string[] {

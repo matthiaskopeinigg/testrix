@@ -1,0 +1,39 @@
+import { catalogForEnvironment, type EnvironmentDefinition } from '@shared/config';
+import { DYNAMIC_VARIABLES, type DynamicVariableCatalogItem } from '@shared/dynamic-variables';
+import { flattenEnabledFlowSteps, type TestSuiteFlow } from '@shared/testing';
+
+import { FLOW_STEP_GUIDED_TITLES } from './flow-step-labels';
+
+/**
+ * Builds a variable catalog from dynamic variables, the flow environment, and prior step placeholders.
+ */
+export function collectPriorFlowPlaceholderKeys(
+  flow: TestSuiteFlow,
+  currentStepId: string,
+  environment?: EnvironmentDefinition | null,
+): readonly DynamicVariableCatalogItem[] {
+  const extras: DynamicVariableCatalogItem[] = [];
+  const steps = flattenEnabledFlowSteps(flow.nodes);
+
+  for (const step of steps) {
+    if (step.id === currentStepId) {
+      break;
+    }
+
+    if (step.stepType === 'MANUAL') {
+      const cfg = step.config as { variableName?: string };
+      const key = cfg.variableName?.trim();
+      if (key) {
+        extras.push({
+          id: `manual-${step.id}`,
+          label: `{{${key}}}`,
+          insert: `{{${key}}}`,
+          detail: `Value from manual step "${step.name || FLOW_STEP_GUIDED_TITLES.MANUAL}".`,
+        });
+      }
+    }
+  }
+
+  const envCatalog = catalogForEnvironment(environment ?? null);
+  return [...DYNAMIC_VARIABLES, ...envCatalog, ...extras];
+}

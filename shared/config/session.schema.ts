@@ -58,6 +58,8 @@ const workspaceEnvironmentsSchema = workspaceExpandedFoldersSchema.extend({
 const workspaceSchema = z.object({
   activeId: z.string().nullable(),
   recentIds: z.array(z.string()),
+  activeSidebarPanelId: z.string().nullable().default(null),
+  sidebarPanelOpen: z.boolean().default(false),
   collections: workspaceCollectionFolderTabsSchema,
   environments: workspaceEnvironmentsSchema,
   editor: workspaceEditorStateSchema,
@@ -85,6 +87,8 @@ export const sessionPatchSchema = z
       .object({
         activeId: z.string().nullable().optional(),
         recentIds: z.array(z.string()).optional(),
+        activeSidebarPanelId: z.string().nullable().optional(),
+        sidebarPanelOpen: z.boolean().optional(),
         collections: workspaceCollectionFolderTabsSchema.partial().optional(),
         environments: workspaceEnvironmentsSchema.partial().optional(),
         editor: workspaceEditorStateSchema.partial().optional(),

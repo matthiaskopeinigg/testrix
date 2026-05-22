@@ -381,6 +381,7 @@ export function migrateSettings(data: unknown, options?: MigrateSettingsOptions)
     dataConfig: section('dataConfig', defaults.dataConfig),
     collections: migrateCollectionsSection(record['collections'], defaults.collections, record['http']),
     environments: section('environments', defaults.environments),
+    testSuite: section('testSuite', defaults.testSuite),
     editor: migrateEditorSection(record['editor'], defaults.editor),
     http: migrateHttpSection(record['http'], defaults.http, appVersion),
     meta:
@@ -515,6 +516,15 @@ export function migrateSession(data: unknown): SessionFile {
           ? (workspaceRaw['activeId'] as string | null)
           : defaults.workspace.activeId,
       recentIds: legacyRecentIds,
+      activeSidebarPanelId:
+        typeof workspaceRaw['activeSidebarPanelId'] === 'string' ||
+        workspaceRaw['activeSidebarPanelId'] === null
+          ? (workspaceRaw['activeSidebarPanelId'] as string | null)
+          : defaults.workspace.activeSidebarPanelId,
+      sidebarPanelOpen:
+        typeof workspaceRaw['sidebarPanelOpen'] === 'boolean'
+          ? workspaceRaw['sidebarPanelOpen']
+          : defaults.workspace.sidebarPanelOpen,
       collections: {
         ...defaults.workspace.collections,
         expandedFolderIds: Array.isArray(collectionsRaw['expandedFolderIds'])

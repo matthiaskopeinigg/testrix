@@ -1,0 +1,131 @@
+<div class="request-panel ts-flow-step-panel ts-flow-interceptor-panel">
+
+
+  <section class="ts-flow-interceptor-panel__section" aria-labelledby="ts-interceptor-match-heading">
+    <h3 class="ts-flow-interceptor-panel__section-title" id="ts-interceptor-match-heading">Match criteria</h3>
+    <p class="ts-flow-interceptor-panel__section-hint">Requests must match this pattern before the interceptor runs.</p>
+
+    <div class="ts-flow-step-panel__row-2">
+      <tx-form-field label="Method" controlId="ts-interceptor-method">
+        <tx-dropdown
+          controlId="ts-interceptor-method"
+          [options]="methodOptions"
+          [ngModel]="cfg().method"
+          (ngModelChange)="patch({ method: $event })"
+        />
+      </tx-form-field>
+      <tx-form-field class="ts-flow-step-panel__grow" label="URL pattern" controlId="ts-interceptor-url">
+        <tx-variable-input
+          controlId="ts-interceptor-url"
+          [catalog]="variableCatalog()"
+          [ngModel]="cfg().urlPattern"
+          (ngModelChange)="patch({ urlPattern: $event })"
+          placeholder="**/api/login or /v1/users/*"
+        />
+      </tx-form-field>
+    </div>
+
+    <tx-form-field label="Match phase" controlId="ts-interceptor-phase">
+      <tx-dropdown
+        controlId="ts-interceptor-phase"
+        [options]="phaseOptions"
+        [ngModel]="cfg().matchPhase"
+        (ngModelChange)="patch({ matchPhase: $event })"
+      />
+    </tx-form-field>
+  </section>
+
+  <section class="ts-flow-interceptor-panel__section" aria-labelledby="ts-interceptor-action-heading">
+    <h3 class="ts-flow-interceptor-panel__section-title" id="ts-interceptor-action-heading">Action</h3>
+
+    <tx-form-field label="When matched" controlId="ts-interceptor-action">
+      <tx-dropdown
+        controlId="ts-interceptor-action"
+        [options]="actionOptions"
+        [ngModel]="cfg().interceptAction"
+        (ngModelChange)="patch({ interceptAction: $event })"
+      />
+    </tx-form-field>
+
+    @if (!isModifyAction()) {
+      <tx-banner variant="warning" title="Request blocked">
+        Matching requests are cancelled before they leave the browser. No body or header changes apply.
+      </tx-banner>
+    }
+  </section>
+
+  @if (isModifyAction()) {
+    <section class="ts-flow-interceptor-panel__section" aria-labelledby="ts-interceptor-headers-heading">
+      <h3 class="ts-flow-interceptor-panel__section-title" id="ts-interceptor-headers-heading">Header overrides</h3>
+      <p class="ts-flow-interceptor-panel__section-hint">Add or replace headers on the matched request.</p>
+      <tx-key-value-list
+        keyLabel="Header"
+        valueLabel="Value"
+        addLabel="Add header"
+        valueInput="variables"
+        [rows]="headerRows()"
+        [variableCatalog]="variableCatalog()"
+        (rowsChange)="handleHeadersChange($event)"
+      />
+    </section>
+
+    <section class="ts-flow-interceptor-panel__section" aria-labelledby="ts-interceptor-query-heading">
+      <h3 class="ts-flow-interceptor-panel__section-title" id="ts-interceptor-query-heading">Query overrides</h3>
+      <p class="ts-flow-interceptor-panel__section-hint">Add or replace query parameters on the matched URL.</p>
+      <tx-key-value-list
+        keyLabel="Param"
+        valueLabel="Value"
+        addLabel="Add param"
+        valueInput="variables"
+        [rows]="queryRows()"
+        [variableCatalog]="variableCatalog()"
+        (rowsChange)="handleQueryChange($event)"
+      />
+    </section>
+
+    <section class="ts-flow-interceptor-panel__section" aria-labelledby="ts-interceptor-body-heading">
+      <h3 class="ts-flow-interceptor-panel__section-title" id="ts-interceptor-body-heading">Body replacement</h3>
+      <p class="ts-flow-interceptor-panel__section-hint">Replace the outgoing request body when a type is selected.</p>
+
+      <tx-form-field label="Body type" controlId="ts-interceptor-body-type">
+        <tx-dropdown
+          controlId="ts-interceptor-body-type"
+          [options]="bodyTypeOptions"
+          [ngModel]="cfg().replaceBodyType ?? 'none'"
+          (ngModelChange)="patch({ replaceBodyType: $event })"
+        />
+      </tx-form-field>
+
+      @if (showBodyEditor()) {
+        <div class="ts-flow-interceptor-panel__editor">
+          <tx-code-editor
+            [language]="bodyEditorLanguage()"
+            [languageBadgeLabel]="bodyEditorLanguageLabel()"
+            title="Replace body"
+            [hideToolbarActions]="true"
+            [showFormatAction]="true"
+            [framed]="true"
+            [autoFormat]="true"
+            [variableCatalog]="variableCatalog()"
+            [ngModel]="cfg().replacePostBody ?? ''"
+            (ngModelChange)="patch({ replacePostBody: $event })"
+          />
+        </div>
+      } @else {
+        <p class="ts-flow-step-panel__hint-inline">Choose a body type to edit replacement content.</p>
+      }
+    </section>
+  }
+
+  <section class="ts-flow-interceptor-panel__section ts-flow-interceptor-panel__section--meta" aria-labelledby="ts-interceptor-meta-heading">
+    <h3 class="ts-flow-interceptor-panel__section-title" id="ts-interceptor-meta-heading">Output</h3>
+    <tx-form-field label="Cache as variable" controlId="ts-interceptor-var">
+      <tx-input
+        controlId="ts-interceptor-var"
+        [ngModel]="cfg().variableName ?? ''"
+        (ngModelChange)="patch({ variableName: $event || undefined })"
+        placeholder="Optional variable name"
+      />
+    </tx-form-field>
+  </section>
+</div>

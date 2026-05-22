@@ -14,6 +14,7 @@ import { RegressionService } from './core/testing/regression.service';
 import { TestSuiteService } from './core/testing/test-suite.service';
 import { TestingSessionService } from './core/testing/testing-session.service';
 import { ProfileService } from './core/profile/profile.service';
+import { WorkspaceSidebarSessionService } from './core/workspace/workspace-sidebar-session.service';
 
 import { WindowChromeDocumentService } from './core/electron/window-chrome-document.service';
 import { UiPreferencesService } from './core/ui/ui-preferences.service';
@@ -39,6 +40,7 @@ export class App implements OnInit {
   private readonly capture = inject(CaptureWorkbenchStore);
   private readonly interceptor = inject(InterceptorWorkspaceStore);
   private readonly testingSession = inject(TestingSessionService);
+  private readonly sidebarSession = inject(WorkspaceSidebarSessionService);
 
 
   /** Registers `data-*` UI preference hooks on `document.documentElement`. */
@@ -58,6 +60,7 @@ export class App implements OnInit {
       this.history.hydrate(),
     ]);
     this.testingSession.load();
+    this.sidebarSession.load();
     void Promise.all([
       this.testSuite.hydrate(),
       this.loadTest.hydrate(),

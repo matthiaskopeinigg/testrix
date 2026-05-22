@@ -5,8 +5,8 @@
     [activeId]="activeSidebarId()"
     [panelOpen]="sidebarPanelOpen()"
     [closePanelOnOutsideClick]="closeSidebarPanelOnOutsideClick()"
-    (activeIdChange)="activeSidebarId.set($event)"
-    (panelOpenChange)="sidebarPanelOpen.set($event)"
+    (activeIdChange)="handleActiveSidebarIdChange($event)"
+    (panelOpenChange)="handleSidebarPanelOpenChange($event)"
     (itemSelect)="handleSidebarSelect($event)"
   >
     @if (sidebarPanelOpen() && activeSidebarId(); as panelId) {

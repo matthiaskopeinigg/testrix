@@ -1,0 +1,48 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.ts-flow-coll-req-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.ts-flow-coll-req-picker__selected {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--tx-text-2);
+}
+
+.ts-flow-coll-req-picker__shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 14rem;
+  border-radius: var(--tx-radius-sm, 8px);
+  border: 1px solid color-mix(in srgb, var(--tx-border-0) 55%, transparent);
+  background: color-mix(in srgb, var(--tx-surface-1) 88%, #000 12%);
+  overflow: hidden;
+}
+
+.ts-flow-coll-req-picker__body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.ts-flow-coll-req-picker__tree {
+  flex: 1 1 auto;
+  min-height: 12rem;
+  padding-top: 0.15rem;
+}
+
+.ts-flow-coll-req-picker__empty {
+  margin: 0.75rem 0 0;
+  padding: 0.5rem 0.35rem;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--tx-text-1);
+}

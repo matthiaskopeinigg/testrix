@@ -1,0 +1,138 @@
+@if (!step()) {
+  <div class="ts-flow-step-editor__empty-state">
+    <tx-icon name="layers" [size]="28" aria-hidden="true" />
+    <p class="ts-flow-step-editor__empty-title">No step selected</p>
+    <p class="ts-flow-step-editor__empty">Choose a step in the list, or add one with the + button.</p>
+  </div>
+} @else if (step(); as s) {
+  <div class="ts-flow-step-editor__panel">
+    <header class="ts-flow-step-editor__header">
+      <div class="ts-flow-step-editor__header-main">
+        <div
+          class="ts-flow-step-editor__type-chip"
+          [style.--ts-flow-type-accent]="stepTypeAccent()"
+        >
+          <tx-icon [name]="stepTypeIcon()" [size]="14" aria-hidden="true" />
+          <span>{{ s.stepType }}</span>
+        </div>
+        <p class="ts-flow-step-editor__subtitle">{{ stepTypeLabel() }}</p>
+        <tx-input
+          class="ts-flow-step-editor__inline-name"
+          controlId="ts-step-name"
+          [ngModel]="s.name"
+          (ngModelChange)="patch({ name: $event })"
+          [placeholder]="stepNamePlaceholder()"
+        />
+      </div>
+      <div class="ts-flow-step-editor__header-actions">
+        @if (showFailureChip()) {
+          <tx-button
+            class="ts-flow-step-editor__failure-chip"
+            variant="secondary"
+            (pressed)="failureReopened.emit()"
+          >
+            <tx-icon name="alertCircle" [size]="14" aria-hidden="true" />
+            View error
+          </tx-button>
+        }
+        <tx-toggle
+          class="ts-flow-step-editor__enabled"
+          label="Enabled"
+          [ngModel]="s.enabled"
+          (ngModelChange)="patch({ enabled: $event })"
+        />
+        <tx-button variant="secondary" (pressed)="removeStep.emit()">Remove step</tx-button>
+      </div>
+    </header>
+
+    <div class="ts-flow-step-editor__body">
+      @if (showFailureAlert()) {
+        <app-ts-flow-step-failure-alert
+          [stepName]="failureStepName()"
+          [message]="failureErrorMessage()"
+          (dismissed)="failureDismissed.emit()"
+        />
+      }
+      @switch (s.stepType) {
+        @case ('REQUEST') {
+          <app-ts-flow-request-step-panel
+            [config]="s.config"
+            [variableCatalog]="variableCatalog()"
+            (configChange)="patchConfig($event)"
+          />
+        }
+        @case ('VALIDATION') {
+          <app-ts-flow-validation-step-panel
+            [config]="s.config"
+            [flow]="flow()"
+            [refStepOptions]="refStepOptions()"
+            (configChange)="patchConfig($event)"
+          />
+        }
+        @case ('WAIT') {
+          <app-ts-flow-wait-step-panel
+            [config]="s.config"
+            (configChange)="patchConfig($event)"
+          />
+        }
+        @case ('E2E') {
+          <app-ts-flow-e2e-step-panel
+            [config]="s.config"
+            [flow]="flow()"
+            [stepId]="s.id"
+            [variableCatalog]="variableCatalog()"
+            (configChange)="patchConfig($event)"
+          />
+        }
+        @case ('DATABASE') {
+          <app-ts-flow-database-step-panel
+            [config]="s.config"
+            (configChange)="patchConfig($event)"
+          />
+        }
+        @case ('MANUAL') {
+          <app-ts-flow-manual-step-panel
+            [config]="s.config"
+            (configChange)="patchConfig($event)"
+          />
+        }
+        @case ('TRIGGER') {
+          <app-ts-flow-trigger-step-panel
+            [config]="s.config"
+            [targetOptions]="triggerTargetOptions()"
+            (configChange)="patchConfig($event)"
+          />
+        }
+        @case ('HTTP_LISTENER') {
+          <app-ts-flow-http-middleware-step-panel
+            [config]="s.config"
+            [variableCatalog]="variableCatalog()"
+            (configChange)="patchConfig($event)"
+          />
+        }
+        @case ('HTTP_INTERCEPTOR') {
+          <app-ts-flow-http-interceptor-step-panel
+            [config]="s.config"
+            [variableCatalog]="variableCatalog()"
+            (configChange)="patchConfig($event)"
+          />
+        }
+        @default {
+          <section class="ts-flow-step-editor__section">
+            <tx-banner variant="info" title="Limited editor">
+              Full editor for {{ s.stepType }} is not available yet. Edit raw JSON below.
+            </tx-banner>
+            <tx-form-field label="Config (JSON)" controlId="ts-raw-config">
+              <tx-textarea
+                controlId="ts-raw-config"
+                [ngModel]="rawConfigJson()"
+                (ngModelChange)="patchRawConfig($event)"
+                [rows]="12"
+              />
+            </tx-form-field>
+          </section>
+        }
+      }
+    </div>
+  </div>
+}

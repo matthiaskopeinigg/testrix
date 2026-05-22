@@ -36,7 +36,8 @@
   );
 }
 
-:host.tx-tree-row-host--has-subtitle .tx-tree-row {
+:host.tx-tree-row-host--has-subtitle .tx-tree-row,
+:host.tx-tree-row-host--has-meta .tx-tree-row {
   align-items: flex-start;
   padding-block: 0.4rem;
 }
@@ -206,6 +207,11 @@
   display: flex;
   flex-direction: column;
   gap: 0.05rem;
+
+  &--custom {
+    flex-direction: row;
+    align-items: flex-start;
+  }
 }
 
 .tx-tree-row__primary {
@@ -230,6 +236,36 @@
   transition: color var(--tx-duration-fast) var(--tx-ease-standard);
 }
 
+.tx-tree-row__critical {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  flex-shrink: 0;
+  padding: 0.1rem 0.38rem 0.1rem 0.32rem;
+  border-radius: 999px;
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  line-height: 1.2;
+  color: color-mix(in srgb, var(--tx-warning) 92%, var(--tx-text-0));
+  background: color-mix(in srgb, var(--tx-warning) 14%, var(--tx-surface-1));
+  border: 1px solid color-mix(in srgb, var(--tx-warning) 42%, transparent);
+}
+
+.tx-tree-row__critical-label {
+  white-space: nowrap;
+}
+
+.tx-tree-row__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.22rem;
+  min-width: 0;
+  padding-top: 0.08rem;
+}
+
 .tx-tree-row__tags {
   display: inline-flex;
   align-items: center;
@@ -241,14 +277,13 @@
 }
 
 .tx-tree-row__tag-chip {
-  flex-shrink: 1;
-  min-width: 0;
-  max-width: 4.25rem;
+  flex-shrink: 0;
+  max-width: 8rem;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  padding: 0.05rem 0.35rem;
-  border-radius: 4px;
+  padding: 0.08rem 0.38rem;
+  border-radius: 999px;
   font-size: 0.625rem;
   font-weight: 600;
   line-height: 1.25;
@@ -277,7 +312,10 @@
 
 :host.tx-tree-row-host--has-subtitle .tx-tree-row__chevron,
 :host.tx-tree-row-host--has-subtitle .tx-tree-row__handle,
-:host.tx-tree-row-host--has-subtitle .tx-tree-row__icon {
+:host.tx-tree-row-host--has-subtitle .tx-tree-row__icon,
+:host.tx-tree-row-host--has-meta .tx-tree-row__chevron,
+:host.tx-tree-row-host--has-meta .tx-tree-row__handle,
+:host.tx-tree-row-host--has-meta .tx-tree-row__icon {
   margin-top: 0.1rem;
 }
 

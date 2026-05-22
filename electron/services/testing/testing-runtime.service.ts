@@ -1,22 +1,49 @@
-/**
- * In-process stubs for mock server, capture, interceptor, and load-test runtimes.
- * Replace with real engines as verticals mature.
- */
+import { app, type WebContents } from 'electron';
+
 import {
-  LoadTestRunSimulator,
   createIdleLoadTestRunMetrics,
-  loadTestStartOptionsSchema,
+  createIdleRegressionRunMetrics,
+  type FlowRunProgressEvent,
   type LoadTestRunMetrics,
   type LoadTestStartOptions,
+  type RegressionRun,
+  type RegressionRunMetrics,
 } from '../../../shared/testing';
 
+import { TestingChannels } from '../../ipc/channels/testing.channels';
+import type { ConfigFileService } from '../config/config-file.service';
+import { LoadTestRunner } from './load-test-runner.service';
+import { RegressionRunner } from './regression-runner.service';
+import { TestSuiteFlowExecutor, type TestSuiteFlowRunResult } from './test-suite-flow-executor.service';
+import {
+  E2eRunnerService,
+  type E2eExecutePayload,
+  type E2eExecuteResult,
+  type E2ePickElementPayload,
+  type E2ePickElementResult,
+} from './e2e-runner.service';
+
+/**
+ * In-process testing runtimes (mock server, capture, interceptor, load test, E2E browser).
+ */
 export class TestingRuntimeService {
   private mockRunning = false;
   private captureRunning = false;
   private interceptorRunning = false;
-  private readonly loadTestSimulator = new LoadTestRunSimulator();
-  private readonly captureEntries: { readonly id: string; readonly method: string; readonly url: string; readonly at: string }[] =
-    [];
+  private readonly loadTestRunner = new LoadTestRunner();
+  private readonly regressionRunner = new RegressionRunner();
+  private readonly flowExecutor = new TestSuiteFlowExecutor();
+  private readonly e2eRunner = new E2eRunnerService();
+  private readonly captureEntries: {
+    readonly id: string;
+    readonly method: string;
+    readonly url: string;
+    readonly at: string;
+  }[] = [];
+
+  constructor(private readonly files: ConfigFileService) {
+    this.flowExecutor.setE2eRunner(this.e2eRunner);
+  }
 
   mockStatus(): { readonly running: boolean } {
     return { running: this.mockRunning };
@@ -46,7 +73,12 @@ export class TestingRuntimeService {
     return { running: false };
   }
 
-  captureListEntries(): readonly { readonly id: string; readonly method: string; readonly url: string; readonly at: string }[] {
+  captureListEntries(): readonly {
+    readonly id: string;
+    readonly method: string;
+    readonly url: string;
+    readonly at: string;
+  }[] {
     return this.captureEntries;
   }
 
@@ -65,29 +97,73 @@ export class TestingRuntimeService {
   }
 
   loadTestStatus(): { readonly running: boolean } {
-    return { running: this.loadTestSimulator.snapshot().running };
+    return { running: this.loadTestRunner.snapshot().running };
   }
 
   loadTestMetrics(): LoadTestRunMetrics {
-    return this.loadTestSimulator.snapshot();
+    return this.loadTestRunner.snapshot();
   }
 
-  loadTestStart(options: unknown = {}): LoadTestRunMetrics {
-    const parsed = loadTestStartOptionsSchema.parse(options ?? {});
-    return this.loadTestSimulator.start(parsed);
+  loadTestStart(options: unknown = {}): Promise<LoadTestRunMetrics> {
+    const version = app.getVersion?.() ?? '0.0.0';
+    return this.loadTestRunner.start(options, this.files, version);
   }
 
   loadTestCancel(): LoadTestRunMetrics {
-    return this.loadTestSimulator.cancel();
+    return this.loadTestRunner.cancel();
   }
 
-  async e2eExecuteFlow(_flowId: string): Promise<{ readonly ok: boolean; readonly message: string }> {
-    return { ok: true, message: 'Flow execution stub completed.' };
+  regressionStatus(): RegressionRunMetrics {
+    return this.regressionRunner.snapshot();
+  }
+
+  regressionMetrics(): RegressionRunMetrics {
+    return this.regressionRunner.snapshot();
+  }
+
+  async regressionStart(
+    options: unknown,
+    sender?: WebContents,
+  ): Promise<{ readonly metrics: RegressionRunMetrics; readonly run: RegressionRun }> {
+    return this.regressionRunner.start(options, this.files, sender);
+  }
+
+  regressionCancel(): RegressionRunMetrics {
+    return this.regressionRunner.cancel();
+  }
+
+  async e2eExecuteFlow(flowId: string, sender?: WebContents): Promise<TestSuiteFlowRunResult> {
+    return this.flowExecutor.executeFlow(flowId, this.files, (event: FlowRunProgressEvent) => {
+      sender?.send(TestingChannels.flowRunProgress, event);
+    });
   }
 
   e2eCancel(): void {
-    // no-op stub
+    this.flowExecutor.cancel();
+  }
+
+  async e2eExecute(payload: E2eExecutePayload): Promise<E2eExecuteResult> {
+    return this.e2eRunner.execute(payload);
+  }
+
+  async e2eClearRunnerSession(): Promise<{ readonly ok: boolean }> {
+    await this.e2eRunner.clearRunnerSession();
+    return { ok: true };
+  }
+
+  e2eSignalCancel(): void {
+    this.e2eRunner.signalCancel();
+  }
+
+  async e2ePickElement(payload: E2ePickElementPayload): Promise<E2ePickElementResult> {
+    return this.e2eRunner.pickElement(payload);
   }
 }
 
-export { createIdleLoadTestRunMetrics, type LoadTestRunMetrics, type LoadTestStartOptions };
+export {
+  createIdleLoadTestRunMetrics,
+  createIdleRegressionRunMetrics,
+  type LoadTestRunMetrics,
+  type LoadTestStartOptions,
+  type RegressionRunMetrics,
+};

@@ -1,8 +1,10 @@
 import { z } from 'zod';
 
 import { loadTestTabsByIdSchema } from './load-test-tab-ui.schema';
+import { regressionTabsByIdSchema } from './regression-tab-ui.schema';
+import { testSuiteTabsByIdSchema } from './test-suite-tab-ui.schema';
 
-export const TESTING_ACTIVE_VIEW_IDS = ['menu', 'test-suite', 'load-test'] as const;
+export const TESTING_ACTIVE_VIEW_IDS = ['menu', 'test-suite', 'load-test', 'regression'] as const;
 export type TestingActiveViewId = (typeof TESTING_ACTIVE_VIEW_IDS)[number];
 
 export const TESTING_SUBPANEL_IDS = [
@@ -20,6 +22,14 @@ const testingTreeSidebarPrefsSchema = z.object({
   sortBy: z.enum(['saved', 'name-asc', 'name-desc', 'date-new', 'date-old']).default('saved'),
 });
 
+const regressionSidebarPrefsSchema = testingTreeSidebarPrefsSchema.extend({
+  archiveExpanded: z.boolean().default(false),
+  /** @deprecated Use archiveExpanded */
+  showArchived: z.boolean().optional(),
+  tagFilter: z.array(z.string()).default([]),
+  showDescriptions: z.boolean().default(false),
+});
+
 const testingInterceptorPrefsSchema = z.object({
   allFoldersExpanded: z.boolean().default(true),
 });
@@ -30,7 +40,9 @@ export const workspaceTestingSchema = z.object({
   testSuite: testingTreeSidebarPrefsSchema,
   loadTest: testingTreeSidebarPrefsSchema,
   loadTestTabsById: loadTestTabsByIdSchema.default({}),
-  regression: testingTreeSidebarPrefsSchema,
+  testSuiteTabsById: testSuiteTabsByIdSchema.default({}),
+  regressionTabsById: regressionTabsByIdSchema.default({}),
+  regression: regressionSidebarPrefsSchema,
   mockServer: testingTreeSidebarPrefsSchema,
   capture: testingTreeSidebarPrefsSchema,
   interceptor: testingInterceptorPrefsSchema,
@@ -67,6 +79,8 @@ export function mergeWorkspaceTesting(
     testSuite: { ...base.testSuite, ...patch.testSuite },
     loadTest: { ...base.loadTest, ...patch.loadTest },
     loadTestTabsById: { ...base.loadTestTabsById, ...patch.loadTestTabsById },
+    testSuiteTabsById: { ...base.testSuiteTabsById, ...patch.testSuiteTabsById },
+    regressionTabsById: { ...base.regressionTabsById, ...patch.regressionTabsById },
     regression: { ...base.regression, ...patch.regression },
     mockServer: { ...base.mockServer, ...patch.mockServer },
     capture: { ...base.capture, ...patch.capture },

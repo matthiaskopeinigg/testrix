@@ -1,24 +1,33 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  computed,
+  effect,
+  ElementRef,
   forwardRef,
+  inject,
   input,
   output,
   signal,
+  viewChild,
 } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
+import { filter, fromEvent } from 'rxjs';
 
+import { TxIconComponent } from '../tx-icon/tx-icon.component';
 import { TxTagComponent } from '../tx-tag/tx-tag.component';
 
 @Component({
   selector: 'tx-tags-input',
   standalone: true,
-  imports: [TxTagComponent],
+  imports: [TxTagComponent, TxIconComponent],
   templateUrl: './tx-tags-input.component.html',
   styleUrl: './tx-tags-input.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
     class: 'tx-tags-input-host',
+    '[class.tx-tags-input-host--open]': 'panelOpen()',
   },
   providers: [
     {
@@ -31,22 +40,81 @@ import { TxTagComponent } from '../tx-tag/tx-tag.component';
 export class TxTagsInputComponent implements ControlValueAccessor {
   private static nextId = 0;
 
+  private readonly hostRef = inject(ElementRef<HTMLElement>);
+
   readonly controlId = input('');
-  readonly placeholder = input('Type a tag and press Enter');
+  readonly placeholder = input('Add a tag…');
   readonly maxTags = input(16);
   readonly disabled = input(false);
+  /** Compact single-line layout for toolbars. */
+  readonly compact = input(false);
 
   readonly tagsChange = output<readonly string[]>();
 
   protected readonly autoId = `tx-tags-input-${TxTagsInputComponent.nextId++}`;
   protected readonly tags = signal<readonly string[]>([]);
   protected readonly draft = signal('');
+  protected readonly panelOpen = signal(false);
 
-  private onChange: (value: readonly string[]) => void = () => {};
-  private onTouched: () => void = () => {};
+  private readonly draftInputRef = viewChild<ElementRef<HTMLInputElement>>('draftInput');
+
+  protected readonly canAddMore = computed(
+    () => !this.disabled() && this.tags().length < this.maxTags(),
+  );
+
+  protected readonly triggerLabel = computed(() => {
+    const count = this.tags().length;
+    if (count === 0) {
+      return 'Add tags…';
+    }
+    if (count === 1) {
+      return '1 tag';
+    }
+    return `${count} tags`;
+  });
+
+  constructor() {
+    fromEvent<MouseEvent>(document, 'click', { capture: true })
+      .pipe(
+        filter(() => this.panelOpen()),
+        filter((event) => {
+          const target = event.target;
+          return target instanceof Node && !this.hostRef.nativeElement.contains(target);
+        }),
+        takeUntilDestroyed(),
+      )
+      .subscribe(() => this.closePanel());
+
+    effect(() => {
+      if (!this.panelOpen()) {
+        return;
+      }
+      const inputRef = this.draftInputRef();
+      if (!inputRef) {
+        return;
+      }
+      queueMicrotask(() => this.focusElement(inputRef.nativeElement));
+    });
+  }
 
   protected effectiveId(): string {
     return this.controlId().trim() || this.autoId;
+  }
+
+  protected handleTogglePanel(event: MouseEvent): void {
+    event.stopPropagation();
+    if (this.disabled()) {
+      return;
+    }
+    if (this.panelOpen()) {
+      this.closePanel();
+      return;
+    }
+    this.panelOpen.set(true);
+  }
+
+  protected handlePanelKeydown(event: KeyboardEvent): void {
+    event.stopPropagation();
   }
 
   protected handleDraftInput(event: Event): void {
@@ -60,20 +128,14 @@ export class TxTagsInputComponent implements ControlValueAccessor {
       this.commitDraft();
       return;
     }
-    if (event.key === 'Backspace' && this.draft().length === 0 && this.tags().length > 0) {
-      this.removeTag(this.tags()[this.tags().length - 1]!);
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      this.closePanel();
     }
   }
 
   protected handleRemoveTag(tag: string): void {
     this.removeTag(tag);
-  }
-
-  protected handleBlur(): void {
-    this.onTouched();
-    if (this.draft().trim()) {
-      this.commitDraft();
-    }
   }
 
   private commitDraft(): void {
@@ -99,6 +161,11 @@ export class TxTagsInputComponent implements ControlValueAccessor {
       }
     }
     this.setTags(merged);
+    if (merged.length >= this.maxTags()) {
+      this.closePanel();
+      return;
+    }
+    queueMicrotask(() => this.focusDraftInput());
   }
 
   private removeTag(tag: string): void {
@@ -111,9 +178,37 @@ export class TxTagsInputComponent implements ControlValueAccessor {
     this.tagsChange.emit(tags);
   }
 
+  private closePanel(): void {
+    this.panelOpen.set(false);
+    this.draft.set('');
+    this.onTouched();
+  }
+
+  private focusDraftInput(): void {
+    const input = this.draftInputRef()?.nativeElement;
+    if (!input) {
+      return;
+    }
+    this.focusElement(input);
+  }
+
+  private focusElement(input: HTMLInputElement): void {
+    try {
+      input.focus({ preventScroll: true });
+    } catch {
+      input.focus();
+    }
+  }
+
+  private onChange: (value: readonly string[]) => void = () => {};
+  private onTouched: () => void = () => {};
+
   writeValue(value: readonly string[] | null): void {
     this.tags.set(Array.isArray(value) ? value : []);
     this.draft.set('');
+    if (this.tags().length >= this.maxTags()) {
+      this.panelOpen.set(false);
+    }
   }
 
   registerOnChange(fn: (value: readonly string[]) => void): void {
@@ -125,6 +220,9 @@ export class TxTagsInputComponent implements ControlValueAccessor {
   }
 
   setDisabledState(isDisabled: boolean): void {
-    void isDisabled;
+    if (isDisabled) {
+      this.panelOpen.set(false);
+      this.draft.set('');
+    }
   }
 }

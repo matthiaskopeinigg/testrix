@@ -6,6 +6,10 @@
   width: 100%;
 }
 
+:host.tx-dropdown-host--open {
+  z-index: var(--tx-z-dropdown-panel, 200);
+}
+
 .tx-dropdown {
   position: relative;
   width: 100%;

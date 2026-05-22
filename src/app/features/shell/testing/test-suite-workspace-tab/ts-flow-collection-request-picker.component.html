@@ -1,0 +1,34 @@
+<div class="ts-flow-coll-req-picker">
+  @if (collectionRequestId()) {
+    <p class="ts-flow-coll-req-picker__selected">
+      Selected: <strong>{{ selectedLabel() }}</strong>
+    </p>
+  }
+
+  <app-workspace-sidebar-panel-shell
+    class="ts-flow-coll-req-picker__shell"
+    searchPlaceholder="Search requests…"
+    searchAriaLabel="Search collection requests"
+    [allFoldersExpanded]="allExpanded()"
+    [showFilterButton]="false"
+    [showSortButton]="false"
+    (searchChange)="handleSearch($event)"
+    (allFoldersExpandedChange)="handleExpandAll($event)"
+  >
+    <div class="ts-flow-coll-req-picker__body">
+      @if (displayNodes().length === 0) {
+        <p class="ts-flow-coll-req-picker__empty">{{ emptyStateMessage() }}</p>
+      } @else {
+        <tx-tree
+          class="ts-flow-coll-req-picker__tree"
+          [nodes]="displayNodes()"
+          [config]="treeConfig()"
+          [expandedIds]="expandedIds()"
+          [selectionIds]="treeSelectionIds()"
+          (expandedChange)="handleExpandedChange($event)"
+          (nodeClick)="handleNodeClick($event)"
+        />
+      }
+    </div>
+  </app-workspace-sidebar-panel-shell>
+</div>

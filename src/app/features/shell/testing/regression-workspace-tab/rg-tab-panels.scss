@@ -1,0 +1,69 @@
+@use '../../workspace/request-workspace-tab/request-tab-panels';
+
+:host ::ng-deep .rg-docs-editor textarea {
+  min-height: 16rem;
+}
+
+.rg-flow-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rg-flow-list__item {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.55rem 0.65rem;
+  border-radius: var(--tx-radius-sm, 8px);
+  border: 1px solid color-mix(in srgb, var(--tx-border-0) 55%, transparent);
+  background: color-mix(in srgb, var(--tx-surface-1) 88%, #000 12%);
+}
+
+.rg-flow-list__name {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 0.8125rem;
+  color: var(--tx-text-0);
+}
+
+.rg-flow-list__id {
+  font-size: 0.6875rem;
+  color: var(--tx-text-2);
+}
+
+.rg-flow-picker {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.55rem;
+  margin-top: 0.75rem;
+}
+
+.rg-flow-picker tx-form-field {
+  flex: 1 1 12rem;
+  min-width: 10rem;
+}
+
+.rg-settings-advanced-toggle {
+  margin-top: 0.75rem;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--tx-accent);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.rg-settings-advanced {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  margin-top: 0.65rem;
+  padding-top: 0.65rem;
+  border-top: 1px solid color-mix(in srgb, var(--tx-border-0) 55%, transparent);
+}

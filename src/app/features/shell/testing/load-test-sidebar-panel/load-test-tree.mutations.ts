@@ -287,7 +287,6 @@ export function createDefaultLoadTestArtifactPayload(
     docs: '',
     profile: createDefaultLoadTestProfile(),
     thresholds: createDefaultLoadTestThresholds(),
-    scenarios: [],
     runs: [],
     updatedAt: ts,
   };

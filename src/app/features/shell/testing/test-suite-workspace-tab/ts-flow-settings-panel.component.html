@@ -1,0 +1,38 @@
+<section class="ts-flow-settings" aria-label="Flow options">
+  <tx-tags-input
+    class="ts-flow-settings__tags"
+    controlId="ts-flow-settings-tags"
+    placeholder="Tags…"
+    [compact]="true"
+    [maxTags]="5"
+    [ngModel]="flow().tags"
+    (ngModelChange)="tagsChange.emit($event)"
+  />
+
+  <div class="ts-flow-settings__toggles" role="group" aria-label="Flow toggles">
+    <tx-toggle
+      class="ts-flow-settings__toggle"
+      label="Critical"
+      title="Mark flow as critical"
+      [ngModel]="flow().isCritical === true"
+      (ngModelChange)="criticalChange.emit($event)"
+    />
+
+    @if (hasE2eSteps()) {
+      <tx-toggle
+        class="ts-flow-settings__toggle ts-flow-settings__toggle--e2e"
+        label="Show E2E"
+        title="Show E2E browser window during run"
+        [ngModel]="e2eShowWindow()"
+        (ngModelChange)="e2eShowWindowChange.emit($event)"
+      />
+      <tx-toggle
+        class="ts-flow-settings__toggle ts-flow-settings__toggle--e2e"
+        label="Keep E2E"
+        title="Keep E2E browser window open after run"
+        [ngModel]="e2eKeepWindowOpen()"
+        (ngModelChange)="e2eKeepWindowOpenChange.emit($event)"
+      />
+    }
+  </div>
+</section>

@@ -180,3 +180,21 @@ $workspace-tab-ease: var(--tx-ease-out-expo, cubic-bezier(0.16, 1, 0.3, 1));
     font-size: 0.8125rem;
   }
 }
+
+/** Keeps toolbar popovers above sibling rows and tab content. */
+@mixin workspace-tab-toolbar-popover-stack {
+  overflow: visible;
+  position: relative;
+  z-index: 4;
+}
+
+/** Elevates a toolbar row while a nested popover is open. */
+@mixin workspace-tab-toolbar-popover-row {
+  overflow: visible;
+
+  &:has(tx-dropdown.tx-dropdown-host--open),
+  &:has(tx-tags-input.tx-tags-input-host--open) {
+    position: relative;
+    z-index: var(--tx-z-dropdown-panel, 200);
+  }
+}

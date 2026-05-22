@@ -6,7 +6,6 @@ export const LOAD_TEST_TAB_SECTION_IDS = [
   'target',
   'profile',
   'thresholds',
-  'scenarios',
   'docs',
 ] as const;
 
@@ -16,6 +15,9 @@ export const DEFAULT_LOAD_TEST_TAB_SECTION: LoadTestTabSectionId = 'overview';
 
 /** Coerces persisted section id to a valid load test tab section. */
 export function coerceLoadTestTabSectionId(value: unknown): LoadTestTabSectionId {
+  if (value === 'scenarios') {
+    return 'profile';
+  }
   if (
     typeof value === 'string' &&
     (LOAD_TEST_TAB_SECTION_IDS as readonly string[]).includes(value)

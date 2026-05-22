@@ -101,6 +101,15 @@ export function createDefaultSettings(): SettingsFile {
       foldersFirst: true,
       showDescriptions: true,
     },
+    testSuite: {
+      expandFolderOnDrag: true,
+      animateMove: true,
+      animateExpand: true,
+      siblingSort: 'orderThenPriority',
+      foldersFirst: true,
+      showDescriptions: true,
+      showTags: false,
+    },
     editor: createDefaultEditorSettings(),
     http: createDefaultHttpSettings(),
   };
@@ -210,6 +219,8 @@ export function createDefaultSession(): SessionFile {
     workspace: {
       activeId: null,
       recentIds: [],
+      activeSidebarPanelId: null,
+      sidebarPanelOpen: false,
       collections: {
         expandedFolderIds: [],
         folderTabsById: {},

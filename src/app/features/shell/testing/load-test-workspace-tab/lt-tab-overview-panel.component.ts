@@ -159,7 +159,6 @@ export class LtTabOverviewPanelComponent {
   readonly description = input('');
   readonly profile = input<LoadTestProfile | undefined>(undefined);
   readonly targetSummary = input('—');
-  readonly scenarioCount = input(0);
   readonly runs = input<readonly LoadTestRunRecord[]>([]);
   readonly pinnedBaselineRunId = input<string | null>(null);
 
@@ -229,16 +228,10 @@ export class LtTabOverviewPanelComponent {
       ? `${profile.virtualUsers} VUs · ${profile.durationSec}s · ${profile.rampUpSec}s ramp`
       : '—';
 
-    const scenarioCount = this.scenarioCount();
-    const scenarioValue =
-      scenarioCount === 0
-        ? 'Default profile only'
-        : `${scenarioCount} scenario${scenarioCount === 1 ? '' : 's'}`;
-
     return [
       { section: 'profile', label: 'Profile', value: profileValue, icon: 'sliders' },
       { section: 'target', label: 'Target', value: this.targetSummary(), icon: 'target' },
-      { section: 'scenarios', label: 'Scenarios', value: scenarioValue, icon: 'layers' },
+      { section: 'thresholds', label: 'Thresholds', value: 'Pass / fail gates', icon: 'checkCircle' },
     ];
   });
 

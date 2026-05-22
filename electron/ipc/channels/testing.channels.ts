@@ -27,6 +27,12 @@ export const TestingChannels = {
   loadTestCancel: 'testing:loadTestCancel',
   e2eExecuteFlow: 'testing:e2eExecuteFlow',
   e2eCancel: 'testing:e2eCancel',
+  flowRunProgress: 'testing:flowRunProgress',
+  regressionStart: 'testing:regressionStart',
+  regressionCancel: 'testing:regressionCancel',
+  regressionStatus: 'testing:regressionStatus',
+  regressionMetrics: 'testing:regressionMetrics',
+  regressionRunProgress: 'testing:regressionRunProgress',
 } as const;
 
 export type TestingChannel = (typeof TestingChannels)[keyof typeof TestingChannels];

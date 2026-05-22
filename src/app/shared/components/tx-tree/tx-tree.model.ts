@@ -155,6 +155,16 @@ export class TxTreeModel<TMeta = unknown> {
       return { targetId, position: 'after' };
     }
 
+    const adjacentDown = remapAdjacentDownwardBeforeDrop(
+      this.nodes,
+      sourceId,
+      targetId,
+      position,
+    );
+    if (adjacentDown) {
+      return adjacentDown;
+    }
+
     return { targetId, position };
   }
 
@@ -183,7 +193,7 @@ export class TxTreeModel<TMeta = unknown> {
     if (position === 'after') {
       const next = rows[index + 1];
       if (next && next.parentId === row.parentId) {
-        return { targetId: next.id, position: 'before' };
+        return { targetId: next.id, position: 'after' };
       }
       return { targetId: sourceId, position: 'after' };
     }
@@ -433,6 +443,37 @@ function hasChildrenCapability<TMeta>(node: TxTreeNode<TMeta>): boolean {
 /**
  * Returns true when the drop would leave the source in the same sibling slot.
  */
+/**
+ * When the source sits directly above the target, a `before` drop on the target is a no-op.
+ * Remap to `after` on the target so dragging one row down onto the next row reorders.
+ */
+function remapAdjacentDownwardBeforeDrop<TMeta>(
+  nodes: MutableTxTreeNode<TMeta>[],
+  sourceId: string,
+  targetId: string,
+  position: TxTreeDropPosition,
+): { readonly targetId: string; readonly position: TxTreeDropPosition } | null {
+  if (position !== 'before') {
+    return null;
+  }
+
+  const sourceLoc = findLocation(nodes, sourceId);
+  const targetLoc = findLocation(nodes, targetId);
+  if (!sourceLoc || !targetLoc) {
+    return null;
+  }
+
+  if ((sourceLoc.parent?.id ?? null) !== (targetLoc.parent?.id ?? null)) {
+    return null;
+  }
+
+  if (sourceLoc.index !== targetLoc.index - 1) {
+    return null;
+  }
+
+  return { targetId, position: 'after' };
+}
+
 function isEquivalentMove<TMeta>(
   sourceLoc: NodeLocation<TMeta>,
   targetLoc: NodeLocation<TMeta>,

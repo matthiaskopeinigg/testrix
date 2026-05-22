@@ -120,6 +120,12 @@ button.tx-button[data-variant='cta'] {
   }
 }
 
+button.tx-button[data-size='icon'] {
+  min-height: var(--tx-control-height-sm, 30px);
+  width: var(--tx-control-height-sm, 30px);
+  padding: 0;
+}
+
 button.tx-button[data-variant='add'] {
   border-style: dashed;
   @include tx-btn-surface(

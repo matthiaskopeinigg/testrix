@@ -18,8 +18,10 @@ export interface TxTreeNode<TMeta = unknown> {
   readonly label: string;
   /** Optional secondary line shown below {@link label} (smaller, muted). */
   readonly subtitle?: string;
-  /** Optional tag pills shown below the label when the sidebar preference allows it. */
+  /** Optional tag pills shown on a secondary meta row when the sidebar preference allows it. */
   readonly tags?: readonly string[];
+  /** Optional critical indicator for flows and similar high-priority items. */
+  readonly critical?: boolean;
   /** Optional HTTP method chip on request rows (not persisted). */
   readonly httpMethod?: string;
   readonly icon?: TxIconName;

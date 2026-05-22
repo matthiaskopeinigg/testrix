@@ -1,0 +1,101 @@
+.ts-flow-interceptor-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.ts-flow-interceptor-panel__hero {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.85rem 0.95rem;
+  border-radius: var(--tx-radius-md, 10px);
+  border: 1px solid color-mix(in srgb, var(--tx-accent) 28%, var(--tx-border-0));
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--tx-accent) 12%, var(--tx-surface-1)) 0%,
+    color-mix(in srgb, var(--tx-accent) 4%, var(--tx-surface-1)) 100%
+  );
+}
+
+.ts-flow-interceptor-panel__hero-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 2.35rem;
+  height: 2.35rem;
+  border-radius: var(--tx-radius-sm, 8px);
+  color: color-mix(in srgb, var(--tx-accent) 88%, var(--tx-text-0));
+  background: color-mix(in srgb, var(--tx-accent) 14%, var(--tx-surface-2));
+  border: 1px solid color-mix(in srgb, var(--tx-accent) 24%, transparent);
+}
+
+.ts-flow-interceptor-panel__hero-copy {
+  min-width: 0;
+}
+
+.ts-flow-interceptor-panel__hero-title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem 0.6rem;
+}
+
+.ts-flow-interceptor-panel__title {
+  margin: 0;
+}
+
+.ts-flow-interceptor-panel__hint {
+  margin: 0.35rem 0 0;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--tx-text-2);
+}
+
+.ts-flow-interceptor-panel__section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  padding: 0.8rem 0.9rem;
+  border-radius: var(--tx-radius-md, 10px);
+  border: 1px solid color-mix(in srgb, var(--tx-border-0) 48%, transparent);
+  background: color-mix(in srgb, var(--tx-surface-0) 55%, transparent);
+}
+
+.ts-flow-interceptor-panel__section--meta {
+  gap: 0.55rem;
+}
+
+.ts-flow-interceptor-panel__section-title {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--tx-text-0);
+}
+
+.ts-flow-interceptor-panel__section-hint {
+  margin: -0.15rem 0 0;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: var(--tx-text-2);
+}
+
+.ts-flow-interceptor-panel__editor {
+  display: flex;
+  flex-direction: column;
+  min-height: 12rem;
+
+  ::ng-deep tx-code-editor,
+  ::ng-deep .tx-code-editor-host {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-height: 12rem;
+  }
+
+  ::ng-deep .tx-code-editor__field {
+    min-height: 10rem;
+  }
+}

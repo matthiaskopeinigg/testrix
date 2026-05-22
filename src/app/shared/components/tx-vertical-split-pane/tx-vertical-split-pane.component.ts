@@ -24,7 +24,7 @@ const AUTO_HIDE_THRESHOLD = 120;
             (click)="handleRevealClick($event)"
           >
             <tx-icon name="chevronUp" [size]="12" aria-hidden="true" />
-            <span>Response</span>
+            <span>{{ revealLabel() }}</span>
           </button>
         </div>
       }
@@ -66,6 +66,8 @@ export class TxVerticalSplitPaneComponent {
   readonly secondaryHeight = input(280);
   readonly secondaryVisible = input(true);
   readonly secondaryHidden = input(false);
+  /** Label on the reveal/hide pills (default: Response). */
+  readonly revealLabel = input('Response');
   readonly secondaryHeightChange = output<number>();
   readonly secondaryHeightCommit = output<number>();
   readonly secondaryHiddenChange = output<boolean>();

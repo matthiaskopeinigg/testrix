@@ -1,0 +1,123 @@
+<header class="ts-flow-step-tree__header">
+  <div class="ts-flow-step-tree__header-main">
+    <h3 class="ts-flow-step-tree__title">Flow steps</h3>
+    @if (stepCount() > 0) {
+      <span class="ts-flow-step-tree__count">{{ stepCount() }}</span>
+    }
+  </div>
+</header>
+
+@if (treeNodes().length === 0) {
+  <div class="ts-flow-step-tree__empty-card" role="status">
+    <span class="ts-flow-step-tree__empty-icon" aria-hidden="true">
+      <tx-icon name="layers" [size]="20" aria-hidden="true" />
+    </span>
+    <p class="ts-flow-step-tree__empty-title">No steps yet</p>
+    <p class="ts-flow-step-tree__empty-hint">Right-click here to add a step.</p>
+  </div>
+} @else {
+  <div class="ts-flow-step-tree__scroll" #treeScroll (scroll)="handleTreeScroll()">
+    <div
+      class="ts-flow-step-tree__link-canvas"
+      [class.has-validation-links]="validationLinks().length > 0"
+      [style.min-height.px]="linkLayerHeight() || null"
+    >
+      <tx-tree
+        class="ts-flow-step-tree__tree"
+        [nodes]="treeNodes()"
+        [config]="treeConfig()"
+        [selectionIds]="selectionIds()"
+        (nodesChange)="nodesChange.emit($event)"
+        (nodeClick)="handleNodeClick($event)"
+        (rowContextMenu)="rowContextMenu.emit($event)"
+      >
+        <ng-template txTreeNode let-row>
+          <span
+            class="ts-flow-step-tree__row"
+            [class.is-disabled]="row.node.disabled"
+            [class.is-validation-ref]="hasValidationReference(row)"
+            [class.is-validation-target]="isValidationRefTarget(row)"
+            [class.is-validation-link-highlight]="isValidationLinkHighlighted(row)"
+            [class.is-status-running]="effectiveStatus(row) === 'running'"
+            [class.is-status-waiting]="effectiveStatus(row) === 'waiting'"
+            [class.is-status-passed]="effectiveStatus(row) === 'passed'"
+            [class.is-status-failed]="effectiveStatus(row) === 'failed'"
+            [class.is-status-skipped]="effectiveStatus(row) === 'skipped'"
+          >
+            @if (rowIndex(row); as index) {
+              <span class="ts-flow-step-tree__index" aria-hidden="true">{{ index }}</span>
+            } @else {
+              <span class="ts-flow-step-tree__index ts-flow-step-tree__index--spacer" aria-hidden="true">0</span>
+            }
+            @if (row.node.icon; as iconName) {
+              <span class="ts-flow-step-tree__type-icon">
+                <tx-icon [name]="iconName" [size]="14" aria-hidden="true" />
+              </span>
+            }
+            <span class="ts-flow-step-tree__row-text">
+              <span class="ts-flow-step-tree__row-label">{{ row.node.label }}</span>
+              @if (row.node.subtitle) {
+                <span class="ts-flow-step-tree__row-sub">{{ row.node.subtitle }}</span>
+              }
+            </span>
+            @if (statusTag(row); as tag) {
+              <tx-tag
+                class="ts-flow-step-tree__status"
+                [class.ts-flow-status-tag--running]="effectiveStatus(row) === 'running'"
+                [class.ts-flow-status-tag--waiting]="effectiveStatus(row) === 'waiting'"
+                [class.ts-flow-status-tag--passed]="effectiveStatus(row) === 'passed'"
+                [class.ts-flow-status-tag--failed]="effectiveStatus(row) === 'failed'"
+                [class.ts-flow-status-tag--skipped]="effectiveStatus(row) === 'skipped'"
+                [variant]="tag.variant"
+                casing="normal"
+                [attr.title]="tag.label"
+              >
+                {{ tag.label }}
+              </tx-tag>
+            }
+          </span>
+        </ng-template>
+      </tx-tree>
+      @if (linkPaths().length > 0) {
+        <svg
+          class="ts-flow-step-tree__links"
+          aria-hidden="true"
+          [attr.width]="linkLayerWidth()"
+          [attr.height]="linkLayerHeight()"
+        >
+          <defs>
+            <linearGradient
+              id="ts-flow-validation-link-gradient"
+              gradientUnits="userSpaceOnUse"
+              x1="0"
+              y1="0"
+              x2="0"
+              [attr.y2]="linkLayerHeight()"
+            >
+              <stop
+                offset="0%"
+                class="ts-flow-step-tree__link-gradient-stop ts-flow-step-tree__link-gradient-stop--ref"
+              />
+              <stop
+                offset="100%"
+                class="ts-flow-step-tree__link-gradient-stop ts-flow-step-tree__link-gradient-stop--validation"
+              />
+            </linearGradient>
+          </defs>
+          @for (path of linkPaths(); track path.id) {
+            <path
+              class="ts-flow-step-tree__link-glow"
+              [class.is-highlighted]="path.highlighted"
+              [attr.d]="path.d"
+            />
+            <path
+              class="ts-flow-step-tree__link-path"
+              [class.is-highlighted]="path.highlighted"
+              [attr.d]="path.d"
+            />
+          }
+        </svg>
+      }
+    </div>
+  </div>
+}

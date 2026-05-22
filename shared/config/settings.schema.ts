@@ -105,6 +105,13 @@ const collectionsSettingsSchema = collectionsTreeDisplaySchema.extend({
 
 const environmentsSettingsSchema = treeSidebarSettingsSchema;
 
+const testSuiteTreeDisplaySchema = treeSidebarSettingsSchema.extend({
+  /** When true, folder and flow tags appear in the test suite sidebar tree. */
+  showTags: z.boolean(),
+});
+
+export type TestSuiteSettings = z.infer<typeof testSuiteTreeDisplaySchema>;
+
 export const settingsFileSchema = z.object({
   schemaVersion: z.literal(1),
   meta: metaSettingsSchema,
@@ -117,6 +124,7 @@ export const settingsFileSchema = z.object({
   dataConfig: dataConfigSchema,
   collections: collectionsSettingsSchema,
   environments: environmentsSettingsSchema,
+  testSuite: testSuiteTreeDisplaySchema,
   editor: editorSettingsSchema,
   http: httpSettingsSchema,
 });
@@ -134,6 +142,7 @@ export const settingsPatchSchema = z
     dataConfig: dataConfigSchema.partial().optional(),
     collections: collectionsSettingsSchema.partial().optional(),
     environments: environmentsSettingsSchema.partial().optional(),
+    testSuite: testSuiteTreeDisplaySchema.partial().optional(),
     editor: z
       .object({
         keyboard: editorKeyboardSettingsSchema.partial().optional(),

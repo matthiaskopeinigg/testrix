@@ -10,9 +10,11 @@ import { ShellChannels } from '../ipc/channels/shell.channels';
 import { HttpChannels } from '../ipc/channels/http.channels';
 import { CookieChannels } from '../ipc/channels/cookie.channels';
 import { TestingChannels } from '../ipc/channels/testing.channels';
+import { E2eChannels } from '../ipc/channels/e2e.channels';
 import { WindowChannels } from '../ipc/channels/window.channels';
 
 import type { UpdaterStatus } from '../../shared/updater/updater-status.schema';
+import type { FlowRunProgressEvent } from '../../shared/testing';
 
 /**
  * Electron runs this preload **before** the renderer loads Angular. **`contextBridge`** must publish
@@ -123,8 +125,43 @@ const api: ElectronAPI = {
     loadTestMetrics: () => ipcRenderer.invoke(TestingChannels.loadTestMetrics),
     loadTestStart: (options) => ipcRenderer.invoke(TestingChannels.loadTestStart, options ?? {}),
     loadTestCancel: () => ipcRenderer.invoke(TestingChannels.loadTestCancel),
+    regressionStatus: () => ipcRenderer.invoke(TestingChannels.regressionStatus),
+    regressionStart: (options) => ipcRenderer.invoke(TestingChannels.regressionStart, options ?? {}),
+    regressionCancel: () => ipcRenderer.invoke(TestingChannels.regressionCancel),
+    onRegressionMetrics: (listener) => {
+      const handler = (_event: IpcRendererEvent, payload: unknown): void => {
+        listener(payload);
+      };
+      ipcRenderer.on(TestingChannels.regressionMetrics, handler);
+      return () => {
+        ipcRenderer.removeListener(TestingChannels.regressionMetrics, handler);
+      };
+    },
+    onRegressionRunProgress: (listener) => {
+      const handler = (_event: IpcRendererEvent, payload: unknown): void => {
+        listener(payload);
+      };
+      ipcRenderer.on(TestingChannels.regressionRunProgress, handler);
+      return () => {
+        ipcRenderer.removeListener(TestingChannels.regressionRunProgress, handler);
+      };
+    },
     e2eExecuteFlow: (flowId) => ipcRenderer.invoke(TestingChannels.e2eExecuteFlow, flowId),
     e2eCancel: () => ipcRenderer.invoke(TestingChannels.e2eCancel),
+    onFlowRunProgress: (listener) => {
+      const handler = (_event: IpcRendererEvent, payload: FlowRunProgressEvent): void => {
+        listener(payload);
+      };
+      ipcRenderer.on(TestingChannels.flowRunProgress, handler);
+      return () => {
+        ipcRenderer.removeListener(TestingChannels.flowRunProgress, handler);
+      };
+    },
+    e2eExecute: (payload) => ipcRenderer.invoke(E2eChannels.execute, payload),
+    e2eSignalCancel: () => ipcRenderer.send(E2eChannels.signalCancel),
+    clearE2eRunnerSession: () => ipcRenderer.invoke(E2eChannels.clearRunnerSession),
+    e2ePickElement: (payload) =>
+      ipcRenderer.invoke(E2eChannels.pickElementStart, payload && typeof payload === 'object' ? payload : {}),
   },
   windowControls: {
     minimize: () => ipcRenderer.invoke(WindowChannels.minimize),

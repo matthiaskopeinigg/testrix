@@ -36,6 +36,12 @@
     [searchPlaceholder]="searchPlaceholder()"
     [searchAriaLabel]="searchAriaLabel()"
   />
+} @else if (activeView() === 'regression') {
+  <app-regression-sidebar-panel
+    class="testing-sidebar-panel__drill-in"
+    [searchPlaceholder]="searchPlaceholder()"
+    [searchAriaLabel]="searchAriaLabel()"
+  />
 } @else if (programmaticPanel(); as cmp) {
   <div class="testing-sidebar-panel__drill-in">
     <ng-container *ngComponentOutlet="cmp; inputs: panelInputs()" />

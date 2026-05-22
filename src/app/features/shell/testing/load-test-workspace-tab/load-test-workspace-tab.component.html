@@ -33,7 +33,8 @@
             [variant]="runButtonVariant()"
             [loading]="runActionPending()"
             loadingLabel="Working"
-            [title]="running() ? 'Cancel load test' : 'Start load test'"
+            [title]="runButtonTitle()"
+            [disabled]="!running() && !canStartLoadTest()"
             (pressed)="handleRunToggle()"
           >
             {{ runButtonLabel() }}
@@ -108,7 +109,6 @@
                     [description]="artifact()?.description ?? ''"
                     [profile]="artifact()?.profile"
                     [targetSummary]="targetLabel()"
-                    [scenarioCount]="artifact()?.scenarios?.length ?? 0"
                     [runs]="artifact()?.runs ?? []"
                     [pinnedBaselineRunId]="pinnedBaselineRunId()"
                     (descriptionChange)="handleDescriptionChange($event)"
@@ -158,22 +158,6 @@
                   <app-lt-tab-thresholds-panel
                     [thresholds]="artifact()!.thresholds"
                     (thresholdsChange)="handleThresholdsChange($event)"
-                  />
-                </div>
-              </div>
-            }
-            @case ('scenarios') {
-              <div
-                class="tx-workspace-tab__section-shell tx-entrance-stagger"
-                [class.tx-entrance-stagger--play]="isSectionContentAnimating('scenarios')"
-                [class.tx-entrance-stagger--settled]="isSectionContentSettled('scenarios')"
-              >
-                <div class="tx-entrance-stagger__block">
-                  <app-lt-tab-scenarios-panel
-                    [scenarios]="artifact()?.scenarios ?? []"
-                    (scenariosChange)="handleScenariosChange($event)"
-                    (addScenario)="handleAddScenario()"
-                    (removeScenario)="handleRemoveScenario($event)"
                   />
                 </div>
               </div>

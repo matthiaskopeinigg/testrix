@@ -1,0 +1,133 @@
+@use './ts-flow-tab.shared' as flow-shared;
+
+:host {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.ts-flow-step-editor__empty-state {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 2rem 1.5rem;
+  text-align: center;
+  color: var(--tx-text-2);
+}
+
+.ts-flow-step-editor__empty-title {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--tx-text-1);
+}
+
+.ts-flow-step-editor__empty {
+  margin: 0;
+  max-width: 22rem;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--tx-text-2);
+}
+
+.ts-flow-step-editor__panel {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.ts-flow-step-editor__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-shrink: 0;
+  padding: 0.85rem 1.25rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--tx-border-0) 42%, transparent);
+}
+
+.ts-flow-step-editor__header-actions {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.5rem 0.75rem;
+  padding-top: 0.15rem;
+}
+
+.ts-flow-step-editor__header-main {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 0.45rem;
+  min-width: 0;
+  max-width: 56rem;
+}
+
+.ts-flow-step-editor__type-chip {
+  @include flow-shared.ts-flow-type-chip(var(--ts-flow-type-accent, var(--tx-accent)));
+  align-self: flex-start;
+
+  &--folder {
+    @include flow-shared.ts-flow-type-chip(var(--tx-warning));
+  }
+}
+
+.ts-flow-step-editor__subtitle {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  color: var(--tx-text-2);
+}
+
+.ts-flow-step-editor__inline-name {
+  width: 100%;
+  max-width: 36rem;
+
+  ::ng-deep .tx-input {
+    font-size: 1rem;
+    font-weight: 600;
+  }
+}
+
+.ts-flow-step-editor__name {
+  width: 100%;
+  max-width: 24rem;
+}
+
+.ts-flow-step-editor__enabled {
+  flex-shrink: 0;
+}
+
+.ts-flow-step-editor__failure-chip {
+  color: color-mix(in srgb, var(--tx-danger) 88%, var(--tx-text-0));
+  border-color: color-mix(in srgb, var(--tx-danger) 38%, var(--tx-border-0));
+  background: color-mix(in srgb, var(--tx-danger) 12%, var(--tx-surface-1));
+}
+
+.ts-flow-step-editor__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding: 1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.ts-flow-step-editor__section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-width: 56rem;
+}
