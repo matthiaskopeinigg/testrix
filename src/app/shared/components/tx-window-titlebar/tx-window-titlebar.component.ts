@@ -1,17 +1,13 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
-import { FormsModule } from '@angular/forms';
 
 import { ElectronService } from '@app/core/electron/electron.service';
 import { ProfileService } from '@app/core/profile/profile.service';
 
 import { TxBrandLogoComponent } from '../tx-brand-logo/tx-brand-logo.component';
-import { TxButtonComponent } from '../tx-button/tx-button.component';
 import { TxDropdownComponent } from '../tx-dropdown/tx-dropdown.component';
-import { TxFormFieldComponent } from '../tx-form-field/tx-form-field.component';
 import { TxIconComponent } from '../tx-icon/tx-icon.component';
-import { TxInputComponent } from '../tx-input/tx-input.component';
-import { TxModalComponent } from '../tx-modal/tx-modal.component';
 import { TxCookieManagerComponent } from '../tx-cookie-manager/tx-cookie-manager.component';
+import { TxProfileManagerModalComponent } from '../tx-profile-manager-modal/tx-profile-manager-modal.component';
 import { TxSettingsPopupComponent } from '../tx-settings-popup/tx-settings-popup.component';
 import { TxTooltipDirective } from '../tx-tooltip/tx-tooltip.directive';
 
@@ -19,15 +15,11 @@ import { TxTooltipDirective } from '../tx-tooltip/tx-tooltip.directive';
   selector: 'app-tx-window-titlebar',
   standalone: true,
   imports: [
-    FormsModule,
     TxBrandLogoComponent,
-    TxButtonComponent,
     TxDropdownComponent,
-    TxFormFieldComponent,
     TxIconComponent,
-    TxInputComponent,
-    TxModalComponent,
     TxCookieManagerComponent,
+    TxProfileManagerModalComponent,
     TxSettingsPopupComponent,
     TxTooltipDirective,
   ],
@@ -41,8 +33,7 @@ export class TxWindowTitlebarComponent {
 
   readonly settingsOpen = signal(false);
   readonly cookiesOpen = signal(false);
-  readonly newProfileModalOpen = signal(false);
-  readonly newProfileName = signal('New profile');
+  readonly profileManagerOpen = signal(false);
 
   readonly isDarwin = computed(() => this.electron.bridge()?.platform === 'darwin');
 
@@ -147,24 +138,11 @@ export class TxWindowTitlebarComponent {
     void this.profiles.switchProfile(profileId);
   }
 
-  protected handleNewProfile(): void {
-    if (this.profileSwitching()) {
-      return;
-    }
-    this.newProfileName.set('New profile');
-    this.newProfileModalOpen.set(true);
+  protected handleOpenProfileManager(): void {
+    this.profileManagerOpen.set(true);
   }
 
-  protected handleCloseNewProfileModal(): void {
-    this.newProfileModalOpen.set(false);
-  }
-
-  protected handleConfirmNewProfile(): void {
-    const name = this.newProfileName().trim();
-    if (!name || this.profileSwitching()) {
-      return;
-    }
-    this.newProfileModalOpen.set(false);
-    void this.profiles.createProfile(name);
+  protected handleCloseProfileManager(): void {
+    this.profileManagerOpen.set(false);
   }
 }

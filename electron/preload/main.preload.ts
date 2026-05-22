@@ -12,9 +12,15 @@ import { CookieChannels } from '../ipc/channels/cookie.channels';
 import { TestingChannels } from '../ipc/channels/testing.channels';
 import { E2eChannels } from '../ipc/channels/e2e.channels';
 import { WindowChannels } from '../ipc/channels/window.channels';
+import { DbChannels } from '../ipc/channels/db.channels';
 
 import type { UpdaterStatus } from '../../shared/updater/updater-status.schema';
 import type { FlowRunProgressEvent } from '../../shared/testing';
+import {
+  DEFAULT_APPEARANCE_THEME_ID,
+  normalizeAppearanceThemeId,
+  resolveThemeContentBackground,
+} from '../../shared/theme/theme-catalog';
 
 /**
  * Electron runs this preload **before** the renderer loads Angular. **`contextBridge`** must publish
@@ -33,6 +39,9 @@ function readAdditionalArg(prefix: string): string | undefined {
 
 const bootTheme = readAdditionalArg('--boot-theme=');
 const bootThemeMode = readAdditionalArg('--boot-theme-mode=') as 'light' | 'dark' | undefined;
+const bootThemeBg = bootTheme
+  ? resolveThemeContentBackground(bootTheme)
+  : resolveThemeContentBackground(DEFAULT_APPEARANCE_THEME_ID);
 
 const mergedVersions: VersionBundle = {
   electron: process.versions.electron ?? '',
@@ -43,10 +52,11 @@ const mergedVersions: VersionBundle = {
 const api: ElectronAPI = {
   platform: process.platform,
   devToolkit: process.env.TESTRIX_DEV === '1',
-  opaqueDevWindow: process.env.TESTRIX_SERVE_RENDERER === '1',
+  opaqueDevWindow: process.env.TESTRIX_SERVE_RENDERER === '1' && process.platform !== 'win32',
   /** Persisted appearance theme applied in `index.html` before Angular boot (via `additionalArguments`). */
   bootTheme,
   bootThemeMode,
+  bootThemeBg,
   nativeDevFrame: false,
   versions: mergedVersions as ElectronAPI['versions'],
   notifyReady: () => {
@@ -92,6 +102,10 @@ const api: ElectronAPI = {
   http: {
     send: (payload) => ipcRenderer.invoke(HttpChannels.send, payload),
     cancel: (requestId) => ipcRenderer.invoke(HttpChannels.cancel, requestId),
+  },
+  database: {
+    query: (payload) => ipcRenderer.invoke(DbChannels.query, payload),
+    testConnection: (connection) => ipcRenderer.invoke(DbChannels.testConnection, connection),
   },
   cookies: {
     getAll: () => ipcRenderer.invoke(CookieChannels.getAll),
@@ -168,6 +182,17 @@ const api: ElectronAPI = {
     maximizeToggle: () => ipcRenderer.invoke(WindowChannels.maximizeToggle),
     close: () => ipcRenderer.invoke(WindowChannels.close),
     focus: () => ipcRenderer.invoke(WindowChannels.focus),
+    getChromeState: () =>
+      ipcRenderer.invoke(WindowChannels.getChromeState) as Promise<{ readonly edgeToEdge: boolean }>,
+    onChromeStateChange: (listener: (state: { readonly edgeToEdge: boolean }) => void) => {
+      const handler = (_event: IpcRendererEvent, state: { readonly edgeToEdge: boolean }): void => {
+        listener(state);
+      };
+      ipcRenderer.on(WindowChannels.chromeStateChanged, handler);
+      return () => {
+        ipcRenderer.removeListener(WindowChannels.chromeStateChanged, handler);
+      };
+    },
     dragStart: (offset: { readonly offsetX: number; readonly offsetY: number }) =>
       ipcRenderer.send(WindowChannels.dragStart, { x: offset.offsetX, y: offset.offsetY }),
     dragMove: (position: { readonly screenX: number; readonly screenY: number }) =>

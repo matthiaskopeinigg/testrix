@@ -42,6 +42,28 @@
       [attr.aria-labelledby]="effectiveId()"
       [attr.aria-activedescendant]="optionId(activeIndex())"
     >
+      @if (showPanelAction()) {
+        <li class="tx-dropdown__panel-action-item" role="presentation">
+          <button
+            type="button"
+            class="tx-dropdown__panel-action"
+            (mousedown)="$event.preventDefault()"
+            (click)="handlePanelActionClick()"
+          >
+            @if (panelActionIcon()) {
+              <tx-icon
+                class="tx-dropdown__option-icon"
+                [name]="panelActionIcon()!"
+                [size]="16"
+                aria-hidden="true"
+              />
+            }
+            <span class="tx-dropdown__option-label">{{ panelActionLabel() }}</span>
+          </button>
+        </li>
+        <li class="tx-dropdown__separator" role="separator" aria-hidden="true"></li>
+      }
+
       @if (options().length === 0) {
         <li class="tx-dropdown__empty" role="presentation">
           <span>{{ emptyLabel() }}</span>

@@ -15,6 +15,7 @@ import { editorKeyboardSettingsSchema, editorSettingsSchema } from './editor-set
 import { httpSettingsPatchSchema, httpSettingsSchema } from './http-settings.schema';
 import { httpMethodDisplaySchema } from './http-method-display';
 import { workspaceEditorLayoutSchema } from './workspace-editor-layout.schema';
+import { databaseSettingsSchema } from './database-settings.schema';
 
 const metaSettingsSchema = z.object({
   createdAt: z.string(),
@@ -127,6 +128,7 @@ export const settingsFileSchema = z.object({
   testSuite: testSuiteTreeDisplaySchema,
   editor: editorSettingsSchema,
   http: httpSettingsSchema,
+  databases: databaseSettingsSchema,
 });
 
 export type SettingsFile = z.infer<typeof settingsFileSchema>;
@@ -150,6 +152,7 @@ export const settingsPatchSchema = z
       .partial()
       .optional(),
     http: httpSettingsPatchSchema.optional(),
+    databases: databaseSettingsSchema.partial().optional(),
   })
   .strict();
 

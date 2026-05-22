@@ -124,6 +124,8 @@ export * from './components/tx-response-viewer/tx-response-viewer.component';
 
 export * from './components/tx-cookie-manager/tx-cookie-manager.component';
 
+export * from './components/tx-profile-manager-modal/tx-profile-manager-modal.component';
+
 export * from './components/tx-run-timeline/tx-run-timeline.component';
 
 export * from './components/tx-diff-view/tx-diff-view.component';

@@ -8,6 +8,7 @@ export const FLOW_VALIDATION_REFERENCE_STEP_TYPES = [
   'E2E',
   'HTTP_LISTENER',
   'HTTP_INTERCEPTOR',
+  'DATABASE',
 ] as const satisfies readonly TestSuiteStepType[];
 
 export type FlowValidationReferenceStepType = (typeof FLOW_VALIDATION_REFERENCE_STEP_TYPES)[number];
@@ -49,9 +50,18 @@ export const flowStepE2eElementCaptureSchema = z.object({
 
 export type FlowStepE2eElementCapture = z.infer<typeof flowStepE2eElementCaptureSchema>;
 
+export const flowStepDatabaseCaptureSchema = z.object({
+  kind: z.literal('database_result'),
+  capturedAt: z.string(),
+  dbText: boundedText(512_000).default(''),
+});
+
+export type FlowStepDatabaseCapture = z.infer<typeof flowStepDatabaseCaptureSchema>;
+
 export const flowStepRunCaptureSchema = z.discriminatedUnion('kind', [
   flowStepHttpResponseCaptureSchema,
   flowStepE2eElementCaptureSchema,
+  flowStepDatabaseCaptureSchema,
 ]);
 
 export type FlowStepRunCapture = z.infer<typeof flowStepRunCaptureSchema>;
@@ -80,5 +90,14 @@ export function buildHttpResponseStepCapture(
     headers,
     requestMethod: snapshot.requestSummary?.method,
     requestUrl: snapshot.requestSummary?.url,
+  });
+}
+
+/** Builds a database query result capture for validation and step references. */
+export function buildDatabaseStepCapture(dbText: string): FlowStepDatabaseCapture {
+  return flowStepDatabaseCaptureSchema.parse({
+    kind: 'database_result',
+    capturedAt: new Date().toISOString(),
+    dbText,
   });
 }

@@ -117,6 +117,8 @@ export const databaseStepConfigSchema = z.object({
   timeoutMs: z.union([z.number(), z.string()]).optional(),
 });
 
+export type DatabaseStepConfig = z.infer<typeof databaseStepConfigSchema>;
+
 export const e2eStepConfigSchema = z.object({
   action: z
     .enum([
@@ -144,6 +146,8 @@ export type E2eStepConfig = z.infer<typeof e2eStepConfigSchema>;
 export const waitStepConfigSchema = z.object({
   durationMs: z.union([z.number(), z.string()]).default(2000),
 });
+
+export type WaitStepConfig = z.infer<typeof waitStepConfigSchema>;
 
 export const manualStepConfigSchema = z.object({
   prompt: z.string().default('Please enter value:'),

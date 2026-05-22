@@ -219,22 +219,31 @@ function buildCaptureSummaryLines(capture: FlowStepRunCapture): FlowStepCaptureS
     return lines;
   }
 
+  if (capture.kind === 'database_result') {
+    const lines: FlowStepCaptureSummaryLine[] = [];
+    if (capture.dbText.trim()) {
+      lines.push({ label: 'Result size', value: `${capture.dbText.length} characters` });
+    }
+    return lines;
+  }
+
+  const e2eCapture = capture;
   const lines: FlowStepCaptureSummaryLine[] = [];
-  if (capture.action) {
-    lines.push({ label: 'Action', value: capture.action });
+  if (e2eCapture.action) {
+    lines.push({ label: 'Action', value: e2eCapture.action });
   }
-  if (capture.pageUrl) {
-    lines.push({ label: 'Page URL', value: capture.pageUrl });
+  if (e2eCapture.pageUrl) {
+    lines.push({ label: 'Page URL', value: e2eCapture.pageUrl });
   }
-  if (capture.selector) {
-    lines.push({ label: 'Selector', value: capture.selector });
+  if (e2eCapture.selector) {
+    lines.push({ label: 'Selector', value: e2eCapture.selector });
   }
   lines.push({
     label: 'Element exists',
-    value: capture.elementExists ? 'yes' : 'no',
+    value: e2eCapture.elementExists ? 'yes' : 'no',
   });
-  if (capture.elementText.trim()) {
-    lines.push({ label: 'Text length', value: `${capture.elementText.length} characters` });
+  if (e2eCapture.elementText.trim()) {
+    lines.push({ label: 'Text length', value: `${e2eCapture.elementText.length} characters` });
   }
   return lines;
 }
@@ -256,7 +265,20 @@ function buildCapturePreview(
     };
   }
 
-  if (stepType === 'E2E') {
+  if (capture.kind === 'database_result') {
+    const body = capture.dbText.trim();
+    if (!body) {
+      return null;
+    }
+    const language = body.startsWith('{') || body.startsWith('[') ? 'json' : 'plaintext';
+    return {
+      title: 'Query result',
+      language,
+      content: truncatePreview(body),
+    };
+  }
+
+  if (stepType === 'E2E' && capture.kind === 'e2e_element') {
     const html = capture.elementHtml.trim();
     if (html) {
       return {

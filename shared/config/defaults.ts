@@ -112,6 +112,9 @@ export function createDefaultSettings(): SettingsFile {
     },
     editor: createDefaultEditorSettings(),
     http: createDefaultHttpSettings(),
+    databases: {
+      connections: [],
+    },
   };
 }
 

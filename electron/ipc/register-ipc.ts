@@ -10,6 +10,7 @@ import { registerHttpHandlers } from './handlers/http.handler';
 import { registerCookieHandlers } from './handlers/cookie.handler';
 import { registerWindowControlHandlers } from './handlers/window-control.handler';
 import { registerTestingHandlers } from './handlers/testing.handler';
+import { registerDbHandlers } from './handlers/db.handler';
 import { registerE2eIpcHandlers } from '../services/testing/e2e-bootstrap';
 import type { AppReadyCoordinator } from '../boot/app-ready-coordinator';
 
@@ -30,6 +31,7 @@ export function registerAllIpcHandlers(
   registerCookieHandlers(ipc);
   registerWindowControlHandlers(ipc);
   registerE2eIpcHandlers();
+  registerDbHandlers(ipc);
   registerTestingHandlers(ipc, { files: configDeps.files });
 }
 

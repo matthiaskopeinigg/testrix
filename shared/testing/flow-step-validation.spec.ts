@@ -120,4 +120,27 @@ describe('flow-step-validation', () => {
       actual,
     )).toBe(true);
   });
+
+  it('maps DATABASE reference steps to cached_value source', () => {
+    expect(validationSourcesForReferenceStepType('DATABASE')).toEqual(['cached_value']);
+  });
+
+  it('evaluates cached_value from database capture', () => {
+    const capture = {
+      kind: 'database_result' as const,
+      capturedAt: '2026-01-01T00:00:00.000Z',
+      dbText: '[{"id":1}]',
+    };
+    const actual = resolveValidationActualValue(capture, {
+      source: 'cached_value',
+      expression: '',
+      operator: 'contains',
+      expected: '"id":1',
+    });
+    expect(actual).toBe('[{"id":1}]');
+    expect(evaluateValidationRule(
+      { source: 'cached_value', expression: '', operator: 'contains', expected: '"id":1' },
+      actual,
+    )).toBe(true);
+  });
 });

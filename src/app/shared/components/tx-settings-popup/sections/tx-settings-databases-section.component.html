@@ -1,0 +1,188 @@
+<div class="tx-settings-databases">
+  <div class="tx-settings-databases__head">
+    <div class="tx-settings-databases__intro">
+      <h2 class="tx-settings-databases__title">Database Connections</h2>
+      <p class="tx-settings-databases__desc">
+        Configure connection profiles for use in test suite flows. Query results can be cached as flow
+        variables.
+      </p>
+    </div>
+    <tx-button variant="secondary" (pressed)="handleAddConnection()">
+      <tx-icon name="plus" [size]="14" aria-hidden="true" />
+      Add
+    </tx-button>
+  </div>
+
+  @if (!hasConnections()) {
+    <p class="tx-settings-databases__empty">
+      No database connections yet. Click <strong>Add</strong> to create one.
+    </p>
+  }
+
+  <ul class="tx-settings-databases__list">
+    @for (conn of connections(); track conn.id; let i = $index) {
+      <li class="tx-settings-databases__item" [class.tx-settings-databases__item--open]="isExpanded(i)">
+        <div class="tx-settings-databases__header">
+          <button
+            type="button"
+            class="tx-settings-databases__row"
+            (click)="handleToggleExpand(i)"
+          >
+            <span class="tx-settings-databases__type-pill">{{ typeLabel(conn.type) }}</span>
+            <span class="tx-settings-databases__name">{{ conn.name || 'Untitled connection' }}</span>
+            <span class="tx-settings-databases__summary">{{ connectionSummary(conn) }}</span>
+            <tx-icon
+              name="chevronDown"
+              [size]="16"
+              class="tx-settings-databases__chev"
+              [class.tx-settings-databases__chev--open]="isExpanded(i)"
+              aria-hidden="true"
+            />
+          </button>
+          <tx-button
+            variant="secondary"
+            size="icon"
+            class="tx-settings-databases__remove"
+            title="Remove connection"
+            (pressed)="handleRemoveConnection(i)"
+          >
+            <tx-icon name="trash" [size]="16" aria-hidden="true" />
+          </tx-button>
+        </div>
+
+        @if (isExpanded(i)) {
+          <div class="tx-settings-databases__detail">
+            <div class="tx-settings-databases__grid">
+              <tx-form-field label="Name" [controlId]="'tx-db-name-' + i">
+                <tx-input
+                  [controlId]="'tx-db-name-' + i"
+                  [ngModel]="conn.name"
+                  (ngModelChange)="handlePatchConnection(i, { name: $event })"
+                />
+              </tx-form-field>
+              <tx-form-field label="Type" [controlId]="'tx-db-type-' + i">
+                <tx-dropdown
+                  [id]="'tx-db-type-' + i"
+                  [options]="typeOptions"
+                  [ngModel]="conn.type"
+                  (ngModelChange)="handleTypeChange(i, $event)"
+                />
+              </tx-form-field>
+            </div>
+
+            @if (conn.type === 'sqlite') {
+              <tx-form-field label="File path" [controlId]="'tx-db-file-' + i">
+                <div class="tx-settings-databases__file-row">
+                  <tx-input
+                    [controlId]="'tx-db-file-' + i"
+                    [ngModel]="conn.filePath ?? ''"
+                    (ngModelChange)="handlePatchConnection(i, { filePath: $event || undefined })"
+                    placeholder="C:\path\to\database.sqlite"
+                  />
+                  @if (canPickFile()) {
+                    <tx-button variant="secondary" (pressed)="handlePickSqliteFile(i)">
+                      Browse
+                    </tx-button>
+                  }
+                </div>
+              </tx-form-field>
+              <tx-form-field label="Busy timeout (ms)" [controlId]="'tx-db-busy-' + i">
+                <tx-input
+                  [controlId]="'tx-db-busy-' + i"
+                  type="number"
+                  [ngModel]="conn.busyTimeoutMs ?? ''"
+                  (ngModelChange)="handlePatchConnection(i, { busyTimeoutMs: $event ? +$event : undefined })"
+                />
+              </tx-form-field>
+            } @else {
+              <div class="tx-settings-databases__grid">
+                <tx-form-field label="Host" [controlId]="'tx-db-host-' + i">
+                  <tx-input
+                    [controlId]="'tx-db-host-' + i"
+                    [ngModel]="conn.host"
+                    (ngModelChange)="handlePatchConnection(i, { host: $event })"
+                  />
+                </tx-form-field>
+                <tx-form-field label="Port" [controlId]="'tx-db-port-' + i">
+                  <tx-input
+                    [controlId]="'tx-db-port-' + i"
+                    type="number"
+                    [ngModel]="conn.port"
+                    (ngModelChange)="handlePatchConnection(i, { port: +$event })"
+                  />
+                </tx-form-field>
+              </div>
+              <div class="tx-settings-databases__grid">
+                <tx-form-field label="User" [controlId]="'tx-db-user-' + i">
+                  <tx-input
+                    [controlId]="'tx-db-user-' + i"
+                    [ngModel]="conn.user ?? ''"
+                    (ngModelChange)="handlePatchConnection(i, { user: $event || undefined })"
+                  />
+                </tx-form-field>
+                <tx-form-field label="Password" [controlId]="'tx-db-pass-' + i">
+                  <tx-input
+                    [controlId]="'tx-db-pass-' + i"
+                    type="password"
+                    [ngModel]="conn.password ?? ''"
+                    (ngModelChange)="handlePatchConnection(i, { password: $event || undefined })"
+                  />
+                </tx-form-field>
+              </div>
+              <div class="tx-settings-databases__grid tx-settings-databases__grid--db-row">
+                <tx-form-field
+                  [label]="conn.type === 'redis' ? 'Database index' : 'Database name'"
+                  [controlId]="'tx-db-database-' + i"
+                >
+                  <tx-input
+                    [controlId]="'tx-db-database-' + i"
+                    [ngModel]="conn.database ?? ''"
+                    (ngModelChange)="handlePatchConnection(i, { database: $event || undefined })"
+                  />
+                </tx-form-field>
+                <div class="tx-settings-databases__toggle-slot">
+                  <tx-toggle
+                    label="Use TLS"
+                    [ngModel]="conn.tls ?? false"
+                    (ngModelChange)="handlePatchConnection(i, { tls: $event })"
+                  />
+                </div>
+              </div>
+              <div class="tx-settings-databases__grid">
+                <tx-form-field label="Connect timeout (ms)" [controlId]="'tx-db-conn-timeout-' + i">
+                  <tx-input
+                    [controlId]="'tx-db-conn-timeout-' + i"
+                    type="number"
+                    [ngModel]="conn.connectTimeoutMs ?? ''"
+                    (ngModelChange)="handlePatchConnection(i, { connectTimeoutMs: $event ? +$event : undefined })"
+                  />
+                </tx-form-field>
+                <tx-form-field label="Command timeout (ms)" [controlId]="'tx-db-cmd-timeout-' + i">
+                  <tx-input
+                    [controlId]="'tx-db-cmd-timeout-' + i"
+                    type="number"
+                    [ngModel]="conn.commandTimeoutMs ?? ''"
+                    (ngModelChange)="handlePatchConnection(i, { commandTimeoutMs: $event ? +$event : undefined })"
+                  />
+                </tx-form-field>
+              </div>
+            }
+
+            <div class="tx-settings-databases__actions">
+              <tx-button
+                variant="secondary"
+                [disabled]="isTesting(i)"
+                (pressed)="handleTestConnection(i)"
+              >
+                Test connection
+              </tx-button>
+              @if (testMessage() && isExpanded(i)) {
+                <p class="tx-settings-databases__test-msg">{{ testMessage() }}</p>
+              }
+            </div>
+          </div>
+        }
+      </li>
+    }
+  </ul>
+</div>

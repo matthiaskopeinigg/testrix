@@ -2,33 +2,56 @@
 
 html.tx-electron-app {
   --tx-window-radius: var(--tx-radius-lg, 14px);
+  --tx-titlebar-corner-radius: var(--tx-window-radius);
 
   height: 100%;
   background: transparent !important;
-  border-radius: var(--tx-window-radius);
-  overflow: hidden;
-  // Never clip the document on Electron — Win32 loses pointer hit-testing (patchy / dead clicks).
+  overflow: visible;
   clip-path: none;
 
-  &[data-platform='win32'] {
-    background: var(--tx-content-bg, var(--tx-surface-0)) !important;
-    border-radius: 0;
+  // Rounded surface lives on `.tx-shell` so corner pixels stay transparent (desktop shows through).
+  &:not(.tx-electron-app--edge-to-edge):not(.tx-electron-app--browser-parity) {
+    .tx-shell {
+      border-radius: var(--tx-window-radius);
+      overflow: hidden;
+    }
+  }
 
-    body {
-      background: var(--tx-content-bg, var(--tx-surface-0)) !important;
+  // macOS opaque dev (`ng serve`): native window owns outer rounding.
+  &.tx-electron-app--dev-opaque[data-platform='darwin']:not(.tx-electron-app--edge-to-edge):not(.tx-electron-app--browser-parity) {
+    --tx-titlebar-corner-radius: 8px;
+
+    app-root {
+      background: var(--tx-content-bg, var(--tx-surface-0));
     }
 
-    app-root,
     .tx-shell {
       border-radius: 0;
     }
   }
 
-  &.tx-electron-app--dev-opaque {
-    border-radius: 0;
+  &[data-platform='win32'].tx-electron-app--dev-opaque {
+    background: var(--tx-content-bg, var(--tx-surface-0)) !important;
+
+    body {
+      background: var(--tx-content-bg, var(--tx-surface-0)) !important;
+    }
+
+    app-root {
+      background: var(--tx-content-bg, var(--tx-surface-0));
+    }
+  }
+
+  &.tx-electron-app--edge-to-edge {
+    --tx-titlebar-corner-radius: 0;
 
     .tx-shell {
       border-radius: 0;
+    }
+
+    app-tx-window-titlebar .tx-titlebar {
+      border-top-left-radius: 0;
+      border-top-right-radius: 0;
     }
   }
 
@@ -41,9 +64,8 @@ html.tx-electron-app {
   app-root {
     display: block;
     height: 100%;
-    border-radius: inherit;
-    overflow: hidden;
-    background: var(--tx-content-bg, var(--tx-surface-0));
+    overflow: visible;
+    background: transparent;
   }
 
   .tx-shell {
@@ -52,7 +74,6 @@ html.tx-electron-app {
     min-height: 100%;
     border: none;
     outline: none;
-    border-radius: var(--tx-window-radius);
     overflow: hidden;
     background: var(--tx-content-bg, var(--tx-surface-0));
     box-shadow: none;
@@ -109,7 +130,7 @@ html.tx-electron-app[data-chrome-blur='disabled'] .tx-shell__stage::before {
   }
 }
 
-html.tx-electron-app[data-platform='win32'] {
+html.tx-electron-app[data-platform='win32'].tx-electron-app--dev-opaque {
   body,
   body.theme-github-light,
   body.theme-github-dark,
@@ -127,7 +148,6 @@ html.tx-electron-app:not(.tx-electron-app--browser-parity) {
 
   app-tx-window-titlebar .tx-titlebar__profile,
   app-tx-window-titlebar .tx-titlebar__trailing,
-  app-tx-window-titlebar .tx-titlebar__actions,
   app-tx-window-titlebar .tx-titlebar__window-controls,
   app-tx-window-titlebar .tx-titlebar-btn,
   app-tx-window-titlebar .tx-titlebar__profile-dropdown,
@@ -161,7 +181,6 @@ html.tx-electron-app.tx-electron-app--browser-parity {
 
   app-root {
     overflow: visible;
-    border-radius: 0;
     background: var(--tx-surface-0);
   }
 

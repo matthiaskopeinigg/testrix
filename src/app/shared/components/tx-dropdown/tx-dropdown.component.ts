@@ -62,8 +62,12 @@ export class TxDropdownComponent implements ControlValueAccessor {
   /** Hover/focus hint anchored to the trigger only (not the component host). */
   readonly hint = input('');
   readonly hintPosition = input<TxTooltipPosition>('top');
+  /** Optional action row at the top of the panel, separated from selectable options. */
+  readonly panelActionLabel = input('');
+  readonly panelActionIcon = input<TxDropdownOption['icon']>('settings');
 
   readonly valueChange = output<string>();
+  readonly panelAction = output<void>();
 
   protected readonly autoId = `tx-dropdown-${TxDropdownComponent.nextId++}`;
   protected readonly listboxId = `${this.autoId}-listbox`;
@@ -231,6 +235,19 @@ export class TxDropdownComponent implements ControlValueAccessor {
     if (this.isOpen()) {
       this.activeIndex.set(index);
     }
+  }
+
+  protected handlePanelActionClick(): void {
+    if (this.isDisabled()) {
+      return;
+    }
+
+    this.closePanel(true);
+    this.panelAction.emit();
+  }
+
+  protected showPanelAction(): boolean {
+    return this.panelActionLabel().trim().length > 0;
   }
 
   protected handleTriggerBlur(): void {

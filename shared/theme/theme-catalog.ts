@@ -130,3 +130,9 @@ export function normalizeAppearanceThemeId(theme: unknown): AppearanceThemeId {
 export const THEME_BG_HEX: Readonly<Record<string, string>> = Object.fromEntries(
   THEME_PALETTES.map((p) => [p.id, p.bg]),
 );
+
+/** Window / content backdrop hex for a saved appearance theme id. */
+export function resolveThemeContentBackground(theme: unknown): string {
+  const themeId = normalizeAppearanceThemeId(theme);
+  return THEME_BG_HEX[themeId] ?? THEME_BG_HEX[DEFAULT_APPEARANCE_THEME_ID] ?? '#ffffff';
+}

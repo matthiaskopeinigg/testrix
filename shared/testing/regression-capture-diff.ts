@@ -18,6 +18,9 @@ function captureBodyText(capture: FlowStepRunCapture): string {
   if (capture.kind === 'http_response') {
     return capture.bodyText;
   }
+  if (capture.kind === 'database_result') {
+    return capture.dbText;
+  }
   return capture.elementText || capture.elementHtml;
 }
 

@@ -144,6 +144,43 @@
   font-size: 0.8125rem;
 }
 
+.tx-dropdown__panel-action {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.45rem 0.55rem;
+  border: 0;
+  border-radius: var(--tx-radius-sm, 8px);
+  background: transparent;
+  color: var(--tx-text-0);
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background-color var(--tx-duration-fast, 120ms) ease,
+    color var(--tx-duration-fast, 120ms) ease;
+
+  &:hover {
+    background: color-mix(in srgb, var(--tx-primary) 12%, var(--tx-surface-2));
+    color: var(--tx-primary);
+  }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--tx-focus-ring) 55%, transparent);
+  }
+}
+
+.tx-dropdown__separator {
+  height: 1px;
+  margin: 0.25rem 0.35rem;
+  background: color-mix(in srgb, var(--tx-border-0) 70%, transparent);
+  list-style: none;
+}
+
 .tx-dropdown__option-icon {
   flex-shrink: 0;
   opacity: 0.85;

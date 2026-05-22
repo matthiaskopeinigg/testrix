@@ -44,6 +44,7 @@ export class TxInputComponent implements ControlValueAccessor {
   readonly clearable = input<boolean | undefined>(undefined);
 
   readonly cleared = output<void>();
+  readonly submitted = output<void>();
 
   private readonly nativeInput = viewChild<ElementRef<HTMLInputElement>>('nativeInput');
 
@@ -80,6 +81,14 @@ export class TxInputComponent implements ControlValueAccessor {
 
   protected handleBlur(): void {
     this.onTouched();
+  }
+
+  protected handleEnter(event: Event): void {
+    event.preventDefault();
+    if (this.disabled()) {
+      return;
+    }
+    this.submitted.emit();
   }
 
   protected handleClear(event: MouseEvent): void {

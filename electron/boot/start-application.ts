@@ -5,6 +5,7 @@ import { AppReadyCoordinator } from './app-ready-coordinator';
 import { isDevMode, shouldShowSplashBoot, usesAngularDevServer } from '../config/environment';
 import { attachProcessLogging, logDebug, logError } from '../errors/logger';
 import { registerAllIpcHandlers } from '../ipc/register-ipc';
+import { closeDatabaseConnections } from '../ipc/handlers/db.handler';
 import { resolveAndPrepareProfileLayout } from '../services/config/config-bootstrap.service';
 import { ConfigFileService } from '../services/config/config-file.service';
 import { ConfigPathService } from '../services/config/config-path.service';
@@ -162,7 +163,10 @@ export async function startApplication(getBootSplash?: () => BrowserWindow | nul
       };
       globalShortcut.register('F12', toggleDevTools);
       globalShortcut.register('CommandOrControl+Shift+I', toggleDevTools);
-      app.once('will-quit', () => globalShortcut.unregisterAll());
+      app.once('will-quit', () => {
+        globalShortcut.unregisterAll();
+        void closeDatabaseConnections();
+      });
     }
 
     const coordinator = new AppReadyCoordinator({

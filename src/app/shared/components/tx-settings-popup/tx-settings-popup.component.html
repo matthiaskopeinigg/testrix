@@ -692,6 +692,32 @@
                   </div>
                 </section>
               }
+              @if (isSectionActive('databases')) {
+                <section
+                  class="tx-settings__section"
+                  [class.tx-settings__section--active]="isSectionActive('databases')"
+                  [attr.aria-hidden]="!isSectionActive('databases')"
+                >
+                  <div
+                    class="tx-settings__section-inner tx-entrance-stagger"
+                    [class.tx-entrance-stagger--play]="isSectionContentAnimating('databases')"
+                    [class.tx-entrance-stagger--settled]="isSectionContentSettled('databases')"
+                  >
+                    <tx-settings-databases-section
+                      [connections]="databasesDraft()"
+                      [canPickFile]="hasElectronBridge()"
+                      (connectionsChange)="handleDatabasesDraftChange($event)"
+                    />
+                    @if (isDatabasesDirty()) {
+                      <div class="tx-settings__action-row tx-settings-databases-save">
+                        <p class="tx-settings__hint">You have unsaved connection changes.</p>
+                        <tx-button variant="secondary" (pressed)="handleCancelDatabases()">Cancel</tx-button>
+                        <tx-button variant="primary" (pressed)="handleSaveDatabases()">Save connections</tx-button>
+                      </div>
+                    }
+                  </div>
+                </section>
+              }
               @if (isSectionActive('dataConfig')) {
                 <section
                   class="tx-settings__section"

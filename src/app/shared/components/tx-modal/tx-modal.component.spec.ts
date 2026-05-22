@@ -1,17 +1,27 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { TxModalComponent } from './tx-modal.component';
 
 describe('TxModalComponent', () => {
-  it('portals the modal root to document.body when open', async () => {
+  let fixture: ComponentFixture<TxModalComponent>;
+
+  beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [TxModalComponent],
     }).compileComponents();
 
-    const fixture: ComponentFixture<TxModalComponent> = TestBed.createComponent(TxModalComponent);
-    fixture.componentRef.setInput('open', true);
+    fixture = TestBed.createComponent(TxModalComponent);
     fixture.componentRef.setInput('title', 'Delete item');
+  });
+
+  afterEach(() => {
+    document.body.querySelectorAll('.tx-modal-root').forEach((node) => node.remove());
+    vi.useRealTimers();
+  });
+
+  it('portals the modal root to document.body when open', async () => {
+    fixture.componentRef.setInput('open', true);
     fixture.detectChanges();
     await fixture.whenStable();
 
@@ -19,4 +29,32 @@ describe('TxModalComponent', () => {
     expect(root).toBeTruthy();
     expect(root?.textContent).toContain('Delete item');
   });
+
+  it('plays a close transition before removing the modal from the DOM', async () => {
+    vi.useFakeTimers();
+
+    fixture.componentRef.setInput('open', true);
+    fixture.detectChanges();
+    await flushFrame();
+
+    const root = document.body.querySelector('.tx-modal-root');
+    expect(root?.classList.contains('tx-modal-root--shown')).toBe(true);
+
+    fixture.componentRef.setInput('open', false);
+    fixture.detectChanges();
+
+    expect(document.body.querySelector('.tx-modal-root')).toBeTruthy();
+    expect(root?.classList.contains('tx-modal-root--shown')).toBe(false);
+
+    vi.advanceTimersByTime(180);
+    fixture.detectChanges();
+
+    expect(document.body.querySelector('.tx-modal-root')).toBeNull();
+  });
 });
+
+function flushFrame(): Promise<void> {
+  return new Promise((resolve) => {
+    requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+  });
+}

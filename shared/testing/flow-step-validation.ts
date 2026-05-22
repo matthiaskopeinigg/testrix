@@ -3,6 +3,7 @@ import type { TestSuiteStepType } from './test-suite-steps.schema';
 import type {
   FlowStepE2eElementCapture,
   FlowStepHttpResponseCapture,
+  FlowStepDatabaseCapture,
   FlowStepRunCapture,
 } from './flow-step-capture';
 import { isFlowValidationReferenceStepType } from './flow-step-capture';
@@ -26,6 +27,9 @@ export const E2E_ELEMENT_VALIDATION_SOURCES = [
   'e2e_page_url',
 ] as const satisfies readonly ValidationRuleSource[];
 
+/** Cached query result validation (DATABASE steps). */
+export const DATABASE_VALIDATION_SOURCES = ['cached_value'] as const satisfies readonly ValidationRuleSource[];
+
 export function validationSourcesForReferenceStepType(
   stepType: TestSuiteStepType | null | undefined,
 ): readonly ValidationRuleSource[] {
@@ -36,6 +40,8 @@ export function validationSourcesForReferenceStepType(
     case 'HTTP_LISTENER':
     case 'HTTP_INTERCEPTOR':
       return HTTP_RESPONSE_VALIDATION_SOURCES;
+    case 'DATABASE':
+      return DATABASE_VALIDATION_SOURCES;
     default:
       return [];
   }
@@ -60,6 +66,13 @@ export function defaultValidationRuleForReferenceStepType(
         expression: '',
         operator: 'equals',
         expected: '200',
+      };
+    case 'DATABASE':
+      return {
+        source: 'cached_value',
+        expression: '',
+        operator: 'is_not_empty',
+        expected: '',
       };
     default:
       return null;
@@ -94,7 +107,20 @@ export function resolveValidationActualValue(
   if (capture.kind === 'http_response') {
     return resolveHttpValidationActual(capture, rule);
   }
+  if (capture.kind === 'database_result') {
+    return resolveDatabaseValidationActual(capture, rule);
+  }
   return resolveE2eValidationActual(capture, rule);
+}
+
+function resolveDatabaseValidationActual(
+  capture: FlowStepDatabaseCapture,
+  rule: ValidationRule,
+): string {
+  if (rule.source === 'cached_value') {
+    return capture.dbText;
+  }
+  return '';
 }
 
 function resolveHttpValidationActual(

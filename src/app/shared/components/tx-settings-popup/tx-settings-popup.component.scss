@@ -635,6 +635,23 @@
   margin: 0;
 }
 
+.tx-settings-databases-save {
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid color-mix(in srgb, var(--tx-border-0) 55%, transparent);
+  align-items: center;
+  justify-content: flex-end;
+
+  .tx-settings__hint {
+    flex: 1 1 auto;
+    min-width: 0;
+    margin: 0;
+    font-size: 0.8125rem;
+    line-height: 1.45;
+    color: color-mix(in srgb, var(--tx-text-1) 88%, transparent);
+  }
+}
+
 .tx-settings__profile-list {
   list-style: none;
   margin: 0.75rem 0 0;
@@ -676,7 +693,8 @@
     tx-settings-http-headers-section,
     tx-settings-http-certificates-section,
     tx-settings-http-dns-section,
-    tx-settings-http-proxy-section
+    tx-settings-http-proxy-section,
+    tx-settings-databases-section
   ) tx-key-value-list {
     display: block;
     width: 100%;

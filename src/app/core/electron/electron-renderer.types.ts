@@ -4,6 +4,7 @@
 
 import type {
   CollectionsFile,
+  DatabaseConnection,
   EnvironmentsFile,
   HistoryFile,
   PathsAnchor,
@@ -57,11 +58,13 @@ export interface ElectronRendererBridge {
   readonly devToolkit: boolean;
 
   /** Set when the main window uses the Angular dev server (`TESTRIX_SERVE_RENDERER=1`). */
+  /** macOS dev server only — Win32 dev uses a transparent rounded shell. */
   readonly opaqueDevWindow: boolean;
 
   /** Saved theme id from disk — applied in `index.html` before Angular paints. */
   readonly bootTheme?: string;
   readonly bootThemeMode?: 'light' | 'dark';
+  readonly bootThemeBg?: string;
 
   /** Reserved; frameless custom titlebar is used on all platforms. */
   readonly nativeDevFrame: boolean;
@@ -120,6 +123,8 @@ export interface ElectronRendererBridge {
     maximizeToggle: () => Promise<void>;
     close: () => Promise<void>;
     focus: () => Promise<void>;
+    getChromeState: () => Promise<{ readonly edgeToEdge: boolean }>;
+    onChromeStateChange: (listener: (state: { readonly edgeToEdge: boolean }) => void) => () => void;
     dragStart: (offset: { readonly offsetX: number; readonly offsetY: number }) => void;
     dragMove: (position: { readonly screenX: number; readonly screenY: number }) => void;
     dragEnd: () => void;
@@ -137,6 +142,15 @@ export interface ElectronRendererBridge {
   http: {
     send: (payload: SendHttpRequestPayload) => Promise<OutgoingHttpResponse>;
     cancel: (requestId: string) => Promise<void>;
+  };
+
+  database: {
+    query: (payload: {
+      readonly connection: DatabaseConnection;
+      readonly query: string;
+      readonly timeoutMs?: number;
+    }) => Promise<unknown>;
+    testConnection: (connection: DatabaseConnection) => Promise<unknown>;
   };
 
   cookies: {

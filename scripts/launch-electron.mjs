@@ -26,6 +26,9 @@ const extraArgs = process.argv.slice(2);
 let child = null;
 let restartTimer = null;
 
+/** Win32 needs a beat after SIGTERM so Chromium can release cache locks. */
+const RESTART_DEBOUNCE_MS = process.platform === 'win32' ? 750 : 150;
+
 function startElectron() {
   child = spawn('npx', ['electron', '--enable-logging', '.', ...extraArgs], {
     cwd: repoRoot,
@@ -57,7 +60,7 @@ function scheduleRestart(reason) {
     child.removeAllListeners('exit');
     child.once('exit', () => startElectron());
     child.kill();
-  }, 150);
+  }, RESTART_DEBOUNCE_MS);
 }
 
 for (const target of restartTargets) {

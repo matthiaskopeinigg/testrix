@@ -10,12 +10,10 @@
     <style>
       html.tx-electron-app,
       html.tx-electron-app body {
-        background-color: #0d1117;
         color-scheme: dark;
       }
       html.tx-electron-app[data-theme='light'],
       html.tx-electron-app[data-theme='light'] body {
-        background-color: #ffffff;
         color-scheme: light;
       }
     </style>
@@ -26,6 +24,10 @@
         root.classList.add('tx-electron-app');
         if (window.testrix.opaqueDevWindow) {
           root.classList.add('tx-electron-app--dev-opaque');
+        }
+        if (window.testrix.opaqueDevWindow && window.testrix.bootThemeBg) {
+          root.style.backgroundColor = window.testrix.bootThemeBg;
+          document.body.style.backgroundColor = window.testrix.bootThemeBg;
         }
         if (window.testrix.bootTheme) {
           var themeClass = 'theme-' + window.testrix.bootTheme;

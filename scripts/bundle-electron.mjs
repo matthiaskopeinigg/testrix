@@ -24,7 +24,7 @@ const common = {
   format: 'cjs',
   sourcemap: true,
   logLevel: 'info',
-  external: ['electron', 'electron-updater'],
+  external: ['electron', 'electron-updater', 'better-sqlite3', 'ioredis', 'pg', 'mysql2', 'mssql'],
 };
 
 await Promise.all([

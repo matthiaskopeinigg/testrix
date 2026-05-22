@@ -11,8 +11,10 @@ import { resolveBrowserIndexPath, resolveMainPreloadPath } from '../../config/pa
 import type { ConfigFileService } from '../../services/config/config-file.service';
 
 import { bootThemeAdditionalArguments } from '../../config/boot-theme';
+import { resolveBootWindowBackgroundColor } from '../../config/window-background';
 import { MAIN_WINDOW_TRANSPARENT_BG, mainWindowChromeOptions } from './main-window-chrome';
 import { mainWindowDefaults } from './main-window.options';
+import { attachWindowChromeState } from './window-chrome-state';
 import { attachExternalLinkHandlers } from './external-link-handlers';
 import { attachWindowSessionSync } from './window-session-sync';
 
@@ -45,9 +47,10 @@ export function createMainWindow(
 ): BrowserWindow {
   const merged = mergeSessionBounds(mainWindowDefaults, session.window);
   const win32DirectShow = usesWin32DirectShow();
-  const devOpaque = usesAngularDevServer();
 
   const chrome = mainWindowChromeOptions();
+  const windowBackground =
+    chrome.transparent === false ? resolveBootWindowBackgroundColor() : MAIN_WINDOW_TRANSPARENT_BG;
   const deferShowUntilHandoff = shouldShowSplashBoot();
   const win = new BrowserWindow({
     ...merged,
@@ -65,11 +68,12 @@ export function createMainWindow(
   });
 
   if (!win.isDestroyed()) {
-    win.setBackgroundColor(devOpaque ? '#16181d' : MAIN_WINDOW_TRANSPARENT_BG);
+    win.setBackgroundColor(windowBackground);
     win.setIgnoreMouseEvents(false);
   }
 
   attachWindowSessionSync(win, files);
+  attachWindowChromeState(win);
   attachExternalLinkHandlers(win);
   attachWin32DevToolsGuard(win);
 
@@ -78,7 +82,7 @@ export function createMainWindow(
       if (win.isDestroyed()) {
         return;
       }
-      win.setBackgroundColor(devOpaque ? '#16181d' : MAIN_WINDOW_TRANSPARENT_BG);
+      win.setBackgroundColor(windowBackground);
       win.setIgnoreMouseEvents(false);
       if (session.window.maximized) {
         win.maximize();

@@ -130,6 +130,12 @@ export class TsFlowValidationStepPanelComponent {
     if (capture.kind === 'http_response') {
       return `Status ${capture.statusCode} · body ${capture.bodyText.length} chars`;
     }
+    if (capture.kind === 'database_result') {
+      return `Query result · ${capture.dbText.length} chars`;
+    }
+    if (capture.kind !== 'e2e_element') {
+      return null;
+    }
     const usesPageUrl = this.rules().some((rule) => rule.source === 'e2e_page_url');
     if (usesPageUrl && capture.pageUrl.trim()) {
       return capture.pageUrl.trim();

@@ -1,5 +1,7 @@
 import { buildOutgoingRequest } from '../../../shared/http/build-outgoing-request';
 import { sendHttpRequestPayloadSchema } from '../../../shared/http/outgoing-request.schema';
+import { resolveTemplateVariables } from '../../../shared/dynamic-variables/template-variables';
+import type { DatabaseConnection } from '../../../shared/config/database-settings.schema';
 import {
   buildFlowEnvironmentVariableContext,
   buildHttpCaptureFromE2eData,
@@ -10,6 +12,7 @@ import {
 } from '../../../shared/testing/flow-http-middleware-config';
 import {
   buildInitialFlowRunStatuses,
+  buildDatabaseStepCapture,
   buildHttpResponseStepCapture,
   evaluateValidationRule,
   findFlowStepById,
@@ -26,6 +29,7 @@ import {
   type TestSuiteStepStatus,
 } from '../../../shared/testing';
 import type {
+  DatabaseStepConfig,
   E2eStepConfig,
   HttpInterceptorStepConfig,
   HttpListenerStepConfig,
@@ -38,6 +42,7 @@ import { migrateTestSuitesFile } from '../../../shared/testing/test-suite-migrat
 import { isTestSuiteFlow, TEST_SUITE_ROOT_ID } from '../../../shared/testing/test-suites.schema';
 
 import type { ConfigFileService } from '../config/config-file.service';
+import { databaseQueryService } from '../database/database-query.service';
 import { executeHttpRequest } from '../http/http-request-executor.service';
 import type { E2eExecutePayload, E2eExecuteResult, E2eRunnerService } from './e2e-runner.service';
 
@@ -70,6 +75,7 @@ export class TestSuiteFlowExecutor {
   private cancelled = false;
   private e2eRunner: E2eRunnerService | null = null;
   private readonly captures = new Map<string, FlowStepRunCapture>();
+  private readonly flowVariables = new Map<string, string>();
   private readonly activeInterceptorStepIds = new Set<string>();
   private browserSessionReady = false;
 
@@ -90,6 +96,7 @@ export class TestSuiteFlowExecutor {
   ): Promise<TestSuiteFlowRunResult> {
     this.cancelled = false;
     this.captures.clear();
+    this.flowVariables.clear();
     this.activeInterceptorStepIds.clear();
     this.browserSessionReady = false;
 
@@ -195,9 +202,10 @@ export class TestSuiteFlowExecutor {
         const stepStartedAt = Date.now();
         try {
           await this.executeStep(step, flow, {
-            collections: collections.items,
+            collections: collections.nodes,
             http: settings.http,
             environments,
+            databaseConnections: settings.databases.connections,
             appVersion: '0.0.0',
             showBrowser,
             e2eScreenshotFolder: settings.http.testing.e2eScreenshotFolder,
@@ -264,6 +272,7 @@ export class TestSuiteFlowExecutor {
       readonly collections: readonly import('@shared/config').CollectionNode[];
       readonly http: import('@shared/config').HttpSettings;
       readonly environments: import('@shared/config').EnvironmentsFile;
+      readonly databaseConnections: readonly DatabaseConnection[];
       readonly appVersion: string;
       readonly showBrowser: boolean;
       readonly e2eScreenshotFolder: string;
@@ -272,7 +281,7 @@ export class TestSuiteFlowExecutor {
   ): Promise<void> {
     switch (step.stepType) {
       case 'REQUEST':
-        await this.executeRequest(step, ctx);
+        await this.executeRequest(step, flow, ctx);
         return;
       case 'WAIT':
         await this.executeWait(step);
@@ -290,12 +299,82 @@ export class TestSuiteFlowExecutor {
         await this.executeHttpInterceptor(step, flow, ctx);
         return;
       case 'DATABASE':
+        await this.executeDatabase(step, flow, ctx);
+        return;
       case 'MANUAL':
       case 'TRIGGER':
         throw new Error(`${step.stepType} execution is not yet implemented in Testrix.`);
       default:
         throw new Error(`Unknown step type: ${step.stepType}`);
     }
+  }
+
+  private buildVariableContext(
+    flow: TestSuiteFlow,
+    environments: import('@shared/config').EnvironmentsFile,
+    environmentIdOverride?: string | null,
+  ): Record<string, string> {
+    const env = buildFlowEnvironmentVariableContext(flow, environments, environmentIdOverride);
+    return { ...env, ...Object.fromEntries(this.flowVariables) };
+  }
+
+  private resolveFlowTemplate(
+    template: string,
+    flow: TestSuiteFlow,
+    environments: import('@shared/config').EnvironmentsFile,
+    environmentIdOverride?: string | null,
+  ): string {
+    return resolveTemplateVariables(template, {
+      environment: this.buildVariableContext(flow, environments, environmentIdOverride),
+    });
+  }
+
+  private async executeDatabase(
+    step: TestSuiteFlowStep,
+    flow: TestSuiteFlow,
+    ctx: {
+      readonly environments: import('@shared/config').EnvironmentsFile;
+      readonly databaseConnections: readonly DatabaseConnection[];
+      readonly environmentIdOverride?: string | null;
+    },
+  ): Promise<void> {
+    const cfg = step.config as DatabaseStepConfig;
+    const connectionId = String(cfg.connectionId ?? '').trim();
+    if (!connectionId) {
+      throw new Error('DATABASE step needs a connection.');
+    }
+
+    const connection = ctx.databaseConnections.find((entry) => entry.id === connectionId);
+    if (!connection) {
+      throw new Error(`Unknown database connection id: ${connectionId}`);
+    }
+
+    const query = this.resolveFlowTemplate(
+      String(cfg.query ?? ''),
+      flow,
+      ctx.environments,
+      ctx.environmentIdOverride,
+    ).trim();
+    if (!query) {
+      throw new Error('DATABASE step needs a query.');
+    }
+
+    const stepTimeoutMs = resolveTimeoutMs(cfg.timeoutMs, 0) || undefined;
+    const rows = await databaseQueryService.query(connection, query, { stepTimeoutMs });
+    const textOut =
+      typeof rows === 'string' ? rows : JSON.stringify(rows ?? null, null, 2);
+
+    const alias = this.resolveFlowTemplate(
+      String(cfg.cacheAs ?? ''),
+      flow,
+      ctx.environments,
+      ctx.environmentIdOverride,
+    ).trim();
+    if (alias) {
+      this.flowVariables.set(alias, textOut);
+    }
+
+    this.captures.set(step.id, buildDatabaseStepCapture(textOut));
   }
 
   private async ensureBrowserSession(): Promise<void> {
@@ -365,7 +444,7 @@ export class TestSuiteFlowExecutor {
       readonly environmentIdOverride?: string | null;
     },
   ): Promise<void> {
-    const variableContext = buildFlowEnvironmentVariableContext(
+    const variableContext = this.buildVariableContext(
       flow,
       ctx.environments,
       ctx.environmentIdOverride,
@@ -393,7 +472,7 @@ export class TestSuiteFlowExecutor {
       readonly environmentIdOverride?: string | null;
     },
   ): Promise<void> {
-    const variableContext = buildFlowEnvironmentVariableContext(
+    const variableContext = this.buildVariableContext(
       flow,
       ctx.environments,
       ctx.environmentIdOverride,
@@ -756,11 +835,13 @@ export class TestSuiteFlowExecutor {
 
   private async executeRequest(
     step: TestSuiteFlowStep,
+    flow: TestSuiteFlow,
     ctx: {
       readonly collections: readonly import('@shared/config').CollectionNode[];
       readonly http: import('@shared/config').HttpSettings;
       readonly environments: import('@shared/config').EnvironmentsFile;
       readonly appVersion: string;
+      readonly environmentIdOverride?: string | null;
     },
   ): Promise<void> {
     const cfg = step.config as RequestStepConfig;
@@ -768,7 +849,7 @@ export class TestSuiteFlowExecutor {
     if (cfg.collectionRequestId) {
       const built = buildOutgoingRequest({
         requestId: cfg.collectionRequestId,
-        nodes: ctx.collections,
+        nodes: [...ctx.collections],
         http: ctx.http,
         environments: ctx.environments,
         appVersion: ctx.appVersion,
@@ -789,20 +870,36 @@ export class TestSuiteFlowExecutor {
       return;
     }
 
-    const url = String(cfg.url ?? '').trim();
+    const variableContext = this.buildVariableContext(
+      flow,
+      ctx.environments,
+      ctx.environmentIdOverride,
+    );
+
+    const url = this.resolveFlowTemplate(
+      String(cfg.url ?? ''),
+      flow,
+      ctx.environments,
+      ctx.environmentIdOverride,
+    ).trim();
     if (!url) {
       throw new Error('REQUEST step needs a URL or collection request.');
     }
+
+    const resolvedHeaders = Object.fromEntries(
+      (cfg.headers ?? [])
+        .filter((h) => h.enabled && h.key)
+        .map((h) => [
+          h.key,
+          resolveTemplateVariables(h.value, { environment: variableContext }),
+        ]),
+    );
 
     const payload = sendHttpRequestPayloadSchema.parse({
       requestId: step.id,
       method: cfg.method ?? 'GET',
       url,
-      headers: Object.fromEntries(
-        (cfg.headers ?? [])
-          .filter((h) => h.enabled && h.key)
-          .map((h) => [h.key, h.value]),
-      ),
+      headers: resolvedHeaders,
       body: { kind: 'none' },
       transport: {
         timeoutMs: Number(cfg.timeoutMs) || 30_000,
@@ -821,7 +918,7 @@ export class TestSuiteFlowExecutor {
       },
       scripts: { pre: [], post: [] },
       environmentId: null,
-      variableContext: {},
+      variableContext,
     });
 
     const snapshot = await executeHttpRequest(payload);

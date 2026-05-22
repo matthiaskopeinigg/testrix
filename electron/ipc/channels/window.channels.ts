@@ -3,6 +3,8 @@ export const WindowChannels = {
   maximizeToggle: 'window:maximizeToggle',
   close: 'window:close',
   focus: 'window:focus',
+  getChromeState: 'window:getChromeState',
+  chromeStateChanged: 'window:chrome-state-changed',
   dragStart: 'window:drag-start',
   dragMove: 'window:drag-move',
   dragEnd: 'window:drag-end',

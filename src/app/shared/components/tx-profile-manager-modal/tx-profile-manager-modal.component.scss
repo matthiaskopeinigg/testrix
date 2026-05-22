@@ -1,0 +1,53 @@
+.tx-profile-manager__intro {
+  margin: 0 0 1rem;
+  font-size: 0.875rem;
+  line-height: 1.55;
+  color: color-mix(in srgb, var(--tx-text-1) 90%, transparent);
+}
+
+.tx-profile-manager__toolbar {
+  display: flex;
+  justify-content: flex-start;
+  margin-bottom: 0.85rem;
+}
+
+.tx-profile-manager__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.tx-profile-manager__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.65rem;
+  border-radius: var(--tx-radius-md, 10px);
+  border: 1px solid color-mix(in srgb, var(--tx-border-0) 50%, transparent);
+  background: color-mix(in srgb, var(--tx-surface-2) 40%, transparent);
+}
+
+.tx-profile-manager__name {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-weight: 600;
+  color: var(--tx-text-0);
+}
+
+.tx-profile-manager__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.tx-profile-manager__dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}

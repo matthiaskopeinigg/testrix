@@ -1,5 +1,6 @@
 import type {
   CollectionsFile,
+  DatabaseConnection,
   EnvironmentsFile,
   HistoryFile,
   PathsAnchor,
@@ -47,11 +48,12 @@ export interface ElectronAPI {
   readonly platform: NodeJS.Platform;
   /** `true` when started with `npm run dev` (`TESTRIX_DEV=1`). Absent/false for `npm start` and production. */
   readonly devToolkit: boolean;
-  /** `true` when the main window loads `ng serve` (`TESTRIX_SERVE_RENDERER=1`) — opaque window, no clip-path hit-test bugs. */
+  /** `true` when the main window uses an opaque fill (macOS dev server only). Win32 dev uses a transparent shell. */
   readonly opaqueDevWindow: boolean;
   /** Saved theme id from disk — applied in `index.html` before Angular paints. */
   readonly bootTheme?: string;
   readonly bootThemeMode?: 'light' | 'dark';
+  readonly bootThemeBg?: string;
   /** Reserved; frameless custom titlebar is used on all platforms. */
   readonly nativeDevFrame: boolean;
   readonly versions: {
@@ -103,6 +105,8 @@ export interface ElectronAPI {
     maximizeToggle: () => Promise<void>;
     close: () => Promise<void>;
     focus: () => Promise<void>;
+    getChromeState: () => Promise<{ readonly edgeToEdge: boolean }>;
+    onChromeStateChange: (listener: (state: { readonly edgeToEdge: boolean }) => void) => () => void;
     dragStart: (offset: { readonly offsetX: number; readonly offsetY: number }) => void;
     dragMove: (position: { readonly screenX: number; readonly screenY: number }) => void;
     dragEnd: () => void;
@@ -118,6 +122,14 @@ export interface ElectronAPI {
   http: {
     send: (payload: SendHttpRequestPayload) => Promise<OutgoingHttpResponse>;
     cancel: (requestId: string) => Promise<void>;
+  };
+  database: {
+    query: (payload: {
+      readonly connection: DatabaseConnection;
+      readonly query: string;
+      readonly timeoutMs?: number;
+    }) => Promise<unknown>;
+    testConnection: (connection: DatabaseConnection) => Promise<unknown>;
   };
   cookies: {
     getAll: () => Promise<readonly StoredCookie[]>;

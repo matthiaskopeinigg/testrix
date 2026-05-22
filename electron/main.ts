@@ -1,9 +1,11 @@
 import { app } from 'electron';
 
 import { configureAppIdentity } from './config/app-icon';
+import { configureDevChromiumPaths } from './config/dev-chromium-paths';
 import { shouldShowSplashBoot } from './config/environment';
 
 configureAppIdentity();
+configureDevChromiumPaths();
 import { createSplashWindow } from './windows/splash-window/splash-window.factory';
 import { startApplication } from './boot/start-application';
 

@@ -38,23 +38,15 @@
           [disabled]="profileSwitching()"
           [selectedValue]="activeProfileId()"
           (valueChange)="handleProfileChange($event)"
+          panelActionLabel="Manage profiles"
+          panelActionIcon="settings"
+          (panelAction)="handleOpenProfileManager()"
           ariaLabel="Workspace profile"
           placeholder="Profile"
           placement="bottom-start"
           hint="Collections, tabs, and history are per profile. Theme and settings stay shared."
           hintPosition="bottom"
         />
-        <button
-          type="button"
-          class="tx-titlebar-btn tx-titlebar-btn--profile-add"
-          [disabled]="profileSwitching()"
-          txTooltip="New profile"
-          txTooltipPosition="bottom"
-          aria-label="Create workspace profile"
-          (click)="handleNewProfile()"
-        >
-          <tx-icon name="plus" [size]="14" />
-        </button>
       </div>
     }
   </div>
@@ -64,64 +56,61 @@
   }
 
   <nav class="tx-titlebar__trailing" aria-label="Window chrome">
-    <div class="tx-titlebar__actions">
-      <button
-        type="button"
-        class="tx-titlebar-btn tx-titlebar-btn--chip"
-        txTooltip="Cookie jar"
-        txTooltipPosition="bottom"
-        aria-label="Open cookie jar"
-        (click)="handleOpenCookies()"
-      >
-        <tx-icon name="box" [size]="16" />
-      </button>
-      <button
-        type="button"
-        class="tx-titlebar-btn tx-titlebar-btn--chip"
-        txTooltip="Settings"
-        txTooltipPosition="bottom"
-        aria-label="Open settings"
-        (click)="handleOpenSettings()"
-      >
-        <tx-icon name="settingsGear" [size]="16" />
-      </button>
+    <button
+      type="button"
+      class="tx-titlebar-btn tx-titlebar-btn--chrome"
+      txTooltip="Cookie jar"
+      txTooltipPosition="bottom"
+      aria-label="Open cookie jar"
+      (click)="handleOpenCookies()"
+    >
+      <tx-icon name="box" [size]="16" />
+    </button>
+    <button
+      type="button"
+      class="tx-titlebar-btn tx-titlebar-btn--chrome"
+      txTooltip="Settings"
+      txTooltipPosition="bottom"
+      aria-label="Open settings"
+      (click)="handleOpenSettings()"
+    >
+      <tx-icon name="settingsGear" [size]="16" />
+    </button>
 
-      @if (hasChromeBridge()) {
-        <span class="tx-titlebar__actions-sep" aria-hidden="true"></span>
-        <div class="tx-titlebar__window-controls" aria-label="Window controls">
-          <button
-            type="button"
-            class="tx-titlebar-btn tx-titlebar-btn--chip"
-            (click)="handleMinimize()"
-            txTooltip="Minimize"
-            txTooltipPosition="bottom"
-            aria-label="Minimize window"
-          >
-            <tx-icon name="minimize" [size]="13" />
-          </button>
-          <button
-            type="button"
-            class="tx-titlebar-btn tx-titlebar-btn--chip"
-            (click)="handleMaximizeToggle()"
-            txTooltip="Maximize"
-            txTooltipPosition="bottom"
-            aria-label="Toggle maximize"
-          >
-            <tx-icon name="maximize" [size]="13" />
-          </button>
-          <button
-            type="button"
-            class="tx-titlebar-btn tx-titlebar-btn--chip tx-titlebar-btn--close"
-            (click)="handleClose()"
-            txTooltip="Close"
-            txTooltipPosition="bottom"
-            aria-label="Close window"
-          >
-            <tx-icon name="close" [size]="13" />
-          </button>
-        </div>
-      }
-    </div>
+    @if (hasChromeBridge()) {
+      <div class="tx-titlebar__window-controls" aria-label="Window controls">
+        <button
+          type="button"
+          class="tx-titlebar-btn tx-titlebar-btn--window"
+          (click)="handleMinimize()"
+          txTooltip="Minimize"
+          txTooltipPosition="bottom"
+          aria-label="Minimize window"
+        >
+          <tx-icon name="minimize" [size]="13" />
+        </button>
+        <button
+          type="button"
+          class="tx-titlebar-btn tx-titlebar-btn--window"
+          (click)="handleMaximizeToggle()"
+          txTooltip="Maximize"
+          txTooltipPosition="bottom"
+          aria-label="Toggle maximize"
+        >
+          <tx-icon name="maximize" [size]="13" />
+        </button>
+        <button
+          type="button"
+          class="tx-titlebar-btn tx-titlebar-btn--window tx-titlebar-btn--close"
+          (click)="handleClose()"
+          txTooltip="Close"
+          txTooltipPosition="bottom"
+          aria-label="Close window"
+        >
+          <tx-icon name="close" [size]="13" />
+        </button>
+      </div>
+    }
   </nav>
 </header>
 
@@ -129,25 +118,4 @@
 
 <tx-settings-popup [open]="settingsOpen()" (closed)="handleCloseSettings()" />
 
-<tx-modal
-  [open]="newProfileModalOpen()"
-  title="New workspace profile"
-  ariaLabel="New workspace profile"
-  layer="stacked"
-  (closed)="handleCloseNewProfileModal()"
->
-  <tx-form-field label="Profile name" controlId="tx-titlebar-new-profile-name">
-    <tx-input
-      id="tx-titlebar-new-profile-name"
-      [ngModel]="newProfileName()"
-      (ngModelChange)="newProfileName.set($event)"
-      placeholder="e.g. Testing"
-    />
-  </tx-form-field>
-  <div class="tx-titlebar-new-profile-actions">
-    <tx-button variant="secondary" (pressed)="handleCloseNewProfileModal()">Cancel</tx-button>
-    <tx-button variant="primary" [disabled]="!newProfileName().trim() || profileSwitching()" (pressed)="handleConfirmNewProfile()">
-      Create profile
-    </tx-button>
-  </div>
-</tx-modal>
+<tx-profile-manager-modal [open]="profileManagerOpen()" (closed)="handleCloseProfileManager()" />

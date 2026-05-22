@@ -1,26 +1,38 @@
 <div class="request-panel ts-flow-step-panel">
   <h2 class="request-panel__title">Database</h2>
-  <tx-form-field label="Connection ID" controlId="ts-db-conn">
-    <tx-input
-      controlId="ts-db-conn"
+
+  @if (!hasConnections()) {
+    <p class="ts-flow-step-panel__hint">
+      No database connections configured. Add connections in Settings → Databases.
+    </p>
+  }
+
+  <tx-form-field label="Connection" controlId="ts-db-conn">
+    <tx-dropdown
+      id="ts-db-conn"
+      [options]="connectionOptions()"
       [ngModel]="cfg().connectionId"
       (ngModelChange)="patch({ connectionId: $event })"
+      emptyLabel="Select a connection"
     />
   </tx-form-field>
+
   <tx-form-field label="Query" controlId="ts-db-query">
     <tx-textarea
       controlId="ts-db-query"
       [ngModel]="cfg().query"
       (ngModelChange)="patch({ query: $event })"
       [rows]="8"
+      [placeholder]="queryPlaceholder"
     />
   </tx-form-field>
+
   <tx-form-field label="Cache as variable" controlId="ts-db-cache">
     <tx-input
       controlId="ts-db-cache"
       [ngModel]="cfg().cacheAs ?? ''"
       (ngModelChange)="patch({ cacheAs: $event || undefined })"
-      placeholder="Optional variable name"
+      placeholder="Optional variable name for later steps"
     />
   </tx-form-field>
 </div>

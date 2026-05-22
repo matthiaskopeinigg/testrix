@@ -32,6 +32,19 @@ export function collectPriorFlowPlaceholderKeys(
         });
       }
     }
+
+    if (step.stepType === 'DATABASE') {
+      const cfg = step.config as { cacheAs?: string };
+      const key = cfg.cacheAs?.trim();
+      if (key) {
+        extras.push({
+          id: `database-${step.id}`,
+          label: `{{${key}}}`,
+          insert: `{{${key}}}`,
+          detail: `Cached query result from database step "${step.name || FLOW_STEP_GUIDED_TITLES.DATABASE}".`,
+        });
+      }
+    }
   }
 
   const envCatalog = catalogForEnvironment(environment ?? null);

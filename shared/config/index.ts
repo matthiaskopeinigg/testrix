@@ -50,4 +50,5 @@ export { clampWorkspaceSplitRatio, setLayoutRatioAtPath } from './workspace-edit
 export * from './workspace-editor-layout.schema';
 export * from './http-method-display';
 export * from './http-settings.schema';
+export * from './database-settings.schema';
 export * from './settings.schema';

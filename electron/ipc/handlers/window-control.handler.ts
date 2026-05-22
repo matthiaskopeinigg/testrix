@@ -3,6 +3,7 @@ import { BrowserWindow } from 'electron';
 import { WindowChannels } from '../channels/window.channels';
 import type { IpcMainBinder } from '../register-ipc';
 import { wrapInvokeHandler } from '../wrap-ipc-handler';
+import { readWindowChromeState } from '../../windows/main-window/window-chrome-state';
 
 interface DragOffset {
   readonly x: number;
@@ -13,6 +14,17 @@ const dragOffsetByWindow = new WeakMap<BrowserWindow, DragOffset>();
 
 /** Win32 frameless windows: CSS `-webkit-app-region: drag` is unreliable; IPC move is used instead. */
 export function registerWindowControlHandlers(ipc: IpcMainBinder): void {
+  ipc.handle(
+    WindowChannels.getChromeState,
+    wrapInvokeHandler(WindowChannels.getChromeState, async (event) => {
+      const win = BrowserWindow.fromWebContents(event.sender);
+      if (!win || win.isDestroyed()) {
+        return { edgeToEdge: false } as const;
+      }
+      return readWindowChromeState(win);
+    }),
+  );
+
   ipc.handle(
     WindowChannels.minimize,
     wrapInvokeHandler(WindowChannels.minimize, async (event): Promise<void> => {

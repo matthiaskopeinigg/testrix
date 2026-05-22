@@ -35,6 +35,7 @@ import {
   collectionFolderClickBehaviorLabel,
   LOG_LEVEL_OPTIONS,
   createDefaultSettings,
+  type DatabaseConnection,
   type SettingsFile,
   type SettingsPatch,
 } from '@shared/config';
@@ -80,6 +81,7 @@ import { TxSettingsEditorKeyboardSectionComponent } from './sections/tx-settings
 import { TxSettingsHttpRequestSectionComponent } from './sections/tx-settings-http-request-section.component';
 import { TxSettingsHttpRetriesSectionComponent } from './sections/tx-settings-http-retries-section.component';
 import { TxSettingsHttpTestingSectionComponent } from './sections/tx-settings-http-testing-section.component';
+import { TxSettingsDatabasesSectionComponent } from './sections/tx-settings-databases-section.component';
 
 export type SettingsPopupSection =
   | 'appearance'
@@ -90,6 +92,7 @@ export type SettingsPopupSection =
   | 'testSuite'
   | 'general'
   | 'logging'
+  | 'databases'
   | 'dataConfig'
   | 'httpRequest'
   | 'httpRetries'
@@ -107,7 +110,8 @@ type ConfirmAction =
   | 'resetSession'
   | 'importSettings'
   | 'changeConfigDir'
-  | 'deleteProfile';
+  | 'deleteProfile'
+  | 'discardDatabases';
 
 interface PendingConfirm {
   readonly action: ConfirmAction;
@@ -116,6 +120,8 @@ interface PendingConfirm {
   readonly confirmLabel: string;
   readonly variant: 'default' | 'danger';
   readonly payload?: string;
+  readonly pendingSection?: SettingsPopupSection;
+  readonly closeAfterDiscard?: boolean;
 }
 
 export interface SettingsSidebarItem {
@@ -159,6 +165,7 @@ const THEME_PERSIST_DEBOUNCE_MS = 280;
     TxSettingsHttpCertificatesSectionComponent,
     TxSettingsHttpDnsSectionComponent,
     TxSettingsHttpProxySectionComponent,
+    TxSettingsDatabasesSectionComponent,
   ],
   templateUrl: './tx-settings-popup.component.html',
   styleUrl: './tx-settings-popup.component.scss',
@@ -211,6 +218,10 @@ export class TxSettingsPopupComponent {
   private readonly contentStaggerArming = signal(false);
   /** Sections visited this popup session (skips entrance stagger on revisit). */
   private readonly visitedSections = signal<ReadonlySet<SettingsPopupSection>>(new Set());
+
+  /** Draft database connections while the Databases tab is active (explicit save). */
+  protected readonly databasesDraft = signal<readonly DatabaseConnection[]>([]);
+  private databasesBaselineJson: string | null = null;
 
   readonly settings = computed(() => this.config.settings());
 
@@ -342,7 +353,8 @@ export class TxSettingsPopupComponent {
       title: 'System',
       items: [
         { id: 'logging', label: 'Logging', icon: 'terminal' },
-        { id: 'dataConfig', label: 'Data & Config', icon: 'database' },
+        { id: 'databases', label: 'Databases', icon: 'database' },
+        { id: 'dataConfig', label: 'Data & Config', icon: 'folder' },
         { id: 'privacy', label: 'Privacy', icon: 'shield' },
       ],
     },
@@ -412,6 +424,21 @@ export class TxSettingsPopupComponent {
     if (this.activeSection() === id) {
       return;
     }
+    if (this.isDatabasesDirty() && this.activeSection() === 'databases') {
+      this.openConfirm({
+        action: 'discardDatabases',
+        title: 'Unsaved database changes',
+        message: 'You have unsaved connection changes. Discard them and switch sections?',
+        confirmLabel: 'Discard',
+        variant: 'danger',
+        pendingSection: id,
+      });
+      return;
+    }
+    this.activateSection(id);
+  }
+
+  private activateSection(id: SettingsPopupSection): void {
     const alreadyVisited = this.visitedSections().has(id);
     this.visitedSections.update((visited) => new Set([...visited, id]));
     this.activeSection.set(id);
@@ -423,6 +450,42 @@ export class TxSettingsPopupComponent {
       this.scheduleSectionContentStagger(id);
     }
     void this.refreshSectionData(id);
+  }
+
+  protected isDatabasesDirty(): boolean {
+    if (this.databasesBaselineJson == null) {
+      return false;
+    }
+    return this.serializeDatabasesDraft() !== this.databasesBaselineJson;
+  }
+
+  protected handleDatabasesDraftChange(connections: readonly DatabaseConnection[]): void {
+    this.databasesDraft.set(connections);
+  }
+
+  protected async handleSaveDatabases(): Promise<void> {
+    await this.patch({ databases: { connections: [...this.databasesDraft()] } });
+    this.syncDatabasesBaselineFromSettings();
+  }
+
+  protected handleCancelDatabases(): void {
+    this.loadDatabasesDraftFromSettings();
+  }
+
+  private serializeDatabasesDraft(): string {
+    return JSON.stringify({ connections: this.databasesDraft() });
+  }
+
+  private loadDatabasesDraftFromSettings(): void {
+    const connections = this.settingsView().databases?.connections ?? [];
+    this.databasesDraft.set(structuredClone(connections));
+    this.databasesBaselineJson = JSON.stringify({ connections });
+  }
+
+  private syncDatabasesBaselineFromSettings(): void {
+    const connections = this.settingsView().databases?.connections ?? [];
+    this.databasesDraft.set(structuredClone(connections));
+    this.databasesBaselineJson = JSON.stringify({ connections });
   }
 
   protected isSectionContentAnimating(id: SettingsPopupSection): boolean {
@@ -959,6 +1022,14 @@ export class TxSettingsPopupComponent {
             this.notifications.showSuccess('Profile deleted');
           }
           break;
+        case 'discardDatabases':
+          this.loadDatabasesDraftFromSettings();
+          if (pending.pendingSection) {
+            this.activateSection(pending.pendingSection);
+          } else if (pending.closeAfterDiscard) {
+            this.beginClose(true);
+          }
+          break;
       }
     } catch {
       this.notifications.showError('Action failed');
@@ -973,6 +1044,17 @@ export class TxSettingsPopupComponent {
 
   protected handleClose(): void {
     if (!this.isVisible() || this.isClosing()) {
+      return;
+    }
+    if (this.isDatabasesDirty() && this.activeSection() === 'databases') {
+      this.openConfirm({
+        action: 'discardDatabases',
+        title: 'Unsaved database changes',
+        message: 'You have unsaved connection changes. Discard them and close settings?',
+        confirmLabel: 'Discard',
+        variant: 'danger',
+        closeAfterDiscard: true,
+      });
       return;
     }
     this.beginClose(true);
@@ -1367,6 +1449,10 @@ export class TxSettingsPopupComponent {
       return 'HTTP settings saved';
     }
 
+    if (patch.databases != null) {
+      return 'Database connections saved';
+    }
+
     return 'Settings saved';
   }
 
@@ -1399,6 +1485,11 @@ export class TxSettingsPopupComponent {
       } catch {
         this.configFilePaths.set(null);
       }
+      return;
+    }
+
+    if (section === 'databases') {
+      this.loadDatabasesDraftFromSettings();
     }
   }
 

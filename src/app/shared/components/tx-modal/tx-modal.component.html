@@ -1,65 +1,23 @@
-@if (open()) {
+@if (isVisible()) {
   <div
     #root
     class="tx-modal-root"
+    [class.tx-modal-root--shown]="isShown()"
     [class.tx-modal-root--stacked]="layer() === 'stacked'"
     [class.tx-modal-root--wide]="cardSize() === 'wide'"
     role="presentation"
   >
-
-
-
     <button type="button" class="tx-modal-backdrop" aria-label="Close dialog backdrop" (click)="onBackdrop()"></button>
 
-
-
     <section class="tx-modal-card" role="dialog" aria-modal="true" [attr.aria-label]="ariaLabel()">
-
-
-
       <header class="tx-modal-header">
-
-
-
-
         <h2>{{ title() }}</h2>
-
-
-        <button type="button" class="tx-modal-close" (click)="close()" aria-label="Close modal">
-
-
-
-
-
-          ✕
-
-
-
-        </button>
-
-
+        <button type="button" class="tx-modal-close" (click)="close()" aria-label="Close modal">✕</button>
       </header>
 
-
-
       <div class="tx-modal-body">
-
-
-
         <ng-content />
-
-
-
       </div>
-
-
-
     </section>
-
-
-
   </div>
-
-
-
 }

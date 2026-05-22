@@ -384,6 +384,7 @@ export function migrateSettings(data: unknown, options?: MigrateSettingsOptions)
     testSuite: section('testSuite', defaults.testSuite),
     editor: migrateEditorSection(record['editor'], defaults.editor),
     http: migrateHttpSection(record['http'], defaults.http, appVersion),
+    databases: section('databases', defaults.databases),
     meta:
       typeof record['meta'] === 'object' && record['meta'] !== null
         ? { ...defaults.meta, ...(record['meta'] as object) }
