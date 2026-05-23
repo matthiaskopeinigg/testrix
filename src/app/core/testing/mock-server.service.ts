@@ -1,20 +1,40 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 
 import {
+  createDefaultMockServerEndpoint,
   createDefaultMockServerFile,
+  isMockServerEndpoint,
+  mockServerEndpointSchema,
   mockServerFileSchema,
   mockServerTabResourceId,
-  type MockEndpoint,
+  type MockServerEndpoint,
+  type MockServerMismatchRecord,
+  type MockServerOptions,
   type MockServerFile,
+  type MockServerRuntimeStatus,
+  type MockServerTreeItem,
 } from '@shared/testing';
 
 import { ElectronService } from '@app/core/electron/electron.service';
 import { ErrorNotificationService } from '@app/core/errors/error-notification.service';
+import {
+  fromMockServerTreeNodesWithExisting,
+  toMockServerTreeNodes,
+} from '@app/features/shell/testing/mock-server-sidebar-panel/mock-server-tree.adapter';
+import {
+  collectMockServerEndpointIdsForDeletion,
+  createEndpointFromMismatch,
+  createMockServerNode,
+  deleteMockServerNode,
+  findMockServerNode,
+  renameMockServerNode,
+} from '@app/features/shell/testing/mock-server-sidebar-panel/mock-server-tree.mutations';
+import type { MockServerTreeNode } from '@app/features/shell/testing/mock-server-sidebar-panel/mock-server-tree.types';
 
 import { newTestingId } from './testing-id';
 import { runTestingHydrateOnce } from './testing-hydrate-once';
 
-const BROWSER_STORAGE_KEY = 'testrix.mock-server.v1';
+const BROWSER_STORAGE_KEY = 'testrix.mock-server.v2';
 
 @Injectable({ providedIn: 'root' })
 export class MockServerService {
@@ -22,13 +42,36 @@ export class MockServerService {
   private readonly notifier = inject(ErrorNotificationService);
 
   private readonly fileState = signal<MockServerFile | null>(null);
-  private readonly runningState = signal(false);
+  private readonly statusState = signal<MockServerRuntimeStatus | null>(null);
+  private readonly mismatchesState = signal<readonly MockServerMismatchRecord[]>([]);
   private saveTimer: ReturnType<typeof setTimeout> | null = null;
   private readonly hydrateInflight: { current: Promise<void> | null } = { current: null };
+  private activityUnsub: (() => void) | null = null;
 
-  readonly endpoints = computed(() => this.fileState()?.endpoints ?? []);
+  readonly items = computed(() => this.fileState()?.items ?? []);
   readonly options = computed(() => this.fileState()?.options ?? createDefaultMockServerFile().options);
-  readonly running = computed(() => this.runningState());
+  readonly nodes = computed(() => toMockServerTreeNodes(this.items()));
+  readonly running = computed(() => this.statusState()?.running ?? false);
+  readonly status = computed(() => this.statusState());
+  readonly mismatches = computed(() => this.mismatchesState());
+  readonly unmatchedCount = computed(() => this.statusState()?.unmatchedCount ?? 0);
+
+  readonly allTags = computed(() => {
+    const tags = new Set<string>();
+    const walk = (list: readonly MockServerTreeItem[]): void => {
+      for (const item of list) {
+        if (isMockServerEndpoint(item)) {
+          for (const tag of item.tags) {
+            tags.add(tag);
+          }
+        } else {
+          walk(item.children);
+        }
+      }
+    };
+    walk(this.items());
+    return [...tags].sort((a, b) => a.localeCompare(b));
+  });
 
   async hydrate(): Promise<void> {
     return runTestingHydrateOnce(
@@ -41,9 +84,15 @@ export class MockServerService {
           return;
         }
         try {
-          const [file, status] = await Promise.all([api.getMockServer(), api.mockStatus()]);
+          const [file, status, mismatches] = await Promise.all([
+            api.getMockServer(),
+            api.mockStatus(),
+            api.mockListMismatches(),
+          ]);
           this.fileState.set(mockServerFileSchema.parse(file));
-          this.runningState.set(status.running);
+          this.statusState.set(status);
+          this.mismatchesState.set(mismatches);
+          this.wireActivityListener(api);
         } catch (error: unknown) {
           this.notifier.reportUnknown(error);
           this.fileState.set(createDefaultMockServerFile());
@@ -52,52 +101,213 @@ export class MockServerService {
     );
   }
 
-  find(id: string): MockEndpoint | null {
-    return this.endpoints().find((e) => e.id === id) ?? null;
+  findEndpoint(id: string): MockServerEndpoint | null {
+    const walk = (list: readonly MockServerTreeItem[]): MockServerEndpoint | null => {
+      for (const item of list) {
+        if (isMockServerEndpoint(item) && item.id === id) {
+          return item;
+        }
+        if (!isMockServerEndpoint(item)) {
+          const found = walk(item.children);
+          if (found) {
+            return found;
+          }
+        }
+      }
+      return null;
+    };
+    return walk(this.items());
+  }
+
+  findMismatch(id: string): MockServerMismatchRecord | null {
+    return this.mismatches().find((m) => m.id === id) ?? null;
   }
 
   labelForResource(resourceId: string): string {
+    if (resourceId.startsWith('ms-mismatch:')) {
+      const m = this.findMismatch(resourceId.slice('ms-mismatch:'.length));
+      return m ? `${m.method} ${m.pathname}` : 'Unmatched request';
+    }
     if (!resourceId.startsWith('ms:')) {
       return 'Mock server';
     }
-    return this.find(resourceId.slice(3))?.name ?? 'Mock endpoint';
+    return this.findEndpoint(resourceId.slice(3))?.name ?? 'Mock endpoint';
   }
 
-  addEndpoint(name = 'New endpoint'): MockEndpoint {
-    const ts = new Date().toISOString();
-    const endpoint: MockEndpoint = {
-      id: newTestingId(),
-      name,
-      method: 'GET',
-      path: '/',
-      statusCode: 200,
-      body: '{}',
-      latencyMs: 0,
-      updatedAt: ts,
-    };
+  saveNodes(treeNodes: readonly MockServerTreeNode[]): void {
+    const merged = fromMockServerTreeNodesWithExisting(treeNodes, this.items());
     const file = this.fileState() ?? createDefaultMockServerFile();
-    this.scheduleSave({ ...file, endpoints: [...file.endpoints, endpoint] });
+    this.scheduleSave({ ...file, items: merged });
+  }
+
+  updateOptions(patch: Partial<MockServerOptions>): void {
+    const file = this.fileState() ?? createDefaultMockServerFile();
+    this.scheduleSave({
+      ...file,
+      options: mockServerFileSchema.shape.options.parse({ ...file.options, ...patch }),
+    });
+  }
+
+  patchEndpoint(id: string, patch: Partial<Omit<MockServerEndpoint, 'id'>>): void {
+    const file = this.fileState();
+    if (!file) {
+      return;
+    }
+    const ts = new Date().toISOString();
+    const patchItem = (items: readonly MockServerTreeItem[]): MockServerTreeItem[] =>
+      items.map((item) => {
+        if (isMockServerEndpoint(item)) {
+          if (item.id !== id) {
+            return item;
+          }
+          return mockServerEndpointSchema.parse({
+            ...item,
+            ...patch,
+            id: item.id,
+            updatedAt: ts,
+          });
+        }
+        return { ...item, children: patchItem(item.children) };
+      });
+    this.scheduleSave({ ...file, items: patchItem(file.items) });
+  }
+
+  addFolder(name = 'New folder', parentId: string | null = null): string | null {
+    const result = createMockServerNode(this.nodes(), parentId, 'folder', name);
+    if (!result) {
+      return null;
+    }
+    this.saveNodes(result.nodes);
+    return result.nodeId;
+  }
+
+  addEndpoint(parentId: string | null = null, name = 'New endpoint'): MockServerEndpoint {
+    const result = createMockServerNode(this.nodes(), parentId, 'endpoint', name);
+    if (!result) {
+      const ts = new Date().toISOString();
+      const endpoint = createDefaultMockServerEndpoint(newTestingId(), name, ts);
+      const file = this.fileState() ?? createDefaultMockServerFile();
+      this.scheduleSave({ ...file, items: [...file.items, endpoint] });
+      return endpoint;
+    }
+    this.saveNodes(result.nodes);
+    return this.findEndpoint(result.nodeId) ?? createDefaultMockServerEndpoint(result.nodeId, name, new Date().toISOString());
+  }
+
+  addEndpointFromMismatch(mismatch: MockServerMismatchRecord): MockServerEndpoint {
+    const endpoint = createEndpointFromMismatch(mismatch);
+    const file = this.fileState() ?? createDefaultMockServerFile();
+    this.scheduleSave({ ...file, items: [...file.items, endpoint] });
     return endpoint;
+  }
+
+  renameNode(nodeId: string, label: string): void {
+    const next = renameMockServerNode(this.nodes(), nodeId, label);
+    if (next) {
+      this.saveNodes(next);
+    }
+  }
+
+  deleteNode(nodeId: string): string[] {
+    const removedIds = collectMockServerEndpointIdsForDeletion(this.nodes(), nodeId);
+    const next = deleteMockServerNode(this.nodes(), nodeId);
+    if (next) {
+      this.saveNodes(next);
+    }
+    return removedIds;
+  }
+
+  async refreshStatus(): Promise<void> {
+    const api = this.electron.bridge()?.testing;
+    if (!api) {
+      return;
+    }
+    try {
+      this.statusState.set(await api.mockStatus());
+    } catch (error: unknown) {
+      this.notifier.reportUnknown(error);
+    }
   }
 
   async start(): Promise<void> {
     const api = this.electron.bridge()?.testing;
     if (!api) {
-      this.runningState.set(true);
+      const portOpt = this.options().port;
+      this.statusState.set({
+        running: true,
+        host: this.options().host,
+        port: portOpt === 'auto' ? 0 : portOpt,
+        unmatchedCount: 0,
+      });
       return;
     }
-    const status = await api.mockStart();
-    this.runningState.set(status.running);
+    try {
+      this.statusState.set(await api.mockStart());
+      this.mismatchesState.set(await api.mockListMismatches());
+    } catch (error: unknown) {
+      this.notifier.reportUnknown(error);
+    }
   }
 
   async stop(): Promise<void> {
     const api = this.electron.bridge()?.testing;
     if (!api) {
-      this.runningState.set(false);
+      const portOpt = this.options().port;
+      this.statusState.set({
+        running: false,
+        host: this.options().host,
+        port: portOpt === 'auto' ? 0 : portOpt,
+        unmatchedCount: 0,
+      });
+      this.mismatchesState.set([]);
       return;
     }
-    const status = await api.mockStop();
-    this.runningState.set(status.running);
+    try {
+      this.statusState.set(await api.mockStop());
+      this.mismatchesState.set([]);
+    } catch (error: unknown) {
+      this.notifier.reportUnknown(error);
+    }
+  }
+
+  async clearMismatches(): Promise<void> {
+    const api = this.electron.bridge()?.testing;
+    if (!api) {
+      this.mismatchesState.set([]);
+      return;
+    }
+    await api.mockClearMismatches();
+    this.mismatchesState.set([]);
+    await this.refreshStatus();
+  }
+
+  openEndpointTab(id: string): string {
+    return mockServerTabResourceId(id);
+  }
+
+  private wireActivityListener(
+    api: NonNullable<ReturnType<ElectronService['bridge']>>['testing'],
+  ): void {
+    this.activityUnsub?.();
+    this.activityUnsub = api.onMockActivity((payload: unknown) => {
+      const event = payload as {
+        readonly type?: string;
+        readonly record?: MockServerMismatchRecord;
+        readonly unmatchedCount?: number;
+      };
+      if (event.type === 'mismatch' && event.record) {
+        this.mismatchesState.update((list) => {
+          const without = list.filter((m) => m.id !== event.record!.id);
+          return [event.record!, ...without];
+        });
+        if (typeof event.unmatchedCount === 'number') {
+          this.statusState.update((s) =>
+            s ? { ...s, unmatchedCount: event.unmatchedCount! } : s,
+          );
+        }
+      }
+      void this.refreshStatus();
+    });
   }
 
   private scheduleSave(file: MockServerFile): void {

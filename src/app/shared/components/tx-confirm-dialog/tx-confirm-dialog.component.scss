@@ -11,8 +11,3 @@
   justify-content: flex-end;
   gap: 0.5rem;
 }
-
-:host ::ng-deep .tx-confirm-dialog__confirm--danger.tx-button {
-  --tx-btn-bg: var(--tx-danger, #c42b1c);
-  --tx-btn-bg-hover: color-mix(in srgb, var(--tx-danger, #c42b1c) 88%, #000);
-}

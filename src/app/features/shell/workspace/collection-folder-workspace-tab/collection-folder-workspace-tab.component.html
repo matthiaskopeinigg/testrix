@@ -38,7 +38,12 @@
 
     @if (useTitlebarLayout()) {
       <div class="tx-entrance-stagger__block folder-tab__sections-wrap">
-        <nav class="folder-tab__sections-bar" role="tablist" aria-label="Folder settings sections">
+        <nav
+          class="folder-tab__sections-bar"
+          role="tablist"
+          aria-label="Folder settings sections"
+          [txWorkspaceSectionNav]="activeSection()"
+        >
           @for (item of navItems; track item.id) {
             <button
               type="button"
@@ -59,7 +64,12 @@
 
     <div class="folder-tab__body">
       @if (useSidebarLayout()) {
-        <nav class="folder-tab__nav" role="tablist" aria-label="Folder settings sections">
+        <nav
+          class="folder-tab__nav"
+          role="tablist"
+          aria-label="Folder settings sections"
+          [txWorkspaceSectionNav]="activeSection()"
+        >
           @for (item of navItems; track item.id) {
             <button
               type="button"
@@ -78,10 +88,7 @@
         </nav>
         <div class="folder-tab__divider" aria-hidden="true"></div>
       }
-      <div
-        class="folder-tab__pane tx-workspace-tab__pane"
-        [class.tx-workspace-tab__pane--switch]="tabMotion.paneSwitchActive()"
-      >
+      <div class="folder-tab__pane tx-workspace-tab__pane">
         @switch (activeSection()) {
           @case ('overview') {
             <div

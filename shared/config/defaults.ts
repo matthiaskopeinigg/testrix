@@ -227,6 +227,10 @@ export function createDefaultSession(): SessionFile {
       sidebarPanelOpen: false,
       collections: {
         expandedFolderIds: [],
+        listSidebarFilter: 'all',
+        listSidebarSortBy: 'order',
+        listSidebarTagFilter: [],
+        listSidebarMethodFilter: [],
         folderTabsById: {},
         requestTabsById: {},
         websocketTabsById: {},
@@ -239,6 +243,11 @@ export function createDefaultSession(): SessionFile {
         sidebarSortBy: 'order',
         listSidebarFilter: 'all',
         listSidebarSortBy: 'order',
+      },
+      history: {
+        statusFilter: 'all',
+        sortBy: 'date-new',
+        collapsedByDate: {},
       },
       editor: createDefaultWorkspaceEditor(),
       designSystem: createDefaultWorkspaceDesignSystem(),

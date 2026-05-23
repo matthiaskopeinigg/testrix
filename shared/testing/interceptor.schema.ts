@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { collectionRequestBodySchema } from '../config/collection-request-settings.schema';
+
 const boundedText = (max: number) => z.string().max(max);
 
 export const interceptorRuleSchema = z.object({
@@ -9,7 +11,8 @@ export const interceptorRuleSchema = z.object({
   matchUrl: boundedText(4_096).default('*'),
   action: z.enum(['proxy', 'mock', 'block']).default('proxy'),
   mockStatus: z.number().int().min(100).max(599).optional(),
-  mockBody: boundedText(512_000).optional(),
+  /** Mock response payload (collection request body modes). */
+  mockBody: collectionRequestBodySchema.default({ mode: 'none' }),
   updatedAt: z.string(),
 });
 
@@ -29,7 +32,7 @@ export type InterceptorFolder = {
   readonly updatedAt: string;
 };
 
-export const interceptorTreeItemSchema = z.union([interceptorFolderSchema, interceptorRuleSchema]);
+export const interceptorTreeItemSchema = z.union([interceptorRuleSchema, interceptorFolderSchema]);
 
 export type InterceptorTreeItem = InterceptorFolder | z.infer<typeof interceptorRuleSchema>;
 export type InterceptorRule = z.infer<typeof interceptorRuleSchema>;
@@ -37,6 +40,8 @@ export type InterceptorRule = z.infer<typeof interceptorRuleSchema>;
 export const interceptorFileSchema = z.object({
   schemaVersion: z.literal(1),
   running: z.boolean().default(false),
+  /** URL loaded in the interceptor browser window when started. */
+  startUrl: boundedText(4_096).default('https://example.com'),
   items: z.array(interceptorTreeItemSchema).default([]),
 });
 

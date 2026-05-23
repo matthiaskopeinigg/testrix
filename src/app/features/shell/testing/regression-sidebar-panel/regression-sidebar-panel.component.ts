@@ -18,17 +18,21 @@ import { RegressionService } from '@app/core/testing/regression.service';
 import { TestingSessionService } from '@app/core/testing/testing-session.service';
 import { WorkspaceEditorService } from '@app/core/workspace/workspace-editor.service';
 import {
-  buildRegressionFilterMenuItems,
+  buildEmptyRegressionContextMenu,
   buildRegressionNodeContextMenu,
-  buildRegressionRootContextMenu,
 } from '@app/features/shell/testing/regression-sidebar-panel/regression-context-menu';
+import {
+  buildRegressionFilterMenuItems,
+  buildRegressionSortMenuItems,
+  isRegressionKindFilterAction,
+  isRegressionSortAction,
+} from '@app/features/shell/testing/regression-sidebar-panel/regression-sidebar-menus';
 import {
   collectRegressionFolderIds,
   collectRegressionFolderIdsInSubtree,
-  filterRegressionByTags,
-  filterRegressionTree,
   partitionRegressionArchived,
 } from '@app/features/shell/testing/regression-sidebar-panel/regression-tree.filter';
+import { applyRegressionTreeView } from '@app/features/shell/testing/regression-sidebar-panel/regression-tree.view';
 import {
   collectRegressionFolderIdsFromNodes,
   findRegressionNode,
@@ -61,6 +65,12 @@ import type {
   TxTreeNodeRenameCommitEvent,
   TxTreeRowContextMenuEvent,
 } from '@app/shared/components/tx-tree/tx-tree.types';
+import {
+  DEFAULT_REGRESSION_SIDEBAR_FILTER,
+  DEFAULT_REGRESSION_SIDEBAR_SORT_BY,
+  type RegressionSidebarFilter,
+  type RegressionSidebarSortBy,
+} from '@shared/config';
 
 const SESSION_PREF_DEBOUNCE_MS = 300;
 const SEARCH_DEBOUNCE_MS = 100;
@@ -102,6 +112,8 @@ export class RegressionSidebarPanelComponent {
   protected readonly archiveExpandedIds = signal<string[]>([]);
   protected readonly allExpanded = signal(false);
   protected readonly archiveSectionExpanded = signal(false);
+  protected readonly kindFilter = signal<RegressionSidebarFilter>(DEFAULT_REGRESSION_SIDEBAR_FILTER);
+  protected readonly sortBy = signal<RegressionSidebarSortBy>(DEFAULT_REGRESSION_SIDEBAR_SORT_BY);
   protected readonly tagFilter = signal<string[]>([]);
 
   protected readonly contextMenuOpen = signal(false);
@@ -111,6 +123,9 @@ export class RegressionSidebarPanelComponent {
 
   protected readonly filterMenuOpen = signal(false);
   protected readonly filterMenuPosition = signal({ x: 0, y: 0 });
+
+  protected readonly sortMenuOpen = signal(false);
+  protected readonly sortMenuPosition = signal({ x: 0, y: 0 });
 
   protected readonly renamingNodeId = signal<string | null>(null);
 
@@ -127,7 +142,7 @@ export class RegressionSidebarPanelComponent {
   protected readonly treeConfig = computed(() =>
     mergeTxTreeConfig<RegressionTreeNodeMeta>({
       ariaLabel: 'Regressions',
-      sort: { foldersFirst: true },
+      sort: { foldersFirst: this.sortBy() === 'saved' },
       drop: {
         maxDepth: 1,
         canDrop: (ctx) => regressionCanDrop(ctx),
@@ -140,8 +155,12 @@ export class RegressionSidebarPanelComponent {
   private decorateNodes(list: readonly RegressionTreeNode[]): RegressionDisplayNode[] {
     const prefs = this.configService.session()?.workspace.testing.regression;
     const showDescriptions = prefs?.showDescriptions ?? false;
-    let next = filterRegressionByTags(list, this.tagFilter());
-    next = filterRegressionTree(next, this.searchQueryDebounced());
+    const next = applyRegressionTreeView(list, {
+      query: this.searchQueryDebounced(),
+      kindFilter: this.kindFilter(),
+      sortBy: this.sortBy(),
+      tagFilter: this.tagFilter(),
+    });
     const display = next as RegressionDisplayNode[];
     const withStatus = this.applyRunStatusIndicators(display);
     const withDescriptions = applyTreeDescriptionVisibility(withStatus, showDescriptions);
@@ -159,12 +178,28 @@ export class RegressionSidebarPanelComponent {
   protected readonly archivedCount = computed(() => this.partitionedNodes().archived.length);
 
   protected readonly filterMenuItems = computed(() =>
-    buildRegressionFilterMenuItems(this.tagFilter(), this.regression.allTags()),
+    buildRegressionFilterMenuItems(
+      this.kindFilter(),
+      this.tagFilter(),
+      this.regression.allTags(),
+    ),
   );
 
-  protected readonly filterToolbarActive = computed(() => this.tagFilter().length > 0);
+  protected readonly sortMenuItems = computed(() => buildRegressionSortMenuItems(this.sortBy()));
 
-  protected readonly emptyStateMessage = computed(() => {
+  protected readonly filterToolbarActive = computed(
+    () => this.kindFilter() !== DEFAULT_REGRESSION_SIDEBAR_FILTER || this.tagFilter().length > 0,
+  );
+
+  protected readonly sortToolbarActive = computed(
+    () => this.sortBy() !== DEFAULT_REGRESSION_SIDEBAR_SORT_BY,
+  );
+
+  protected readonly emptyStateMessage = computed(() => this.resolveEmptyMessage('active'));
+
+  protected readonly archiveEmptyMessage = computed(() => this.resolveEmptyMessage('archive'));
+
+  private resolveEmptyMessage(section: 'active' | 'archive'): string {
     if (this.nodes().length === 0) {
       return 'No regressions yet.';
     }
@@ -174,8 +209,14 @@ export class RegressionSidebarPanelComponent {
     if (this.tagFilter().length > 0) {
       return 'No regressions match the selected tags.';
     }
-    return 'No active regressions.';
-  });
+    if (this.kindFilter() === 'folders') {
+      return 'No folders match the current filter.';
+    }
+    if (this.kindFilter() === 'regressions') {
+      return 'No regressions match the current filter.';
+    }
+    return section === 'archive' ? 'No archived regressions match.' : 'No active regressions.';
+  }
 
   protected readonly treeSelectionIds = computed(() =>
     testingSidebarSelectionIds(this.workspaceEditor.activeTab()),
@@ -364,9 +405,6 @@ export class RegressionSidebarPanelComponent {
           this.exportArtifactJson(nodeId);
         }
         break;
-      case 'import-json':
-        void this.importArtifactJson();
-        break;
     }
   }
 
@@ -380,8 +418,36 @@ export class RegressionSidebarPanelComponent {
     this.filterMenuOpen.set(true);
   }
 
+  protected handleSortToolbarClick(event: MouseEvent): void {
+    event.stopPropagation();
+    this.sortMenuPosition.set({ x: event.clientX, y: event.clientY });
+    this.sortMenuOpen.set(true);
+  }
+
+  protected handleSortMenuSelect(actionId: string): void {
+    this.sortMenuOpen.set(false);
+    if (!isRegressionSortAction(actionId) || actionId === this.sortBy()) {
+      return;
+    }
+    this.sortBy.set(actionId);
+    this.schedulePersistPrefs({ sortBy: actionId });
+  }
+
+  protected handleSortMenuClosed(): void {
+    this.sortMenuOpen.set(false);
+  }
+
   protected handleFilterMenuSelect(actionId: string): void {
     this.filterMenuOpen.set(false);
+
+    if (isRegressionKindFilterAction(actionId)) {
+      if (actionId === this.kindFilter()) {
+        return;
+      }
+      this.kindFilter.set(actionId);
+      this.schedulePersistPrefs({ kindFilter: actionId });
+      return;
+    }
 
     if (actionId.startsWith('tag:')) {
       const tag = actionId.slice('tag:'.length);
@@ -417,19 +483,10 @@ export class RegressionSidebarPanelComponent {
     this.deleteOpen.set(false);
   }
 
-  protected handleAddFolder(): void {
-    this.handleCreate('folder', null);
-  }
-
-  protected handleAddArtifact(): void {
-    const artifact = this.regression.addArtifact(null);
-    this.openArtifact(artifact.id);
-  }
-
   private openContextMenu(x: number, y: number, nodeId: string | null): void {
     this.contextNodeId.set(nodeId);
     if (nodeId === null) {
-      this.contextMenuItems.set(buildRegressionRootContextMenu());
+      this.contextMenuItems.set(buildEmptyRegressionContextMenu());
     } else {
       const loc = findRegressionNode(this.nodes(), nodeId);
       const kind = (loc?.node.data?.kind ?? loc?.node.kind ?? 'folder') as RegressionTreeKind;
@@ -540,18 +597,6 @@ export class RegressionSidebarPanelComponent {
     void navigator.clipboard?.writeText(json);
   }
 
-  private async importArtifactJson(): Promise<void> {
-    try {
-      const content = await navigator.clipboard.readText();
-      const artifact = this.regression.importArtifactJson(content);
-      if (artifact) {
-        this.openArtifact(artifact.id);
-      }
-    } catch {
-      // Clipboard unavailable or invalid JSON.
-    }
-  }
-
   private toggleFolderExpanded(folderId: string): void {
     if (!regressionFolderHasChildren(this.nodes(), folderId)) {
       return;
@@ -609,6 +654,8 @@ export class RegressionSidebarPanelComponent {
       searchQuery: string;
       expandedIds: readonly string[];
       archiveExpanded: boolean;
+      kindFilter: RegressionSidebarFilter;
+      sortBy: RegressionSidebarSortBy;
       tagFilter: readonly string[];
     }>,
   ): void {
@@ -626,6 +673,8 @@ export class RegressionSidebarPanelComponent {
       searchQuery: string;
       expandedIds: readonly string[];
       archiveExpanded: boolean;
+      kindFilter: RegressionSidebarFilter;
+      sortBy: RegressionSidebarSortBy;
       tagFilter: readonly string[];
     }>,
   ): void {
@@ -633,8 +682,9 @@ export class RegressionSidebarPanelComponent {
     const currentRegression = session?.workspace.testing.regression ?? {
       searchQuery: '',
       expandedIds: [],
-      sortBy: 'saved' as const,
+      sortBy: DEFAULT_REGRESSION_SIDEBAR_SORT_BY,
       archiveExpanded: false,
+      kindFilter: DEFAULT_REGRESSION_SIDEBAR_FILTER,
       tagFilter: [],
       showDescriptions: false,
     };

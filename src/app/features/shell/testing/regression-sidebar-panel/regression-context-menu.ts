@@ -13,8 +13,7 @@ export type RegressionContextMenuAction =
   | 'archive'
   | 'restore'
   | 'run'
-  | 'export-json'
-  | 'import-json';
+  | 'export-json';
 
 /** Menu for right-click on empty sidebar / tree area (root-level create). */
 export function buildEmptyRegressionContextMenu(): TxContextMenuItem[] {
@@ -68,32 +67,3 @@ export function buildRegressionNodeContextMenu(
   return items;
 }
 
-/** Filter toolbar menu: tag checkboxes. */
-export function buildRegressionFilterMenuItems(
-  tagFilter: readonly string[],
-  allTags: readonly string[],
-): TxContextMenuItem[] {
-  const items: TxContextMenuItem[] = [];
-
-  if (allTags.length > 0) {
-    for (const tag of allTags) {
-      items.push({
-        id: `tag:${tag}`,
-        label: tag,
-        icon: 'tag',
-        selected: tagFilter.some((active) => active.toLowerCase() === tag.toLowerCase()),
-      });
-    }
-  }
-
-  return items;
-}
-
-/** Root area context menu including import. */
-export function buildRegressionRootContextMenu(): TxContextMenuItem[] {
-  return [
-    ...buildEmptyRegressionContextMenu(),
-    { id: 'sep-import', label: '', separator: true },
-    { id: 'import-json', label: 'Import from clipboard', icon: 'clipboard' },
-  ];
-}

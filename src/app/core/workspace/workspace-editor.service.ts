@@ -22,6 +22,7 @@ import {
   findTabByResourceId,
   normalizeWorkspaceEditorState,
   pruneEditorGroups,
+  pruneWorkspaceEditorTabs,
   pushRecentResourceId,
   removeLayoutGroup,
   setLayoutRatioAtPath,
@@ -54,6 +55,10 @@ import { RegressionService } from '@app/core/testing/regression.service';
 import { TestSuiteService } from '@app/core/testing/test-suite.service';
 
 import { WorkspaceEditorMotionService } from './workspace-editor-motion.service';
+import {
+  workspaceTabResourceExists,
+  type WorkspaceTabResourceLookupContext,
+} from './workspace-tab-resource-exists';
 
 const SESSION_EDITOR_DEBOUNCE_MS = 150;
 
@@ -129,6 +134,39 @@ export class WorkspaceEditorService {
       this.saveTimer = null;
       await this.persist();
     }
+  }
+
+  /**
+   * Closes tabs whose resources are missing after switching workspace profiles.
+   */
+  async pruneTabsForMissingProfileResources(): Promise<void> {
+    const ctx = this.tabResourceLookupContext();
+    const editor = this.editorState();
+    const pruned = pruneWorkspaceEditorTabs(editor, (tab) => workspaceTabResourceExists(ctx, tab));
+    if (workspaceEditorTabCount(editor) === workspaceEditorTabCount(pruned)) {
+      return;
+    }
+    if (this.saveTimer !== null) {
+      clearTimeout(this.saveTimer);
+      this.saveTimer = null;
+    }
+    const normalized = normalizeWorkspaceEditorState(pruned);
+    this.editorState.set(normalized);
+    await this.persist();
+  }
+
+  private tabResourceLookupContext(): WorkspaceTabResourceLookupContext {
+    return {
+      collections: this.collectionsService,
+      environments: this.environmentsService,
+      history: this.historyService,
+      testSuite: this.testSuite,
+      loadTest: this.loadTest,
+      regression: this.regression,
+      mockServer: this.mockServer,
+      capture: this.capture,
+      interceptor: this.interceptor,
+    };
   }
 
   /** Returns tab view models for a group (pinned first). */
@@ -763,4 +801,12 @@ export class WorkspaceEditorService {
       },
     });
   }
+}
+
+function workspaceEditorTabCount(editor: WorkspaceEditorState): number {
+  let count = 0;
+  for (const group of Object.values(editor.groups)) {
+    count += group.tabs.length;
+  }
+  return count;
 }

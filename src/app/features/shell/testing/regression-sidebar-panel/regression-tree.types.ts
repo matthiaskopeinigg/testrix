@@ -7,6 +7,8 @@ export interface RegressionTreeNodeMeta {
   readonly description?: string;
   readonly tags?: readonly string[];
   readonly archivedAt?: string | null;
+  readonly createdAt?: string;
+  readonly updatedAt?: string;
   readonly flowCount?: number;
   readonly lastRunStatus?: 'passed' | 'failed' | 'cancelled' | 'running' | null;
 }

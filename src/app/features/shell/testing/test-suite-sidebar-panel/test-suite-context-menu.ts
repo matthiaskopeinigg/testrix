@@ -16,12 +16,14 @@ export function buildTestSuiteNodeContextMenu(
 ): readonly TxContextMenuItem[] {
   const items: TxContextMenuItem[] = [
     { id: 'rename', label: 'Rename', icon: 'edit' },
+    { id: 'duplicate', label: 'Duplicate', icon: 'copy' },
   ];
 
   if (kind === 'folder') {
     items.unshift(
       { id: 'new-folder', label: 'New folder', icon: 'folder' },
       { id: 'new-flow', label: 'New flow', icon: 'play' },
+      { id: 'sep-create', label: '', separator: true },
     );
   }
 

@@ -27,6 +27,7 @@ const collectionNodeBaseSchema = z.object({
   label: z.string().min(1),
   order: z.number().optional(),
   priority: z.number().optional(),
+  favourite: z.boolean().optional(),
 });
 
 const collectionRequestNodeSchema = collectionNodeBaseSchema.extend({

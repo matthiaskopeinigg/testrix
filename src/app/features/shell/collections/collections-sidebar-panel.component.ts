@@ -13,7 +13,12 @@ import {
 import {
   coerceCollectionFolderClickBehavior,
   DEFAULT_COLLECTION_FOLDER_CLICK_BEHAVIOR,
+  DEFAULT_COLLECTION_LIST_SIDEBAR_FILTER,
+  DEFAULT_COLLECTION_LIST_SIDEBAR_SORT_BY,
   resolveCollectionFolderClickAction,
+  type CollectionListSidebarFilter,
+  type CollectionListSidebarSortBy,
+  type HttpMethodId,
 } from '@shared/config';
 
 import { CollectionsService } from '@app/core/collections/collections.service';
@@ -23,9 +28,7 @@ import { TxNotificationService } from '@app/core/notifications/tx-notification.s
 import { TxContextMenuComponent } from '@app/shared/components/tx-context-menu/tx-context-menu.component';
 import type { TxContextMenuItem } from '@app/shared/components/tx-context-menu/tx-context-menu.types';
 import { TxConfirmDialogComponent } from '@app/shared/components/tx-confirm-dialog/tx-confirm-dialog.component';
-import { applyTreeDescriptionVisibility } from '@app/shared/components/tx-tree/tx-tree-description-visibility';
-import { applyTreeHttpMethodVisibility } from '@app/shared/components/tx-tree/tx-tree-http-method-visibility';
-import { applyTreeTagsVisibility } from '@app/shared/components/tx-tree/tx-tree-tags-visibility';
+import { TxIconComponent } from '@app/shared/components/tx-icon/tx-icon.component';
 import { mergeTxTreeConfig } from '@app/shared/components/tx-tree/tx-tree.config';
 import { TxTreeComponent } from '@app/shared/components/tx-tree/tx-tree.component';
 import type {
@@ -34,6 +37,7 @@ import type {
   TxTreeNodeRenameCommitEvent,
   TxTreeRowContextMenuEvent,
 } from '@app/shared/components/tx-tree/tx-tree.types';
+import { WorkspacePanelToolbarActionsDirective } from '@app/features/shell/workspace/workspace-panel-toolbar-actions.directive';
 import { WorkspaceSidebarPanelShellComponent } from '@app/features/shell/workspace/workspace-sidebar-panel-shell.component';
 import {
   collectFolderAncestorIds,
@@ -44,8 +48,14 @@ import {
   buildCollectionNodeContextMenu,
   buildEmptyCollectionContextMenu,
 } from './collection-context-menu';
+import {
+  buildCollectionListFilterMenuItems,
+  buildCollectionListSortMenuItems,
+  isCollectionListKindFilterAction,
+} from './collection-list-sidebar-menus';
+import { collectAllCollectionTreeTags } from './collection-tree.tags';
 import { collectFolderIds, collectFolderIdsInSubtree } from './collection-tree.expand';
-import { filterCollectionTree } from './collection-tree.filter';
+import { applyCollectionTreeView } from './collection-tree.view';
 import {
   collectCollectionNodeIdsForDeletion,
   collectFolderIdsFromNodes,
@@ -77,6 +87,8 @@ function countCollectionTreeNodes(nodes: readonly CollectionTreeNode[]): number 
   standalone: true,
   imports: [
     WorkspaceSidebarPanelShellComponent,
+    WorkspacePanelToolbarActionsDirective,
+    TxIconComponent,
     TxTreeComponent,
     TxContextMenuComponent,
     TxConfirmDialogComponent,
@@ -99,8 +111,21 @@ export class CollectionsSidebarPanelComponent {
 
   protected readonly searchQuery = signal('');
   protected readonly searchQueryDebounced = signal('');
+  protected readonly listSidebarFilter = signal<CollectionListSidebarFilter>(
+    DEFAULT_COLLECTION_LIST_SIDEBAR_FILTER,
+  );
+  protected readonly listSidebarSortBy = signal<CollectionListSidebarSortBy>(
+    DEFAULT_COLLECTION_LIST_SIDEBAR_SORT_BY,
+  );
+  protected readonly tagFilter = signal<string[]>([]);
+  protected readonly methodFilter = signal<HttpMethodId[]>([]);
   protected readonly expandedIds = signal<string[]>([]);
   protected readonly allExpanded = signal(false);
+
+  protected readonly filterMenuOpen = signal(false);
+  protected readonly sortMenuOpen = signal(false);
+  protected readonly filterMenuPosition = signal({ x: 0, y: 0 });
+  protected readonly sortMenuPosition = signal({ x: 0, y: 0 });
 
   protected readonly contextMenuOpen = signal(false);
   protected readonly contextMenuPosition = signal({ x: 0, y: 0 });
@@ -119,10 +144,37 @@ export class CollectionsSidebarPanelComponent {
 
   protected readonly nodes = computed(() => this.collectionsService.nodes());
 
+  protected readonly allCollectionTags = computed(() => collectAllCollectionTreeTags(this.nodes()));
+
+  protected readonly filterMenuItems = computed(() =>
+    buildCollectionListFilterMenuItems(
+      this.listSidebarFilter(),
+      this.tagFilter(),
+      this.allCollectionTags(),
+      this.methodFilter(),
+    ),
+  );
+
+  protected readonly sortMenuItems = computed(() =>
+    buildCollectionListSortMenuItems(this.listSidebarSortBy()),
+  );
+
+  protected readonly filterToolbarActive = computed(
+    () =>
+      this.listSidebarFilter() !== DEFAULT_COLLECTION_LIST_SIDEBAR_FILTER ||
+      this.tagFilter().length > 0 ||
+      this.methodFilter().length > 0,
+  );
+
+  protected readonly sortToolbarActive = computed(
+    () => this.listSidebarSortBy() !== DEFAULT_COLLECTION_LIST_SIDEBAR_SORT_BY,
+  );
+
   protected readonly treeConfig = computed(() => {
     const collections = this.configService.settings()?.collections;
     const largeTree =
       countCollectionTreeNodes(this.filteredNodes()) > LARGE_TREE_NODE_THRESHOLD;
+    const nameSort = this.listSidebarSortBy() === 'name';
     return mergeTxTreeConfig<CollectionTreeNodeMeta>({
       ariaLabel: 'Collections',
       expansion: {
@@ -136,7 +188,7 @@ export class CollectionsSidebarPanelComponent {
         animateExpand: largeTree ? false : (collections?.animateExpand ?? true),
       },
       sort: {
-        siblingSort: collections?.siblingSort ?? 'orderThenPriority',
+        siblingSort: nameSort ? 'manual' : (collections?.siblingSort ?? 'orderThenPriority'),
         foldersFirst: collections?.foldersFirst ?? true,
       },
       drag: { handleOnly: false },
@@ -147,14 +199,17 @@ export class CollectionsSidebarPanelComponent {
   });
 
   protected readonly filteredNodes = computed(() => {
-    const filtered = filterCollectionTree(this.nodes(), this.searchQueryDebounced());
     const collections = this.configService.settings()?.collections;
-    const showDescriptions = collections?.showDescriptions ?? true;
-    const showTags = collections?.showTags ?? false;
-    const displayHttpMethod = collections?.displayHttpMethod ?? 'tree-and-tab';
-    const withDescriptions = applyTreeDescriptionVisibility(filtered, showDescriptions);
-    const withTags = applyTreeTagsVisibility(withDescriptions, showTags);
-    return applyTreeHttpMethodVisibility(withTags, displayHttpMethod);
+    return applyCollectionTreeView(this.nodes(), {
+      query: this.searchQueryDebounced(),
+      filter: this.listSidebarFilter(),
+      sortBy: this.listSidebarSortBy(),
+      tagFilter: this.tagFilter(),
+      methodFilter: this.methodFilter(),
+      showDescriptions: collections?.showDescriptions ?? true,
+      showTags: (collections?.showTags ?? false) || this.tagFilter().length > 0,
+      displayHttpMethod: collections?.displayHttpMethod ?? 'tree-and-tab',
+    });
   });
 
   protected readonly treeSelectionIds = computed(() =>
@@ -163,11 +218,30 @@ export class CollectionsSidebarPanelComponent {
 
   protected readonly hasFolders = computed(() => collectFolderIds(this.nodes()).length > 0);
 
-  protected readonly treeEmptyMessage = computed(() =>
-    this.searchQueryDebounced().trim()
-      ? 'No items match your search.'
-      : 'No collections yet. Right-click to create one.',
-  );
+  protected readonly treeEmptyMessage = computed(() => {
+    if (this.searchQueryDebounced().trim()) {
+      return 'No items match your search.';
+    }
+    if (this.listSidebarFilter() === 'favourites') {
+      return 'No favourites yet. Right-click an item and choose Add to favourites.';
+    }
+    if (this.listSidebarFilter() === 'folders') {
+      return 'No folders in this collection.';
+    }
+    if (this.listSidebarFilter() === 'requests') {
+      return 'No HTTP requests in this collection.';
+    }
+    if (this.listSidebarFilter() === 'websockets') {
+      return 'No WebSockets in this collection.';
+    }
+    if (this.tagFilter().length > 0) {
+      return 'No items match the selected tags.';
+    }
+    if (this.listSidebarFilter() === 'requests' && this.methodFilter().length > 0) {
+      return 'No requests match the selected HTTP methods.';
+    }
+    return 'No collections yet. Right-click to create one.';
+  });
 
   constructor() {
     effect(() => {
@@ -177,10 +251,19 @@ export class CollectionsSidebarPanelComponent {
         if (!session) {
           return;
         }
-        const saved = session.workspace.collections.expandedFolderIds ?? [];
+        const collectionsSession = session.workspace.collections;
+        const saved = collectionsSession.expandedFolderIds ?? [];
         this.expandedIds.set([...saved]);
         this.tree()?.syncExpansionFromInput(saved);
         this.syncAllExpandedState();
+        this.listSidebarFilter.set(
+          collectionsSession.listSidebarFilter ?? DEFAULT_COLLECTION_LIST_SIDEBAR_FILTER,
+        );
+        this.listSidebarSortBy.set(
+          collectionsSession.listSidebarSortBy ?? DEFAULT_COLLECTION_LIST_SIDEBAR_SORT_BY,
+        );
+        this.tagFilter.set([...(collectionsSession.listSidebarTagFilter ?? [])]);
+        this.methodFilter.set([...(collectionsSession.listSidebarMethodFilter ?? [])]);
       });
     });
 
@@ -223,6 +306,77 @@ export class CollectionsSidebarPanelComponent {
       this.searchDebounceTimer = null;
       this.searchQueryDebounced.set(query);
     }, SEARCH_DEBOUNCE_MS);
+  }
+
+  protected handleFilterToolbarClick(event: MouseEvent): void {
+    this.sortMenuOpen.set(false);
+    this.openToolbarMenu(event, this.filterMenuPosition, this.filterMenuOpen);
+  }
+
+  protected handleSortToolbarClick(event: MouseEvent): void {
+    this.filterMenuOpen.set(false);
+    this.openToolbarMenu(event, this.sortMenuPosition, this.sortMenuOpen);
+  }
+
+  protected handleFilterMenuSelect(actionId: string): void {
+    if (actionId.startsWith('tag:')) {
+      const tag = actionId.slice('tag:'.length);
+      this.tagFilter.update((current) => {
+        const lower = tag.toLowerCase();
+        const exists = current.some((active) => active.toLowerCase() === lower);
+        const next = exists
+          ? current.filter((active) => active.toLowerCase() !== lower)
+          : [...current, tag];
+        this.persistListSidebarViewPrefs({ tagFilter: next });
+        return next;
+      });
+      return;
+    }
+
+    if (actionId.startsWith('method:')) {
+      const method = actionId.slice('method:'.length) as HttpMethodId;
+      this.methodFilter.update((current) => {
+        const exists = current.includes(method);
+        const next = exists ? current.filter((entry) => entry !== method) : [...current, method];
+        this.persistListSidebarViewPrefs({ methodFilter: next });
+        return next;
+      });
+      return;
+    }
+
+    if (!isCollectionListKindFilterAction(actionId)) {
+      return;
+    }
+
+    this.filterMenuOpen.set(false);
+    if (actionId === this.listSidebarFilter()) {
+      return;
+    }
+    this.listSidebarFilter.set(actionId);
+    if (actionId !== 'requests') {
+      this.methodFilter.set([]);
+    }
+    this.persistListSidebarViewPrefs(
+      actionId !== 'requests' ? { listSidebarFilter: actionId, methodFilter: [] } : { listSidebarFilter: actionId },
+    );
+  }
+
+  protected handleSortMenuSelect(actionId: string): void {
+    this.sortMenuOpen.set(false);
+    const next = actionId as CollectionListSidebarSortBy;
+    if (next === this.listSidebarSortBy()) {
+      return;
+    }
+    this.listSidebarSortBy.set(next);
+    this.persistListSidebarViewPrefs();
+  }
+
+  protected handleFilterMenuClosed(): void {
+    this.filterMenuOpen.set(false);
+  }
+
+  protected handleSortMenuClosed(): void {
+    this.sortMenuOpen.set(false);
   }
 
   protected handleExpandAll(expanded: boolean): void {
@@ -316,6 +470,11 @@ export class CollectionsSidebarPanelComponent {
           this.openCollectionItem(nodeId);
         }
         break;
+      case 'toggle-favourite':
+        if (nodeId) {
+          this.collectionsService.toggleFavourite(nodeId);
+        }
+        break;
       case 'expand':
         if (nodeId && collectionFolderHasChildren(this.nodes(), nodeId)) {
           this.setFolderExpanded(nodeId, true);
@@ -354,7 +513,10 @@ export class CollectionsSidebarPanelComponent {
       const kind = (loc?.node.data?.kind ?? loc?.node.kind ?? 'folder') as CollectionTreeKind;
       const expanded = this.expandedIds().includes(nodeId);
       const hasChildren = collectionFolderHasChildren(this.nodes(), nodeId);
-      this.contextMenuItems.set(buildCollectionNodeContextMenu(kind, expanded, hasChildren));
+      const favourite = loc?.node.favourite === true;
+      this.contextMenuItems.set(
+        buildCollectionNodeContextMenu(kind, expanded, hasChildren, favourite),
+      );
     }
     this.contextMenuPosition.set({ x, y });
     this.contextMenuOpen.set(true);
@@ -512,6 +674,42 @@ export class CollectionsSidebarPanelComponent {
   private pruneExpandedIds(ids: readonly string[]): string[] {
     const valid = new Set(collectFolderIdsFromNodes(this.nodes()));
     return ids.filter((id) => valid.has(id));
+  }
+
+  private persistListSidebarViewPrefs(
+    patch: Partial<{
+      listSidebarFilter: CollectionListSidebarFilter;
+      listSidebarSortBy: CollectionListSidebarSortBy;
+      tagFilter: string[];
+      methodFilter: HttpMethodId[];
+    }> = {},
+  ): void {
+    void this.configService.patchSession({
+      workspace: {
+        collections: {
+          listSidebarFilter: patch.listSidebarFilter ?? this.listSidebarFilter(),
+          listSidebarSortBy: patch.listSidebarSortBy ?? this.listSidebarSortBy(),
+          listSidebarTagFilter: patch.tagFilter ?? this.tagFilter(),
+          listSidebarMethodFilter: patch.methodFilter ?? this.methodFilter(),
+        },
+      },
+    });
+  }
+
+  private openToolbarMenu(
+    event: MouseEvent,
+    positionSignal: { set(value: { x: number; y: number }): void },
+    openSignal: { set(value: boolean): void },
+  ): void {
+    event.stopPropagation();
+    const target = event.currentTarget as HTMLElement | null;
+    const rect = target?.getBoundingClientRect();
+    if (rect) {
+      positionSignal.set({ x: rect.left, y: rect.bottom + 4 });
+    } else {
+      positionSignal.set({ x: event.clientX, y: event.clientY });
+    }
+    openSignal.set(true);
   }
 }
 

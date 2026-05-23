@@ -15,6 +15,10 @@
   min-height: 0;
 }
 
+.collections-sidebar-panel__toolbar-actions {
+  display: contents;
+}
+
 .collections-sidebar-panel__body {
   @include sidebar-tree.workspace-sidebar-panel-body;
 }

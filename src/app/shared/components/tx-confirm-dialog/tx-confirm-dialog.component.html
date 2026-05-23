@@ -11,8 +11,7 @@
   <div class="tx-confirm-dialog__actions" role="group" [attr.aria-label]="title() + ' actions'">
     <tx-button variant="secondary" (pressed)="handleCancel()">{{ cancelLabel() }}</tx-button>
     <tx-button
-      variant="primary"
-      [class.tx-confirm-dialog__confirm--danger]="variant() === 'danger'"
+      [variant]="variant() === 'danger' ? 'danger' : 'primary'"
       (pressed)="handleConfirm()"
     >
       {{ confirmLabel() }}

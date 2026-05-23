@@ -34,6 +34,7 @@ function toTestSuiteTreeNode(item: TestSuiteTreeItem): TestSuiteTreeNode {
         kind: 'flow',
         description: item.description,
         tags: item.tags,
+        updatedAt: item.updatedAt,
         isCritical: item.isCritical,
       },
     };
@@ -47,7 +48,12 @@ function toTestSuiteTreeNode(item: TestSuiteTreeItem): TestSuiteTreeNode {
     tags: testSuiteTreeTags(item),
     kind: 'folder',
     icon: iconForKind('folder'),
-    data: { kind: 'folder', description: item.description, tags: item.tags },
+    data: {
+      kind: 'folder',
+      description: item.description,
+      tags: item.tags,
+      updatedAt: item.updatedAt,
+    },
     children: toTestSuiteTreeNodes(item.children),
   };
 }

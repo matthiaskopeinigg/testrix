@@ -42,11 +42,14 @@ import {
 import {
   captureFileSchema,
   createDefaultCaptureFile,
+  migrateCaptureFile,
   createDefaultInterceptorFile,
+  migrateInterceptorFile,
   createDefaultLoadTestsFile,
   createDefaultMockServerFile,
   createDefaultRegressionsFile,
   createDefaultTestSuitesFile,
+  migrateMockServerFile,
   migrateRegressionsFile,
   interceptorFileSchema,
   loadTestsFileSchema,
@@ -352,7 +355,16 @@ export class ConfigFileService {
   }
 
   async readMockServer(): Promise<MockServerFile> {
-    return this.readJsonFile(this.mockServerPath(), createDefaultMockServerFile, mockServerFileSchema);
+    const path = this.mockServerPath();
+    try {
+      const raw = await fs.readFile(path, 'utf8');
+      return migrateMockServerFile(JSON.parse(raw));
+    } catch (err: unknown) {
+      if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
+        return createDefaultMockServerFile();
+      }
+      throw err;
+    }
   }
 
   async saveMockServer(data: MockServerFile): Promise<MockServerFile> {
@@ -362,7 +374,15 @@ export class ConfigFileService {
   }
 
   async readCapture(): Promise<CaptureFile> {
-    return this.readJsonFile(this.capturePath(), createDefaultCaptureFile, captureFileSchema);
+    try {
+      const raw = await fs.readFile(this.capturePath(), 'utf8');
+      return migrateCaptureFile(JSON.parse(raw) as unknown);
+    } catch (err: unknown) {
+      if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
+        return createDefaultCaptureFile();
+      }
+      throw err;
+    }
   }
 
   async saveCapture(data: CaptureFile): Promise<CaptureFile> {
@@ -372,7 +392,18 @@ export class ConfigFileService {
   }
 
   async readInterceptor(): Promise<InterceptorFile> {
-    return this.readJsonFile(this.interceptorPath(), createDefaultInterceptorFile, interceptorFileSchema);
+    try {
+      const raw = await fs.readFile(this.interceptorPath(), 'utf8');
+      return migrateInterceptorFile(JSON.parse(raw) as unknown);
+    } catch (e: unknown) {
+      const err = e as NodeJS.ErrnoException;
+      if (err?.code === 'ENOENT') {
+        const created = createDefaultInterceptorFile();
+        await this.saveInterceptor(created);
+        return created;
+      }
+      throw e;
+    }
   }
 
   async saveInterceptor(data: InterceptorFile): Promise<InterceptorFile> {

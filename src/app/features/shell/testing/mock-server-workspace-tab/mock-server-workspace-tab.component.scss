@@ -1,18 +1,199 @@
-@use '../testing-workspace-tab.shared';
+@use '../../workspace/workspace-tab-chrome' as tab-chrome;
+@use '../../workspace/workspace-tab-motion';
 
-.mock-server-workspace-tab__dl {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 0.35rem 1rem;
-  margin: 0;
-  font-size: 13px;
+:host {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  min-width: 0;
 }
 
-.mock-server-workspace-tab__body {
+.ms-tab {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  min-width: 0;
+}
+
+.ms-tab__bar {
+  @include tab-chrome.workspace-tab-toolbar-row;
+}
+
+.ms-tab__bar-cluster {
+  @include tab-chrome.workspace-tab-bar-cluster;
+
+  &--grow {
+    @include tab-chrome.workspace-tab-bar-cluster-grow;
+  }
+
+  &--trailing {
+    @include tab-chrome.workspace-tab-bar-cluster-trailing;
+  }
+}
+
+.ms-tab__method-field {
+  flex: 0 0 auto;
+  width: 5.5rem;
+  min-width: 5.5rem;
+  max-width: 6rem;
+
+  @include tab-chrome.workspace-tab-toolbar-dropdown;
+
+  ::ng-deep .tx-dropdown-host {
+    min-width: 0;
+  }
+
+  ::ng-deep .tx-dropdown__trigger {
+    min-width: 0;
+    padding-inline: 0.5rem 0.4rem;
+  }
+
+  ::ng-deep .tx-dropdown__value {
+    font-weight: 700;
+    letter-spacing: 0.03em;
+  }
+
+  ::ng-deep .tx-dropdown__panel {
+    min-width: 7rem;
+  }
+}
+
+.ms-tab__route-field {
+  flex: 1 1 auto;
+  min-width: 8rem;
+}
+
+.ms-tab__bar-cluster--trailing ::ng-deep .tx-toggle-host {
+  flex-shrink: 0;
+  align-self: flex-end;
+  margin-bottom: 1px;
+}
+
+.ms-tab--sidebar .ms-tab__workspace {
+  flex-direction: row;
+}
+
+.ms-tab__sections-wrap {
+  @include tab-chrome.workspace-tab-sections-wrap;
+}
+
+.ms-tab__sections-bar {
+  @include tab-chrome.workspace-tab-sections-bar;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.ms-tab__section-tab {
+  @include tab-chrome.workspace-tab-section-tab;
+}
+
+.ms-tab__workspace {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+}
+
+.ms-tab__nav {
+  @include tab-chrome.workspace-tab-section-sidebar-nav;
+}
+
+.ms-tab__nav-item {
+  @include tab-chrome.workspace-tab-section-sidebar-nav-item;
+}
+
+.ms-tab__nav-icon {
+  display: flex;
+  flex-shrink: 0;
+}
+
+.ms-tab__divider {
+  @include tab-chrome.workspace-tab-section-sidebar-divider;
+}
+
+.ms-tab__pane {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  padding: 14px 18px 18px;
+}
+
+.ms-tab__section-shell--fill,
+.ms-tab__section-fill {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+}
+
+.ms-tab__dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.25rem 0.75rem;
+  font-size: 0.8125rem;
+  color: var(--tx-text-1);
+}
+
+.ms-tab__subheading {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--tx-text-0);
+}
+
+.ms-tab__headers {
+  margin: 0;
+  padding-left: 1rem;
+  font-size: 0.8125rem;
+  color: var(--tx-text-1);
+}
+
+.ms-tab__pre {
   margin: 0;
   padding: 0.75rem;
-  border-radius: var(--tx-radius-sm, 8px);
-  background: color-mix(in srgb, var(--tx-text-0) 4%, transparent);
-  font-size: 12px;
+  border-radius: var(--tx-radius-md, 10px);
+  border: 1px solid color-mix(in srgb, var(--tx-border-0) 62%, transparent);
+  background: var(--tx-surface-2);
+  font-size: 0.8125rem;
+  color: var(--tx-text-0);
   overflow: auto;
+}
+
+.ms-tab__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.request-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+  flex: 1 1 auto;
+  max-width: 56rem;
+}
+
+.request-panel__title {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--tx-text-0);
+}
+
+.request-panel__hint {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--tx-text-2);
+  line-height: 1.45;
 }

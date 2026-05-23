@@ -2,6 +2,13 @@ import { z } from 'zod';
 
 import { ANIMATION_SPEED_IDS, type AnimationSpeed } from './animation-speed';
 import {
+  COLLECTION_LIST_SIDEBAR_FILTER_IDS,
+  COLLECTION_LIST_SIDEBAR_SORT_BY_IDS,
+  type CollectionListSidebarFilter,
+  type CollectionListSidebarSortBy,
+} from './collection-list-sidebar';
+import { HTTP_METHOD_IDS, type HttpMethodId } from './http-settings.schema';
+import {
   ENVIRONMENT_LIST_SIDEBAR_FILTER_IDS,
   ENVIRONMENT_LIST_SIDEBAR_SORT_BY_IDS,
   type EnvironmentListSidebarFilter,
@@ -41,6 +48,7 @@ import {
   type DesignSystemPillarId,
 } from './design-system-session.schema';
 import { workspaceDevelopmentSchema } from './development-session.schema';
+import { workspaceHistorySidebarSchema } from './history-sidebar';
 import { workspaceTestingSchema } from './testing-session.schema';
 import { sessionFileSchema } from './session.schema';
 import {
@@ -102,6 +110,46 @@ function migrateEnvironmentSidebarSortBy(
     (ENVIRONMENT_SIDEBAR_SORT_BY_IDS as readonly string[]).includes(value)
     ? (value as EnvironmentSidebarSortBy)
     : fallback;
+}
+
+function migrateCollectionListSidebarFilter(
+  value: unknown,
+  fallback: CollectionListSidebarFilter,
+): CollectionListSidebarFilter {
+  return typeof value === 'string' &&
+    (COLLECTION_LIST_SIDEBAR_FILTER_IDS as readonly string[]).includes(value)
+    ? (value as CollectionListSidebarFilter)
+    : fallback;
+}
+
+function migrateCollectionListSidebarSortBy(
+  value: unknown,
+  fallback: CollectionListSidebarSortBy,
+): CollectionListSidebarSortBy {
+  return typeof value === 'string' &&
+    (COLLECTION_LIST_SIDEBAR_SORT_BY_IDS as readonly string[]).includes(value)
+    ? (value as CollectionListSidebarSortBy)
+    : fallback;
+}
+
+function migrateStringArray(value: unknown, fallback: readonly string[]): string[] {
+  if (!Array.isArray(value)) {
+    return [...fallback];
+  }
+  return value.filter((entry): entry is string => typeof entry === 'string');
+}
+
+function migrateHttpMethodFilterArray(
+  value: unknown,
+  fallback: readonly HttpMethodId[],
+): HttpMethodId[] {
+  if (!Array.isArray(value)) {
+    return [...fallback];
+  }
+  const allowed = new Set<string>(HTTP_METHOD_IDS);
+  return value.filter(
+    (entry): entry is HttpMethodId => typeof entry === 'string' && allowed.has(entry),
+  );
 }
 
 function migrateEnvironmentListSidebarFilter(
@@ -508,6 +556,16 @@ export function migrateSession(data: unknown): SessionFile {
     ...testingRaw,
   });
 
+  const historyRaw =
+    typeof workspaceRaw['history'] === 'object' && workspaceRaw['history'] !== null
+      ? (workspaceRaw['history'] as Record<string, unknown>)
+      : {};
+
+  const history = workspaceHistorySidebarSchema.parse({
+    ...defaults.workspace.history,
+    ...historyRaw,
+  });
+
   return sessionFileSchema.parse({
     ...defaults,
     ...record,
@@ -535,6 +593,22 @@ export function migrateSession(data: unknown): SessionFile {
         expandedFolderIds: Array.isArray(collectionsRaw['expandedFolderIds'])
           ? (collectionsRaw['expandedFolderIds'] as string[])
           : defaults.workspace.collections.expandedFolderIds,
+        listSidebarFilter: migrateCollectionListSidebarFilter(
+          collectionsRaw['listSidebarFilter'],
+          defaults.workspace.collections.listSidebarFilter,
+        ),
+        listSidebarSortBy: migrateCollectionListSidebarSortBy(
+          collectionsRaw['listSidebarSortBy'],
+          defaults.workspace.collections.listSidebarSortBy,
+        ),
+        listSidebarTagFilter: migrateStringArray(
+          collectionsRaw['listSidebarTagFilter'],
+          defaults.workspace.collections.listSidebarTagFilter,
+        ),
+        listSidebarMethodFilter: migrateHttpMethodFilterArray(
+          collectionsRaw['listSidebarMethodFilter'],
+          defaults.workspace.collections.listSidebarMethodFilter,
+        ),
         folderTabsById:
           collectionsRaw['folderTabsById'] &&
           typeof collectionsRaw['folderTabsById'] === 'object' &&
@@ -591,6 +665,7 @@ export function migrateSession(data: unknown): SessionFile {
       editor,
       designSystem,
       development,
+      history,
       testing,
     },
   });

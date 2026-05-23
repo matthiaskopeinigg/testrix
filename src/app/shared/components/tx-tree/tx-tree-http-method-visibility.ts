@@ -1,5 +1,6 @@
 import type { HttpMethodDisplayId } from '@shared/config';
 import { httpMethodShowsInTree } from '@shared/config';
+import { treeRowLabelWithHttpMethod } from '@shared/http';
 
 import type { TxTreeNode } from './tx-tree.types';
 
@@ -30,6 +31,7 @@ export function applyTreeHttpMethodVisibility<TMeta extends NodeWithMethod>(
     return {
       ...node,
       httpMethod,
+      label: httpMethod ? treeRowLabelWithHttpMethod(httpMethod, node.label) : node.label,
       children: node.children?.length
         ? applyTreeHttpMethodVisibility(node.children, mode)
         : node.children,

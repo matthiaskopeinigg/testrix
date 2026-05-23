@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { TxConfirmDialogComponent } from './tx-confirm-dialog.component';
 
@@ -45,5 +45,19 @@ describe('TxConfirmDialogComponent', () => {
 
     expect(cancelled).toHaveBeenCalled();
     expect(closed).toHaveBeenCalled();
+  });
+
+  it('uses the danger button variant for destructive confirmations', async () => {
+    const fixture = TestBed.createComponent(TxConfirmDialogComponent);
+    fixture.componentRef.setInput('open', true);
+    fixture.componentRef.setInput('message', 'Delete item?');
+    fixture.componentRef.setInput('variant', 'danger');
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const confirmButton = document.body.querySelector(
+      '.tx-confirm-dialog__actions tx-button button[data-variant="danger"]',
+    );
+    expect(confirmButton).toBeTruthy();
   });
 });

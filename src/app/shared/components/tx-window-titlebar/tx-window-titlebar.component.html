@@ -3,6 +3,7 @@
   [class.tx-titlebar--darwin]="isDarwin()"
   [class.tx-titlebar--native-frame]="useNativeFrame()"
   (mousedown)="handleTitlebarMouseDown($event)"
+  (dblclick)="handleTitlebarDoubleClick($event)"
 >
   <div class="tx-titlebar__lead">
     @if (!useNativeFrame()) {

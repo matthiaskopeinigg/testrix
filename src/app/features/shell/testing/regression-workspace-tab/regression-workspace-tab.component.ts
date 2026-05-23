@@ -41,6 +41,8 @@ import { RegressionService } from '@app/core/testing/regression.service';
 import { TestSuiteService } from '@app/core/testing/test-suite.service';
 import { freezeWhileTabInactive } from '@app/core/ui/workspace-tab-active.util';
 import { WorkspaceTabMotionController } from '@app/core/ui/workspace-tab-motion';
+import { regressionTabSectionBlockCount } from '@app/core/ui/workspace-tab-section-stagger';
+import { WorkspaceSectionNavSliderDirective } from '../../workspace/workspace-section-nav-slider.directive';
 import { UiPreferencesService } from '@app/core/ui/ui-preferences.service';
 import type { TxDropdownOption } from '@app/shared/components/tx-dropdown/tx-dropdown.types';
 import { TxBannerComponent } from '@app/shared/components/tx-banner/tx-banner.component';
@@ -89,6 +91,7 @@ const SESSION_UI_DEBOUNCE_MS = 150;
     RgTabSettingsPanelComponent,
     RgTabDocsPanelComponent,
     RgTabResultsPanelComponent,
+    WorkspaceSectionNavSliderDirective,
   ],
   templateUrl: './regression-workspace-tab.component.html',
   styleUrl: './regression-workspace-tab.component.scss',
@@ -373,7 +376,7 @@ export class RegressionWorkspaceTabComponent {
   }
 
   protected isSectionContentSettled(sectionId: RegressionTabSectionId): boolean {
-    return this.tabMotion.isSectionContentSettled(sectionId, this.activeSection() === sectionId);
+    return this.tabMotion.isSectionContentSettled(sectionId);
   }
 
   protected handleNameChange(name: string): void {
@@ -520,15 +523,21 @@ export class RegressionWorkspaceTabComponent {
 
   protected handleOpenResultsView(): void {
     this.activeSection.set('results');
+    this.tabMotion.onSectionChange('results', {
+      contentBlockCount: regressionTabSectionBlockCount('results'),
+    });
     this.resultsPanelHidden.set(false);
     this.scheduleTabUiPersist();
   }
 
   protected handleSectionSelect(section: RegressionTabSectionId): void {
-    if (section !== this.activeSection()) {
-      this.tabMotion.onSectionChange(section);
+    if (section === this.activeSection()) {
+      return;
     }
     this.activeSection.set(section);
+    this.tabMotion.onSectionChange(section, {
+      contentBlockCount: regressionTabSectionBlockCount(section),
+    });
     if (section === 'results') {
       this.resultsView.set(this.resultsView() === 'compare' ? 'compare' : 'live');
     }

@@ -1,4 +1,4 @@
-import { app, type WebContents } from 'electron';
+import { app, type BrowserWindow, type WebContents } from 'electron';
 
 import {
   createIdleLoadTestRunMetrics,
@@ -8,11 +8,18 @@ import {
   type LoadTestStartOptions,
   type RegressionRun,
   type RegressionRunMetrics,
+  type InterceptorFile,
+  type InterceptorRuntimeStatus,
+  type MockServerFile,
+  type MockServerMismatchRecord,
 } from '../../../shared/testing';
 
 import { TestingChannels } from '../../ipc/channels/testing.channels';
 import type { ConfigFileService } from '../config/config-file.service';
+import { CaptureRunner } from './capture-runner.service';
+import { InterceptorRunner } from './interceptor-runner.service';
 import { LoadTestRunner } from './load-test-runner.service';
+import { MockServerRunner, type MockServerStatus } from './mock-server-runner.service';
 import { RegressionRunner } from './regression-runner.service';
 import { TestSuiteFlowExecutor, type TestSuiteFlowRunResult } from './test-suite-flow-executor.service';
 import {
@@ -27,73 +34,99 @@ import {
  * In-process testing runtimes (mock server, capture, interceptor, load test, E2E browser).
  */
 export class TestingRuntimeService {
-  private mockRunning = false;
-  private captureRunning = false;
-  private interceptorRunning = false;
   private readonly loadTestRunner = new LoadTestRunner();
   private readonly regressionRunner = new RegressionRunner();
   private readonly flowExecutor = new TestSuiteFlowExecutor();
   private readonly e2eRunner = new E2eRunnerService();
-  private readonly captureEntries: {
-    readonly id: string;
-    readonly method: string;
-    readonly url: string;
-    readonly at: string;
-  }[] = [];
+  private readonly mockServerRunner: MockServerRunner;
+  private readonly captureRunner = new CaptureRunner();
+  private readonly interceptorRunner: InterceptorRunner;
 
   constructor(private readonly files: ConfigFileService) {
     this.flowExecutor.setE2eRunner(this.e2eRunner);
+    this.mockServerRunner = new MockServerRunner(files);
+    this.interceptorRunner = new InterceptorRunner(files);
   }
 
-  mockStatus(): { readonly running: boolean } {
-    return { running: this.mockRunning };
+  /**
+   * Wires the main window provider for mock server and capture push events.
+   */
+  setMainWindowProvider(provider: () => BrowserWindow | null): void {
+    this.mockServerRunner.setMainWindowProvider(provider);
+    this.captureRunner.setMainWindowProvider(provider);
+    this.interceptorRunner.setMainWindowProvider(provider);
   }
 
-  mockStart(): { readonly running: boolean } {
-    this.mockRunning = true;
-    return { running: true };
+  mockStatus(): MockServerStatus {
+    return this.mockServerRunner.status();
   }
 
-  mockStop(): { readonly running: boolean } {
-    this.mockRunning = false;
-    return { running: false };
+  async mockStart(): Promise<MockServerStatus> {
+    return this.mockServerRunner.start();
   }
 
-  captureStatus(): { readonly running: boolean } {
-    return { running: this.captureRunning };
+  async mockStop(): Promise<MockServerStatus> {
+    return this.mockServerRunner.stop();
   }
 
-  captureStart(): { readonly running: boolean } {
-    this.captureRunning = true;
-    return { running: true };
+  mockListMismatches(): readonly MockServerMismatchRecord[] {
+    return this.mockServerRunner.listMismatches();
   }
 
-  captureStop(): { readonly running: boolean } {
-    this.captureRunning = false;
-    return { running: false };
+  mockClearMismatches(): void {
+    this.mockServerRunner.clearMismatches();
   }
 
-  captureListEntries(): readonly {
-    readonly id: string;
-    readonly method: string;
-    readonly url: string;
-    readonly at: string;
-  }[] {
-    return this.captureEntries;
+  onMockServerFileSaved(file: MockServerFile): void {
+    this.mockServerRunner.setFile(file);
   }
 
-  interceptorStatus(): { readonly running: boolean } {
-    return { running: this.interceptorRunning };
+  async tryAutoStartMockServer(): Promise<void> {
+    await this.mockServerRunner.tryAutoStartOnLaunch();
   }
 
-  interceptorStart(): { readonly running: boolean } {
-    this.interceptorRunning = true;
-    return { running: true };
+  captureStatus() {
+    return this.captureRunner.status();
   }
 
-  interceptorStop(): { readonly running: boolean } {
-    this.interceptorRunning = false;
-    return { running: false };
+  captureStart(options: unknown) {
+    return this.captureRunner.start(options);
+  }
+
+  captureStop() {
+    return this.captureRunner.stop();
+  }
+
+  captureListEntries(captureItemId?: string) {
+    return this.captureRunner.listEntries(captureItemId);
+  }
+
+  captureClearEntries(captureItemId?: string): void {
+    this.captureRunner.clearEntries(captureItemId);
+  }
+
+  interceptorStatus(): InterceptorRuntimeStatus {
+    return this.interceptorRunner.status();
+  }
+
+  interceptorStart(options: unknown): Promise<InterceptorRuntimeStatus> {
+    return this.interceptorRunner.start(options);
+  }
+
+  interceptorStop(): InterceptorRuntimeStatus {
+    return this.interceptorRunner.stop();
+  }
+
+  interceptorListHits() {
+    return this.interceptorRunner.listHits();
+  }
+
+  interceptorClearHits(): void {
+    this.interceptorRunner.clearHits();
+  }
+
+  onInterceptorFileSaved(file: InterceptorFile): void {
+    this.interceptorRunner.setFile(file);
   }
 
   loadTestStatus(): { readonly running: boolean } {

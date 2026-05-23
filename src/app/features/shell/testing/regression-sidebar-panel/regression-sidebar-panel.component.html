@@ -23,20 +23,13 @@
     <button
       type="button"
       class="workspace-panel-shell__icon-btn"
-      aria-label="Add folder"
-      title="Add folder"
-      (click)="handleAddFolder()"
+      [class.is-pressed]="sortToolbarActive()"
+      aria-label="Sort regressions"
+      title="Sort regressions"
+      [attr.aria-expanded]="sortMenuOpen()"
+      (click)="handleSortToolbarClick($event)"
     >
-      <tx-icon name="folder" [size]="16" aria-hidden="true" />
-    </button>
-    <button
-      type="button"
-      class="workspace-panel-shell__icon-btn"
-      aria-label="Add regression"
-      title="Add regression"
-      (click)="handleAddArtifact()"
-    >
-      <tx-icon name="plus" [size]="16" aria-hidden="true" />
+      <tx-icon name="list" [size]="16" aria-hidden="true" />
     </button>
   </div>
 
@@ -44,27 +37,32 @@
     class="regression-sidebar-panel__body"
     (contextmenu)="handleTreeAreaContextMenu($event)"
   >
-    <tx-tree
-      #regressionTree
-      class="regression-sidebar-panel__tree"
-      [entranceStagger]="true"
-      [emptyMessage]="emptyStateMessage()"
-      [nodes]="filteredNodes()"
-      [config]="treeConfig()"
-      [expandedIds]="expandedIds()"
-      [selectionIds]="treeSelectionIds()"
-      [renamingNodeId]="renamingNodeId()"
-      (nodesChange)="handleNodesChange($event)"
-      (expandedChange)="handleExpandedChange($event)"
-      (nodeClick)="handleNodeClick($event)"
-      (nodeDblClick)="handleNodeDblClick($event)"
-      (renameCommit)="handleRenameCommit($event)"
-      (renameCancel)="handleRenameCancel()"
-      (rowContextMenu)="handleRowContextMenu($event)"
-    />
+    <div class="regression-sidebar-panel__active">
+      <tx-tree
+        #regressionTree
+        class="regression-sidebar-panel__tree"
+        [entranceStagger]="true"
+        [emptyMessage]="emptyStateMessage()"
+        [nodes]="filteredNodes()"
+        [config]="treeConfig()"
+        [expandedIds]="expandedIds()"
+        [selectionIds]="treeSelectionIds()"
+        [renamingNodeId]="renamingNodeId()"
+        (nodesChange)="handleNodesChange($event)"
+        (expandedChange)="handleExpandedChange($event)"
+        (nodeClick)="handleNodeClick($event)"
+        (nodeDblClick)="handleNodeDblClick($event)"
+        (renameCommit)="handleRenameCommit($event)"
+        (renameCancel)="handleRenameCancel()"
+        (rowContextMenu)="handleRowContextMenu($event)"
+      />
+    </div>
 
     @if (archivedCount() > 0) {
-      <section class="regression-sidebar-panel__archive">
+      <section
+        class="regression-sidebar-panel__archive"
+        [class.is-expanded]="archiveSectionExpanded()"
+      >
         <button
           type="button"
           class="regression-sidebar-panel__archive-header"
@@ -83,21 +81,24 @@
         </button>
 
         @if (archiveSectionExpanded()) {
-          <tx-tree
-            #archiveTree
-            class="regression-sidebar-panel__archive-tree"
-            [nodes]="archivedFilteredNodes()"
-            [config]="treeConfig()"
-            [expandedIds]="archiveExpandedIds()"
-            [selectionIds]="treeSelectionIds()"
-            [renamingNodeId]="renamingNodeId()"
-            (expandedChange)="handleArchiveExpandedChange($event)"
-            (nodeClick)="handleNodeClick($event)"
-            (nodeDblClick)="handleNodeDblClick($event)"
-            (renameCommit)="handleRenameCommit($event)"
-            (renameCancel)="handleRenameCancel()"
-            (rowContextMenu)="handleRowContextMenu($event)"
-          />
+          <div class="regression-sidebar-panel__archive-body">
+            <tx-tree
+              #archiveTree
+              class="regression-sidebar-panel__archive-tree"
+              [emptyMessage]="archiveEmptyMessage()"
+              [nodes]="archivedFilteredNodes()"
+              [config]="treeConfig()"
+              [expandedIds]="archiveExpandedIds()"
+              [selectionIds]="treeSelectionIds()"
+              [renamingNodeId]="renamingNodeId()"
+              (expandedChange)="handleArchiveExpandedChange($event)"
+              (nodeClick)="handleNodeClick($event)"
+              (nodeDblClick)="handleNodeDblClick($event)"
+              (renameCommit)="handleRenameCommit($event)"
+              (renameCancel)="handleRenameCancel()"
+              (rowContextMenu)="handleRowContextMenu($event)"
+            />
+          </div>
         }
       </section>
     }
@@ -118,6 +119,14 @@
   [items]="filterMenuItems()"
   (itemSelect)="handleFilterMenuSelect($event)"
   (closed)="handleFilterMenuClosed()"
+/>
+
+<tx-context-menu
+  [open]="sortMenuOpen()"
+  [position]="sortMenuPosition()"
+  [items]="sortMenuItems()"
+  (itemSelect)="handleSortMenuSelect($event)"
+  (closed)="handleSortMenuClosed()"
 />
 
 <tx-confirm-dialog

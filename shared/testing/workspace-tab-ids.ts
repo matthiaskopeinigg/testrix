@@ -6,7 +6,17 @@ export const MOCK_SERVER_HUB_TAB_ID = '__mock_server__' as const;
  * Returns whether a workspace tab id is a persisted mock-server editor tab (`ms:` prefix).
  */
 export function isPersistedMockServerTabId(resourceId: string): boolean {
-  return resourceId.startsWith('ms:') && resourceId !== MOCK_SERVER_HUB_TAB_ID;
+  return (
+    (resourceId.startsWith('ms:') && resourceId !== MOCK_SERVER_HUB_TAB_ID) ||
+    resourceId.startsWith('ms-mismatch:')
+  );
+}
+
+/**
+ * Builds a mock server mismatch detail tab resource id.
+ */
+export function mockServerMismatchTabResourceId(id: string): string {
+  return `ms-mismatch:${id}`;
 }
 
 /**

@@ -85,7 +85,12 @@
 
       @if (useTitlebarLayout()) {
         <div class="tx-entrance-stagger__block rg-tab__sections-wrap">
-          <nav class="rg-tab__sections-bar" role="tablist" aria-label="Regression sections">
+          <nav
+            class="rg-tab__sections-bar"
+            role="tablist"
+            aria-label="Regression sections"
+            [txWorkspaceSectionNav]="activeSection()"
+          >
             @for (item of navItems; track item.id) {
               <button
                 type="button"
@@ -116,7 +121,12 @@
     >
       <div class="rg-tab__workspace rg-tab__split-primary" txSplitPrimary>
         @if (useSidebarLayout()) {
-          <nav class="rg-tab__nav" role="tablist" aria-label="Regression sections">
+          <nav
+            class="rg-tab__nav"
+            role="tablist"
+            aria-label="Regression sections"
+            [txWorkspaceSectionNav]="activeSection()"
+          >
             @for (item of navItems; track item.id) {
               <button
                 type="button"
@@ -135,10 +145,7 @@
           </nav>
           <div class="rg-tab__divider" aria-hidden="true"></div>
         }
-        <div
-          class="rg-tab__pane tx-workspace-tab__pane"
-          [class.tx-workspace-tab__pane--switch]="tabMotion.paneSwitchActive()"
-        >
+        <div class="rg-tab__pane tx-workspace-tab__pane">
           @switch (activeSection()) {
             @case ('overview') {
               <div

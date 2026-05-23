@@ -15,6 +15,7 @@ import { TxFormFieldComponent } from '@app/shared/components/tx-form-field/tx-fo
 import { TxIconComponent } from '@app/shared/components/tx-icon/tx-icon.component';
 import type { TxIconName } from '@app/shared/icons/tx-icon.registry';
 import { TxTagComponent } from '@app/shared/components/tx-tag/tx-tag.component';
+import { TxTagsInputComponent } from '@app/shared/components/tx-tags-input/tx-tags-input.component';
 import { TxTextareaComponent } from '@app/shared/components/tx-textarea/tx-textarea.component';
 
 interface LtOverviewConfigCard {
@@ -39,6 +40,7 @@ interface LtOverviewRunStat {
     TxFormFieldComponent,
     TxIconComponent,
     TxTagComponent,
+    TxTagsInputComponent,
     TxTextareaComponent,
   ],
   template: `
@@ -55,6 +57,15 @@ interface LtOverviewRunStat {
       <div class="lt-overview__layout">
         <section class="lt-overview-card lt-overview-card--about" aria-label="About this load test">
           <h3 class="lt-overview-card__title">About</h3>
+          <tx-form-field label="Tags" controlId="lt-tags">
+            <tx-tags-input
+              id="lt-tags"
+              [compact]="true"
+              [ngModel]="tags()"
+              (ngModelChange)="tagsChange.emit($event)"
+            />
+          </tx-form-field>
+
           <tx-form-field label="Description" controlId="lt-description">
             <tx-textarea
               id="lt-description"
@@ -157,12 +168,14 @@ interface LtOverviewRunStat {
 })
 export class LtTabOverviewPanelComponent {
   readonly description = input('');
+  readonly tags = input<readonly string[]>([]);
   readonly profile = input<LoadTestProfile | undefined>(undefined);
   readonly targetSummary = input('—');
   readonly runs = input<readonly LoadTestRunRecord[]>([]);
   readonly pinnedBaselineRunId = input<string | null>(null);
 
   readonly descriptionChange = output<string>();
+  readonly tagsChange = output<readonly string[]>();
   readonly openHistory = output<void>();
   readonly sectionSelect = output<LoadTestTabSectionId>();
 

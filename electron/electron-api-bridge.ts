@@ -88,6 +88,7 @@ export interface ElectronAPI {
     setEnvironments: (data: EnvironmentsFile) => Promise<EnvironmentsFile>;
     getHistory: () => Promise<HistoryFile>;
     setHistory: (data: HistoryFile) => Promise<HistoryFile>;
+    onHistoryUpdated: (listener: (payload: unknown) => void) => () => void;
     getProfiles: () => Promise<ProfilesState>;
     setActiveProfile: (profileId: string) => Promise<ProfilesState>;
     createProfile: (name: string) => Promise<ProfilesState>;
@@ -149,18 +150,36 @@ export interface ElectronAPI {
     setCapture: (data: CaptureFile) => Promise<CaptureFile>;
     getInterceptor: () => Promise<InterceptorFile>;
     setInterceptor: (data: InterceptorFile) => Promise<InterceptorFile>;
-    mockStatus: () => Promise<{ readonly running: boolean }>;
-    mockStart: () => Promise<{ readonly running: boolean }>;
-    mockStop: () => Promise<{ readonly running: boolean }>;
-    captureStatus: () => Promise<{ readonly running: boolean }>;
-    captureStart: () => Promise<{ readonly running: boolean }>;
-    captureStop: () => Promise<{ readonly running: boolean }>;
-    captureListEntries: () => Promise<
-      readonly { readonly id: string; readonly method: string; readonly url: string; readonly at: string }[]
-    >;
-    interceptorStatus: () => Promise<{ readonly running: boolean }>;
-    interceptorStart: () => Promise<{ readonly running: boolean }>;
-    interceptorStop: () => Promise<{ readonly running: boolean }>;
+    mockStatus: () => Promise<import('@shared/testing').MockServerRuntimeStatus>;
+    mockStart: () => Promise<import('@shared/testing').MockServerRuntimeStatus>;
+    mockStop: () => Promise<import('@shared/testing').MockServerRuntimeStatus>;
+    mockListMismatches: () => Promise<readonly import('@shared/testing').MockServerMismatchRecord[]>;
+    mockClearMismatches: () => Promise<void>;
+    onMockActivity: (listener: (payload: unknown) => void) => () => void;
+    captureStatus: () => Promise<import('@shared/testing').CaptureRuntimeStatus>;
+    captureStart: (
+      options: import('@shared/testing').CaptureStartOptions,
+    ) => Promise<import('@shared/testing').CaptureRuntimeStatus>;
+    captureStop: () => Promise<import('@shared/testing').CaptureRuntimeStatus>;
+    captureListEntries: (
+      captureItemId?: string,
+    ) => Promise<readonly import('@shared/testing').CaptureLogEntry[]>;
+    captureClearEntries: (captureItemId?: string) => Promise<void>;
+    onCaptureEntry: (listener: (entry: import('@shared/testing').CaptureLogEntry) => void) => () => void;
+    onCaptureStatus: (
+      listener: (status: import('@shared/testing').CaptureRuntimeStatus) => void,
+    ) => () => void;
+    interceptorStatus: () => Promise<import('@shared/testing').InterceptorRuntimeStatus>;
+    interceptorStart: (
+      options?: import('@shared/testing').InterceptorStartOptions,
+    ) => Promise<import('@shared/testing').InterceptorRuntimeStatus>;
+    interceptorStop: () => Promise<import('@shared/testing').InterceptorRuntimeStatus>;
+    interceptorListHits: () => Promise<readonly import('@shared/testing').InterceptorHit[]>;
+    interceptorClearHits: () => Promise<void>;
+    onInterceptorHit: (listener: (hit: import('@shared/testing').InterceptorHit) => void) => () => void;
+    onInterceptorStatus: (
+      listener: (status: import('@shared/testing').InterceptorRuntimeStatus) => void,
+    ) => () => void;
     loadTestStatus: () => Promise<{ readonly running: boolean }>;
     loadTestMetrics: () => Promise<LoadTestRunMetrics>;
     loadTestStart: (options?: LoadTestStartOptions) => Promise<LoadTestRunMetrics>;

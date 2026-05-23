@@ -32,6 +32,8 @@ export class HistoryService {
   readonly nodes = computed(() => this.nodesState());
   readonly items = computed(() => fromTreeNodes(this.nodesState()));
 
+  private historyUpdatedUnsub: (() => void) | null = null;
+
   async hydrate(): Promise<void> {
     const api = this.electron.bridge();
 
@@ -43,9 +45,32 @@ export class HistoryService {
     try {
       const file = await api.config.getHistory();
       this.nodesState.set(toTreeNodes(file.items));
+      this.wireHistoryUpdatedListener(api);
     } catch (error: unknown) {
       this.notifier.reportUnknown(error);
       this.nodesState.set(toTreeNodes(createDefaultHistory().items));
+    }
+  }
+
+  private wireHistoryUpdatedListener(
+    api: NonNullable<ReturnType<ElectronService['bridge']>>,
+  ): void {
+    this.historyUpdatedUnsub?.();
+    this.historyUpdatedUnsub = api.config.onHistoryUpdated(() => {
+      void this.reloadFromDisk();
+    });
+  }
+
+  private async reloadFromDisk(): Promise<void> {
+    const api = this.electron.bridge();
+    if (!api) {
+      return;
+    }
+    try {
+      const file = await api.config.getHistory();
+      this.nodesState.set(toTreeNodes(file.items));
+    } catch (error: unknown) {
+      this.notifier.reportUnknown(error);
     }
   }
 

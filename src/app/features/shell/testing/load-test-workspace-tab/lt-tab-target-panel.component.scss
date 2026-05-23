@@ -38,6 +38,10 @@
   color: var(--tx-text-2);
 }
 
+.lt-target-panel__source-field {
+  max-width: 18rem;
+}
+
 .lt-target-panel__selection {
   display: flex;
   flex-direction: column;

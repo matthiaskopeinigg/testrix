@@ -36,6 +36,7 @@ function toTreeNode(node: CollectionNode): CollectionTreeNode {
       icon: iconForCollectionKind('folder'),
       order: enriched.order,
       priority: enriched.priority,
+      favourite: enriched.favourite === true,
       data: { kind: 'folder', description: enriched.description, settings: enriched.settings },
       children: enriched.children.map(toTreeNode),
     };
@@ -53,6 +54,7 @@ function toTreeNode(node: CollectionNode): CollectionTreeNode {
       icon: iconForCollectionKind('request'),
       order: enriched.order,
       priority: enriched.priority,
+      favourite: enriched.favourite === true,
       data: {
         kind: 'request',
         method: enriched.method,
@@ -75,6 +77,7 @@ function toTreeNode(node: CollectionNode): CollectionTreeNode {
       icon: iconForCollectionKind('websocket'),
       order: enriched.order,
       priority: enriched.priority,
+      favourite: enriched.favourite === true,
       data: {
         kind: 'websocket',
         wsPath: enriched.wsPath,
@@ -102,6 +105,7 @@ function fromTreeNode(node: CollectionTreeNode): CollectionNode {
       kind: 'folder',
       order: node.order,
       priority: node.priority,
+      favourite: node.favourite === true ? true : undefined,
       description: node.data?.description,
       settings: node.data?.settings ?? createDefaultCollectionFolderSettings(),
       children: (node.children ?? []).map(fromTreeNode),
@@ -115,6 +119,7 @@ function fromTreeNode(node: CollectionTreeNode): CollectionNode {
       kind: 'request',
       order: node.order,
       priority: node.priority,
+      favourite: node.favourite === true ? true : undefined,
       method: (node.data?.method ?? 'GET') as HttpMethodId,
       url: node.data?.url ?? '',
       description: node.data?.description,
@@ -128,6 +133,7 @@ function fromTreeNode(node: CollectionTreeNode): CollectionNode {
     kind: 'websocket',
     order: node.order,
     priority: node.priority,
+    favourite: node.favourite === true ? true : undefined,
     wsPath: node.data?.wsPath ?? 'ws://localhost/path',
     description: node.data?.description,
     settings: node.data?.websocketSettings ?? createDefaultCollectionWebsocketSettings(),

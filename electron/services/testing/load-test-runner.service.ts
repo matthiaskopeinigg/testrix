@@ -1,3 +1,4 @@
+import { buildManualOutgoingRequest } from '../../../shared/http/build-manual-outgoing-request';
 import { buildOutgoingRequest } from '../../../shared/http/build-outgoing-request';
 import type { SendHttpRequestPayload } from '../../../shared/http/outgoing-request.schema';
 import type { HttpResponseSnapshot } from '../../../shared/http/outgoing-request.schema';
@@ -76,34 +77,63 @@ export class LoadTestRunner {
     }
 
     const parsed = loadTestStartOptionsSchema.parse(options ?? {});
-    const [collections, settings, environments] = await Promise.all([
-      files.readCollections(),
-      files.readSettings(),
-      files.readEnvironments(),
-    ]);
+    const runId = `load-test-${Date.now()}`;
+    const settings = await files.readSettings();
 
-    const built = buildOutgoingRequest({
-      requestId: parsed.targetRequestId,
-      nodes: collections.items,
-      http: settings.http,
-      environments,
-      appVersion,
-      runScope: { runId: `load-test-${Date.now()}` },
-      environmentVariableKeys: {
-        useFolderPathInKeys: settings.environments.useFolderPathInKeys,
-      },
-    });
+    let built: ReturnType<typeof buildOutgoingRequest> | null = null;
 
-    if (!built) {
-      throw new TestrixError(
-        ErrorCodes.LOAD_TEST_TARGET_NOT_FOUND,
-        'Target request was not found in collections.',
-      );
+    if (parsed.targetSource === 'manual') {
+      if (!parsed.manualTarget || !parsed.loadTestId) {
+        throw new TestrixError(
+          ErrorCodes.CONFIG_VALIDATION_FAILED,
+          'Manual load test target is incomplete.',
+        );
+      }
+      built = buildManualOutgoingRequest({
+        loadTestId: parsed.loadTestId,
+        manual: parsed.manualTarget,
+        http: settings.http,
+      });
+      if (!built) {
+        throw new TestrixError(
+          ErrorCodes.CONFIG_VALIDATION_FAILED,
+          'Manual load test target needs a valid URL.',
+        );
+      }
+    } else {
+      const targetRequestId = parsed.targetRequestId;
+      if (!targetRequestId) {
+        throw new TestrixError(
+          ErrorCodes.LOAD_TEST_TARGET_NOT_FOUND,
+          'Select a collection request before starting a load test.',
+        );
+      }
+      const [collections, environments] = await Promise.all([
+        files.readCollections(),
+        files.readEnvironments(),
+      ]);
+      built = buildOutgoingRequest({
+        requestId: targetRequestId,
+        nodes: collections.items,
+        http: settings.http,
+        environments,
+        appVersion,
+        runScope: { runId },
+        environmentVariableKeys: {
+          useFolderPathInKeys: settings.environments.useFolderPathInKeys,
+        },
+      });
+      if (!built) {
+        throw new TestrixError(
+          ErrorCodes.LOAD_TEST_TARGET_NOT_FOUND,
+          'Target request was not found in collections.',
+        );
+      }
     }
 
     const payloadCheck = sendHttpRequestPayloadSchema.safeParse({
       ...built.outgoing,
-      runScope: { runId: `load-test-${Date.now()}` },
+      runScope: { runId },
     });
     if (!payloadCheck.success) {
       throw new TestrixError(

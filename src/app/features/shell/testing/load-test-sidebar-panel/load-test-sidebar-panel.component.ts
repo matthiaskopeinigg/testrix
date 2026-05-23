@@ -20,10 +20,16 @@ import {
   buildLoadTestNodeContextMenu,
 } from '@app/features/shell/testing/load-test-sidebar-panel/load-test-context-menu';
 import {
+  buildLoadTestFilterMenuItems,
+  buildLoadTestSortMenuItems,
+  isLoadTestKindFilterAction,
+  isLoadTestSortAction,
+} from '@app/features/shell/testing/load-test-sidebar-panel/load-test-sidebar-menus';
+import {
   collectLoadTestFolderIds,
   collectLoadTestFolderIdsInSubtree,
-  filterLoadTestTree,
 } from '@app/features/shell/testing/load-test-sidebar-panel/load-test-tree.filter';
+import { applyLoadTestTreeView } from '@app/features/shell/testing/load-test-sidebar-panel/load-test-tree.view';
 import {
   collectLoadTestArtifactIdsForDeletion,
   collectLoadTestFolderIdsFromNodes,
@@ -43,6 +49,7 @@ import type { TxContextMenuItem } from '@app/shared/components/tx-context-menu/t
 import { TxConfirmDialogComponent } from '@app/shared/components/tx-confirm-dialog/tx-confirm-dialog.component';
 import { TxIconComponent } from '@app/shared/components/tx-icon/tx-icon.component';
 import { mergeTxTreeConfig } from '@app/shared/components/tx-tree/tx-tree.config';
+import { applyTreeTagsVisibility } from '@app/shared/components/tx-tree/tx-tree-tags-visibility';
 import { TxTreeComponent } from '@app/shared/components/tx-tree/tx-tree.component';
 import type {
   TxTreeDropContext,
@@ -50,8 +57,14 @@ import type {
   TxTreeNodeRenameCommitEvent,
   TxTreeRowContextMenuEvent,
 } from '@app/shared/components/tx-tree/tx-tree.types';
+import {
+  DEFAULT_LOAD_TEST_SIDEBAR_FILTER,
+  DEFAULT_LOAD_TEST_SIDEBAR_SORT_BY,
+  type LoadTestSidebarFilter,
+  type LoadTestSidebarSortBy,
+} from '@shared/config';
 
-const SESSION_EXPAND_DEBOUNCE_MS = 300;
+const SESSION_PREF_DEBOUNCE_MS = 300;
 const SEARCH_DEBOUNCE_MS = 100;
 
 @Component({
@@ -84,11 +97,19 @@ export class LoadTestSidebarPanelComponent {
   protected readonly searchQueryDebounced = signal('');
   protected readonly expandedIds = signal<string[]>([]);
   protected readonly allExpanded = signal(false);
+  protected readonly kindFilter = signal<LoadTestSidebarFilter>(DEFAULT_LOAD_TEST_SIDEBAR_FILTER);
+  protected readonly sortBy = signal<LoadTestSidebarSortBy>(DEFAULT_LOAD_TEST_SIDEBAR_SORT_BY);
+  protected readonly tagFilter = signal<string[]>([]);
 
   protected readonly contextMenuOpen = signal(false);
   protected readonly contextMenuPosition = signal({ x: 0, y: 0 });
   protected readonly contextMenuItems = signal<readonly TxContextMenuItem[]>([]);
   protected readonly contextNodeId = signal<string | null>(null);
+
+  protected readonly filterMenuOpen = signal(false);
+  protected readonly filterMenuPosition = signal({ x: 0, y: 0 });
+  protected readonly sortMenuOpen = signal(false);
+  protected readonly sortMenuPosition = signal({ x: 0, y: 0 });
 
   protected readonly renamingNodeId = signal<string | null>(null);
 
@@ -105,7 +126,7 @@ export class LoadTestSidebarPanelComponent {
   protected readonly treeConfig = computed(() =>
     mergeTxTreeConfig<LoadTestTreeNodeMeta>({
       ariaLabel: 'Load tests',
-      sort: { foldersFirst: true },
+      sort: { foldersFirst: this.sortBy() === 'saved' },
       drop: {
         maxDepth: 1,
         canDrop: (ctx) => loadTestCanDrop(ctx),
@@ -113,19 +134,56 @@ export class LoadTestSidebarPanelComponent {
     }),
   );
 
-  protected readonly filteredNodes = computed(() =>
-    filterLoadTestTree(this.nodes(), this.searchQueryDebounced()),
+  protected readonly filteredNodes = computed(() => {
+    const filtered = applyLoadTestTreeView(this.nodes(), {
+      query: this.searchQueryDebounced(),
+      kindFilter: this.kindFilter(),
+      sortBy: this.sortBy(),
+      tagFilter: this.tagFilter(),
+    });
+    return applyTreeTagsVisibility(filtered, this.tagFilter().length > 0);
+  });
+
+  protected readonly filterMenuItems = computed(() =>
+    buildLoadTestFilterMenuItems(
+      this.kindFilter(),
+      this.tagFilter(),
+      this.loadTest.allTags(),
+    ),
+  );
+
+  protected readonly sortMenuItems = computed(() => buildLoadTestSortMenuItems(this.sortBy()));
+
+  protected readonly filterToolbarActive = computed(
+    () => this.kindFilter() !== DEFAULT_LOAD_TEST_SIDEBAR_FILTER || this.tagFilter().length > 0,
+  );
+
+  protected readonly sortToolbarActive = computed(
+    () => this.sortBy() !== DEFAULT_LOAD_TEST_SIDEBAR_SORT_BY,
   );
 
   protected readonly treeSelectionIds = computed(() =>
     testingSidebarSelectionIds(this.workspaceEditor.activeTab()),
   );
 
-  protected readonly treeEmptyMessage = computed(() =>
-    this.searchQueryDebounced().trim()
-      ? 'No load tests match your search.'
-      : 'No load tests yet. Add a folder or load test to get started.',
-  );
+  protected readonly treeEmptyMessage = computed(() => {
+    if (this.nodes().length === 0) {
+      return 'No load tests yet. Right-click to add a folder or load test.';
+    }
+    if (this.searchQueryDebounced().trim()) {
+      return 'No load tests match your search.';
+    }
+    if (this.kindFilter() === 'folders') {
+      return 'No folders match the current filter.';
+    }
+    if (this.tagFilter().length > 0) {
+      return 'No load tests match the selected tags.';
+    }
+    if (this.kindFilter() === 'load-tests') {
+      return 'No load tests match the current filter.';
+    }
+    return 'No load tests match the current filters.';
+  });
 
   constructor() {
     effect(() => {
@@ -135,9 +193,16 @@ export class LoadTestSidebarPanelComponent {
         if (!session) {
           return;
         }
-        const saved = session.workspace.testing.loadTest.expandedIds ?? [];
+        const prefs = session.workspace.testing.loadTest;
+        const saved = prefs.expandedIds ?? [];
         this.expandedIds.set([...saved]);
         this.tree()?.syncExpansionFromInput(saved);
+        this.kindFilter.set(prefs.kindFilter ?? DEFAULT_LOAD_TEST_SIDEBAR_FILTER);
+        this.tagFilter.set([...(prefs.tagFilter ?? [])]);
+        this.sortBy.set(prefs.sortBy ?? DEFAULT_LOAD_TEST_SIDEBAR_SORT_BY);
+        const savedSearch = prefs.searchQuery ?? '';
+        this.searchQuery.set(savedSearch);
+        this.searchQueryDebounced.set(savedSearch);
         this.syncAllExpandedState();
       });
     });
@@ -188,6 +253,7 @@ export class LoadTestSidebarPanelComponent {
     this.searchDebounceTimer = setTimeout(() => {
       this.searchDebounceTimer = null;
       this.searchQueryDebounced.set(query);
+      this.schedulePersistPrefs({ searchQuery: query });
     }, SEARCH_DEBOUNCE_MS);
   }
 
@@ -289,6 +355,61 @@ export class LoadTestSidebarPanelComponent {
     this.contextMenuOpen.set(false);
   }
 
+  protected handleFilterToolbarClick(event: MouseEvent): void {
+    event.stopPropagation();
+    this.filterMenuPosition.set({ x: event.clientX, y: event.clientY });
+    this.filterMenuOpen.set(true);
+  }
+
+  protected handleFilterMenuSelect(actionId: string): void {
+    this.filterMenuOpen.set(false);
+
+    if (isLoadTestKindFilterAction(actionId)) {
+      if (actionId === this.kindFilter()) {
+        return;
+      }
+      this.kindFilter.set(actionId);
+      this.schedulePersistPrefs({ kindFilter: actionId });
+      return;
+    }
+
+    if (actionId.startsWith('tag:')) {
+      const tag = actionId.slice('tag:'.length);
+      this.tagFilter.update((current) => {
+        const lower = tag.toLowerCase();
+        const exists = current.some((active) => active.toLowerCase() === lower);
+        const next = exists
+          ? current.filter((active) => active.toLowerCase() !== lower)
+          : [...current, tag];
+        this.schedulePersistPrefs({ tagFilter: next });
+        return next;
+      });
+    }
+  }
+
+  protected handleFilterMenuClosed(): void {
+    this.filterMenuOpen.set(false);
+  }
+
+  protected handleSortToolbarClick(event: MouseEvent): void {
+    event.stopPropagation();
+    this.sortMenuPosition.set({ x: event.clientX, y: event.clientY });
+    this.sortMenuOpen.set(true);
+  }
+
+  protected handleSortMenuSelect(actionId: string): void {
+    this.sortMenuOpen.set(false);
+    if (!isLoadTestSortAction(actionId) || actionId === this.sortBy()) {
+      return;
+    }
+    this.sortBy.set(actionId);
+    this.schedulePersistPrefs({ sortBy: actionId });
+  }
+
+  protected handleSortMenuClosed(): void {
+    this.sortMenuOpen.set(false);
+  }
+
   protected handleDeleteConfirmed(): void {
     const id = this.deleteNodeId();
     if (!id) {
@@ -305,15 +426,6 @@ export class LoadTestSidebarPanelComponent {
 
   protected handleDeleteClosed(): void {
     this.deleteOpen.set(false);
-  }
-
-  protected handleAddFolder(): void {
-    this.handleCreate('folder', null);
-  }
-
-  protected handleAddArtifact(): void {
-    const artifact = this.loadTest.addArtifact(null);
-    this.openArtifact(artifact.id);
   }
 
   private openContextMenu(x: number, y: number, nodeId: string | null): void {
@@ -425,7 +537,7 @@ export class LoadTestSidebarPanelComponent {
     this.syncAllExpandedState();
     this.cdr.markForCheck();
     if (options.persist) {
-      this.schedulePersistExpandedIds(next);
+      this.schedulePersistPrefs({ expandedIds: next });
     }
   }
 
@@ -437,31 +549,52 @@ export class LoadTestSidebarPanelComponent {
     );
   }
 
-  private schedulePersistExpandedIds(ids: readonly string[]): void {
+  private schedulePersistPrefs(
+    patch: Partial<{
+      searchQuery: string;
+      expandedIds: readonly string[];
+      kindFilter: LoadTestSidebarFilter;
+      sortBy: LoadTestSidebarSortBy;
+      tagFilter: readonly string[];
+    }>,
+  ): void {
     if (this.sessionSaveTimer !== null) {
       clearTimeout(this.sessionSaveTimer);
     }
     this.sessionSaveTimer = setTimeout(() => {
       this.sessionSaveTimer = null;
-      this.persistExpandedIds(ids);
-    }, SESSION_EXPAND_DEBOUNCE_MS);
+      this.persistPrefs(patch);
+    }, SESSION_PREF_DEBOUNCE_MS);
   }
 
-  private persistExpandedIds(ids: readonly string[]): void {
-    const pruned = this.pruneExpandedIds(ids);
-    const session = this.configService.session();
-    const currentLoadTest = session?.workspace.testing.loadTest ?? {
+  private persistPrefs(
+    patch: Partial<{
+      searchQuery: string;
+      expandedIds: readonly string[];
+      kindFilter: LoadTestSidebarFilter;
+      sortBy: LoadTestSidebarSortBy;
+      tagFilter: readonly string[];
+    }>,
+  ): void {
+    const current = this.configService.session()?.workspace.testing.loadTest ?? {
       searchQuery: '',
       expandedIds: [],
-      sortBy: 'saved' as const,
+      sortBy: DEFAULT_LOAD_TEST_SIDEBAR_SORT_BY,
+      kindFilter: DEFAULT_LOAD_TEST_SIDEBAR_FILTER,
+      tagFilter: [],
     };
+    const expandedIds = patch.expandedIds
+      ? this.pruneExpandedIds(patch.expandedIds)
+      : current.expandedIds;
     void this.configService.patchSession({
       workspace: {
         testing: {
           ...this.testingSession.navigationFields(),
           loadTest: {
-            ...currentLoadTest,
-            expandedIds: pruned,
+            ...current,
+            ...patch,
+            expandedIds,
+            tagFilter: patch.tagFilter ? [...patch.tagFilter] : current.tagFilter,
           },
         },
       },
@@ -475,7 +608,7 @@ export class LoadTestSidebarPanelComponent {
       this.syncAllExpandedState();
     }
     if (!this.searchQuery().trim()) {
-      this.persistExpandedIds(pruned);
+      this.schedulePersistPrefs({ expandedIds: pruned });
     }
   }
 

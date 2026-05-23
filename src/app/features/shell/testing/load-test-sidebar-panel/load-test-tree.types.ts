@@ -5,6 +5,8 @@ export type LoadTestTreeKind = 'folder' | 'artifact';
 export interface LoadTestTreeNodeMeta {
   readonly kind: LoadTestTreeKind;
   readonly description?: string;
+  readonly tags?: readonly string[];
+  readonly updatedAt?: string;
 }
 
 export type LoadTestTreeNode = TxTreeNode<LoadTestTreeNodeMeta>;

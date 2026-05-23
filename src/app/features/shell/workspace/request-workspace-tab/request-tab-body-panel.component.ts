@@ -100,7 +100,7 @@ const GQL_VARS_PLACEHOLDER = '{\n  "userId": "{{userId}}"\n}';
               [smartEditing]="true"
               [variableCatalog]="variableCatalog()"
               [placeholder]="rawBodyPlaceholder()"
-              [showVariablePlaceholderHint]="true"
+              [showVariablePlaceholderHint]="showVariablePlaceholderHint()"
               [ngModel]="rawContent()"
               (ngModelChange)="handleRawChange($event)"
               (environmentVariableClick)="environmentVariableClick.emit($event)"
@@ -122,7 +122,7 @@ const GQL_VARS_PLACEHOLDER = '{\n  "userId": "{{userId}}"\n}';
               [smartEditing]="true"
               [variableCatalog]="variableCatalog()"
               [placeholder]="rawBodyPlaceholder()"
-              [showVariablePlaceholderHint]="true"
+              [showVariablePlaceholderHint]="showVariablePlaceholderHint()"
               [ngModel]="rawContent()"
               (ngModelChange)="handleRawChange($event)"
               (environmentVariableClick)="environmentVariableClick.emit($event)"
@@ -144,7 +144,7 @@ const GQL_VARS_PLACEHOLDER = '{\n  "userId": "{{userId}}"\n}';
               [smartEditing]="true"
               [variableCatalog]="variableCatalog()"
               [placeholder]="rawBodyPlaceholder()"
-              [showVariablePlaceholderHint]="true"
+              [showVariablePlaceholderHint]="showVariablePlaceholderHint()"
               [ngModel]="rawContent()"
               (ngModelChange)="handleRawChange($event)"
               (environmentVariableClick)="environmentVariableClick.emit($event)"
@@ -166,7 +166,7 @@ const GQL_VARS_PLACEHOLDER = '{\n  "userId": "{{userId}}"\n}';
               [smartEditing]="true"
               [variableCatalog]="variableCatalog()"
               [placeholder]="rawBodyPlaceholder()"
-              [showVariablePlaceholderHint]="true"
+              [showVariablePlaceholderHint]="showVariablePlaceholderHint()"
               [ngModel]="rawContent()"
               (ngModelChange)="handleRawChange($event)"
               (environmentVariableClick)="environmentVariableClick.emit($event)"
@@ -308,7 +308,7 @@ const GQL_VARS_PLACEHOLDER = '{\n  "userId": "{{userId}}"\n}';
               [smartEditing]="true"
               [variableCatalog]="variableCatalog()"
               [placeholder]="graphqlQueryPlaceholder"
-              [showVariablePlaceholderHint]="true"
+              [showVariablePlaceholderHint]="showVariablePlaceholderHint()"
               [ngModel]="graphqlQuery()"
               (ngModelChange)="handleGraphqlPatch({ query: $event })"
               (environmentVariableClick)="environmentVariableClick.emit($event)"
@@ -330,7 +330,7 @@ const GQL_VARS_PLACEHOLDER = '{\n  "userId": "{{userId}}"\n}';
               [smartEditing]="true"
               [variableCatalog]="variableCatalog()"
               [placeholder]="graphqlVariablesPlaceholder"
-              [showVariablePlaceholderHint]="true"
+              [showVariablePlaceholderHint]="showVariablePlaceholderHint()"
               [ngModel]="graphqlVariables()"
               (ngModelChange)="handleGraphqlPatch({ variables: $event })"
               (environmentVariableClick)="environmentVariableClick.emit($event)"
@@ -358,6 +358,8 @@ export class RequestTabBodyPanelComponent {
 
   readonly body = input.required<CollectionRequestBody>();
   readonly method = input<string>('GET');
+  /** Request tabs use `request`; mock/interceptor response editors use `response`. */
+  readonly bodyContext = input<'request' | 'response'>('request');
   readonly variableCatalog = input<readonly DynamicVariableCatalogItem[]>(DYNAMIC_VARIABLES);
 
   readonly bodyChange = output<CollectionRequestBody>();
@@ -375,12 +377,17 @@ export class RequestTabBodyPanelComponent {
   protected readonly binarySource = signal<'file' | 'inline'>('file');
 
   protected readonly bodyDisabledHint = computed(() => {
+    if (this.bodyContext() === 'response') {
+      return null;
+    }
     const m = this.method().toUpperCase();
     if (m === 'GET' || m === 'HEAD') {
       return `${m} requests typically have no body; you can still configure a body for overrides.`;
     }
     return null;
   });
+
+  protected readonly showVariablePlaceholderHint = computed(() => this.bodyContext() === 'request');
 
   protected readonly rawEditor = computed(() => {
     const mode = this.body().mode;

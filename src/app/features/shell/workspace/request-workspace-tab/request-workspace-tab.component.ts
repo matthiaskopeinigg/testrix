@@ -57,6 +57,8 @@ import { openEnvironmentVariableTab } from '@app/core/workspace/open-environment
 import { UiPreferencesService } from '@app/core/ui/ui-preferences.service';
 import { freezeWhileTabInactive } from '@app/core/ui/workspace-tab-active.util';
 import { WorkspaceTabMotionController } from '@app/core/ui/workspace-tab-motion';
+import { requestTabSectionBlockCount } from '@app/core/ui/workspace-tab-section-stagger';
+import { WorkspaceSectionNavSliderDirective } from '../workspace-section-nav-slider.directive';
 import { HttpRequestService } from '@app/core/http/http-request.service';
 import { WorkspaceEditorService } from '@app/core/workspace/workspace-editor.service';
 import { TxVerticalSplitPaneComponent } from '@app/shared/components/tx-vertical-split-pane/tx-vertical-split-pane.component';
@@ -116,6 +118,7 @@ const SETTINGS_SAVE_DEBOUNCE_MS = 150;
     RequestTabSectionOutletComponent,
     RequestTabDynamicOutletComponent,
     TxVerticalSplitPaneComponent,
+    WorkspaceSectionNavSliderDirective,
   ],
   templateUrl: './request-workspace-tab.component.html',
   styleUrl: './request-workspace-tab.component.scss',
@@ -639,7 +642,7 @@ export class RequestWorkspaceTabComponent {
   }
 
   protected isSectionContentSettled(sectionId: HttpRequestSectionId): boolean {
-    return this.tabMotion.isSectionContentSettled(sectionId, this.activeSection() === sectionId);
+    return this.tabMotion.isSectionContentSettled(sectionId);
   }
 
   private loadChromeChildCount(): number {
@@ -647,10 +650,13 @@ export class RequestWorkspaceTabComponent {
   }
 
   protected handleSectionSelect(section: HttpRequestSectionId): void {
-    if (section !== this.activeSection()) {
-      this.tabMotion.onSectionChange(section);
+    if (section === this.activeSection()) {
+      return;
     }
     this.activeSection.set(section);
+    this.tabMotion.onSectionChange(section, {
+      contentBlockCount: requestTabSectionBlockCount(section),
+    });
     this.scheduleTabUiPersist();
   }
 
@@ -668,8 +674,8 @@ export class RequestWorkspaceTabComponent {
   }
 
   protected handleScriptPaneSelect(pane: 'pre' | 'post'): void {
-    if (pane !== this.activeScriptPane() && this.activeSection() === 'scripts') {
-      this.tabMotion.onSectionChange('scripts', 3);
+    if (pane === this.activeScriptPane()) {
+      return;
     }
     this.activeScriptPane.set(pane);
     this.scheduleTabUiPersist();

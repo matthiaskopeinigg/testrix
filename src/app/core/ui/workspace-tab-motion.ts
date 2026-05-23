@@ -21,30 +21,28 @@ export function readEntranceStaggerSettleMs(childCount = 12, extraMs = 40): numb
   return stepMs * (count - 1) + durationMs + extraMs;
 }
 
+export interface WorkspaceTabSectionChangeOptions {
+  /** Direct `.tx-entrance-stagger__block` children in the section shell (for settle timing). */
+  readonly contentBlockCount?: number;
+}
+
 /**
- * Motion for collection request / folder workspace tabs (load stagger + section switch).
+ * Motion for collection request / folder / websocket workspace tabs:
+ * chrome stagger on load, section content stagger on each section switch.
  */
 export class WorkspaceTabMotionController {
   readonly loadStaggerPlay = signal(false);
   readonly loadStaggerSettled = signal(false);
 
-  readonly sectionStaggerPlay = signal<string | null>(null);
-  readonly sectionStaggerArming = signal(false);
-
-  readonly paneSwitchActive = signal(false);
-
-  private loadInitialized = false;
+  private readonly sectionContentStaggerId = signal<string | null>(null);
   private sectionStaggerTimer: ReturnType<typeof setTimeout> | null = null;
-  private paneSwitchTimer: ReturnType<typeof setTimeout> | null = null;
+  private loadInitialized = false;
 
   constructor(
     private readonly uiPreferences: UiPreferencesService,
     private readonly destroyRef: DestroyRef,
   ) {
-    this.destroyRef.onDestroy(() => {
-      this.cancelSectionStaggerTimer();
-      this.cancelPaneSwitchTimer();
-    });
+    this.destroyRef.onDestroy(() => this.cancelSectionStaggerTimer());
   }
 
   /** Locks chrome visible without playing stagger (cached tab host). */
@@ -92,28 +90,44 @@ export class WorkspaceTabMotionController {
     });
   }
 
-  /** Pane crossfade + content stagger when the active section changes. */
-  onSectionChange(sectionId: string, contentBlockCount = 6): void {
-    this.scheduleSectionContentStagger(sectionId, contentBlockCount);
-    this.triggerPaneSwitch();
+  /**
+   * Staggers direct children of the active section shell when the user switches sections.
+   */
+  onSectionChange(sectionId: string, options?: WorkspaceTabSectionChangeOptions): void {
+    this.cancelSectionStaggerTimer();
+
+    if (!this.uiPreferences.entranceStaggerEnabled()) {
+      this.sectionContentStaggerId.set(null);
+      return;
+    }
+
+    this.sectionContentStaggerId.set(sectionId);
+
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        if (this.sectionContentStaggerId() !== sectionId) {
+          return;
+        }
+
+        const settleMs = readEntranceStaggerSettleMs(options?.contentBlockCount ?? 4);
+        this.sectionStaggerTimer = setTimeout(() => {
+          this.sectionStaggerTimer = null;
+          if (this.sectionContentStaggerId() === sectionId) {
+            this.sectionContentStaggerId.set(null);
+          }
+        }, settleMs);
+      });
+    });
   }
 
+  /** True while the section shell should apply `tx-entrance-stagger--play`. */
   isSectionContentAnimating(sectionId: string): boolean {
-    return this.sectionStaggerPlay() === sectionId;
+    return this.sectionContentStaggerId() === sectionId;
   }
 
-  isSectionContentSettled(sectionId: string, isActive: boolean): boolean {
-    const play = this.sectionStaggerPlay();
-    if (play === sectionId) {
-      return false;
-    }
-    if (this.sectionStaggerArming() && isActive) {
-      return false;
-    }
-    if (isActive && play !== null && play !== sectionId) {
-      return false;
-    }
-    return true;
+  /** True when the section shell should lock children visible (`tx-entrance-stagger--settled`). */
+  isSectionContentSettled(sectionId: string): boolean {
+    return this.sectionContentStaggerId() !== sectionId;
   }
 
   private replayLoadStagger(childCount: number): void {
@@ -133,76 +147,10 @@ export class WorkspaceTabMotionController {
     }, settleMs);
   }
 
-  private scheduleSectionContentStagger(sectionId: string, blockCount: number): void {
-    this.cancelSectionStaggerTimer();
-
-    if (!this.uiPreferences.entranceStaggerEnabled()) {
-      this.sectionStaggerPlay.set(null);
-      this.sectionStaggerArming.set(false);
-      return;
-    }
-
-    this.sectionStaggerArming.set(true);
-    this.sectionStaggerPlay.set(null);
-
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        this.sectionStaggerArming.set(false);
-        this.sectionStaggerPlay.set(sectionId);
-        this.scheduleSectionStaggerEnd(sectionId, blockCount);
-      });
-    });
-  }
-
-  private scheduleSectionStaggerEnd(sectionId: string, blockCount: number): void {
-    this.cancelSectionStaggerTimer();
-    const settleMs = readEntranceStaggerSettleMs(blockCount);
-
-    this.sectionStaggerTimer = setTimeout(() => {
-      this.sectionStaggerTimer = null;
-      if (this.sectionStaggerPlay() === sectionId) {
-        this.sectionStaggerPlay.set(null);
-      }
-    }, settleMs);
-  }
-
-  private triggerPaneSwitch(): void {
-    this.cancelPaneSwitchTimer();
-
-    if (!this.uiPreferences.animationsEnabled()) {
-      this.paneSwitchActive.set(false);
-      return;
-    }
-
-    this.paneSwitchActive.set(false);
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        this.paneSwitchActive.set(true);
-        const root = typeof document !== 'undefined' ? document.documentElement : null;
-        const styles = root ? getComputedStyle(root) : null;
-        const motionScale =
-          styles ? Number.parseFloat(styles.getPropertyValue('--tx-motion-scale')) || 1 : 1;
-        const durationMs = Math.round(180 * motionScale) + 24;
-
-        this.paneSwitchTimer = setTimeout(() => {
-          this.paneSwitchTimer = null;
-          this.paneSwitchActive.set(false);
-        }, durationMs);
-      });
-    });
-  }
-
   private cancelSectionStaggerTimer(): void {
     if (this.sectionStaggerTimer !== null) {
       clearTimeout(this.sectionStaggerTimer);
       this.sectionStaggerTimer = null;
-    }
-  }
-
-  private cancelPaneSwitchTimer(): void {
-    if (this.paneSwitchTimer !== null) {
-      clearTimeout(this.paneSwitchTimer);
-      this.paneSwitchTimer = null;
     }
   }
 }

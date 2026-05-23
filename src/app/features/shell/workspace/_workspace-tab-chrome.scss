@@ -78,6 +78,7 @@ $workspace-tab-ease: var(--tx-ease-out-expo, cubic-bezier(0.16, 1, 0.3, 1));
 }
 
 @mixin workspace-tab-sections-bar {
+  position: relative;
   display: inline-flex;
   align-items: center;
   gap: 0.06rem;
@@ -89,6 +90,8 @@ $workspace-tab-ease: var(--tx-ease-out-expo, cubic-bezier(0.16, 1, 0.3, 1));
 }
 
 @mixin workspace-tab-section-tab {
+  position: relative;
+  z-index: 1;
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
@@ -124,10 +127,8 @@ $workspace-tab-ease: var(--tx-ease-out-expo, cubic-bezier(0.16, 1, 0.3, 1));
   &.is-active {
     color: var(--tx-text-0);
     font-weight: 600;
-    background: color-mix(in srgb, var(--tx-primary) 18%, var(--tx-surface-1));
-    box-shadow:
-      inset 0 0 0 1px color-mix(in srgb, var(--tx-primary) 45%, transparent),
-      0 1px 3px color-mix(in srgb, var(--tx-shadow-color, #000) 18%, transparent);
+    background: transparent;
+    box-shadow: none;
 
     tx-icon {
       opacity: 1;
@@ -146,6 +147,7 @@ $workspace-tab-ease: var(--tx-ease-out-expo, cubic-bezier(0.16, 1, 0.3, 1));
 }
 
 @mixin workspace-tab-section-sidebar-nav {
+  position: relative;
   display: flex;
   flex: 0 0 11.5rem;
   flex-direction: column;
@@ -160,6 +162,8 @@ $workspace-tab-ease: var(--tx-ease-out-expo, cubic-bezier(0.16, 1, 0.3, 1));
 
 @mixin workspace-tab-section-sidebar-nav-item {
   @include workspace-tab-section-tab;
+  position: relative;
+  z-index: 1;
   width: 100%;
   justify-content: flex-start;
   text-align: left;

@@ -1,0 +1,79 @@
+@use '../../workspace/request-workspace-tab/request-tab-panels';
+
+:host {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+  width: 100%;
+}
+
+.int-action {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-height: 0;
+  flex: 1 1 auto;
+  width: 100%;
+}
+
+.int-action__head {
+  flex-shrink: 0;
+
+  .request-panel__hint {
+    margin-top: 0.15rem;
+  }
+}
+
+.int-action__controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.5rem 0.65rem;
+  flex-shrink: 0;
+}
+
+.int-action__action-field {
+  flex: 1 1 14rem;
+  min-width: 10rem;
+}
+
+.int-action__status-field {
+  flex: 0 0 5.25rem;
+  width: 5.25rem;
+  max-width: 5.75rem;
+}
+
+:host ::ng-deep .int-action__status-field .tx-input-host,
+:host ::ng-deep .int-action__status-field input {
+  min-width: 0;
+}
+
+:host ::ng-deep app-request-tab-body-panel.int-action__body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+}
+
+:host ::ng-deep app-request-tab-body-panel.int-action__body .request-panel {
+  gap: 0.5rem;
+  min-height: 0;
+}
+
+:host ::ng-deep app-request-tab-body-panel.int-action__body .request-panel__mode-row {
+  gap: 0.5rem 0.65rem;
+}
+
+:host ::ng-deep app-request-tab-body-panel.int-action__body .request-panel__mode-row tx-form-field {
+  flex: 1 1 10rem;
+  min-width: 8rem;
+  max-width: 16rem;
+}
+
+:host ::ng-deep app-request-tab-body-panel.int-action__body .request-panel__editor {
+  min-height: 0;
+  flex: 1 1 auto;
+}

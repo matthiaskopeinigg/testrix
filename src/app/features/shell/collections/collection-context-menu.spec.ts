@@ -31,8 +31,19 @@ describe('collection-context-menu', () => {
     expect(items.some((i) => i.id === 'expand')).toBe(false);
   });
 
-  it('builds request menu with open and duplicate', () => {
+  it('builds request menu with open, favourite, and duplicate', () => {
     const items = buildCollectionNodeContextMenu('request', false);
-    expect(items.map((i) => i.id)).toEqual(['open', 'rename', 'duplicate', 'delete']);
+    expect(items.map((i) => i.id)).toEqual([
+      'open',
+      'toggle-favourite',
+      'rename',
+      'duplicate',
+      'delete',
+    ]);
+  });
+
+  it('shows remove from favourites when item is favourited', () => {
+    const items = buildCollectionNodeContextMenu('request', false, true, true);
+    expect(items.find((i) => i.id === 'toggle-favourite')?.label).toBe('Remove from favourites');
   });
 });

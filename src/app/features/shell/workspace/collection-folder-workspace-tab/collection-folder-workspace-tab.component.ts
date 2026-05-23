@@ -32,6 +32,8 @@ import { EnvironmentsService } from '@app/core/environments/environments.service
 import { freezeWhileTabInactive } from '@app/core/ui/workspace-tab-active.util';
 import { UiPreferencesService } from '@app/core/ui/ui-preferences.service';
 import { WorkspaceTabMotionController } from '@app/core/ui/workspace-tab-motion';
+import { folderTabSectionBlockCount } from '@app/core/ui/workspace-tab-section-stagger';
+import { WorkspaceSectionNavSliderDirective } from '../workspace-section-nav-slider.directive';
 import { openEnvironmentVariableTab } from '@app/core/workspace/open-environment-variable-tab';
 import { WorkspaceEditorService } from '@app/core/workspace/workspace-editor.service';
 import { findCollectionNode, collectAncestorFolders, countFolderDescendantItems } from '@app/features/shell/collections/collection-tree.mutations';
@@ -97,6 +99,7 @@ const NAV_ITEMS: readonly FolderTabNavItem[] = [
     FolderTabOverviewPanelComponent,
     FolderTabSettingsPanelComponent,
     FolderTabDocsPanelComponent,
+    WorkspaceSectionNavSliderDirective,
   ],
   templateUrl: './collection-folder-workspace-tab.component.html',
   styleUrl: './collection-folder-workspace-tab.component.scss',
@@ -322,7 +325,7 @@ export class CollectionFolderWorkspaceTabComponent {
   }
 
   protected isSectionContentSettled(sectionId: FolderTabSectionId): boolean {
-    return this.tabMotion.isSectionContentSettled(sectionId, this.activeSection() === sectionId);
+    return this.tabMotion.isSectionContentSettled(sectionId);
   }
 
   private loadChromeChildCount(): number {
@@ -347,16 +350,19 @@ export class CollectionFolderWorkspaceTabComponent {
   }
 
   protected handleSectionSelect(section: FolderTabSectionId): void {
-    if (section !== this.activeSection()) {
-      this.tabMotion.onSectionChange(section);
+    if (section === this.activeSection()) {
+      return;
     }
     this.activeSection.set(section);
+    this.tabMotion.onSectionChange(section, {
+      contentBlockCount: folderTabSectionBlockCount(section),
+    });
     this.scheduleTabUiPersist();
   }
 
   protected handleScriptPaneSelect(pane: FolderScriptPaneId): void {
-    if (pane !== this.activeScriptPane() && this.activeSection() === 'script') {
-      this.tabMotion.onSectionChange('script', 4);
+    if (pane === this.activeScriptPane()) {
+      return;
     }
     this.activeScriptPane.set(pane);
     this.scheduleTabUiPersist();

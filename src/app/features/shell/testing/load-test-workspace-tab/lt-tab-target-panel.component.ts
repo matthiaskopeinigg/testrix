@@ -11,11 +11,22 @@ import {
   untracked,
   viewChild,
 } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+
+import { DYNAMIC_VARIABLES } from '@shared/dynamic-variables';
+import {
+  createDefaultLoadTestManualTarget,
+  resolveLoadTestTargetSource,
+  type LoadTestManualTarget,
+  type LoadTestTargetSource,
+} from '@shared/testing';
 
 import { CollectionsService } from '@app/core/collections/collections.service';
 import { TxBannerComponent } from '@app/shared/components/tx-banner/tx-banner.component';
 import { TxButtonComponent } from '@app/shared/components/tx-button/tx-button.component';
 import { TxContextMenuComponent } from '@app/shared/components/tx-context-menu/tx-context-menu.component';
+import { TxDropdownComponent } from '@app/shared/components/tx-dropdown/tx-dropdown.component';
+import { TxFormFieldComponent } from '@app/shared/components/tx-form-field/tx-form-field.component';
 import { TxIconComponent } from '@app/shared/components/tx-icon/tx-icon.component';
 import { mergeTxTreeConfig } from '@app/shared/components/tx-tree/tx-tree.config';
 import { TxTreeComponent } from '@app/shared/components/tx-tree/tx-tree.component';
@@ -29,6 +40,8 @@ import { collectFolderIdsInSubtree } from '@app/features/shell/collections/colle
 import type { CollectionTreeKind, CollectionTreeNode, CollectionTreeNodeMeta } from '@app/features/shell/collections/collection-tree.types';
 
 import { collectionRequestLabel } from './collect-collection-requests';
+import { LtTabManualTargetPanelComponent } from './lt-tab-manual-target-panel.component';
+import { LOAD_TEST_TARGET_SOURCE_OPTIONS } from './load-test-target-source';
 import {
   buildLtTargetFilterMenuItems,
   buildLtTargetSortMenuItems,
@@ -47,11 +60,15 @@ const SEARCH_DEBOUNCE_MS = 100;
   selector: 'app-lt-tab-target-panel',
   standalone: true,
   imports: [
+    FormsModule,
     TxBannerComponent,
     TxButtonComponent,
     TxContextMenuComponent,
+    TxDropdownComponent,
+    TxFormFieldComponent,
     TxIconComponent,
     TxTreeComponent,
+    LtTabManualTargetPanelComponent,
     WorkspaceSidebarPanelShellComponent,
     WorkspacePanelToolbarActionsDirective,
   ],
@@ -65,10 +82,24 @@ export class LtTabTargetPanelComponent {
 
   private readonly tree = viewChild(TxTreeComponent);
 
+  readonly targetSource = input<LoadTestTargetSource>('collection');
   readonly targetRequestId = input<string | undefined>(undefined);
+  readonly manualTarget = input<LoadTestManualTarget | undefined>(undefined);
 
+  readonly targetSourceChange = output<LoadTestTargetSource>();
   readonly targetRequestIdChange = output<string | undefined>();
+  readonly manualTargetChange = output<LoadTestManualTarget>();
   readonly openRequest = output<void>();
+
+  protected readonly targetSourceOptions = LOAD_TEST_TARGET_SOURCE_OPTIONS;
+  protected readonly variableCatalog = computed(() => DYNAMIC_VARIABLES);
+
+  protected readonly resolvedTargetSource = computed(() =>
+    resolveLoadTestTargetSource({
+      targetSource: this.targetSource(),
+      targetRequestId: this.targetRequestId(),
+    }),
+  );
 
   protected readonly searchQuery = signal('');
   protected readonly searchQueryDebounced = signal('');
@@ -234,6 +265,21 @@ export class LtTabTargetPanelComponent {
   }
 
   protected handleClearTarget(): void {
+    this.targetRequestIdChange.emit(undefined);
+  }
+
+  protected handleTargetSourceChange(source: LoadTestTargetSource): void {
+    if (source === this.resolvedTargetSource()) {
+      return;
+    }
+    this.targetSourceChange.emit(source);
+    if (source === 'manual') {
+      this.targetRequestIdChange.emit(undefined);
+      if (!this.manualTarget()) {
+        this.manualTargetChange.emit(createDefaultLoadTestManualTarget());
+      }
+      return;
+    }
     this.targetRequestIdChange.emit(undefined);
   }
 

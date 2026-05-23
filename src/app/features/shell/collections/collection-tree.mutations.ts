@@ -99,9 +99,8 @@ function defaultLabel(kind: CollectionTreeKind, requestDefaults?: CreateCollecti
     return 'New folder';
   }
   if (kind === 'request') {
-    const method = requestDefaults?.method ?? 'GET';
     const url = requestDefaults?.url ?? '';
-    return url.trim() ? `${method} ${url.trim()}` : method;
+    return url.trim() || 'New request';
   }
   return 'WS /path';
 }
@@ -224,6 +223,29 @@ export function renameCollectionNode(
       if (node.id === id) {
         found = true;
         return { ...node, label: trimmed };
+      }
+      if (node.children?.length) {
+        return { ...node, children: mapNodes(node.children) };
+      }
+      return node;
+    });
+
+  const next = mapNodes(nodes);
+  return found ? next : null;
+}
+
+/** Toggles the favourite flag on a collection tree node. */
+export function toggleCollectionNodeFavourite(
+  nodes: readonly CollectionTreeNode[],
+  id: string,
+): CollectionTreeNode[] | null {
+  let found = false;
+  const mapNodes = (list: readonly CollectionTreeNode[]): CollectionTreeNode[] =>
+    list.map((node) => {
+      if (node.id === id) {
+        found = true;
+        const nextFavourite = node.favourite !== true;
+        return { ...node, favourite: nextFavourite ? true : undefined };
       }
       if (node.children?.length) {
         return { ...node, children: mapNodes(node.children) };

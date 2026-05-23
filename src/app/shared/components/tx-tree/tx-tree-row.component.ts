@@ -13,8 +13,6 @@ import { NgTemplateOutlet } from '@angular/common';
 
 import { TxIconComponent } from '@app/shared/components/tx-icon/tx-icon.component';
 import { TxInlineRenameInputComponent } from '@app/shared/components/tx-inline-rename-input/tx-inline-rename-input.component';
-import { TruncatePipe } from '@app/shared/pipes/truncate.pipe';
-
 /** Max tag chips shown on a tree row meta line; additional tags collapse to +N. */
 const TX_TREE_ROW_MAX_VISIBLE_TAGS = 6;
 
@@ -33,7 +31,7 @@ import {
 @Component({
   selector: 'tx-tree-row',
   standalone: true,
-  imports: [NgTemplateOutlet, TxIconComponent, TxInlineRenameInputComponent, TruncatePipe],
+  imports: [NgTemplateOutlet, TxIconComponent, TxInlineRenameInputComponent],
   templateUrl: './tx-tree-row.component.html',
   styleUrl: './tx-tree-row.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -192,16 +190,12 @@ export class TxTreeRowComponent<TMeta = unknown> implements AfterViewInit, OnDes
     return this.debug() ? 24 : 16;
   }
 
-  protected subtitleTruncate(): number {
-    return 72;
-  }
-
-  protected labelTruncate(): number {
-    return this.debug() ? 80 : 48;
-  }
-
   protected hasMetaRow(): boolean {
     return this.visibleTreeTags().length > 0 || this.treeTagsOverflowCount() > 0;
+  }
+
+  protected isFavourite(): boolean {
+    return this.row().node.favourite === true;
   }
 
   protected isCritical(): boolean {

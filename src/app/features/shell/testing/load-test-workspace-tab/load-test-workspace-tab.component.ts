@@ -16,7 +16,18 @@ import {
   type LoadTestTabSectionId,
   type WorkspaceEditorLayoutId,
 } from '@shared/config';
-import type { LoadTestProfile, LoadTestRunRecord, LoadTestThresholds } from '@shared/testing';
+import type {
+  LoadTestManualTarget,
+  LoadTestProfile,
+  LoadTestRunRecord,
+  LoadTestTargetSource,
+  LoadTestThresholds,
+} from '@shared/testing';
+import {
+  createDefaultLoadTestManualTarget,
+  isLoadTestTargetReady,
+  resolveLoadTestTargetSource,
+} from '@shared/testing';
 import {
   createIdleLoadTestRunMetrics,
   createLoadTestRunRecord,
@@ -34,6 +45,8 @@ import { LoadTestService } from '@app/core/testing/load-test.service';
 import { newTestingId } from '@app/core/testing/testing-id';
 import { freezeWhileTabInactive } from '@app/core/ui/workspace-tab-active.util';
 import { WorkspaceTabMotionController } from '@app/core/ui/workspace-tab-motion';
+import { loadTestTabSectionBlockCount } from '@app/core/ui/workspace-tab-section-stagger';
+import { WorkspaceSectionNavSliderDirective } from '../../workspace/workspace-section-nav-slider.directive';
 import { UiPreferencesService } from '@app/core/ui/ui-preferences.service';
 import { WorkspaceEditorService } from '@app/core/workspace/workspace-editor.service';
 import { TxBannerComponent } from '@app/shared/components/tx-banner/tx-banner.component';
@@ -86,6 +99,7 @@ const METRICS_POLL_MS = 500;
     LtTabThresholdsPanelComponent,
     LtTabDocsPanelComponent,
     LtTabResultsPanelComponent,
+    WorkspaceSectionNavSliderDirective,
   ],
   templateUrl: './load-test-workspace-tab.component.html',
   styleUrl: './load-test-workspace-tab.component.scss',
@@ -156,9 +170,24 @@ export class LoadTestWorkspaceTabComponent {
 
   protected readonly title = computed(() => this.artifact()?.name ?? 'Load test');
 
-  protected readonly targetLabel = computed(() =>
-    collectionRequestLabel(this.collectionsService.nodes(), this.artifact()?.targetRequestId),
-  );
+  protected readonly targetLabel = computed(() => {
+    const artifact = this.artifact();
+    if (!artifact) {
+      return '—';
+    }
+    if (resolveLoadTestTargetSource(artifact) === 'manual') {
+      const manual = artifact.manualTarget;
+      const url = manual?.url?.trim();
+      if (!url) {
+        return 'Manual request (URL required)';
+      }
+      return `${manual?.method ?? 'GET'} ${url}`;
+    }
+    return (
+      collectionRequestLabel(this.collectionsService.nodes(), artifact.targetRequestId) ||
+      'No collection request selected'
+    );
+  });
 
   protected readonly runState = computed((): LtRunState => {
     if (this.running()) {
@@ -182,9 +211,10 @@ export class LoadTestWorkspaceTabComponent {
     this.running() ? 'secondary' : 'primary',
   );
 
-  protected readonly canStartLoadTest = computed(
-    () => Boolean(this.artifact()?.targetRequestId) && Boolean(this.electron.bridge()?.testing),
-  );
+  protected readonly canStartLoadTest = computed(() => {
+    const artifact = this.artifact();
+    return Boolean(artifact && isLoadTestTargetReady(artifact) && this.electron.bridge()?.testing);
+  });
 
   protected readonly runButtonTitle = computed(() => {
     if (this.running()) {
@@ -193,8 +223,8 @@ export class LoadTestWorkspaceTabComponent {
     if (!this.electron.bridge()?.testing) {
       return 'Load tests require the Electron desktop app';
     }
-    if (!this.artifact()?.targetRequestId) {
-      return 'Select a target request before starting';
+    if (!isLoadTestTargetReady(this.artifact() ?? {})) {
+      return 'Configure a target request before starting';
     }
     return 'Start load test';
   });
@@ -264,7 +294,7 @@ export class LoadTestWorkspaceTabComponent {
   }
 
   protected isSectionContentSettled(sectionId: LoadTestTabSectionId): boolean {
-    return this.tabMotion.isSectionContentSettled(sectionId, this.activeSection() === sectionId);
+    return this.tabMotion.isSectionContentSettled(sectionId);
   }
 
   protected handleNameChange(name: string): void {
@@ -275,12 +305,41 @@ export class LoadTestWorkspaceTabComponent {
     this.scheduleArtifactPatch({ description });
   }
 
-  protected handleTargetChange(targetRequestId: string | undefined): void {
+  protected handleTagsChange(tags: readonly string[]): void {
     const id = this.artifactId();
-    if (!id) {
+    if (id) {
+      this.loadTest.patchTags(id, tags);
+    }
+  }
+
+  protected handleTargetSourceChange(targetSource: LoadTestTargetSource): void {
+    const artifact = this.artifact();
+    if (!artifact) {
       return;
     }
-    this.loadTest.patchArtifact(id, { targetRequestId });
+    this.scheduleArtifactPatch({
+      targetSource,
+      targetRequestId: targetSource === 'collection' ? artifact.targetRequestId : undefined,
+      manualTarget:
+        targetSource === 'manual'
+          ? (artifact.manualTarget ?? createDefaultLoadTestManualTarget())
+          : artifact.manualTarget,
+    });
+  }
+
+  protected handleTargetChange(targetRequestId: string | undefined): void {
+    this.scheduleArtifactPatch({
+      targetSource: 'collection',
+      targetRequestId,
+    });
+  }
+
+  protected handleManualTargetChange(manualTarget: LoadTestManualTarget): void {
+    this.scheduleArtifactPatch({
+      targetSource: 'manual',
+      manualTarget,
+      targetRequestId: undefined,
+    });
   }
 
   protected handleProfileChange(patch: Partial<LoadTestProfile>): void {
@@ -383,7 +442,11 @@ export class LoadTestWorkspaceTabComponent {
   }
 
   protected handleOpenTargetRequest(): void {
-    const targetRequestId = this.artifact()?.targetRequestId;
+    const artifact = this.artifact();
+    if (!artifact || resolveLoadTestTargetSource(artifact) !== 'collection') {
+      return;
+    }
+    const targetRequestId = artifact.targetRequestId;
     if (!targetRequestId) {
       return;
     }
@@ -391,10 +454,13 @@ export class LoadTestWorkspaceTabComponent {
   }
 
   protected handleSectionSelect(section: LoadTestTabSectionId): void {
-    if (section !== this.activeSection()) {
-      this.tabMotion.onSectionChange(section);
+    if (section === this.activeSection()) {
+      return;
     }
     this.activeSection.set(section);
+    this.tabMotion.onSectionChange(section, {
+      contentBlockCount: loadTestTabSectionBlockCount(section),
+    });
     this.scheduleTabUiPersist();
   }
 
@@ -432,17 +498,20 @@ export class LoadTestWorkspaceTabComponent {
       return;
     }
 
-    const targetRequestId = artifact?.targetRequestId;
-    if (!targetRequestId) {
+    if (!artifact || !isLoadTestTargetReady(artifact)) {
       this.runActionPending.set(false);
-      this.notifier.reportUnknown(new Error('Select a target request before starting a load test.'));
+      this.notifier.reportUnknown(new Error('Configure a target request before starting a load test.'));
       this.activeSection.set('target');
       this.scheduleTabUiPersist();
       return;
     }
 
+    const targetSource = resolveLoadTestTargetSource(artifact);
     const startOptions: LoadTestStartOptions = {
-      targetRequestId,
+      targetSource,
+      targetRequestId: targetSource === 'collection' ? artifact.targetRequestId : undefined,
+      manualTarget: targetSource === 'manual' ? artifact.manualTarget : undefined,
+      loadTestId: artifact.id,
       virtualUsers: profile.virtualUsers,
       durationSec: profile.durationSec,
       rampUpSec: profile.rampUpSec,

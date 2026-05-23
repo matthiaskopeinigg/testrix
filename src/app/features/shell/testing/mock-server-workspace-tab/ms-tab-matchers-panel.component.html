@@ -1,0 +1,187 @@
+<div class="request-panel ms-matchers">
+  <h2 class="request-panel__title">Matchers</h2>
+  <p class="request-panel__hint">
+    Method and route are set in the toolbar. Each matcher adds optional header and body rules; the first
+    rule that passes wins.
+  </p>
+
+  @if (matchers().length === 0) {
+    <div class="ms-matchers__empty">
+      <p class="ms-matchers__empty-title">No matchers yet</p>
+      <p class="ms-matchers__empty-hint">
+        Set method and route in the toolbar, or add a matcher to define header and body rules.
+      </p>
+      <tx-button variant="secondary" (pressed)="addMatcher.emit()">Add matcher</tx-button>
+    </div>
+  } @else {
+    @for (matcher of matchers(); track matcher.id; let i = $index) {
+      <article class="ms-matchers__card">
+        <header class="ms-matchers__card-head">
+          <tx-form-field class="ms-matchers__name-field" label="Matcher name" [controlId]="'ms-mn-' + i">
+            <tx-input
+              [id]="'ms-mn-' + i"
+              [ngModel]="matcher.name"
+              (ngModelChange)="handlePatch(i, { name: $event })"
+            />
+          </tx-form-field>
+          <div class="ms-matchers__card-actions">
+            <tx-toggle
+              label="Enabled"
+              [ngModel]="matcher.enabled"
+              (ngModelChange)="handlePatch(i, { enabled: $event })"
+            />
+            @if (canReorder(i)) {
+              <tx-button
+                variant="secondary"
+                size="icon"
+                ariaLabel="Move matcher up"
+                [disabled]="!canMoveUp(i)"
+                (pressed)="handleMoveMatcher(i, -1)"
+              >
+                <tx-icon name="chevronUp" [size]="14" aria-hidden="true" />
+              </tx-button>
+              <tx-button
+                variant="secondary"
+                size="icon"
+                ariaLabel="Move matcher down"
+                [disabled]="!canMoveDown(i)"
+                (pressed)="handleMoveMatcher(i, 1)"
+              >
+                <tx-icon name="chevronDown" [size]="14" aria-hidden="true" />
+              </tx-button>
+            }
+            <tx-button
+              variant="secondary"
+              size="icon"
+              ariaLabel="Remove matcher"
+              (pressed)="handleRemoveMatcher(i)"
+            >
+              <tx-icon name="trash" [size]="14" aria-hidden="true" />
+            </tx-button>
+          </div>
+        </header>
+
+        @if (i === 0) {
+          <p class="ms-matchers__route-note">
+            <tx-icon name="info" [size]="12" aria-hidden="true" />
+            Uses method and route from the toolbar above.
+          </p>
+        }
+
+        <section class="ms-matchers__section" aria-label="Request headers">
+          <div class="ms-matchers__section-head">
+            <h3 class="ms-matchers__section-title">Headers</h3>
+            <tx-button variant="secondary" (pressed)="handleAddHeader(i)">Add header rule</tx-button>
+          </div>
+          @if (matcher.headers.length === 0) {
+            <p class="ms-matchers__section-hint">No header rules — any request headers are accepted.</p>
+          } @else {
+            <ul class="ms-matchers__header-list">
+              @for (row of matcher.headers; track row.id; let hi = $index) {
+                <li class="ms-matchers__header-row">
+                  <tx-toggle
+                    label=""
+                    [attr.aria-label]="'Enable header rule'"
+                    [ngModel]="row.enabled"
+                    (ngModelChange)="handleHeaderPatch(i, hi, { enabled: $event })"
+                  />
+                  <tx-form-field label="Header" [controlId]="'ms-hk-' + i + '-' + hi">
+                    <tx-input
+                      [id]="'ms-hk-' + i + '-' + hi"
+                      [ngModel]="row.key"
+                      (ngModelChange)="handleHeaderPatch(i, hi, { key: $event })"
+                      placeholder="Content-Type"
+                    />
+                  </tx-form-field>
+                  <tx-form-field
+                    class="ms-matchers__dropdown-field"
+                    label="Match"
+                    [controlId]="'ms-hm-' + i + '-' + hi"
+                  >
+                    <tx-dropdown
+                      [id]="'ms-hm-' + i + '-' + hi"
+                      [options]="headerMatchOptions"
+                      [ngModel]="row.match"
+                      (ngModelChange)="handleHeaderPatch(i, hi, { match: $event })"
+                    />
+                  </tx-form-field>
+                  <tx-form-field label="Value" [controlId]="'ms-hv-' + i + '-' + hi">
+                    <tx-input
+                      [id]="'ms-hv-' + i + '-' + hi"
+                      [ngModel]="row.value"
+                      (ngModelChange)="handleHeaderPatch(i, hi, { value: $event })"
+                    />
+                  </tx-form-field>
+                  <tx-button
+                    variant="secondary"
+                    size="icon"
+                    ariaLabel="Remove header rule"
+                    (pressed)="handleRemoveHeader(i, hi)"
+                  >
+                    <tx-icon name="trash" [size]="14" aria-hidden="true" />
+                  </tx-button>
+                </li>
+              }
+            </ul>
+          }
+        </section>
+
+        <section class="ms-matchers__section" aria-label="Request body">
+          <div class="ms-matchers__section-head">
+            <h3 class="ms-matchers__section-title">Body</h3>
+            <tx-toggle
+              label="Require body match"
+              [ngModel]="bodyEnabled(matcher)"
+              (ngModelChange)="handleBodyToggle(i, $event)"
+            />
+          </div>
+          @if (bodyEnabled(matcher) && matcher.body; as body) {
+            <div class="ms-matchers__row">
+              <tx-form-field class="ms-matchers__dropdown-field" label="Body type" [controlId]="'ms-bt-' + i">
+                <tx-dropdown
+                  [id]="'ms-bt-' + i"
+                  [options]="bodyTypeOptions"
+                  [ngModel]="body.bodyType"
+                  (ngModelChange)="handleBodyPatch(i, { bodyType: $event })"
+                />
+              </tx-form-field>
+              <tx-form-field class="ms-matchers__dropdown-field" label="Match mode" [controlId]="'ms-bm-' + i">
+                <tx-dropdown
+                  [id]="'ms-bm-' + i"
+                  [options]="bodyMatchOptions"
+                  [ngModel]="body.match"
+                  (ngModelChange)="handleBodyPatch(i, { match: $event })"
+                />
+              </tx-form-field>
+            </div>
+            <tx-form-field label="Expected body" [controlId]="'ms-bv-' + i">
+              @if (bodyMatchUsesEditor(body.match)) {
+                <div class="ms-matchers__editor">
+                  <tx-code-editor
+                    language="json"
+                    languageBadgeLabel="JSON"
+                    [framed]="true"
+                    [hideToolbarActions]="true"
+                    [showFormatAction]="true"
+                    [ngModel]="body.value"
+                    (ngModelChange)="handleBodyPatch(i, { value: $event })"
+                  />
+                </div>
+              } @else {
+                <tx-input
+                  [id]="'ms-bv-' + i"
+                  [ngModel]="body.value"
+                  (ngModelChange)="handleBodyPatch(i, { value: $event })"
+                  placeholder="Substring, regex, or exact body text"
+                />
+              }
+            </tx-form-field>
+          } @else {
+            <p class="ms-matchers__section-hint">Body is not part of this match rule.</p>
+          }
+        </section>
+      </article>
+    }
+    <tx-button variant="secondary" (pressed)="addMatcher.emit()">Add matcher</tx-button>
+  }
+</div>

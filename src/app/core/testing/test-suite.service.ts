@@ -7,6 +7,8 @@ import {
   createFlowStep,
   isTestSuiteFlow,
   isTestSuiteFolder,
+  cloneTestSuiteTreeItem,
+  insertTestSuiteTreeItemAfter,
   migrateTestSuitesFile,
   testSuitesFileSchema,
   type TestSuiteFlow,
@@ -61,6 +63,22 @@ export class TestSuiteService {
 
   readonly nodes = computed(() => toTestSuiteTreeNodes(this.flows()));
 
+  readonly allTags = computed(() => {
+    const tags = new Set<string>();
+    const walk = (items: readonly TestSuiteTreeItem[]): void => {
+      for (const item of items) {
+        for (const tag of item.tags ?? []) {
+          tags.add(tag);
+        }
+        if (isTestSuiteFolder(item)) {
+          walk(item.children);
+        }
+      }
+    };
+    walk(this.flows());
+    return [...tags].sort((a, b) => a.localeCompare(b));
+  });
+
   async hydrate(): Promise<void> {
     return runTestingHydrateOnce(
       () => this.fileState() !== null,
@@ -99,6 +117,25 @@ export class TestSuiteService {
     const walk = (items: readonly TestSuiteTreeItem[]): TestSuiteFlow | null => {
       for (const item of items) {
         if (isTestSuiteFlow(item) && item.id === id) {
+          return item;
+        }
+        if (isTestSuiteFolder(item)) {
+          const found = walk(item.children);
+          if (found) {
+            return found;
+          }
+        }
+      }
+      return null;
+    };
+    return walk(this.flows());
+  }
+
+  /** Returns the first flow in suite tree order (depth-first), or null when none exist. */
+  firstFlow(): TestSuiteFlow | null {
+    const walk = (items: readonly TestSuiteTreeItem[]): TestSuiteFlow | null => {
+      for (const item of items) {
+        if (isTestSuiteFlow(item)) {
           return item;
         }
         if (isTestSuiteFolder(item)) {
@@ -321,6 +358,44 @@ export class TestSuiteService {
       flows: removeTreeItem(root.flows, itemId),
       updatedAt: ts,
     });
+  }
+
+  /** Duplicates a folder or flow as the next sibling in the suite tree. */
+  duplicateTreeItem(itemId: string): TestSuiteTreeItem | null {
+    const root = this.rootSuite();
+    if (!root) {
+      return null;
+    }
+    const source = this.findTreeItem(itemId);
+    if (!source) {
+      return null;
+    }
+    const copy = cloneTestSuiteTreeItem(source);
+    const nextFlows = insertTestSuiteTreeItemAfter(root.flows, itemId, copy);
+    if (!nextFlows) {
+      return null;
+    }
+    const ts = new Date().toISOString();
+    this.patchRoot({ ...root, flows: nextFlows, updatedAt: ts });
+    return copy;
+  }
+
+  private findTreeItem(itemId: string): TestSuiteTreeItem | null {
+    const walk = (items: readonly TestSuiteTreeItem[]): TestSuiteTreeItem | null => {
+      for (const item of items) {
+        if (item.id === itemId) {
+          return item;
+        }
+        if (isTestSuiteFolder(item)) {
+          const found = walk(item.children);
+          if (found) {
+            return found;
+          }
+        }
+      }
+      return null;
+    };
+    return walk(this.flows());
   }
 
   private insertTreeItem(item: TestSuiteTreeItem, parentId?: string): void {

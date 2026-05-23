@@ -1,5 +1,12 @@
 import { z } from 'zod';
 
+import {
+  COLLECTION_LIST_SIDEBAR_FILTER_IDS,
+  COLLECTION_LIST_SIDEBAR_SORT_BY_IDS,
+  DEFAULT_COLLECTION_LIST_SIDEBAR_FILTER,
+  DEFAULT_COLLECTION_LIST_SIDEBAR_SORT_BY,
+} from './collection-list-sidebar';
+import { HTTP_METHOD_IDS } from './http-settings.schema';
 import { collectionRequestTabsByIdSchema } from './collection-request-tab-ui.schema';
 import { collectionWebsocketTabsByIdSchema } from './collection-websocket-tab-ui.schema';
 import { workspaceRequestRunsSchema } from './request-runs-session.schema';
@@ -53,6 +60,14 @@ export type CollectionFolderTabsById = z.infer<typeof collectionFolderTabsByIdSc
 /** Session slice: collections sidebar + workspace tab UI state. */
 export const workspaceCollectionFolderTabsSchema = z.object({
   expandedFolderIds: z.array(z.string()),
+  listSidebarFilter: z
+    .enum(COLLECTION_LIST_SIDEBAR_FILTER_IDS)
+    .default(DEFAULT_COLLECTION_LIST_SIDEBAR_FILTER),
+  listSidebarSortBy: z
+    .enum(COLLECTION_LIST_SIDEBAR_SORT_BY_IDS)
+    .default(DEFAULT_COLLECTION_LIST_SIDEBAR_SORT_BY),
+  listSidebarTagFilter: z.array(z.string()).default([]),
+  listSidebarMethodFilter: z.array(z.enum(HTTP_METHOD_IDS)).default([]),
   folderTabsById: collectionFolderTabsByIdSchema.default({}),
   requestTabsById: collectionRequestTabsByIdSchema.default({}),
   websocketTabsById: collectionWebsocketTabsByIdSchema.default({}),

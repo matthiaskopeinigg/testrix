@@ -12,6 +12,22 @@ export interface TxContextMenuItem {
   readonly selected?: boolean;
 }
 
+/** True for explicit danger items and common delete/remove menu actions. */
+export function isDestructiveContextMenuItem(item: TxContextMenuItem): boolean {
+  if (item.separator || item.disabled) {
+    return false;
+  }
+  if (item.danger) {
+    return true;
+  }
+  if (item.icon === 'trash') {
+    return true;
+  }
+
+  const id = item.id.toLowerCase();
+  return id === 'delete' || id.endsWith('-delete') || id.startsWith('delete-') || id === 'clear-all';
+}
+
 /** Viewport position for a fixed context menu panel. */
 export interface TxContextMenuPosition {
   readonly x: number;

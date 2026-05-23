@@ -1,0 +1,69 @@
+<div class="lt-manual-target request-panel ts-flow-step-panel">
+  @if (needsUrl()) {
+    <tx-banner variant="warning" title="HTTP Request">
+      Specify a URL for this load test target.
+    </tx-banner>
+  }
+
+  <h2 class="request-panel__title">Request</h2>
+  <div class="ts-flow-step-panel__row-2">
+    <tx-form-field label="Method" controlId="lt-manual-method">
+      <tx-dropdown
+        controlId="lt-manual-method"
+        [options]="httpMethodOptions"
+        [ngModel]="cfg().method"
+        (ngModelChange)="patch({ method: $event })"
+      />
+    </tx-form-field>
+    <tx-form-field class="ts-flow-step-panel__grow" label="URL" controlId="lt-manual-url">
+      <tx-variable-input
+        controlId="lt-manual-url"
+        [catalog]="variableCatalog()"
+        [ngModel]="cfg().url"
+        (ngModelChange)="patch({ url: $event })"
+        placeholder="https://api.example.com/path"
+      />
+    </tx-form-field>
+  </div>
+
+  <h2 class="request-panel__title">Headers</h2>
+  <tx-key-value-list
+    keyLabel="Header"
+    keyInput="http-headers"
+    valueLabel="Value"
+    addLabel="Add header"
+    valueInput="variables"
+    [rows]="headerRows()"
+    [variableCatalog]="variableCatalog()"
+    (rowsChange)="handleHeadersChange($event)"
+  />
+
+  <h2 class="request-panel__title">Query params</h2>
+  <tx-key-value-list
+    keyLabel="Param"
+    valueLabel="Value"
+    addLabel="Add param"
+    valueInput="variables"
+    [rows]="queryRows()"
+    [variableCatalog]="variableCatalog()"
+    (rowsChange)="handleQueryChange($event)"
+  />
+
+  <tx-form-field label="Body type" controlId="lt-manual-body-type">
+    <tx-dropdown
+      controlId="lt-manual-body-type"
+      [options]="bodyTypeOptions"
+      [ngModel]="cfg().bodyType"
+      (ngModelChange)="patch({ bodyType: $event })"
+    />
+  </tx-form-field>
+
+  <tx-form-field label="Body" controlId="lt-manual-body">
+    <tx-textarea
+      controlId="lt-manual-body"
+      [ngModel]="cfg().body"
+      (ngModelChange)="patch({ body: $event })"
+      [rows]="8"
+    />
+  </tx-form-field>
+</div>

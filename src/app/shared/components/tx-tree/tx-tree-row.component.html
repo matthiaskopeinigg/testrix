@@ -99,7 +99,14 @@
           @if (row().node.httpMethod; as method) {
             <span class="tx-tree-row__method" [attr.data-method]="method">{{ method }}</span>
           }
-          <span class="tx-tree-row__label">{{ row().node.label | truncate: labelTruncate() }}</span>
+          <span class="tx-tree-row__label" [attr.title]="row().node.label">{{
+            row().node.label
+          }}</span>
+          @if (isFavourite()) {
+            <span class="tx-tree-row__favourite" title="Favourite" aria-label="Favourite">
+              <tx-icon name="star" [size]="12" aria-hidden="true" />
+            </span>
+          }
           @if (isCritical()) {
             <span class="tx-tree-row__critical" title="Critical flow">
               <tx-icon name="alertCircle" [size]="12" aria-hidden="true" />
@@ -108,7 +115,9 @@
           }
         </span>
         @if (row().node.subtitle) {
-          <span class="tx-tree-row__subtitle">{{ row().node.subtitle | truncate: subtitleTruncate() }}</span>
+          <span class="tx-tree-row__subtitle" [attr.title]="row().node.subtitle">{{
+            row().node.subtitle
+          }}</span>
         }
         @if (hasMetaRow()) {
           <span

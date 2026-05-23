@@ -104,7 +104,12 @@
 
     @if (useTitlebarLayout()) {
       <div class="tx-entrance-stagger__block request-tab__sections-wrap">
-        <nav class="request-tab__sections-bar" role="tablist" aria-label="Request sections">
+        <nav
+          class="request-tab__sections-bar"
+          role="tablist"
+          aria-label="Request sections"
+          [txWorkspaceSectionNav]="activeSection()"
+        >
           @for (item of navItems; track item.id) {
             <button
               type="button"
@@ -144,7 +149,12 @@
     >
       <div class="request-tab__workspace request-tab__split-primary" txSplitPrimary>
       @if (useSidebarLayout()) {
-        <nav class="request-tab__nav" role="tablist" aria-label="Request sections">
+        <nav
+          class="request-tab__nav"
+          role="tablist"
+          aria-label="Request sections"
+          [txWorkspaceSectionNav]="activeSection()"
+        >
           @for (item of navItems; track item.id) {
             <button
               type="button"
@@ -163,10 +173,7 @@
         </nav>
         <div class="request-tab__divider" aria-hidden="true"></div>
       }
-      <div
-        class="request-tab__pane tx-workspace-tab__pane"
-        [class.tx-workspace-tab__pane--switch]="tabMotion.paneSwitchActive()"
-      >
+      <div class="request-tab__pane tx-workspace-tab__pane">
         @switch (activeSection()) {
           @case ('overview') {
             <div

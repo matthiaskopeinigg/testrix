@@ -1,7 +1,12 @@
 import { z } from 'zod';
 
+import { loadTestManualTargetSchema } from './load-test-target.schema';
+
 export const loadTestStartOptionsSchema = z.object({
-  targetRequestId: z.string().min(1),
+  targetSource: z.enum(['collection', 'manual']).default('collection'),
+  targetRequestId: z.string().optional(),
+  manualTarget: loadTestManualTargetSchema.optional(),
+  loadTestId: z.string().min(1).optional(),
   virtualUsers: z.number().int().min(1).max(10_000).default(10),
   durationSec: z.number().int().min(1).max(86_400).default(60),
   rampUpSec: z.number().int().min(0).default(0),

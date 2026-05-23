@@ -149,6 +149,26 @@ button.tx-button[data-variant='add'] {
   }
 }
 
+button.tx-button[data-variant='danger'] {
+  @include tx-btn-surface(
+    var(--tx-btn-danger-bg),
+    var(--tx-btn-danger-fg),
+    var(--tx-btn-danger-border),
+    var(--tx-btn-danger-hover-bg),
+    var(--tx-btn-danger-active-bg),
+    var(--tx-btn-danger-border),
+    -2px,
+    0 6px 20px color-mix(in srgb, var(--tx-btn-danger-bg) 35%, transparent),
+    true
+  );
+
+  &:focus-visible {
+    box-shadow:
+      0 0 0 2px var(--tx-surface-1),
+      0 0 0 4px color-mix(in srgb, var(--tx-btn-danger-bg) 50%, transparent);
+  }
+}
+
 .tx-button__content {
   display: inline-flex;
   align-items: center;

@@ -6,6 +6,7 @@ export interface TestSuiteTreeNodeMeta {
   readonly kind: TestSuiteTreeKind;
   readonly description?: string;
   readonly tags?: readonly string[];
+  readonly updatedAt?: string;
   readonly isCritical?: boolean;
 }
 

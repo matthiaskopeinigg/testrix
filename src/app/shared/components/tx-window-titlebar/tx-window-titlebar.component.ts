@@ -82,6 +82,16 @@ export class TxWindowTitlebarComponent {
     void ctrls.minimize();
   }
 
+  /** Double-click empty titlebar chrome toggles maximize (OS-style). */
+  protected handleTitlebarDoubleClick(event: MouseEvent): void {
+    if (!this.isTitlebarDragTarget(event)) {
+      return;
+    }
+    event.preventDefault();
+    this.cancelTitlebarDrag();
+    this.handleMaximizeToggle();
+  }
+
   /** Win32: IPC window move — `-webkit-app-region: drag` is unreliable in frameless Electron. */
   protected handleTitlebarMouseDown(event: MouseEvent): void {
     const bridge = this.electron.bridge();
@@ -91,11 +101,7 @@ export class TxWindowTitlebarComponent {
     if (event.button !== 0) {
       return;
     }
-    const target = event.target;
-    if (!(target instanceof HTMLElement)) {
-      return;
-    }
-    if (target.closest('button, a, input, select, textarea, .tx-titlebar__profile, .tx-titlebar__trailing')) {
+    if (!this.isTitlebarDragTarget(event)) {
       return;
     }
     const ctrls = bridge.windowControls;
@@ -103,20 +109,70 @@ export class TxWindowTitlebarComponent {
       return;
     }
 
+    if (event.detail >= 2) {
+      event.preventDefault();
+      this.cancelTitlebarDrag();
+      this.handleMaximizeToggle();
+      return;
+    }
+
     event.preventDefault();
-    ctrls.dragStart({ offsetX: event.clientX, offsetY: event.clientY });
+    this.cancelTitlebarDrag();
+
+    const offset = { offsetX: event.clientX, offsetY: event.clientY };
+    let dragging = false;
+
+    const startDrag = (): void => {
+      if (dragging) {
+        return;
+      }
+      dragging = true;
+      ctrls.dragStart(offset);
+    };
 
     const onMove = (move: MouseEvent): void => {
+      if (!dragging) {
+        const dx = Math.abs(move.clientX - offset.offsetX);
+        const dy = Math.abs(move.clientY - offset.offsetY);
+        if (dx < 4 && dy < 4) {
+          return;
+        }
+        startDrag();
+      }
       ctrls.dragMove({ screenX: move.screenX, screenY: move.screenY });
     };
     const onUp = (): void => {
-      ctrls.dragEnd();
+      if (dragging) {
+        ctrls.dragEnd();
+      }
+      this.cancelTitlebarDrag();
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mouseup', onUp);
     };
 
+    this.titlebarDragCleanup = onUp;
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onUp);
+  }
+
+  private titlebarDragCleanup: (() => void) | null = null;
+
+  private cancelTitlebarDrag(): void {
+    this.titlebarDragCleanup?.();
+    this.titlebarDragCleanup = null;
+  }
+
+  private isTitlebarDragTarget(event: MouseEvent): boolean {
+    if (!this.hasChromeBridge()) {
+      return false;
+    }
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) {
+      return false;
+    }
+    return !target.closest(
+      'button, a, input, select, textarea, .tx-titlebar__profile, .tx-titlebar__trailing',
+    );
   }
 
   protected handleMaximizeToggle(): void {

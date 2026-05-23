@@ -1,0 +1,64 @@
+@if (missing()) {
+  <section class="int-tab tx-workspace-tab" [attr.aria-label]="title()">
+    <div class="int-tab__workspace">
+      <div class="int-tab__pane tx-workspace-tab__pane">
+        <div class="request-panel tx-workspace-tab__section-shell">
+          <tx-banner variant="warning" title="Rule not found">
+            This tab points to an interceptor rule that no longer exists. Close the tab or pick another from the sidebar.
+          </tx-banner>
+        </div>
+      </div>
+    </div>
+  </section>
+} @else if (rule(); as r) {
+  <section class="int-tab tx-workspace-tab" [attr.aria-label]="title()">
+    <div
+      class="tx-workspace-tab__chrome tx-entrance-stagger"
+      [class.tx-entrance-stagger--play]="tabMotion.loadStaggerPlay()"
+      [class.tx-entrance-stagger--settled]="tabMotion.loadStaggerSettled()"
+    >
+      <div class="tx-entrance-stagger__block int-tab__bar">
+        <div class="int-tab__bar-cluster">
+          <tx-form-field class="int-tab__name-field" label="Name" controlId="int-rule-name">
+            <tx-input
+              id="int-rule-name"
+              [ngModel]="r.name"
+              (ngModelChange)="handleNameChange($event)"
+            />
+          </tx-form-field>
+          <tx-form-field class="int-tab__match-field" label="Match URL" controlId="int-toolbar-match">
+            <tx-input
+              id="int-toolbar-match"
+              [ngModel]="r.matchUrl"
+              (ngModelChange)="handleMatchUrlChange($event)"
+              placeholder="*"
+            />
+          </tx-form-field>
+          <tx-toggle
+            class="int-tab__enabled-toggle"
+            label="Enabled"
+            [ngModel]="r.enabled"
+            (ngModelChange)="handleEnabledChange($event)"
+          />
+        </div>
+      </div>
+    </div>
+
+    <div class="int-tab__workspace">
+      <div
+        class="int-tab__pane tx-workspace-tab__pane tx-entrance-stagger"
+        [class.tx-entrance-stagger--play]="tabMotion.loadStaggerPlay()"
+        [class.tx-entrance-stagger--settled]="tabMotion.loadStaggerSettled()"
+      >
+        <div class="tx-entrance-stagger__block int-tab__content">
+          <app-int-tab-action-panel
+            [rule]="r"
+            (actionChange)="handleActionChange($event)"
+            (mockStatusChange)="handleMockStatusChange($event)"
+            (mockBodyChange)="handleMockBodyChange($event)"
+          />
+        </div>
+      </div>
+    </div>
+  </section>
+}

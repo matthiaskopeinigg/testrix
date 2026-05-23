@@ -18,6 +18,7 @@ export const ConfigChannels = {
   resetSession: 'config:resetSession',
   getHistory: 'config:getHistory',
   setHistory: 'config:setHistory',
+  historyUpdated: 'config:historyUpdated',
   getProfiles: 'config:getProfiles',
   setActiveProfile: 'config:setActiveProfile',
   createProfile: 'config:createProfile',

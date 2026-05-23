@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import { createDefaultWorkspaceEditor } from './workspace-editor.schema';
+import {
+  createDefaultWorkspaceEditor,
+  WORKSPACE_EDITOR_MAIN_GROUP_ID,
+} from './workspace-editor.schema';
 import {
   WORKSPACE_SPLIT_MAX_RATIO,
   WORKSPACE_SPLIT_MIN_RATIO,
@@ -8,6 +11,7 @@ import {
 import {
   clampWorkspaceSplitRatio,
   normalizeWorkspaceEditorState,
+  pruneWorkspaceEditorTabs,
   splitLayoutAtGroup,
   workspaceEditorHasAnyTabs,
 } from './workspace-editor.logic';
@@ -78,6 +82,35 @@ describe('splitLayoutAtGroup', () => {
     expect(workspaceEditorHasAnyTabs(next)).toBe(false);
     expect(next.layout).toEqual({ type: 'leaf', groupId: 'main' });
     expect(next.recentResourceIds).toEqual(['req-1']);
+  });
+
+  it('pruneWorkspaceEditorTabs removes tabs that fail the predicate', () => {
+    const editor = createDefaultWorkspaceEditor();
+    editor.groups[WORKSPACE_EDITOR_MAIN_GROUP_ID] = {
+      tabs: [
+        {
+          id: 'tab-a',
+          resourceId: 'req-a',
+          kind: 'request',
+          pinned: false,
+        },
+        {
+          id: 'tab-b',
+          resourceId: 'req-b',
+          kind: 'request',
+          pinned: false,
+        },
+      ],
+      activeTabId: 'tab-b',
+    };
+    editor.recentResourceIds = ['req-a', 'req-b', 'req-c'];
+
+    const pruned = pruneWorkspaceEditorTabs(editor, (tab) => tab.resourceId === 'req-a');
+    const group = pruned.groups[WORKSPACE_EDITOR_MAIN_GROUP_ID]!;
+    expect(group.tabs).toHaveLength(1);
+    expect(group.tabs[0]?.resourceId).toBe('req-a');
+    expect(group.activeTabId).toBe('tab-a');
+    expect(pruned.recentResourceIds).toEqual(['req-a']);
   });
 
   it('places new pane on the left when placement is before', () => {

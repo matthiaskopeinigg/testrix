@@ -1,48 +1,272 @@
+<div class="mock-server-sidebar-panel">
+  <button
+    type="button"
+    class="mock-server-sidebar-panel__settings-toggle"
+    [attr.aria-expanded]="settingsExpanded()"
+    (click)="handleToggleSettings()"
+  >
+    <tx-icon
+      name="chevronDown"
+      [size]="14"
+      class="mock-server-sidebar-panel__settings-chevron"
+      [class.is-collapsed]="!settingsExpanded()"
+      aria-hidden="true"
+    />
+    <span>Server settings</span>
+  </button>
+
+  @if (settingsExpanded()) {
+    <section class="mock-server-sidebar-panel__settings" aria-label="Mock server settings">
+      <div class="mock-server-sidebar-panel__runtime" aria-label="Mock server runtime">
+        <div class="mock-server-sidebar-panel__runtime-status">
+          <span
+            class="mock-server-sidebar-panel__status-dot"
+            [class.is-running]="running()"
+            aria-hidden="true"
+          ></span>
+          <div class="mock-server-sidebar-panel__status-copy">
+            <span class="mock-server-sidebar-panel__status-label">
+              {{ running() ? 'Running' : 'Stopped' }}
+            </span>
+            @if (running()) {
+              <button
+                type="button"
+                class="mock-server-sidebar-panel__status-addr"
+                [title]="'Copy ' + listenUrl()"
+                [attr.aria-label]="'Copy listen address ' + listenUrl()"
+                (click)="handleCopyListenAddress()"
+              >
+                {{ listenAddress() }}
+              </button>
+            } @else {
+              <span class="mock-server-sidebar-panel__status-hint">Server is not listening</span>
+            }
+          </div>
+        </div>
+        <tx-button
+          class="mock-server-sidebar-panel__runtime-action"
+          [variant]="running() ? 'secondary' : 'primary'"
+          (pressed)="handleToggleServer()"
+        >
+          {{ running() ? 'Stop server' : 'Start server' }}
+        </tx-button>
+      </div>
+
+      <div class="mock-server-sidebar-panel__settings-row">
+        <tx-form-field label="Port" controlId="ms-port">
+          <tx-input
+            id="ms-port"
+            [ngModel]="portField()"
+            (ngModelChange)="handlePortChange($event)"
+            placeholder="auto"
+          />
+        </tx-form-field>
+        <tx-form-field label="Delay (ms)" controlId="ms-delay">
+          <tx-input
+            id="ms-delay"
+            type="number"
+            [ngModel]="options().delayMs"
+            (ngModelChange)="handleDelayChange($event)"
+          />
+        </tx-form-field>
+      </div>
+      <tx-form-field label="Bind address" controlId="ms-host">
+        <tx-input
+          id="ms-host"
+          [ngModel]="options().host"
+          (ngModelChange)="handleHostChange($event)"
+        />
+      </tx-form-field>
+      <tx-toggle
+        label="CORS"
+        [ngModel]="options().cors.enabled"
+        (ngModelChange)="handleCorsEnabledChange($event)"
+      />
+      @if (options().cors.enabled) {
+        <div class="mock-server-sidebar-panel__cors-fields">
+          <tx-form-field label="Allow origin" controlId="ms-cors-origin">
+            <tx-input
+              id="ms-cors-origin"
+              [ngModel]="options().cors.allowOrigin"
+              (ngModelChange)="handleCorsAllowOriginChange($event)"
+              placeholder="*"
+            />
+          </tx-form-field>
+          <tx-form-field label="Allow methods" controlId="ms-cors-methods">
+            <tx-input
+              id="ms-cors-methods"
+              [ngModel]="options().cors.allowMethods"
+              (ngModelChange)="handleCorsAllowMethodsChange($event)"
+              placeholder="*"
+            />
+          </tx-form-field>
+          <tx-form-field label="Allow headers" controlId="ms-cors-headers">
+            <tx-input
+              id="ms-cors-headers"
+              [ngModel]="options().cors.allowHeaders"
+              (ngModelChange)="handleCorsAllowHeadersChange($event)"
+              placeholder="*"
+            />
+          </tx-form-field>
+        </div>
+      }
+      <tx-toggle
+        label="Capture activity to History"
+        [ngModel]="options().captureToHistory"
+        (ngModelChange)="handleCaptureChange($event)"
+      />
+      <tx-toggle
+        label="Capture mismatches to History"
+        [ngModel]="options().captureMismatchesToHistory"
+        (ngModelChange)="handleCaptureMismatchesChange($event)"
+      />
+      <tx-toggle
+        label="Auto-start on launch"
+        [ngModel]="options().autoStartOnLaunch"
+        (ngModelChange)="handleAutoStartChange($event)"
+      />
+    </section>
+  }
+</div>
+
 <app-workspace-sidebar-panel-shell
+  class="mock-server-sidebar-panel__shell"
   [searchPlaceholder]="searchPlaceholder()"
   [searchAriaLabel]="searchAriaLabel()"
-  [showFolderToggle]="false"
+  [allFoldersExpanded]="allExpanded()"
+  [showFolderToggle]="true"
   [showFilterButton]="false"
   [showSortButton]="false"
   (searchChange)="handleSearch($event)"
+  (allFoldersExpandedChange)="handleExpandAll($event)"
 >
-  <div workspacePanelToolbarActions class="mock-server-sidebar-panel__toolbar">
-    <tx-button variant="secondary" (pressed)="handleToggleServer()">
-      {{ running() ? 'Stop' : 'Start' }}
-    </tx-button>
+  <div workspacePanelToolbarActions>
     <button
       type="button"
       class="workspace-panel-shell__icon-btn"
-      aria-label="Add mock endpoint"
-      title="Add mock endpoint"
-      (click)="handleAdd()"
+      [class.is-pressed]="filterToolbarActive()"
+      aria-label="Filter mock endpoints"
+      title="Filter"
+      [attr.aria-expanded]="filterMenuOpen()"
+      (click)="handleFilterToolbarClick($event)"
     >
-      <tx-icon name="plus" [size]="16" aria-hidden="true" />
+      <tx-icon name="filter" [size]="16" aria-hidden="true" />
+    </button>
+    <button
+      type="button"
+      class="workspace-panel-shell__icon-btn"
+      [class.is-pressed]="sortToolbarActive()"
+      aria-label="Sort mock endpoints"
+      title="Sort"
+      [attr.aria-expanded]="sortMenuOpen()"
+      (click)="handleSortToolbarClick($event)"
+    >
+      <tx-icon name="list" [size]="16" aria-hidden="true" />
     </button>
   </div>
 
-  @if (running()) {
-    <p class="mock-server-sidebar-panel__status">
-      <tx-tag variant="success">Running</tx-tag>
-      <span>{{ options().host }}:{{ options().port }}</span>
-    </p>
-  }
+  <div
+    class="mock-server-sidebar-panel__body"
+    (contextmenu)="handleTreeAreaContextMenu($event)"
+  >
+    <div class="mock-server-sidebar-panel__active">
+      <tx-tree
+        class="mock-server-sidebar-panel__tree"
+        [emptyMessage]="treeEmptyMessage()"
+        [nodes]="filteredNodes()"
+        [config]="treeConfig()"
+        [expandedIds]="expandedIds()"
+        [selectionIds]="treeSelectionIds()"
+        [renamingNodeId]="renamingNodeId()"
+        (nodesChange)="handleNodesChange($event)"
+        (expandedChange)="handleExpandedChange($event)"
+        (nodeClick)="handleNodeClick($event)"
+        (nodeDblClick)="handleNodeDblClick($event)"
+        (renameCommit)="handleRenameCommit($event)"
+        (renameCancel)="handleRenameCancel()"
+        (rowContextMenu)="handleRowContextMenu($event)"
+      />
+    </div>
 
-  <ul class="testing-list-sidebar-panel__list" role="list">
-    @for (item of filtered(); track item.id) {
-      <li>
-        <button
-          type="button"
-          class="testing-list-sidebar-panel__item"
-          [class.is-active]="activeItemId() === item.id"
-          (click)="handleOpen(item.id)"
-        >
-          <tx-icon name="api" [size]="16" aria-hidden="true" />
-          <span>{{ item.method }} {{ item.name }}</span>
-        </button>
-      </li>
-    } @empty {
-      <li class="testing-list-sidebar-panel__empty" role="status">No mock endpoints yet.</li>
+    @if (mismatches().length > 0) {
+      <section
+        class="mock-server-sidebar-panel__mismatches"
+        [class.is-expanded]="mismatchesPanelExpanded()"
+        aria-label="Unmatched requests"
+      >
+        <header class="mock-server-sidebar-panel__mismatches-header">
+          <button
+            type="button"
+            class="mock-server-sidebar-panel__mismatches-toggle"
+            [attr.aria-expanded]="mismatchesPanelExpanded()"
+            (click)="handleToggleMismatchesPanel()"
+          >
+            <tx-icon
+              name="chevronDown"
+              [size]="14"
+              class="mock-server-sidebar-panel__mismatches-chevron"
+              [class.is-collapsed]="!mismatchesPanelExpanded()"
+              aria-hidden="true"
+            />
+            <span>Unmatched requests</span>
+            <span class="mock-server-sidebar-panel__mismatches-count">{{ mismatches().length }}</span>
+          </button>
+          @if (mismatchesPanelExpanded()) {
+            <tx-button variant="secondary" (pressed)="handleClearMismatches()">Clear</tx-button>
+          }
+        </header>
+        @if (mismatchesPanelExpanded()) {
+          <ul class="mock-server-sidebar-panel__mismatch-list" role="list">
+            @for (m of mismatches(); track m.id) {
+              <li>
+                <button
+                  type="button"
+                  class="mock-server-sidebar-panel__mismatch-item"
+                  [class.is-active]="activeMismatchId() === m.id"
+                  (click)="handleOpenMismatch(m.id)"
+                >
+                  <span class="mock-server-sidebar-panel__mismatch-method">{{ m.method }}</span>
+                  <span class="mock-server-sidebar-panel__mismatch-path">{{ m.pathname }}</span>
+                </button>
+              </li>
+            }
+          </ul>
+        }
+      </section>
     }
-  </ul>
+  </div>
 </app-workspace-sidebar-panel-shell>
+
+<tx-context-menu
+  [open]="contextMenuOpen()"
+  [position]="contextMenuPosition()"
+  [items]="contextMenuItems()"
+  (itemSelect)="handleContextMenuSelect($event)"
+  (closed)="handleContextMenuClosed()"
+/>
+
+<tx-context-menu
+  [open]="filterMenuOpen()"
+  [position]="filterMenuPosition()"
+  [items]="filterMenuItems()"
+  (itemSelect)="handleFilterMenuSelect($event)"
+  (closed)="handleFilterMenuClosed()"
+/>
+
+<tx-context-menu
+  [open]="sortMenuOpen()"
+  [position]="sortMenuPosition()"
+  [items]="sortMenuItems()"
+  (itemSelect)="handleSortMenuSelect($event)"
+  (closed)="handleSortMenuClosed()"
+/>
+
+<tx-confirm-dialog
+  [open]="deleteOpen()"
+  title="Delete item"
+  [message]="deleteMessage()"
+  confirmLabel="Delete"
+  variant="danger"
+  (confirmed)="handleDeleteConfirmed()"
+  (closed)="handleDeleteClosed()"
+/>

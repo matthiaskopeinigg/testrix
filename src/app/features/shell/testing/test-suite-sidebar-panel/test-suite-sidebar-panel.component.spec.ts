@@ -62,6 +62,8 @@ describe('TestSuiteSidebarPanelComponent', () => {
             flows: computed(() => SAMPLE_FILE.suites[0]!.flows),
             addFolder: vi.fn(),
             addFlow: vi.fn().mockReturnValue({ id: 'flw-new' }),
+            allTags: computed(() => []),
+            duplicateTreeItem: vi.fn(),
             saveNodes: vi.fn(),
             renameNode: vi.fn(),
             deleteTreeItem: vi.fn(),

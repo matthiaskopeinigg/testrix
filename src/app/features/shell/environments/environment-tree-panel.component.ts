@@ -53,7 +53,6 @@ import { applyEnvironmentTreeView } from './environment-tree.view';
 import type { EnvironmentTreeKind, EnvironmentTreeNode, EnvironmentTreeNodeMeta } from './environment-tree.types';
 
 const SESSION_EXPAND_DEBOUNCE_MS = 300;
-const ROW_CLICK_DELAY_MS = 250;
 
 @Component({
   selector: 'app-environment-tree-panel',
@@ -107,7 +106,6 @@ export class EnvironmentTreePanelComponent {
 
   private readonly expandedSnapshotBeforeSearch = signal<string[] | null>(null);
   private sessionSaveTimer: ReturnType<typeof setTimeout> | null = null;
-  private rowClickTimer: ReturnType<typeof setTimeout> | null = null;
   /** Prevents re-expanding ancestor folders when the tree mutates but selection is unchanged. */
   private selectionRevealKey: string | null = null;
 
@@ -355,10 +353,6 @@ export class EnvironmentTreePanelComponent {
 
     const kind = resolveEnvironmentKind(loc.node);
     if (kind === 'folder') {
-      if (this.rowClickTimer !== null) {
-        clearTimeout(this.rowClickTimer);
-        this.rowClickTimer = null;
-      }
       const isExpanded = this.expandedIds().includes(event.nodeId);
       const next = isExpanded
         ? this.expandedIds().filter((id) => id !== event.nodeId)
@@ -371,22 +365,10 @@ export class EnvironmentTreePanelComponent {
       return;
     }
 
-    if (this.rowClickTimer !== null) {
-      clearTimeout(this.rowClickTimer);
-    }
-
-    const nodeId = event.nodeId;
-    this.rowClickTimer = setTimeout(() => {
-      this.rowClickTimer = null;
-      this.selectedVariableIdChange.emit(nodeId);
-    }, ROW_CLICK_DELAY_MS);
+    this.selectedVariableIdChange.emit(event.nodeId);
   }
 
   protected handleNodeDblClick(event: TxTreeNodeClickEvent<EnvironmentTreeNodeMeta>): void {
-    if (this.rowClickTimer !== null) {
-      clearTimeout(this.rowClickTimer);
-      this.rowClickTimer = null;
-    }
     this.startInlineRename(event.nodeId);
   }
 

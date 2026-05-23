@@ -296,3 +296,38 @@ export function pushRecentResourceId(recent: readonly string[], resourceId: stri
   const filtered = recent.filter((id) => id !== resourceId);
   return [resourceId, ...filtered].slice(0, 32);
 }
+
+/**
+ * Removes tabs that fail `shouldKeepTab` from every group and fixes active tab / recent ids.
+ */
+export function pruneWorkspaceEditorTabs(
+  editor: WorkspaceEditorState,
+  shouldKeepTab: (tab: WorkspaceTab) => boolean,
+): WorkspaceEditorState {
+  const groups: Record<string, TabGroupState> = {};
+  const remainingResourceIds = new Set<string>();
+
+  for (const [groupId, group] of Object.entries(editor.groups)) {
+    const tabs = group.tabs.filter((tab) => {
+      const keep = shouldKeepTab(tab);
+      if (keep) {
+        remainingResourceIds.add(tab.resourceId);
+      }
+      return keep;
+    });
+    const activeStillPresent =
+      group.activeTabId !== null && tabs.some((tab) => tab.id === group.activeTabId);
+    groups[groupId] = {
+      tabs,
+      activeTabId: activeStillPresent ? group.activeTabId : (tabs[0]?.id ?? null),
+    };
+  }
+
+  const recentResourceIds = editor.recentResourceIds.filter((id) => remainingResourceIds.has(id));
+
+  return normalizeWorkspaceEditorState({
+    ...editor,
+    groups,
+    recentResourceIds,
+  });
+}

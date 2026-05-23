@@ -340,13 +340,6 @@ $toolbar-control-h: tab-chrome.$workspace-tab-chip-height;
   }
 }
 
-@container ts-flow-toolbar (max-width: 540px) {
-  ::ng-deep .ts-flow-settings__tags {
-    flex: 1 1 6rem;
-    max-width: none;
-  }
-}
-
 @container ts-flow-toolbar (max-width: 420px) {
   ::ng-deep .ts-flow-settings__toggle--e2e .tx-toggle__label {
     position: absolute;

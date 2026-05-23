@@ -87,6 +87,15 @@ const api: ElectronAPI = {
     setEnvironments: (data) => ipcRenderer.invoke(ConfigChannels.setEnvironments, data),
     getHistory: () => ipcRenderer.invoke(ConfigChannels.getHistory),
     setHistory: (data) => ipcRenderer.invoke(ConfigChannels.setHistory, data),
+    onHistoryUpdated: (listener) => {
+      const handler = (_event: IpcRendererEvent, payload: unknown): void => {
+        listener(payload);
+      };
+      ipcRenderer.on(ConfigChannels.historyUpdated, handler);
+      return () => {
+        ipcRenderer.removeListener(ConfigChannels.historyUpdated, handler);
+      };
+    },
     getProfiles: () => ipcRenderer.invoke(ConfigChannels.getProfiles),
     setActiveProfile: (profileId) => ipcRenderer.invoke(ConfigChannels.setActiveProfile, profileId),
     createProfile: (name) => ipcRenderer.invoke(ConfigChannels.createProfile, name),
@@ -128,13 +137,65 @@ const api: ElectronAPI = {
     mockStatus: () => ipcRenderer.invoke(TestingChannels.mockStatus),
     mockStart: () => ipcRenderer.invoke(TestingChannels.mockStart),
     mockStop: () => ipcRenderer.invoke(TestingChannels.mockStop),
+    mockListMismatches: () => ipcRenderer.invoke(TestingChannels.mockListMismatches),
+    mockClearMismatches: () => ipcRenderer.invoke(TestingChannels.mockClearMismatches),
+    onMockActivity: (listener) => {
+      const handler = (_event: IpcRendererEvent, payload: unknown): void => {
+        listener(payload);
+      };
+      ipcRenderer.on(TestingChannels.mockActivity, handler);
+      return () => {
+        ipcRenderer.removeListener(TestingChannels.mockActivity, handler);
+      };
+    },
     captureStatus: () => ipcRenderer.invoke(TestingChannels.captureStatus),
-    captureStart: () => ipcRenderer.invoke(TestingChannels.captureStart),
+    captureStart: (options) => ipcRenderer.invoke(TestingChannels.captureStart, options),
     captureStop: () => ipcRenderer.invoke(TestingChannels.captureStop),
-    captureListEntries: () => ipcRenderer.invoke(TestingChannels.captureListEntries),
+    captureListEntries: (captureItemId) =>
+      ipcRenderer.invoke(TestingChannels.captureListEntries, captureItemId),
+    captureClearEntries: (captureItemId) =>
+      ipcRenderer.invoke(TestingChannels.captureClearEntries, captureItemId),
+    onCaptureEntry: (listener) => {
+      const handler = (_event: IpcRendererEvent, payload: unknown): void => {
+        listener(payload);
+      };
+      ipcRenderer.on(TestingChannels.captureEntry, handler);
+      return () => {
+        ipcRenderer.removeListener(TestingChannels.captureEntry, handler);
+      };
+    },
+    onCaptureStatus: (listener) => {
+      const handler = (_event: IpcRendererEvent, payload: unknown): void => {
+        listener(payload);
+      };
+      ipcRenderer.on(TestingChannels.captureStatusEvent, handler);
+      return () => {
+        ipcRenderer.removeListener(TestingChannels.captureStatusEvent, handler);
+      };
+    },
     interceptorStatus: () => ipcRenderer.invoke(TestingChannels.interceptorStatus),
-    interceptorStart: () => ipcRenderer.invoke(TestingChannels.interceptorStart),
+    interceptorStart: (options) => ipcRenderer.invoke(TestingChannels.interceptorStart, options),
     interceptorStop: () => ipcRenderer.invoke(TestingChannels.interceptorStop),
+    interceptorListHits: () => ipcRenderer.invoke(TestingChannels.interceptorListHits),
+    interceptorClearHits: () => ipcRenderer.invoke(TestingChannels.interceptorClearHits),
+    onInterceptorHit: (listener) => {
+      const handler = (_event: IpcRendererEvent, payload: unknown): void => {
+        listener(payload);
+      };
+      ipcRenderer.on(TestingChannels.interceptorHit, handler);
+      return () => {
+        ipcRenderer.removeListener(TestingChannels.interceptorHit, handler);
+      };
+    },
+    onInterceptorStatus: (listener) => {
+      const handler = (_event: IpcRendererEvent, payload: unknown): void => {
+        listener(payload);
+      };
+      ipcRenderer.on(TestingChannels.interceptorStatusEvent, handler);
+      return () => {
+        ipcRenderer.removeListener(TestingChannels.interceptorStatusEvent, handler);
+      };
+    },
     loadTestStatus: () => ipcRenderer.invoke(TestingChannels.loadTestStatus),
     loadTestMetrics: () => ipcRenderer.invoke(TestingChannels.loadTestMetrics),
     loadTestStart: (options) => ipcRenderer.invoke(TestingChannels.loadTestStart, options ?? {}),

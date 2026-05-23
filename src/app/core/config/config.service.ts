@@ -194,6 +194,15 @@ export class ConfigService {
                 ...patch.workspace.environments,
               }
             : current.workspace.environments,
+          history: patch.workspace?.history
+            ? {
+                ...current.workspace.history,
+                ...patch.workspace.history,
+                collapsedByDate: patch.workspace.history.collapsedByDate
+                  ? { ...current.workspace.history.collapsedByDate, ...patch.workspace.history.collapsedByDate }
+                  : current.workspace.history.collapsedByDate,
+              }
+            : current.workspace.history,
           editor: patch.workspace?.editor
             ? {
                 ...current.workspace.editor,

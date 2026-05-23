@@ -58,7 +58,12 @@
 
       @if (useTitlebarLayout()) {
         <div class="tx-entrance-stagger__block ws-tab__sections-wrap">
-          <nav class="ws-tab__sections-bar" role="tablist" aria-label="WebSocket sections">
+          <nav
+            class="ws-tab__sections-bar"
+            role="tablist"
+            aria-label="WebSocket sections"
+            [txWorkspaceSectionNav]="activeSection()"
+          >
             @for (item of navItems; track item.id) {
               <button
                 type="button"
@@ -89,7 +94,12 @@
     >
       <div class="ws-tab__workspace ws-tab__split-primary" txSplitPrimary>
         @if (useSidebarLayout()) {
-          <nav class="ws-tab__nav" role="tablist" aria-label="WebSocket sections">
+          <nav
+            class="ws-tab__nav"
+            role="tablist"
+            aria-label="WebSocket sections"
+            [txWorkspaceSectionNav]="activeSection()"
+          >
             @for (item of navItems; track item.id) {
               <button
                 type="button"
@@ -108,10 +118,7 @@
           </nav>
           <div class="ws-tab__divider" aria-hidden="true"></div>
         }
-        <div
-          class="ws-tab__pane tx-workspace-tab__pane"
-          [class.tx-workspace-tab__pane--switch]="tabMotion.paneSwitchActive()"
-        >
+        <div class="ws-tab__pane tx-workspace-tab__pane">
           @switch (activeSection()) {
             @case ('overview') {
               <div
@@ -123,11 +130,14 @@
                   <app-ws-tab-overview-panel
                     [description]="descriptionDraft()"
                     [tags]="tags()"
-                    [auth]="auth()"
-                    [paramCount]="paramCount()"
-                    [headerCount]="headerCount()"
+                    [wsPath]="wsPath()"
+                    [parentPath]="parentPath()"
+                    [environmentName]="activeEnvironment()?.name ?? 'No environment'"
+                    [settings]="settings()"
+                    [connectionState]="connectionState()"
                     (descriptionChange)="handleDescriptionChange($event)"
                     (tagsChange)="handleTagsChange($event)"
+                    (sectionSelect)="handleSectionSelect($event)"
                   />
                 </div>
               </div>
@@ -231,7 +241,7 @@
                     Message delivery will be enabled when WebSocket connection support ships.
                   </tx-banner>
                 </div>
-                <div class="tx-entrance-stagger__block ws-tab__editor">
+                <div class="tx-entrance-stagger__block ws-tab__editor ws-tab__editor--after-banner">
                   <tx-code-editor
                     language="json"
                     languageBadgeLabel="JSON"

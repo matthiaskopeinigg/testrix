@@ -1,6 +1,7 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 
 import {
+  createDefaultLoadTestManualTarget,
   createDefaultLoadTestsFile,
   loadTestArtifactSchema,
   loadTestsFileSchema,
@@ -51,6 +52,23 @@ export class LoadTestService {
   readonly items = computed(() => this.fileState()?.items ?? []);
 
   readonly nodes = computed(() => toLoadTestTreeNodes(this.items()));
+
+  readonly allTags = computed(() => {
+    const tags = new Set<string>();
+    const walk = (list: readonly LoadTestTreeItem[]): void => {
+      for (const item of list) {
+        if (isArtifact(item)) {
+          for (const tag of item.tags ?? []) {
+            tags.add(tag);
+          }
+        } else {
+          walk(item.children);
+        }
+      }
+    };
+    walk(this.items());
+    return [...tags].sort((a, b) => a.localeCompare(b));
+  });
 
   async hydrate(): Promise<void> {
     return runTestingHydrateOnce(
@@ -125,7 +143,10 @@ export class LoadTestService {
         id: newTestingId(),
         name,
         description: '',
+        tags: [],
         docs: '',
+        targetSource: 'collection',
+        manualTarget: createDefaultLoadTestManualTarget(),
         profile: { durationSec: 60, virtualUsers: 10, rampUpSec: 0 },
         thresholds: {},
         runs: [],
@@ -138,6 +159,10 @@ export class LoadTestService {
 
     this.saveNodes(result.nodes);
     return this.findArtifact(result.nodeId) ?? createDefaultLoadTestArtifactPayload(result.nodeId, name);
+  }
+
+  patchTags(id: string, tags: readonly string[]): void {
+    this.patchArtifact(id, { tags: [...tags] });
   }
 
   patchArtifact(id: string, patch: Partial<Omit<LoadTestArtifact, 'id'>>): void {
@@ -195,6 +220,7 @@ export class LoadTestService {
     this.patchArtifact(result.nodeId, {
       name: `${existing.name} copy`,
       description: existing.description,
+      tags: [...(existing.tags ?? [])],
       docs: existing.docs,
       targetRequestId: existing.targetRequestId,
       profile: existing.profile,

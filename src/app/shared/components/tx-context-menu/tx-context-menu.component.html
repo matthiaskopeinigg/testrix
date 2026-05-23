@@ -16,7 +16,7 @@
           type="button"
           class="tx-context-menu__item"
           role="menuitem"
-          [class.tx-context-menu__item--danger]="item.danger"
+          [class.tx-context-menu__item--danger]="isDangerItem(item)"
           [class.tx-context-menu__item--active]="isActive($index)"
           [disabled]="item.disabled"
           (click)="handleItemClick(item, $event)"

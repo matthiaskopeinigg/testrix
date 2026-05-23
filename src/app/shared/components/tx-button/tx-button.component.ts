@@ -11,7 +11,7 @@ import { TxSpinnerComponent } from '../tx-spinner/tx-spinner.component';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TxButtonComponent {
-  readonly variant = input<'cta' | 'primary' | 'secondary' | 'add'>('primary');
+  readonly variant = input<'cta' | 'primary' | 'secondary' | 'add' | 'danger'>('primary');
 
   readonly disabled = input(false);
 

@@ -99,6 +99,11 @@
   --tx-btn-add-fg: color-mix(in srgb, #5cb88a 82%, #f3ece2);
   --tx-btn-add-border: color-mix(in srgb, #5cb88a 52%, #2c2620);
   --tx-btn-add-hover-bg: color-mix(in srgb, #5cb88a 16%, #14110f);
+  --tx-btn-danger-bg: #da3633;
+  --tx-btn-danger-fg: #ffffff;
+  --tx-btn-danger-border: #b62324;
+  --tx-btn-danger-hover-bg: #f85149;
+  --tx-btn-danger-active-bg: #b62324;
 
   --tx-scrollbar-track: color-mix(in srgb, var(--tx-surface-1) 94%, var(--tx-surface-0) 6%);
   --tx-scrollbar-thumb: color-mix(in srgb, var(--tx-primary) 48%, var(--tx-surface-1) 52%);

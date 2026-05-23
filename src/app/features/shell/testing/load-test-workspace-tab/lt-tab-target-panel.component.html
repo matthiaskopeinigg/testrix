@@ -3,9 +3,21 @@
     <div>
       <h2 class="lt-target-panel__title">Target request</h2>
       <p class="lt-target-panel__hint">
-        Choose the collection HTTP request this load test will exercise.
+        Pick a collection request or define a manual HTTP request for this load test.
       </p>
     </div>
+  </header>
+
+  <tx-form-field class="lt-target-panel__source-field" label="Target source" controlId="lt-target-source">
+    <tx-dropdown
+      controlId="lt-target-source"
+      [options]="targetSourceOptions"
+      [ngModel]="resolvedTargetSource()"
+      (ngModelChange)="handleTargetSourceChange($event)"
+    />
+  </tx-form-field>
+
+  @if (resolvedTargetSource() === 'collection') {
     @if (targetRequestId()) {
       <div class="lt-target-panel__selection">
         <tx-banner variant="info" title="Selected target">
@@ -17,56 +29,62 @@
         </div>
       </div>
     }
-  </header>
 
-  <app-workspace-sidebar-panel-shell
-    class="lt-target-panel__shell"
-    searchPlaceholder="Search requests…"
-    searchAriaLabel="Search collection requests"
-    [allFoldersExpanded]="allExpanded()"
-    [useDefaultToolbarActions]="false"
-    (searchChange)="handleSearch($event)"
-    (allFoldersExpandedChange)="handleExpandAll($event)"
-  >
-    <div workspacePanelToolbarActions class="lt-target-panel__toolbar-actions">
-      <button
-        type="button"
-        class="workspace-panel-shell__icon-btn"
-        [class.is-pressed]="filterToolbarActive()"
-        aria-label="Filter collection items"
-        [attr.aria-expanded]="filterMenuOpen()"
-        (click)="handleFilterToolbarClick($event)"
-      >
-        <tx-icon name="filter" [size]="16" />
-      </button>
-      <button
-        type="button"
-        class="workspace-panel-shell__icon-btn"
-        [class.is-pressed]="sortToolbarActive()"
-        aria-label="Sort collection items"
-        [attr.aria-expanded]="sortMenuOpen()"
-        (click)="handleSortToolbarClick($event)"
-      >
-        <tx-icon name="list" [size]="16" />
-      </button>
-    </div>
+    <app-workspace-sidebar-panel-shell
+      class="lt-target-panel__shell"
+      searchPlaceholder="Search requests…"
+      searchAriaLabel="Search collection requests"
+      [allFoldersExpanded]="allExpanded()"
+      [useDefaultToolbarActions]="false"
+      (searchChange)="handleSearch($event)"
+      (allFoldersExpandedChange)="handleExpandAll($event)"
+    >
+      <div workspacePanelToolbarActions class="lt-target-panel__toolbar-actions">
+        <button
+          type="button"
+          class="workspace-panel-shell__icon-btn"
+          [class.is-pressed]="filterToolbarActive()"
+          aria-label="Filter collection items"
+          [attr.aria-expanded]="filterMenuOpen()"
+          (click)="handleFilterToolbarClick($event)"
+        >
+          <tx-icon name="filter" [size]="16" />
+        </button>
+        <button
+          type="button"
+          class="workspace-panel-shell__icon-btn"
+          [class.is-pressed]="sortToolbarActive()"
+          aria-label="Sort collection items"
+          [attr.aria-expanded]="sortMenuOpen()"
+          (click)="handleSortToolbarClick($event)"
+        >
+          <tx-icon name="list" [size]="16" />
+        </button>
+      </div>
 
-    <div class="lt-target-panel__body">
-      @if (displayNodes().length === 0) {
-        <p class="lt-target-panel__empty">{{ emptyStateMessage() }}</p>
-      } @else {
-        <tx-tree
-          class="lt-target-panel__tree"
-          [nodes]="displayNodes()"
-          [config]="treeConfig()"
-          [expandedIds]="expandedIds()"
-          [selectionIds]="treeSelectionIds()"
-          (expandedChange)="handleExpandedChange($event)"
-          (nodeClick)="handleNodeClick($event)"
-        />
-      }
-    </div>
-  </app-workspace-sidebar-panel-shell>
+      <div class="lt-target-panel__body">
+        @if (displayNodes().length === 0) {
+          <p class="lt-target-panel__empty">{{ emptyStateMessage() }}</p>
+        } @else {
+          <tx-tree
+            class="lt-target-panel__tree"
+            [nodes]="displayNodes()"
+            [config]="treeConfig()"
+            [expandedIds]="expandedIds()"
+            [selectionIds]="treeSelectionIds()"
+            (expandedChange)="handleExpandedChange($event)"
+            (nodeClick)="handleNodeClick($event)"
+          />
+        }
+      </div>
+    </app-workspace-sidebar-panel-shell>
+  } @else {
+    <app-lt-tab-manual-target-panel
+      [manualTarget]="manualTarget()"
+      [variableCatalog]="variableCatalog()"
+      (manualTargetChange)="manualTargetChange.emit($event)"
+    />
+  }
 </div>
 
 <tx-context-menu

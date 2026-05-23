@@ -15,7 +15,7 @@ import {
 } from '@angular/core';
 
 import { TxIconComponent } from '../tx-icon/tx-icon.component';
-import type { TxContextMenuItem, TxContextMenuPosition } from './tx-context-menu.types';
+import { isDestructiveContextMenuItem, type TxContextMenuItem, type TxContextMenuPosition } from './tx-context-menu.types';
 
 const MENU_PADDING = 8;
 
@@ -74,6 +74,10 @@ export class TxContextMenuComponent {
         panel.remove();
       }
     });
+  }
+
+  protected isDangerItem(item: TxContextMenuItem): boolean {
+    return isDestructiveContextMenuItem(item);
   }
 
   protected isActive(index: number): boolean {

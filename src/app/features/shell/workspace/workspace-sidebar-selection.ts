@@ -84,6 +84,9 @@ export function testingSidebarSelectionIds(tab: WorkspaceTab | null): readonly s
   if (tab.kind === 'regression' && tab.resourceId.startsWith('rg:')) {
     return [tab.resourceId.slice(3)];
   }
+  if (tab.kind === 'mock-server' && tab.resourceId.startsWith('ms-mismatch:')) {
+    return [tab.resourceId.slice('ms-mismatch:'.length)];
+  }
   if (tab.kind === 'mock-server' && tab.resourceId.startsWith('ms:')) {
     return [tab.resourceId.slice(3)];
   }

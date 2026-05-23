@@ -113,29 +113,29 @@
   }
 
   &--danger {
-    color: color-mix(in srgb, var(--tx-danger, #e5484d) 88%, var(--tx-text-0));
+    color: var(--tx-btn-danger-bg, #cf222e);
 
     .tx-context-menu__icon-wrap {
-      color: color-mix(in srgb, var(--tx-danger, #e5484d) 85%, var(--tx-text-1));
+      color: var(--tx-btn-danger-bg, #cf222e);
     }
 
     &:hover:not(:disabled),
     &--active {
-      background: color-mix(in srgb, var(--tx-danger, #e5484d) 14%, var(--tx-surface-2));
-      color: var(--tx-danger, #e5484d);
+      background: color-mix(in srgb, var(--tx-btn-danger-bg, #cf222e) 14%, var(--tx-surface-2));
+      color: var(--tx-btn-danger-bg, #cf222e);
 
       &::before {
         background: linear-gradient(
           180deg,
-          var(--tx-danger, #e5484d),
-          color-mix(in srgb, var(--tx-danger, #e5484d) 65%, transparent)
+          var(--tx-btn-danger-bg, #cf222e),
+          color-mix(in srgb, var(--tx-btn-danger-bg, #cf222e) 65%, transparent)
         );
-        box-shadow: 0 0 8px color-mix(in srgb, var(--tx-danger, #e5484d) 40%, transparent);
+        box-shadow: 0 0 8px color-mix(in srgb, var(--tx-btn-danger-bg, #cf222e) 40%, transparent);
       }
 
       .tx-context-menu__icon-wrap {
-        background: color-mix(in srgb, var(--tx-danger, #e5484d) 22%, transparent);
-        color: var(--tx-danger, #e5484d);
+        background: color-mix(in srgb, var(--tx-btn-danger-bg, #cf222e) 22%, transparent);
+        color: var(--tx-btn-danger-bg, #cf222e);
       }
     }
   }

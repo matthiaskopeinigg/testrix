@@ -12,20 +12,24 @@
     <button
       type="button"
       class="workspace-panel-shell__icon-btn"
-      aria-label="Add folder"
-      title="Add folder"
-      (click)="handleAddFolder()"
+      [class.is-pressed]="filterToolbarActive()"
+      aria-label="Filter load tests"
+      title="Filter load tests"
+      [attr.aria-expanded]="filterMenuOpen()"
+      (click)="handleFilterToolbarClick($event)"
     >
-      <tx-icon name="folder" [size]="16" aria-hidden="true" />
+      <tx-icon name="filter" [size]="16" aria-hidden="true" />
     </button>
     <button
       type="button"
       class="workspace-panel-shell__icon-btn"
-      aria-label="Add load test"
-      title="Add load test"
-      (click)="handleAddArtifact()"
+      [class.is-pressed]="sortToolbarActive()"
+      aria-label="Sort load tests"
+      title="Sort load tests"
+      [attr.aria-expanded]="sortMenuOpen()"
+      (click)="handleSortToolbarClick($event)"
     >
-      <tx-icon name="plus" [size]="16" aria-hidden="true" />
+      <tx-icon name="list" [size]="16" aria-hidden="true" />
     </button>
   </div>
 
@@ -60,6 +64,22 @@
   [items]="contextMenuItems()"
   (itemSelect)="handleContextMenuSelect($event)"
   (closed)="handleContextMenuClosed()"
+/>
+
+<tx-context-menu
+  [open]="filterMenuOpen()"
+  [position]="filterMenuPosition()"
+  [items]="filterMenuItems()"
+  (itemSelect)="handleFilterMenuSelect($event)"
+  (closed)="handleFilterMenuClosed()"
+/>
+
+<tx-context-menu
+  [open]="sortMenuOpen()"
+  [position]="sortMenuPosition()"
+  [items]="sortMenuItems()"
+  (itemSelect)="handleSortMenuSelect($event)"
+  (closed)="handleSortMenuClosed()"
 />
 
 <tx-confirm-dialog

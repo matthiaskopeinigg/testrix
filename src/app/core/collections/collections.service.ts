@@ -16,6 +16,7 @@ import {
   deleteCollectionNode,
   duplicateCollectionNode,
   renameCollectionNode,
+  toggleCollectionNodeFavourite,
   setCollectionFolderDescription,
   setCollectionRequestDescription,
   setCollectionWebsocketDescription,
@@ -109,6 +110,16 @@ export class CollectionsService {
 
   renameNode(id: string, label: string): boolean {
     const next = renameCollectionNode(this.nodesState(), id, label);
+    if (!next) {
+      return false;
+    }
+    this.saveNodes(next);
+    return true;
+  }
+
+  /** Toggles whether a collection item appears in the favourites filter. */
+  toggleFavourite(id: string): boolean {
+    const next = toggleCollectionNodeFavourite(this.nodesState(), id);
     if (!next) {
       return false;
     }

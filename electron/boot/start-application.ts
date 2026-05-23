@@ -5,6 +5,10 @@ import { AppReadyCoordinator } from './app-ready-coordinator';
 import { isDevMode, shouldShowSplashBoot, usesAngularDevServer } from '../config/environment';
 import { attachProcessLogging, logDebug, logError } from '../errors/logger';
 import { registerAllIpcHandlers } from '../ipc/register-ipc';
+import {
+  setTestingRuntimeMainWindow,
+  tryTestingRuntimeAutoStart,
+} from '../ipc/handlers/testing.handler';
 import { closeDatabaseConnections } from '../ipc/handlers/db.handler';
 import { resolveAndPrepareProfileLayout } from '../services/config/config-bootstrap.service';
 import { ConfigFileService } from '../services/config/config-file.service';
@@ -222,6 +226,9 @@ export async function startApplication(getBootSplash?: () => BrowserWindow | nul
       getConfigDir: () => activeProfileDirRef,
       readSettings: () => getMainSettings(),
     });
+
+    setTestingRuntimeMainWindow(() => (mainWindow.isDestroyed() ? null : mainWindow));
+    void tryTestingRuntimeAutoStart(files);
 
     /** Document loaded in the hidden window — not shown until `markAngularReady()` after first paint. */
     mainWindow.webContents.once('did-finish-load', () => {

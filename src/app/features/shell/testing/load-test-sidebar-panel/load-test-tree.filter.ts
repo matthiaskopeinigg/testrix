@@ -34,10 +34,13 @@ export function filterLoadTestTree(
     for (const node of list) {
       const labelMatch = node.label.toLowerCase().includes(q);
       const descMatch = (node.data?.description ?? node.subtitle ?? '').toLowerCase().includes(q);
+      const tagMatch = (node.data?.tags ?? node.tags ?? []).some((tag) =>
+        tag.toLowerCase().includes(q),
+      );
       const children = node.children ? filterNodes(node.children) : undefined;
       const childMatch = !!children?.length;
 
-      if (labelMatch || descMatch || childMatch) {
+      if (labelMatch || descMatch || tagMatch || childMatch) {
         out.push({
           ...node,
           children: children?.length ? children : node.children && childMatch ? children : undefined,

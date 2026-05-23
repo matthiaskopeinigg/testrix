@@ -1,28 +1,28 @@
-@use '../testing-sidebar-shared' as shared;
+@use '../../workspace/workspace-sidebar-tree' as sidebar-tree;
 
 :host {
-  @include shared.testing-sidebar-host;
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
 }
 
-.capture-sidebar-panel__toolbar {
+.capture-sidebar-panel {
   display: flex;
-  flex-shrink: 0;
-  align-items: center;
-  gap: 0.25rem;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
 }
 
 .capture-sidebar-panel__status {
-  @include shared.testing-sidebar-status;
+  margin: 0 var(--tx-space-3) var(--tx-space-2);
 }
 
-.testing-list-sidebar-panel__list {
-  @include shared.testing-sidebar-list;
+.capture-sidebar-panel__body {
+  @include sidebar-tree.workspace-sidebar-panel-body;
 }
 
-.testing-list-sidebar-panel__item {
-  @include shared.testing-sidebar-list-item;
-}
-
-.testing-list-sidebar-panel__empty {
-  @include shared.testing-sidebar-empty;
+.capture-sidebar-panel__tree {
+  @include sidebar-tree.workspace-sidebar-tree-host;
 }

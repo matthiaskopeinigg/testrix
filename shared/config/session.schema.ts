@@ -18,6 +18,7 @@ import {
   developmentToolsRecordSchema,
   workspaceDevelopmentSchema,
 } from './development-session.schema';
+import { workspaceHistorySidebarSchema } from './history-sidebar';
 import { workspaceEditorStateSchema } from './workspace-editor.schema';
 import { workspaceTestingSchema } from './testing-session.schema';
 
@@ -62,6 +63,7 @@ const workspaceSchema = z.object({
   sidebarPanelOpen: z.boolean().default(false),
   collections: workspaceCollectionFolderTabsSchema,
   environments: workspaceEnvironmentsSchema,
+  history: workspaceHistorySidebarSchema,
   editor: workspaceEditorStateSchema,
   designSystem: workspaceDesignSystemSchema,
   development: workspaceDevelopmentSchema,
@@ -91,6 +93,7 @@ export const sessionPatchSchema = z
         sidebarPanelOpen: z.boolean().optional(),
         collections: workspaceCollectionFolderTabsSchema.partial().optional(),
         environments: workspaceEnvironmentsSchema.partial().optional(),
+        history: workspaceHistorySidebarSchema.partial().optional(),
         editor: workspaceEditorStateSchema.partial().optional(),
         designSystem: workspaceDesignSystemSchema.partial().optional(),
         development: z

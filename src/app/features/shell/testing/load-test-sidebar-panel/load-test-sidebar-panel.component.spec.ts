@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { signal } from '@angular/core';
+import { computed, signal } from '@angular/core';
 import { describe, expect, it, vi } from 'vitest';
 
 import { ConfigService } from '@app/core/config/config.service';
@@ -64,6 +64,7 @@ describe('LoadTestSidebarPanelComponent', () => {
           provide: LoadTestService,
           useValue: {
             nodes: signal(treeNodes),
+            allTags: computed(() => []),
             addFolder: vi.fn(),
             addArtifact: vi.fn().mockReturnValue({ id: 'new-a' }),
             saveNodes: vi.fn(),

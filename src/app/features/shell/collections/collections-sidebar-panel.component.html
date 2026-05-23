@@ -4,9 +4,33 @@
   [searchAriaLabel]="searchAriaLabel()"
   [showFolderToggle]="hasFolders()"
   [allFoldersExpanded]="allExpanded()"
+  [useDefaultToolbarActions]="false"
   (searchChange)="handleSearch($event)"
   (allFoldersExpandedChange)="handleExpandAll($event)"
 >
+  <div workspacePanelToolbarActions class="collections-sidebar-panel__toolbar-actions">
+    <button
+      type="button"
+      class="workspace-panel-shell__icon-btn"
+      [class.is-pressed]="filterToolbarActive()"
+      aria-label="Filter collections"
+      [attr.aria-expanded]="filterMenuOpen()"
+      (click)="handleFilterToolbarClick($event)"
+    >
+      <tx-icon name="filter" [size]="16" />
+    </button>
+    <button
+      type="button"
+      class="workspace-panel-shell__icon-btn"
+      [class.is-pressed]="sortToolbarActive()"
+      aria-label="Sort collections"
+      [attr.aria-expanded]="sortMenuOpen()"
+      (click)="handleSortToolbarClick($event)"
+    >
+      <tx-icon name="list" [size]="16" />
+    </button>
+  </div>
+
   <div
     class="collections-sidebar-panel__body"
     (contextmenu)="handleTreeAreaContextMenu($event)"
@@ -31,6 +55,22 @@
     />
   </div>
 </app-workspace-sidebar-panel-shell>
+
+<tx-context-menu
+  [open]="filterMenuOpen()"
+  [position]="filterMenuPosition()"
+  [items]="filterMenuItems()"
+  (itemSelect)="handleFilterMenuSelect($event)"
+  (closed)="handleFilterMenuClosed()"
+/>
+
+<tx-context-menu
+  [open]="sortMenuOpen()"
+  [position]="sortMenuPosition()"
+  [items]="sortMenuItems()"
+  (itemSelect)="handleSortMenuSelect($event)"
+  (closed)="handleSortMenuClosed()"
+/>
 
 <tx-context-menu
   [open]="contextMenuOpen()"

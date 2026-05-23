@@ -22,6 +22,8 @@ export interface TxTreeNode<TMeta = unknown> {
   readonly tags?: readonly string[];
   /** Optional critical indicator for flows and similar high-priority items. */
   readonly critical?: boolean;
+  /** Optional favourite indicator (star) on collection and similar rows. */
+  readonly favourite?: boolean;
   /** Optional HTTP method chip on request rows (not persisted). */
   readonly httpMethod?: string;
   readonly icon?: TxIconName;

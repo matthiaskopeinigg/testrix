@@ -15,21 +15,11 @@
   min-height: 0;
 }
 
-.history-sidebar-panel__toolbar-actions {
-  display: flex;
-  gap: 6px;
+.history-sidebar-panel__toolbar {
+  display: inline-flex;
   align-items: center;
-}
-
-.history-sidebar-panel__toolbar-btn {
-  flex: 1;
-  min-height: 30px;
-
-  &--danger {
-    flex: 0 0 32px;
-    min-width: 32px;
-    padding-inline: 0;
-  }
+  gap: 0.2rem;
+  flex-shrink: 0;
 }
 
 .history-sidebar-panel__body {

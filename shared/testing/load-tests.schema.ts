@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { LOAD_TEST_TARGET_SOURCE_IDS, loadTestManualTargetSchema } from './load-test-target.schema';
 import {
   loadTestLatencySnapshotSchema,
   loadTestMetricsSampleSchema,
@@ -75,8 +76,11 @@ export const loadTestArtifactSchema = z.object({
   id: z.string().min(1),
   name: boundedText(256),
   description: boundedText(4_000).default(''),
+  tags: z.array(boundedText(64)).max(32).default([]),
   docs: boundedText(32_000).default(''),
+  targetSource: z.enum(LOAD_TEST_TARGET_SOURCE_IDS).default('collection'),
   targetRequestId: z.string().optional(),
+  manualTarget: loadTestManualTargetSchema.optional(),
   profile: loadTestProfileSchema,
   thresholds: loadTestThresholdsSchema.default({}),
   runs: z.array(loadTestRunRecordSchema).max(LOAD_TEST_RUN_HISTORY_MAX).default([]),

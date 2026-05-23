@@ -1,5 +1,6 @@
 import type { LoadTestArtifact, LoadTestTreeItem } from '@shared/testing';
 import {
+  createDefaultLoadTestManualTarget,
   createDefaultLoadTestProfile,
   createDefaultLoadTestThresholds,
 } from '@shared/testing';
@@ -284,7 +285,10 @@ export function createDefaultLoadTestArtifactPayload(
     id,
     name,
     description,
+    tags: [],
     docs: '',
+    targetSource: 'collection',
+    manualTarget: createDefaultLoadTestManualTarget(),
     profile: createDefaultLoadTestProfile(),
     thresholds: createDefaultLoadTestThresholds(),
     runs: [],

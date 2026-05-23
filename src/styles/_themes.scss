@@ -88,6 +88,19 @@
   --tx-btn-add-fg: #{color-mix(in srgb, #{$accent} 82%, #{$text})};
   --tx-btn-add-border: #{color-mix(in srgb, #{$accent} 52%, #{$border})};
   --tx-btn-add-hover-bg: #{color-mix(in srgb, #{$accent} 16%, #{$surface})};
+  @if tx-theme-is-dark($text, $bg) {
+    --tx-btn-danger-bg: #da3633;
+    --tx-btn-danger-fg: #ffffff;
+    --tx-btn-danger-border: #b62324;
+    --tx-btn-danger-hover-bg: #f85149;
+    --tx-btn-danger-active-bg: #b62324;
+  } @else {
+    --tx-btn-danger-bg: #cf222e;
+    --tx-btn-danger-fg: #ffffff;
+    --tx-btn-danger-border: #a40e26;
+    --tx-btn-danger-hover-bg: #b62324;
+    --tx-btn-danger-active-bg: #8b0818;
+  }
 }
 
 html.theme-dark,

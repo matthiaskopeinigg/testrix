@@ -1,0 +1,31 @@
+import type { TestSuiteTreeNode } from './test-suite-tree.types';
+
+/** Filters tree to nodes matching any of the selected tags. */
+export function filterTestSuiteTreeByTags(
+  nodes: readonly TestSuiteTreeNode[],
+  tagFilter: readonly string[],
+): TestSuiteTreeNode[] {
+  if (tagFilter.length === 0) {
+    return [...nodes];
+  }
+  const wanted = new Set(tagFilter.map((t) => t.toLowerCase()));
+
+  const filterNodes = (list: readonly TestSuiteTreeNode[]): TestSuiteTreeNode[] => {
+    const out: TestSuiteTreeNode[] = [];
+    for (const node of list) {
+      const tags = node.data?.tags ?? node.tags ?? [];
+      const tagMatch = tags.some((tag) => wanted.has(tag.toLowerCase()));
+      const children = node.children ? filterNodes(node.children) : undefined;
+      const childMatch = !!children?.length;
+      if (tagMatch || childMatch) {
+        out.push({
+          ...node,
+          children: children?.length ? children : undefined,
+        });
+      }
+    }
+    return out;
+  };
+
+  return filterNodes(nodes);
+}

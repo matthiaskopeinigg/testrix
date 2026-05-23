@@ -1,3 +1,4 @@
+@use '../../workspace/workspace-panel-chrome' as panel;
 @use '../../workspace/workspace-sidebar-tree' as sidebar-tree;
 
 :host {
@@ -19,19 +20,47 @@
   @include sidebar-tree.workspace-sidebar-panel-body;
 }
 
+.regression-sidebar-panel__body:has(.regression-sidebar-panel__archive) {
+  .regression-sidebar-panel__active {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+}
+
+.regression-sidebar-panel__body:has(.regression-sidebar-panel__archive.is-expanded) {
+  .regression-sidebar-panel__active {
+    flex: 1 1 0;
+  }
+}
+
+.regression-sidebar-panel__active {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
 .regression-sidebar-panel__tree {
   @include sidebar-tree.workspace-sidebar-tree-host;
 }
 
 .regression-sidebar-panel__archive {
-  flex-shrink: 0;
-  margin-top: auto;
-  border-top: 1px solid color-mix(in srgb, var(--tx-border-0) 65%, transparent);
-  padding-top: 0.35rem;
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  border-top: 1px solid color-mix(in srgb, var(--tx-border-0) 72%, transparent);
+  background: color-mix(in srgb, var(--tx-surface-1) 88%, var(--tx-surface-0));
+
+  &.is-expanded {
+    flex: 1 1 0;
+  }
 }
 
 .regression-sidebar-panel__archive-header {
   display: flex;
+  flex-shrink: 0;
   align-items: center;
   gap: 0.4rem;
   width: 100%;
@@ -44,9 +73,15 @@
   text-transform: uppercase;
   letter-spacing: 0.04em;
   cursor: pointer;
+
+  &:hover {
+    color: var(--tx-text-0);
+    background: color-mix(in srgb, var(--tx-surface-2) 55%, transparent);
+  }
 }
 
 .regression-sidebar-panel__archive-chevron {
+  flex-shrink: 0;
   transition: transform 160ms ease;
 
   &.is-collapsed {
@@ -64,10 +99,19 @@
   font-weight: 700;
 }
 
+.regression-sidebar-panel__archive-body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
 .regression-sidebar-panel__archive-tree {
-  @include sidebar-tree.workspace-sidebar-tree-host;
-  max-height: 40vh;
+  flex: 1 1 auto;
   min-height: 0;
   overflow: auto;
-  flex: 0 1 auto;
+  padding-top: 0;
+
+  @include panel.workspace-sidebar-tree-tokens;
 }

@@ -234,6 +234,10 @@
   min-width: 0;
 }
 
+.ws-tab__editor--after-banner {
+  margin-block-start: 0.75rem;
+}
+
 :host ::ng-deep .ws-tab__editor > tx-code-editor,
 :host ::ng-deep .ws-tab__editor tx-code-editor {
   flex: 1 1 auto;

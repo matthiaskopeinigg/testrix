@@ -1,5 +1,36 @@
 // Motion for request / folder workspace tabs (gated by `settings.ui.animationSpeed`).
 
+.workspace-tab-section-nav {
+  .workspace-tab-section-nav__slider {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 0;
+    pointer-events: none;
+    border-radius: calc(var(--tx-radius-md, 10px) - 3px);
+    background: color-mix(in srgb, var(--tx-primary) 18%, var(--tx-surface-1));
+    box-shadow:
+      inset 0 0 0 1px color-mix(in srgb, var(--tx-primary) 45%, transparent),
+      0 1px 3px color-mix(in srgb, var(--tx-shadow-color, #000) 18%, transparent);
+    transition:
+      transform var(--tx-duration-base, 180ms) var(--tx-ease-out-expo, cubic-bezier(0.16, 1, 0.3, 1)),
+      width var(--tx-duration-base, 180ms) var(--tx-ease-out-expo, cubic-bezier(0.16, 1, 0.3, 1)),
+      height var(--tx-duration-base, 180ms) var(--tx-ease-out-expo, cubic-bezier(0.16, 1, 0.3, 1)),
+      opacity 120ms ease;
+    will-change: transform, width, height;
+  }
+}
+
+html[data-animation-speed='none'] .workspace-tab-section-nav__slider {
+  transition: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .workspace-tab-section-nav__slider {
+    transition: none !important;
+  }
+}
+
 .tx-workspace-tab__chrome {
   display: flex;
   flex-direction: column;
@@ -14,18 +45,6 @@
   min-height: 0;
   flex: 1 1 auto;
   overflow: auto;
-
-  // Slide/crossfade paints outside the box; clip while motion runs to avoid scrollbar flash.
-  &.tx-workspace-tab__pane--switch,
-  &:has(.tx-workspace-tab__section-shell.tx-entrance-stagger--play),
-  &:has(.tx-workspace-tab__section-shell.tx-entrance-stagger:not(.tx-entrance-stagger--settled)) {
-    overflow: hidden;
-  }
-}
-
-// Opacity-only — translateY on the pane also triggered transient overflow scrollbars.
-.tx-workspace-tab__pane--switch {
-  animation: tx-pane-enter var(--tx-duration-base, 180ms) var(--tx-ease-out-expo, cubic-bezier(0.16, 1, 0.3, 1)) both;
 }
 
 .tx-workspace-tab__section-shell {
@@ -34,23 +53,9 @@
   min-height: 0;
   flex: 1 1 auto;
   width: 100%;
-
-  &.tx-entrance-stagger:not(.tx-entrance-stagger--settled) {
-    overflow: hidden;
-  }
 }
 
-// Smaller offset than global stagger — less bleed past the clipped pane.
-.tx-workspace-tab__section-shell.tx-entrance-stagger > * {
-  transform: translateY(6px);
-}
-
-.tx-workspace-tab__section-shell.tx-entrance-stagger.tx-entrance-stagger--settled > *,
-.tx-workspace-tab__section-shell.tx-entrance-stagger.tx-entrance-stagger--settled.tx-entrance-stagger--play > * {
-  transform: none;
-}
-
-.tx-workspace-tab__section-shell.tx-entrance-stagger > .tx-entrance-stagger__block {
+.tx-workspace-tab__section-shell > .tx-entrance-stagger__block {
   min-width: 0;
 }
 
@@ -67,16 +72,4 @@
   flex: 1 1 auto;
   flex-direction: column;
   min-height: 0;
-}
-
-html[data-animation-speed='none'] {
-  .tx-workspace-tab__pane--switch {
-    animation: none;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .tx-workspace-tab__pane--switch {
-    animation: none;
-  }
 }

@@ -1,7 +1,8 @@
-import type { IpcMainInvokeEvent } from 'electron';
+import type { BrowserWindow, IpcMainInvokeEvent } from 'electron';
 
 import {
   captureFileSchema,
+  migrateCaptureFile,
   interceptorFileSchema,
   loadTestsFileSchema,
   mockServerFileSchema,
@@ -17,10 +18,41 @@ import type { IpcMainBinder } from '../register-ipc';
 
 export interface TestingHandlerDeps {
   readonly files: ConfigFileService;
+  readonly getMainWindow?: () => BrowserWindow | null;
+}
+
+let runtimeInstance: TestingRuntimeService | null = null;
+
+/**
+ * Returns the shared testing runtime (mock server, load test, …).
+ */
+export function getTestingRuntime(files: ConfigFileService): TestingRuntimeService {
+  if (!runtimeInstance) {
+    runtimeInstance = new TestingRuntimeService(files);
+  }
+  return runtimeInstance;
+}
+
+/**
+ * Wires main window for mock-server push events after the window is created.
+ */
+export function setTestingRuntimeMainWindow(provider: () => BrowserWindow | null): void {
+  runtimeInstance?.setMainWindowProvider(provider);
+}
+
+/**
+ * Attempts mock server auto-start when profile config is ready.
+ */
+export async function tryTestingRuntimeAutoStart(files: ConfigFileService): Promise<void> {
+  await getTestingRuntime(files).tryAutoStartMockServer();
 }
 
 export function registerTestingHandlers(ipc: IpcMainBinder, deps: TestingHandlerDeps): void {
-  const runtime = new TestingRuntimeService(deps.files);
+  const runtime = getTestingRuntime(deps.files);
+  if (deps.getMainWindow) {
+    runtime.setMainWindowProvider(deps.getMainWindow);
+  }
+
   ipc.handle(
     TestingChannels.getTestSuites,
     wrapInvokeHandler(TestingChannels.getTestSuites, async () => deps.files.readTestSuites()),
@@ -62,7 +94,9 @@ export function registerTestingHandlers(ipc: IpcMainBinder, deps: TestingHandler
     TestingChannels.setMockServer,
     wrapInvokeHandler(TestingChannels.setMockServer, async (_e: IpcMainInvokeEvent, data: unknown) => {
       const parsed = mockServerFileSchema.parse(data);
-      return deps.files.saveMockServer(parsed);
+      const saved = await deps.files.saveMockServer(parsed);
+      runtime.onMockServerFileSaved(saved);
+      return saved;
     }),
   );
   ipc.handle(
@@ -72,7 +106,7 @@ export function registerTestingHandlers(ipc: IpcMainBinder, deps: TestingHandler
   ipc.handle(
     TestingChannels.setCapture,
     wrapInvokeHandler(TestingChannels.setCapture, async (_e: IpcMainInvokeEvent, data: unknown) => {
-      const parsed = captureFileSchema.parse(data);
+      const parsed = migrateCaptureFile(data);
       return deps.files.saveCapture(parsed);
     }),
   );
@@ -84,7 +118,9 @@ export function registerTestingHandlers(ipc: IpcMainBinder, deps: TestingHandler
     TestingChannels.setInterceptor,
     wrapInvokeHandler(TestingChannels.setInterceptor, async (_e: IpcMainInvokeEvent, data: unknown) => {
       const parsed = interceptorFileSchema.parse(data);
-      return deps.files.saveInterceptor(parsed);
+      const saved = await deps.files.saveInterceptor(parsed);
+      runtime.onInterceptorFileSaved(saved);
+      return saved;
     }),
   );
 
@@ -101,12 +137,25 @@ export function registerTestingHandlers(ipc: IpcMainBinder, deps: TestingHandler
     wrapInvokeHandler(TestingChannels.mockStop, async () => runtime.mockStop()),
   );
   ipc.handle(
+    TestingChannels.mockListMismatches,
+    wrapInvokeHandler(TestingChannels.mockListMismatches, async () => runtime.mockListMismatches()),
+  );
+  ipc.handle(
+    TestingChannels.mockClearMismatches,
+    wrapInvokeHandler(TestingChannels.mockClearMismatches, async () => {
+      runtime.mockClearMismatches();
+      return undefined;
+    }),
+  );
+  ipc.handle(
     TestingChannels.captureStatus,
     wrapInvokeHandler(TestingChannels.captureStatus, async () => runtime.captureStatus()),
   );
   ipc.handle(
     TestingChannels.captureStart,
-    wrapInvokeHandler(TestingChannels.captureStart, async () => runtime.captureStart()),
+    wrapInvokeHandler(TestingChannels.captureStart, async (_e, options: unknown) =>
+      runtime.captureStart(options),
+    ),
   );
   ipc.handle(
     TestingChannels.captureStop,
@@ -114,7 +163,16 @@ export function registerTestingHandlers(ipc: IpcMainBinder, deps: TestingHandler
   );
   ipc.handle(
     TestingChannels.captureListEntries,
-    wrapInvokeHandler(TestingChannels.captureListEntries, async () => runtime.captureListEntries()),
+    wrapInvokeHandler(TestingChannels.captureListEntries, async (_e, captureItemId?: string) =>
+      runtime.captureListEntries(captureItemId),
+    ),
+  );
+  ipc.handle(
+    TestingChannels.captureClearEntries,
+    wrapInvokeHandler(TestingChannels.captureClearEntries, async (_e, captureItemId?: string) => {
+      runtime.captureClearEntries(captureItemId);
+      return undefined;
+    }),
   );
   ipc.handle(
     TestingChannels.interceptorStatus,
@@ -122,11 +180,24 @@ export function registerTestingHandlers(ipc: IpcMainBinder, deps: TestingHandler
   );
   ipc.handle(
     TestingChannels.interceptorStart,
-    wrapInvokeHandler(TestingChannels.interceptorStart, async () => runtime.interceptorStart()),
+    wrapInvokeHandler(TestingChannels.interceptorStart, async (_e, options: unknown) =>
+      runtime.interceptorStart(options),
+    ),
   );
   ipc.handle(
     TestingChannels.interceptorStop,
     wrapInvokeHandler(TestingChannels.interceptorStop, async () => runtime.interceptorStop()),
+  );
+  ipc.handle(
+    TestingChannels.interceptorListHits,
+    wrapInvokeHandler(TestingChannels.interceptorListHits, async () => runtime.interceptorListHits()),
+  );
+  ipc.handle(
+    TestingChannels.interceptorClearHits,
+    wrapInvokeHandler(TestingChannels.interceptorClearHits, async () => {
+      runtime.interceptorClearHits();
+      return undefined;
+    }),
   );
   ipc.handle(
     TestingChannels.loadTestStatus,

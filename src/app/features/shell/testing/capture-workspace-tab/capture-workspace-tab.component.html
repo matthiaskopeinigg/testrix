@@ -1,0 +1,101 @@
+@if (missing()) {
+  <section class="cap-tab tx-workspace-tab" [attr.aria-label]="title()">
+    <div class="cap-tab__workspace">
+      <div class="cap-tab__pane tx-workspace-tab__pane">
+        <div class="request-panel tx-workspace-tab__section-shell">
+          <tx-banner variant="warning" title="Capture session not found">
+            This tab points to a capture session that no longer exists. Close the tab or pick another from the sidebar.
+          </tx-banner>
+        </div>
+      </div>
+    </div>
+  </section>
+} @else if (item(); as session) {
+  <section class="cap-tab tx-workspace-tab" [attr.aria-label]="title()">
+    <div
+      class="tx-workspace-tab__chrome tx-entrance-stagger"
+      [class.tx-entrance-stagger--play]="tabMotion.loadStaggerPlay()"
+      [class.tx-entrance-stagger--settled]="tabMotion.loadStaggerSettled()"
+    >
+      <div class="tx-entrance-stagger__block cap-tab__bar">
+        <div class="cap-tab__bar-cluster cap-tab__bar-cluster--grow">
+          <div class="cap-tab__protocol-chip" aria-hidden="true">
+            <tx-icon name="globe" [size]="14" aria-hidden="true" />
+            <span>CAP</span>
+          </div>
+          <tx-form-field class="cap-tab__name-field" label="Name" controlId="cap-name">
+            <tx-input
+              id="cap-name"
+              [ngModel]="session.name"
+              (ngModelChange)="handleNameChange($event)"
+            />
+          </tx-form-field>
+          <tx-form-field class="cap-tab__url-field" label="Start URL" controlId="cap-start-url">
+            <tx-input
+              id="cap-start-url"
+              type="url"
+              [ngModel]="session.startUrl"
+              (ngModelChange)="handleStartUrlChange($event)"
+              (submitted)="handleStartUrlSubmitted()"
+              placeholder="https://example.com"
+              [disabled]="sessionRecording()"
+            />
+          </tx-form-field>
+        </div>
+        <div class="cap-tab__bar-cluster cap-tab__bar-cluster--trailing">
+          @if (sessionRecording()) {
+            <tx-tag variant="success" casing="normal">Recording</tx-tag>
+          }
+          <tx-button
+            [variant]="sessionRecording() ? 'secondary' : 'primary'"
+            [disabled]="!captureSupported() || (capture.running() && !sessionRecording())"
+            [title]="capture.running() && !sessionRecording() ? 'Another session is recording' : ''"
+            (pressed)="handleRunToggle()"
+          >
+            {{ sessionRecording() ? 'Stop capture' : 'Start capture' }}
+          </tx-button>
+        </div>
+      </div>
+    </div>
+
+    <div class="cap-tab__workspace">
+      <div
+        class="cap-tab__pane tx-workspace-tab__pane tx-entrance-stagger"
+        [class.tx-entrance-stagger--play]="tabMotion.loadStaggerPlay()"
+        [class.tx-entrance-stagger--settled]="tabMotion.loadStaggerSettled()"
+      >
+        <div class="tx-entrance-stagger__block cap-tab__content">
+          @if (!captureSupported()) {
+            <tx-banner variant="warning" title="Desktop only">
+              Capture requires the Testrix desktop app. Start capture opens a separate browser window with the start URL.
+            </tx-banner>
+          }
+
+          <app-cap-tab-traffic-panel
+            [entries]="sessionEntries()"
+            [running]="sessionRecording()"
+            [filterQuery]="trafficFilter()"
+            [filterScope]="trafficFilterScope()"
+            [resourceCategory]="trafficResourceCategory()"
+            (filterQueryChange)="handleFilterQueryChange($event)"
+            (filterScopeChange)="handleFilterScopeChange($event)"
+            (resourceCategoryChange)="handleResourceCategoryChange($event)"
+            (clearHistory)="handleClearHistory()"
+            (createCollectionRequest)="handleCreateCollectionRequest($event)"
+            (createFlowFromCapture)="handleCreateFlowFromCapture($event)"
+          />
+        </div>
+      </div>
+    </div>
+  </section>
+} @else {
+  <section class="cap-tab tx-workspace-tab" [attr.aria-label]="title()">
+    <div class="cap-tab__workspace">
+      <div class="cap-tab__pane tx-workspace-tab__pane">
+        <tx-banner variant="warning" title="Invalid capture tab">
+          This tab is not linked to a capture session. Close it and open a session from the sidebar.
+        </tx-banner>
+      </div>
+    </div>
+  </section>
+}

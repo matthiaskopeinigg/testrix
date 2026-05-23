@@ -34,6 +34,8 @@ import { EnvironmentsService } from '@app/core/environments/environments.service
 import { freezeWhileTabInactive } from '@app/core/ui/workspace-tab-active.util';
 import { UiPreferencesService } from '@app/core/ui/ui-preferences.service';
 import { WorkspaceTabMotionController } from '@app/core/ui/workspace-tab-motion';
+import { websocketTabSectionBlockCount } from '@app/core/ui/workspace-tab-section-stagger';
+import { WorkspaceSectionNavSliderDirective } from '../workspace-section-nav-slider.directive';
 import { openEnvironmentVariableTab } from '@app/core/workspace/open-environment-variable-tab';
 import { WorkspaceEditorService } from '@app/core/workspace/workspace-editor.service';
 import {
@@ -107,6 +109,7 @@ const SCRIPT_EDITOR_PLACEHOLDER = `// Postman-style script APIs (Ctrl+Space for 
     WsTabOverviewPanelComponent,
     WsTabSettingsPanelComponent,
     WsTabMessagesPanelComponent,
+    WorkspaceSectionNavSliderDirective,
   ],
   templateUrl: './websocket-workspace-tab.component.html',
   styleUrl: './websocket-workspace-tab.component.scss',
@@ -186,6 +189,14 @@ export class WebsocketWorkspaceTabComponent {
   protected readonly headerCount = computed(
     () => this.settings().headers.filter((row) => row.key.trim()).length,
   );
+
+  protected readonly parentPath = computed(() => {
+    const ancestors = collectAncestorFolders(this.collectionsService.nodes(), this.resourceId());
+    if (ancestors.length === 0) {
+      return '';
+    }
+    return ancestors.map((folder) => folder.label).join(' / ');
+  });
 
   protected readonly hasParentFolder = computed(() => {
     const loc = this.wsLoc();
@@ -333,7 +344,7 @@ export class WebsocketWorkspaceTabComponent {
   }
 
   protected isSectionContentSettled(sectionId: WebsocketTabSectionId): boolean {
-    return this.tabMotion.isSectionContentSettled(sectionId, this.activeSection() === sectionId);
+    return this.tabMotion.isSectionContentSettled(sectionId);
   }
 
   protected handleConnectToggle(): void {
@@ -369,16 +380,19 @@ export class WebsocketWorkspaceTabComponent {
   }
 
   protected handleSectionSelect(section: WebsocketTabSectionId): void {
-    if (section !== this.activeSection()) {
-      this.tabMotion.onSectionChange(section);
+    if (section === this.activeSection()) {
+      return;
     }
     this.activeSection.set(section);
+    this.tabMotion.onSectionChange(section, {
+      contentBlockCount: websocketTabSectionBlockCount(section),
+    });
     this.scheduleTabUiPersist();
   }
 
   protected handleScriptPaneSelect(pane: CollectionFolderScriptPaneId): void {
-    if (pane !== this.activeScriptPane() && this.activeSection() === 'scripts') {
-      this.tabMotion.onSectionChange('scripts', 4);
+    if (pane === this.activeScriptPane()) {
+      return;
     }
     this.activeScriptPane.set(pane);
     this.scheduleTabUiPersist();

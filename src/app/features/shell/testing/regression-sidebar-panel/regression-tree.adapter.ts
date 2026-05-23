@@ -51,6 +51,8 @@ function toRegressionTreeNode(item: RegressionTreeItem): RegressionTreeNode {
         description: item.description,
         tags: item.tags,
         archivedAt: item.archivedAt,
+        createdAt: item.createdAt,
+        updatedAt: item.updatedAt,
         flowCount: item.flowIds.length,
         lastRunStatus: lastRunStatus(item),
       },
@@ -70,6 +72,8 @@ function toRegressionTreeNode(item: RegressionTreeItem): RegressionTreeNode {
       description: item.description,
       tags: item.tags,
       archivedAt: item.archivedAt,
+      createdAt: item.createdAt,
+      updatedAt: item.updatedAt,
     },
     children: item.children.map(toRegressionTreeNode),
   };

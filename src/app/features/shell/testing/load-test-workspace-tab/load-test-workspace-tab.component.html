@@ -44,7 +44,12 @@
 
       @if (useTitlebarLayout()) {
         <div class="tx-entrance-stagger__block lt-tab__sections-wrap">
-          <nav class="lt-tab__sections-bar" role="tablist" aria-label="Load test sections">
+          <nav
+            class="lt-tab__sections-bar"
+            role="tablist"
+            aria-label="Load test sections"
+            [txWorkspaceSectionNav]="activeSection()"
+          >
             @for (item of navItems; track item.id) {
               <button
                 type="button"
@@ -75,7 +80,12 @@
     >
       <div class="lt-tab__workspace lt-tab__split-primary" txSplitPrimary>
         @if (useSidebarLayout()) {
-          <nav class="lt-tab__nav" role="tablist" aria-label="Load test sections">
+          <nav
+            class="lt-tab__nav"
+            role="tablist"
+            aria-label="Load test sections"
+            [txWorkspaceSectionNav]="activeSection()"
+          >
             @for (item of navItems; track item.id) {
               <button
                 type="button"
@@ -94,10 +104,7 @@
           </nav>
           <div class="lt-tab__divider" aria-hidden="true"></div>
         }
-        <div
-          class="lt-tab__pane tx-workspace-tab__pane"
-          [class.tx-workspace-tab__pane--switch]="tabMotion.paneSwitchActive()"
-        >
+        <div class="lt-tab__pane tx-workspace-tab__pane">
           @switch (activeSection()) {
             @case ('overview') {
               <div
@@ -108,11 +115,13 @@
                 <div class="tx-entrance-stagger__block">
                   <app-lt-tab-overview-panel
                     [description]="artifact()?.description ?? ''"
+                    [tags]="artifact()?.tags ?? []"
                     [profile]="artifact()?.profile"
                     [targetSummary]="targetLabel()"
                     [runs]="artifact()?.runs ?? []"
                     [pinnedBaselineRunId]="pinnedBaselineRunId()"
                     (descriptionChange)="handleDescriptionChange($event)"
+                    (tagsChange)="handleTagsChange($event)"
                     (openHistory)="handleOpenHistoryView()"
                     (sectionSelect)="handleSectionSelect($event)"
                   />
@@ -127,8 +136,12 @@
               >
                 <div class="tx-entrance-stagger__block lt-tab__target-section">
                   <app-lt-tab-target-panel
+                    [targetSource]="artifact()?.targetSource ?? 'collection'"
                     [targetRequestId]="artifact()?.targetRequestId"
+                    [manualTarget]="artifact()?.manualTarget"
+                    (targetSourceChange)="handleTargetSourceChange($event)"
                     (targetRequestIdChange)="handleTargetChange($event)"
+                    (manualTargetChange)="handleManualTargetChange($event)"
                     (openRequest)="handleOpenTargetRequest()"
                   />
                 </div>

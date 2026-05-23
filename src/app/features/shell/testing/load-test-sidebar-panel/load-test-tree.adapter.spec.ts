@@ -16,6 +16,7 @@ describe('load-test-tree.adapter', () => {
           id: 'a1',
           name: 'Checkout',
           description: 'Peak traffic',
+          tags: ['smoke', 'api'],
           docs: 'Runbook',
           targetRequestId: 'req-1',
           profile: { durationSec: 120, virtualUsers: 50, rampUpSec: 10 },

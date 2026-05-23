@@ -2,29 +2,46 @@
   class="history-sidebar-panel"
   [searchPlaceholder]="searchPlaceholder()"
   [searchAriaLabel]="searchAriaLabel()"
-  [showFolderToggle]="false"
+  [allFoldersExpanded]="allExpanded()"
+  [showFilterButton]="false"
+  [showSortButton]="false"
   [useDefaultToolbarActions]="false"
   (searchChange)="handleSearch($event)"
+  (allFoldersExpandedChange)="handleExpandAll($event)"
 >
-  <div workspacePanelToolbarActions class="history-sidebar-panel__toolbar-actions">
-    <tx-button
-      variant="secondary"
-      class="history-sidebar-panel__toolbar-btn"
-      [title]="allCollapsed() ? 'Expand all' : 'Collapse all'"
-      (pressed)="handleCollapseAll()"
+  <div workspacePanelToolbarActions class="history-sidebar-panel__toolbar">
+    <button
+      type="button"
+      class="workspace-panel-shell__icon-btn"
+      [class.is-pressed]="filterToolbarActive()"
+      aria-label="Filter history"
+      title="Filter"
+      [attr.aria-expanded]="filterMenuOpen()"
+      (click)="handleFilterToolbarClick($event)"
     >
-      <tx-icon [name]="allCollapsed() ? 'maximize' : 'minimize'" [size]="14" aria-hidden="true" />
-      <span>{{ allCollapsed() ? 'Expand all' : 'Collapse all' }}</span>
-    </tx-button>
-    <tx-button
-      variant="secondary"
-      class="history-sidebar-panel__toolbar-btn history-sidebar-panel__toolbar-btn--danger"
-      title="Clear history"
+      <tx-icon name="filter" [size]="16" aria-hidden="true" />
+    </button>
+    <button
+      type="button"
+      class="workspace-panel-shell__icon-btn"
+      [class.is-pressed]="sortToolbarActive()"
+      aria-label="Sort history"
+      title="Sort"
+      [attr.aria-expanded]="sortMenuOpen()"
+      (click)="handleSortToolbarClick($event)"
+    >
+      <tx-icon name="list" [size]="16" aria-hidden="true" />
+    </button>
+    <button
+      type="button"
+      class="workspace-panel-shell__icon-btn"
       aria-label="Clear history"
-      (pressed)="handleClearHistory()"
+      title="Clear history"
+      [disabled]="!hasEntries()"
+      (click)="handleClearHistory()"
     >
-      <tx-icon name="trash" [size]="14" aria-hidden="true" />
-    </tx-button>
+      <tx-icon name="trash" [size]="16" aria-hidden="true" />
+    </button>
   </div>
 
   <div class="history-sidebar-panel__body" (contextmenu)="handleListAreaContextMenu($event)">
@@ -104,6 +121,22 @@
   [items]="contextMenuItems()"
   (itemSelect)="handleContextMenuSelect($event)"
   (closed)="handleContextMenuClosed()"
+/>
+
+<tx-context-menu
+  [open]="filterMenuOpen()"
+  [position]="filterMenuPosition()"
+  [items]="filterMenuItems()"
+  (itemSelect)="handleFilterMenuSelect($event)"
+  (closed)="handleFilterMenuClosed()"
+/>
+
+<tx-context-menu
+  [open]="sortMenuOpen()"
+  [position]="sortMenuPosition()"
+  [items]="sortMenuItems()"
+  (itemSelect)="handleSortMenuSelect($event)"
+  (closed)="handleSortMenuClosed()"
 />
 
 <tx-confirm-dialog

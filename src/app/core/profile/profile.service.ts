@@ -8,6 +8,12 @@ import { EnvironmentsService } from '../environments/environments.service';
 import { ElectronService } from '../electron/electron.service';
 import { ErrorNotificationService } from '../errors/error-notification.service';
 import { HistoryService } from '../history/history.service';
+import { CaptureWorkbenchStore } from '../testing/capture-workbench.store';
+import { InterceptorWorkspaceStore } from '../testing/interceptor-workspace.store';
+import { LoadTestService } from '../testing/load-test.service';
+import { MockServerService } from '../testing/mock-server.service';
+import { RegressionService } from '../testing/regression.service';
+import { TestSuiteService } from '../testing/test-suite.service';
 import { TestingSessionService } from '../testing/testing-session.service';
 import { WorkspaceSidebarSessionService } from '../workspace/workspace-sidebar-session.service';
 import { WorkspaceEditorService } from '../workspace/workspace-editor.service';
@@ -23,6 +29,12 @@ export class ProfileService {
   private readonly workspaceEditor = inject(WorkspaceEditorService);
   private readonly testingSession = inject(TestingSessionService);
   private readonly sidebarSession = inject(WorkspaceSidebarSessionService);
+  private readonly testSuite = inject(TestSuiteService);
+  private readonly loadTest = inject(LoadTestService);
+  private readonly regression = inject(RegressionService);
+  private readonly mockServer = inject(MockServerService);
+  private readonly capture = inject(CaptureWorkbenchStore);
+  private readonly interceptor = inject(InterceptorWorkspaceStore);
 
   private readonly profilesState = signal<readonly ProfileEntry[]>([]);
   private readonly activeProfileIdState = signal<string | null>(null);
@@ -146,11 +158,18 @@ export class ProfileService {
     await Promise.all([
       this.collectionsService.hydrate(),
       this.environmentsService.hydrate(),
-      this.configService.hydrateSession(),
       this.historyService.hydrate(),
+      this.testSuite.hydrate(),
+      this.loadTest.hydrate(),
+      this.regression.hydrate(),
+      this.mockServer.hydrate(),
+      this.capture.hydrate(),
+      this.interceptor.hydrate(),
     ]);
+    await this.configService.hydrateSession();
     this.testingSession.rehydrateFromSession();
     this.sidebarSession.rehydrateFromSession();
+    await this.workspaceEditor.pruneTabsForMissingProfileResources();
   }
 
   private async flushWorkspaceWrites(): Promise<void> {

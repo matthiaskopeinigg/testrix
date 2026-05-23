@@ -6,6 +6,7 @@ import {
 
 import type { TxIconName } from '@app/shared/icons/tx-icon.registry';
 
+import { loadTestTreeTags } from './load-test-tree-tags';
 import type { LoadTestTreeKind, LoadTestTreeNode } from './load-test-tree.types';
 
 function isArtifact(item: LoadTestTreeItem): item is LoadTestArtifact {
@@ -24,13 +25,20 @@ export function toLoadTestTreeNodes(fileItems: readonly LoadTestTreeItem[]): Loa
 function toLoadTestTreeNode(item: LoadTestTreeItem): LoadTestTreeNode {
   if (isArtifact(item)) {
     const description = item.description?.trim();
+    const tags = loadTestTreeTags(item);
     return {
       id: item.id,
       label: item.name,
       subtitle: description || undefined,
       kind: 'artifact',
       icon: iconForKind('artifact'),
-      data: { kind: 'artifact', description: item.description },
+      tags,
+      data: {
+        kind: 'artifact',
+        description: item.description,
+        tags: item.tags,
+        updatedAt: item.updatedAt,
+      },
     };
   }
 
@@ -39,7 +47,7 @@ function toLoadTestTreeNode(item: LoadTestTreeItem): LoadTestTreeNode {
     label: item.name,
     kind: 'folder',
     icon: iconForKind('folder'),
-    data: { kind: 'folder' },
+    data: { kind: 'folder', updatedAt: item.updatedAt },
     children: item.children.map(toLoadTestTreeNode),
   };
 }
@@ -75,8 +83,11 @@ function fromLoadTestTreeNode(node: LoadTestTreeNode, existing?: LoadTestTreeIte
     id: node.id,
     name: node.label,
     description: node.data?.description ?? prev?.description ?? '',
+    tags: prev?.tags ?? [...(node.data?.tags ?? node.tags ?? [])],
     docs: prev?.docs ?? '',
+    targetSource: prev?.targetSource ?? 'collection',
     targetRequestId: prev?.targetRequestId,
+    manualTarget: prev?.manualTarget,
     profile: prev?.profile ?? createDefaultLoadTestProfile(),
     thresholds: prev?.thresholds ?? createDefaultLoadTestThresholds(),
     runs: prev?.runs ?? [],
