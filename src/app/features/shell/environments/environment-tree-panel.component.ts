@@ -108,6 +108,8 @@ export class EnvironmentTreePanelComponent {
   private readonly expandedSnapshotBeforeSearch = signal<string[] | null>(null);
   private sessionSaveTimer: ReturnType<typeof setTimeout> | null = null;
   private rowClickTimer: ReturnType<typeof setTimeout> | null = null;
+  /** Prevents re-expanding ancestor folders when the tree mutates but selection is unchanged. */
+  private selectionRevealKey: string | null = null;
 
   protected readonly environments = computed(() => this.environmentsService.environments());
 
@@ -237,9 +239,21 @@ export class EnvironmentTreePanelComponent {
         return;
       }
       const resourceId = this.selectedVariableId();
-      if (!resourceId || this.searchQuery().trim()) {
+      const environmentId = this.environmentId();
+      const query = this.searchQuery().trim();
+      // Re-run when the scope tree hydrates so a pre-selected variable can be revealed once.
+      void this.scopeNodes().length;
+
+      if (!resourceId || query) {
+        this.selectionRevealKey = null;
         return;
       }
+
+      const revealKey = `${environmentId}:${resourceId}`;
+      if (this.selectionRevealKey === revealKey) {
+        return;
+      }
+
       const ancestors = collectFolderAncestorIds(
         this.scopeNodes(),
         resourceId,
@@ -248,6 +262,8 @@ export class EnvironmentTreePanelComponent {
       if (ancestors.length === 0) {
         return;
       }
+
+      this.selectionRevealKey = revealKey;
       this.expandedIds.update((ids) => [...new Set([...ids, ...ancestors])]);
     });
 

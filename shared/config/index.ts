@@ -12,6 +12,8 @@ export * from './collection-request-tab-ui.schema';
 export * from './request-runs-session.schema';
 export * from './resolve-collection-request-headers';
 export * from './resolve-collection-request-auth';
+export * from './collection-environment-selection';
+export * from './resolve-collection-request-environment';
 export * from './resolve-collection-transport';
 export * from './resolve-request-variables';
 export * from './collect-collection-ancestors';

@@ -89,6 +89,9 @@ export class LoadTestRunner {
       environments,
       appVersion,
       runScope: { runId: `load-test-${Date.now()}` },
+      environmentVariableKeys: {
+        useFolderPathInKeys: settings.environments.useFolderPathInKeys,
+      },
     });
 
     if (!built) {
@@ -193,7 +196,7 @@ export class LoadTestRunner {
 
       const started = performance.now();
       try {
-        const snapshot = await executeHttpRequest(requestPayload);
+        const { snapshot } = await executeHttpRequest(requestPayload);
         this.recordOutcome(snapshot, performance.now() - started);
       } catch {
         this.recordFailure(performance.now() - started);

@@ -49,4 +49,15 @@ describe('TxVariableInputComponent', () => {
     const param = fixture.nativeElement.querySelector('.tx-variable-input__mirror .tx-var-param');
     expect(param?.textContent).toBe('(6)');
   });
+
+  it('masks the mirror layer when maskValue is enabled and value is hidden', () => {
+    fixture.componentRef.setInput('maskValue', true);
+    fixture.componentRef.setInput('valueRevealed', false);
+    fixture.componentInstance.writeValue('secret-token');
+    fixture.detectChanges();
+
+    const mirror = fixture.nativeElement.querySelector('.tx-variable-input__mirror code');
+    expect(mirror?.textContent).toBe('************');
+    expect(fixture.nativeElement.querySelector('.tx-variable-input__field--masked')).toBeTruthy();
+  });
 });

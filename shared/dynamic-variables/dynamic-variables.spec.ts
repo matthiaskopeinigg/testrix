@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { environmentVariablesToCatalog } from '../config/environment-variables';
 import { highlightDynamicVariableTemplate } from './dynamic-variable-highlight';
 import {
   formatDynamicVariablePlaceholderHint,
@@ -90,6 +91,18 @@ describe('dynamicVariableTooltip', () => {
   it('formats token and parameter descriptions', () => {
     expect(formatDynamicVariableTooltip('uuid', DYNAMIC_VARIABLES)).toContain('Random UUID');
     expect(formatDynamicVariableTooltip('randomInt', DYNAMIC_VARIABLES, 'param')).toContain('parameter');
+  });
+
+  it('environment tooltip shows profile name only, not resolved values', () => {
+    const catalog = environmentVariablesToCatalog(
+      [{ key: 'password', value: 'super-secret' }],
+      'production',
+    );
+    const tip = formatDynamicVariableTooltip('env:password', catalog);
+    expect(tip).toContain('{{password}}');
+    expect(tip).toContain('production');
+    expect(tip).not.toContain('super-secret');
+    expect(tip).toContain('Click to open in environment');
   });
 
   it('formats empty-field placeholder hint', () => {

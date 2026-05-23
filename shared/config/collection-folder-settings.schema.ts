@@ -89,6 +89,8 @@ export const collectionFolderScriptsSchema = z.object({
 export type CollectionFolderScripts = z.infer<typeof collectionFolderScriptsSchema>;
 
 export const collectionFolderSettingsSchema = z.object({
+  /** Environment profile id from environments.json used for `{{variable}}` substitution. */
+  environmentId: z.string().nullable().default(null),
   tags: z.array(z.string().min(1)).max(COLLECTION_FOLDER_TAGS_MAX).default([]),
   docs: z.string().default(''),
   variables: z.array(collectionDescribedKeyValueRowSchema).max(COLLECTION_DESCRIBED_KV_MAX_ROWS),
@@ -119,7 +121,7 @@ export function createCollectionDescribedKeyValueRow(
 
 /** Default auth when a folder has no explicit configuration. */
 export function createDefaultCollectionFolderAuth(): CollectionFolderAuth {
-  return { type: 'none' };
+  return { type: 'inherit' };
 }
 
 /** Default scripts for a collection folder. */
@@ -130,6 +132,7 @@ export function createDefaultCollectionFolderScripts(): CollectionFolderScripts 
 /** Default folder settings (variables, headers, auth, scripts). */
 export function createDefaultCollectionFolderSettings(): CollectionFolderSettings {
   return {
+    environmentId: null,
     tags: [],
     docs: '',
     variables: [],
@@ -151,6 +154,12 @@ export function enrichCollectionFolderSettings(
 
   const record = raw as Record<string, unknown>;
   const parsed = collectionFolderSettingsSchema.safeParse({
+    environmentId:
+      typeof record['environmentId'] === 'string'
+        ? record['environmentId']
+        : record['environmentId'] === null
+          ? null
+          : defaults.environmentId,
     tags: Array.isArray(record['tags']) ? record['tags'] : defaults.tags,
     docs: typeof record['docs'] === 'string' ? record['docs'] : defaults.docs,
     variables: Array.isArray(record['variables']) ? record['variables'] : defaults.variables,

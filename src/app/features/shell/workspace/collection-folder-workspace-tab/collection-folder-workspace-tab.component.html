@@ -21,6 +21,18 @@
           <tx-icon name="folder" [size]="18" aria-hidden="true" />
           <h1 class="folder-tab__title">{{ title() }}</h1>
         </div>
+        <div class="folder-tab__header-cluster">
+          <tx-form-field class="folder-tab__environment-field" label="Environment" controlId="folder-environment">
+            <tx-dropdown
+              id="folder-environment"
+              placeholder="No environment"
+              ariaLabel="Active environment"
+              [options]="environmentOptions()"
+              [ngModel]="environmentDropdownValue()"
+              (ngModelChange)="handleEnvironmentChange($event)"
+            />
+          </tx-form-field>
+        </div>
       </div>
     </header>
 
@@ -81,11 +93,16 @@
             <app-folder-tab-overview-panel
               [description]="description()"
               [tags]="tags()"
-              [auth]="auth()"
-              [variableCount]="variableCount()"
-              [headerCount]="headerCount()"
+              [folderName]="title()"
+              [parentPath]="parentPath()"
+              [settings]="settings()"
+              [environmentName]="activeEnvironment()?.name ?? 'No environment'"
+              [contentsCounts]="contentsCounts()"
+              [inheritedVariables]="ancestorFolderVariables()"
+              [ownVariables]="ownVariables()"
               (descriptionChange)="handleDescriptionChange($event)"
               (tagsChange)="handleTagsChange($event)"
+              (sectionSelect)="handleSectionSelect($event)"
             />
               </div>
             </div>
@@ -134,6 +151,7 @@
               <div class="tx-entrance-stagger__block">
               <tx-key-value-description-list
                 keyLabel="Key"
+                keyInput="http-headers"
                 valueLabel="Value"
                 descriptionLabel="Description"
                 addLabel="Add header"
@@ -162,7 +180,9 @@
               <app-folder-tab-auth-panel
                 [auth]="auth()"
                 [hasParentFolder]="hasParentFolder()"
+                [catalog]="variableCatalog()"
                 (authChange)="handleAuthChange($event)"
+                (environmentVariableClick)="handleEnvironmentVariableClick($event)"
               />
               </div>
             </div>
@@ -209,6 +229,7 @@
                   [hideToolbarActions]="true"
                   [framed]="false"
                   [extraCompletionItems]="scriptCompletionItems()"
+                  [variableCatalog]="variableCatalog()"
                   [ngModel]="activeScriptSource()"
                   (ngModelChange)="handleScriptChange($event)"
                 />

@@ -79,6 +79,7 @@
 
     <tx-vertical-split-pane
       class="ws-tab__split"
+      revealLabel="Messages"
       [secondaryVisible]="showMessagesPanel()"
       [secondaryHidden]="messagesPanelHidden()"
       [secondaryHeight]="messagesPanelHeight()"
@@ -146,12 +147,15 @@
                   </p>
                 </div>
                 <div class="tx-entrance-stagger__block">
-                  <tx-key-value-description-list
+                  <tx-key-value-list
+                    [compact]="true"
                     keyLabel="Key"
+                    keyInput="query-params"
                     valueLabel="Value"
                     descriptionLabel="Description"
                     addLabel="Add query param"
                     valueInput="variables"
+                    [showDescription]="true"
                     [showEnabled]="true"
                     [rows]="queryRows()"
                     [variableCatalog]="variableCatalog()"
@@ -178,7 +182,9 @@
                   <app-folder-tab-auth-panel
                     [auth]="auth()"
                     [hasParentFolder]="hasParentFolder()"
+                    [catalog]="variableCatalog()"
                     (authChange)="handleAuthChange($event)"
+                    (environmentVariableClick)="handleEnvironmentVariableClick($event)"
                   />
                 </div>
               </div>

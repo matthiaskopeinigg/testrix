@@ -20,44 +20,56 @@
     <tx-form-field label="Token" controlId="folder-auth-bearer-token">
       <tx-variable-input
         id="folder-auth-bearer-token"
+        [catalog]="catalog()"
         [ngModel]="authConfig.token"
         (ngModelChange)="patchBearer({ token: $event })"
-        placeholder="Bearer token or $variable"
+        (environmentVariableClick)="environmentVariableClick.emit($event)"
+        placeholder="Bearer token, environment key, or $variable"
       />
     </tx-form-field>
   }
 
   @if (authConfig.type === 'basic') {
     <tx-form-field label="Username" controlId="folder-auth-basic-user">
-      <tx-input
-        controlId="folder-auth-basic-user"
+      <tx-variable-input
+        id="folder-auth-basic-user"
+        [catalog]="catalog()"
         [ngModel]="authConfig.username"
         (ngModelChange)="patchBasic({ username: $event })"
+        (environmentVariableClick)="environmentVariableClick.emit($event)"
       />
     </tx-form-field>
     <tx-form-field label="Password" controlId="folder-auth-basic-pass">
-      <tx-input
-        controlId="folder-auth-basic-pass"
-        type="password"
+      <tx-variable-input
+        id="folder-auth-basic-pass"
+        [catalog]="catalog()"
         [ngModel]="authConfig.password"
         (ngModelChange)="patchBasic({ password: $event })"
+        (environmentVariableClick)="environmentVariableClick.emit($event)"
+        [maskValue]="true"
       />
     </tx-form-field>
   }
 
   @if (authConfig.type === 'apiKey') {
     <tx-form-field label="Key" controlId="folder-auth-api-name">
-      <tx-input
-        controlId="folder-auth-api-name"
+      <tx-variable-input
+        id="folder-auth-api-name"
+        [catalog]="catalog()"
         [ngModel]="authConfig.name"
         (ngModelChange)="patchApiKey({ name: $event })"
+        (environmentVariableClick)="environmentVariableClick.emit($event)"
       />
     </tx-form-field>
     <tx-form-field label="Value" controlId="folder-auth-api-value">
       <tx-variable-input
         id="folder-auth-api-value"
+        [catalog]="catalog()"
         [ngModel]="authConfig.value"
         (ngModelChange)="patchApiKey({ value: $event })"
+        (environmentVariableClick)="environmentVariableClick.emit($event)"
+        placeholder="Environment key, $uuid, or literal value"
+        [maskValue]="true"
       />
     </tx-form-field>
     <tx-form-field label="Add to" controlId="folder-auth-api-in">
@@ -80,49 +92,58 @@
       />
     </tx-form-field>
     <tx-form-field label="Auth URL" controlId="folder-auth-oauth-auth-url">
-      <tx-input
-        controlId="folder-auth-oauth-auth-url"
-        type="url"
+      <tx-variable-input
+        id="folder-auth-oauth-auth-url"
+        [catalog]="catalog()"
         [ngModel]="authConfig.authUrl"
         (ngModelChange)="patchOAuth2({ authUrl: $event })"
+        (environmentVariableClick)="environmentVariableClick.emit($event)"
       />
     </tx-form-field>
     <tx-form-field label="Token URL" controlId="folder-auth-oauth-token-url">
-      <tx-input
-        controlId="folder-auth-oauth-token-url"
-        type="url"
+      <tx-variable-input
+        id="folder-auth-oauth-token-url"
+        [catalog]="catalog()"
         [ngModel]="authConfig.tokenUrl"
         (ngModelChange)="patchOAuth2({ tokenUrl: $event })"
+        (environmentVariableClick)="environmentVariableClick.emit($event)"
       />
     </tx-form-field>
     <tx-form-field label="Client ID" controlId="folder-auth-oauth-client-id">
-      <tx-input
-        controlId="folder-auth-oauth-client-id"
+      <tx-variable-input
+        id="folder-auth-oauth-client-id"
+        [catalog]="catalog()"
         [ngModel]="authConfig.clientId"
         (ngModelChange)="patchOAuth2({ clientId: $event })"
+        (environmentVariableClick)="environmentVariableClick.emit($event)"
       />
     </tx-form-field>
     <tx-form-field label="Client secret" controlId="folder-auth-oauth-client-secret">
-      <tx-input
-        controlId="folder-auth-oauth-client-secret"
-        type="password"
+      <tx-variable-input
+        id="folder-auth-oauth-client-secret"
+        [catalog]="catalog()"
         [ngModel]="authConfig.clientSecret"
         (ngModelChange)="patchOAuth2({ clientSecret: $event })"
+        (environmentVariableClick)="environmentVariableClick.emit($event)"
+        [maskValue]="true"
       />
     </tx-form-field>
     <tx-form-field label="Scope" controlId="folder-auth-oauth-scope">
-      <tx-input
-        controlId="folder-auth-oauth-scope"
+      <tx-variable-input
+        id="folder-auth-oauth-scope"
+        [catalog]="catalog()"
         [ngModel]="authConfig.scope"
         (ngModelChange)="patchOAuth2({ scope: $event })"
+        (environmentVariableClick)="environmentVariableClick.emit($event)"
       />
     </tx-form-field>
     <tx-form-field label="Redirect URI" controlId="folder-auth-oauth-redirect">
-      <tx-input
-        controlId="folder-auth-oauth-redirect"
-        type="url"
+      <tx-variable-input
+        id="folder-auth-oauth-redirect"
+        [catalog]="catalog()"
         [ngModel]="authConfig.redirectUri"
         (ngModelChange)="patchOAuth2({ redirectUri: $event })"
+        (environmentVariableClick)="environmentVariableClick.emit($event)"
       />
     </tx-form-field>
   }

@@ -7,7 +7,7 @@ export interface EnvironmentNodeLocation {
   readonly index: number;
 }
 
-/** Finds a node by id in the environment tree (depth ≤ 1). */
+/** Finds a node by id in the environment scope tree. */
 export function findEnvironmentNode(
   nodes: readonly EnvironmentTreeNode[],
   id: string,

@@ -15,29 +15,6 @@
           <tx-icon name="download" [size]="12" aria-hidden="true" />
           Save
         </tx-button>
-        <div class="tx-response-viewer__menu" [class.is-open]="moreMenuOpen()">
-          <tx-button
-            variant="secondary"
-            aria-haspopup="menu"
-            [attr.aria-expanded]="moreMenuOpen()"
-            [disabled]="!canSaveToRequest()"
-            (pressed)="handleToggleMoreMenu($event)"
-          >
-            <tx-icon name="moreHorizontal" [size]="12" aria-hidden="true" />
-            More
-            <span class="tx-response-viewer__caret" aria-hidden="true">▾</span>
-          </tx-button>
-          @if (moreMenuOpen()) {
-            <ul class="tx-response-viewer__menu-list" role="menu" (click)="$event.stopPropagation()">
-              <li role="menuitem">
-                <button type="button" class="tx-response-viewer__menu-item" (click)="handleSaveSnapshot()">
-                  <span class="tx-response-viewer__menu-title">Save snapshot</span>
-                  <span class="tx-response-viewer__menu-hint">Pinned response for diff and replay</span>
-                </button>
-              </li>
-            </ul>
-          }
-        </div>
         <div class="tx-response-viewer__menu" [class.is-open]="copyMenuOpen()">
           <tx-button
             variant="secondary"

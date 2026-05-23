@@ -33,6 +33,7 @@ export function buildEmptyEnvironmentContextMenu(): TxContextMenuItem[] {
 /** Menu for a folder row. */
 export function buildEnvironmentFolderContextMenu(): TxContextMenuItem[] {
   return [
+    { id: 'new-folder', label: 'New folder', icon: 'folder' },
     { id: 'add-variable-inside', label: 'Add variable inside', icon: 'plus' },
     { id: 'sep-1', label: '', separator: true },
     { id: 'rename', label: 'Rename', icon: 'edit' },

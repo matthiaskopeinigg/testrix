@@ -1,0 +1,146 @@
+<div class="folder-overview">
+  <header class="folder-overview__hero">
+    <div class="folder-overview__hero-main">
+      <h2 class="folder-overview__title">Overview</h2>
+      <p class="folder-overview__subtitle">
+        Folder metadata, contents summary, and quick access to configuration.
+      </p>
+    </div>
+    <div class="folder-overview__folder-chip" aria-label="Folder name">
+      <tx-icon name="folder" [size]="14" aria-hidden="true" />
+      <span class="folder-overview__folder-name">{{ folderName() }}</span>
+    </div>
+  </header>
+
+  @if (parentPath()) {
+    <p class="folder-overview__path">
+      <tx-icon name="chevronRight" [size]="10" aria-hidden="true" />
+      {{ parentPath() }}
+    </p>
+  }
+
+  <div class="folder-overview__layout">
+    <section class="folder-overview-card folder-overview-card--about" aria-label="About this folder">
+      <h3 class="folder-overview-card__title">About</h3>
+      <tx-form-field label="Description" controlId="folder-description">
+        <tx-textarea
+          id="folder-description"
+          [ngModel]="description()"
+          (ngModelChange)="descriptionChange.emit($event)"
+          placeholder="Optional notes about this folder"
+        />
+      </tx-form-field>
+
+      <tx-form-field label="Tags" controlId="folder-tags">
+        <tx-tags-input
+          controlId="folder-tags"
+          [compact]="true"
+          placeholder="Add a tag"
+          [ngModel]="tags()"
+          (ngModelChange)="tagsChange.emit($event)"
+        />
+      </tx-form-field>
+
+      <p class="folder-overview__env">
+        <tx-icon name="globe" [size]="12" aria-hidden="true" />
+        Environment: <strong>{{ environmentName() }}</strong>
+      </p>
+    </section>
+
+    <section class="folder-overview-card folder-overview-card--contents" aria-label="Folder contents">
+      <h3 class="folder-overview-card__title">Contents</h3>
+
+      <div class="folder-overview-contents__stats">
+        @for (stat of contentsStats(); track stat.label) {
+          <article class="folder-overview-contents-stat">
+            <div class="folder-overview-contents-stat__head">
+              <span class="folder-overview-contents-stat__icon" aria-hidden="true">
+                <tx-icon [name]="stat.icon" [size]="14" />
+              </span>
+              <span class="folder-overview-contents-stat__label">{{ stat.label }}</span>
+            </div>
+            <strong class="folder-overview-contents-stat__value">{{ stat.value }}</strong>
+          </article>
+        }
+      </div>
+
+      <p class="folder-overview-contents__hint">
+        Includes all nested requests and subfolders under this folder.
+      </p>
+    </section>
+  </div>
+
+  <section class="folder-overview-config" aria-label="Configuration summary">
+    <div class="folder-overview-config__head">
+      <h3 class="folder-overview-card__title">Configuration</h3>
+      <p class="folder-overview-config__hint">Jump to a section to edit settings.</p>
+    </div>
+
+    <div class="folder-overview-config__grid">
+      @for (card of configCards(); track card.section) {
+        <button type="button" class="folder-overview-config-card" (click)="sectionSelect.emit(card.section)">
+          <span class="folder-overview-config-card__icon" aria-hidden="true">
+            <tx-icon [name]="card.icon" [size]="16" />
+          </span>
+          <span class="folder-overview-config-card__body">
+            <span class="folder-overview-config-card__label">{{ card.label }}</span>
+            <span class="folder-overview-config-card__value">{{ card.value }}</span>
+          </span>
+          <tx-icon class="folder-overview-config-card__chevron" name="chevronRight" [size]="14" aria-hidden="true" />
+        </button>
+      }
+    </div>
+  </section>
+
+  @if (inheritedVariables().length > 0) {
+    <section class="folder-overview-card folder-overview-card--vars" aria-label="Inherited variables">
+      <h3 class="folder-overview-card__title">Inherited variables</h3>
+      <p class="folder-overview-vars__hint">From ancestor collection folders.</p>
+      <ul class="folder-overview-vars__list">
+        @for (row of inheritedVariablesPreview(); track row.source + row.key) {
+          <li class="folder-overview-vars__row">
+            <span class="folder-overview-vars__source">{{ row.source }}</span>
+            <code class="folder-overview-vars__key">{{ row.key }}</code>
+          </li>
+        }
+      </ul>
+      @if (inheritedVariablesOverflow() > 0) {
+        <p class="folder-overview-vars__more">+ {{ inheritedVariablesOverflow() }} more</p>
+      }
+    </section>
+  }
+
+  <section class="folder-overview-card folder-overview-card--vars" aria-label="Collection variables">
+    <div class="folder-overview-card__head">
+      <h3 class="folder-overview-card__title">Collection variables</h3>
+      @if (ownVariables().length > 0) {
+        <span class="folder-overview-vars__count">{{ ownVariables().length }}</span>
+      }
+    </div>
+    @if (ownVariables().length === 0) {
+      <p class="folder-overview-vars__empty">
+        No variables defined on this folder yet. Add variables in the Variables section.
+      </p>
+    } @else {
+      <ul class="folder-overview-vars__list">
+        @for (row of ownVariablesPreview(); track row.key) {
+          <li>
+            <button
+              type="button"
+              class="folder-overview-vars__row folder-overview-vars__row--action"
+              [attr.aria-label]="'Edit variable ' + row.key"
+              (click)="handleVariablesSelect()"
+            >
+              <code class="folder-overview-vars__key">{{ row.key }}</code>
+              <span class="folder-overview-vars__value">{{ row.valuePreview }}</span>
+              <tx-icon class="folder-overview-vars__chevron" name="chevronRight" [size]="14" aria-hidden="true" />
+            </button>
+          </li>
+        }
+      </ul>
+      @if (ownVariablesOverflow() > 0) {
+        <p class="folder-overview-vars__more">+ {{ ownVariablesOverflow() }} more</p>
+      }
+    }
+  </section>
+</div>

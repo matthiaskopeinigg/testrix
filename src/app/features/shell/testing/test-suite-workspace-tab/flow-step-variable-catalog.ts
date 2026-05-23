@@ -1,4 +1,9 @@
-import { catalogForEnvironment, type EnvironmentDefinition } from '@shared/config';
+import {
+  catalogForEnvironment,
+  DEFAULT_ENVIRONMENT_VARIABLE_KEY_OPTIONS,
+  type EnvironmentDefinition,
+  type EnvironmentVariableKeyOptions,
+} from '@shared/config';
 import { DYNAMIC_VARIABLES, type DynamicVariableCatalogItem } from '@shared/dynamic-variables';
 import { flattenEnabledFlowSteps, type TestSuiteFlow } from '@shared/testing';
 
@@ -11,6 +16,7 @@ export function collectPriorFlowPlaceholderKeys(
   flow: TestSuiteFlow,
   currentStepId: string,
   environment?: EnvironmentDefinition | null,
+  keyOptions: EnvironmentVariableKeyOptions = DEFAULT_ENVIRONMENT_VARIABLE_KEY_OPTIONS,
 ): readonly DynamicVariableCatalogItem[] {
   const extras: DynamicVariableCatalogItem[] = [];
   const steps = flattenEnabledFlowSteps(flow.nodes);
@@ -47,6 +53,6 @@ export function collectPriorFlowPlaceholderKeys(
     }
   }
 
-  const envCatalog = catalogForEnvironment(environment ?? null);
+  const envCatalog = catalogForEnvironment(environment ?? null, keyOptions);
   return [...DYNAMIC_VARIABLES, ...envCatalog, ...extras];
 }

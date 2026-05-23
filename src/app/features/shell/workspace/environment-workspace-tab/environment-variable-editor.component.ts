@@ -51,9 +51,11 @@ export class EnvironmentVariableEditorComponent {
   protected readonly description = signal('');
 
   protected readonly valueHintTooltip = ENVIRONMENT_VALUE_HINT_TOOLTIP;
+  protected readonly showValue = signal(false);
 
   private saveTimer: ReturnType<typeof setTimeout> | null = null;
   private syncingFromStore = false;
+  private lastVariableId: string | null = null;
 
   protected readonly title = computed(() => this.variableMeta()?.key ?? 'Variable');
 
@@ -70,6 +72,14 @@ export class EnvironmentVariableEditorComponent {
   });
 
   constructor() {
+    effect(() => {
+      const variableId = this.variableId();
+      if (variableId !== this.lastVariableId) {
+        this.lastVariableId = variableId;
+        this.showValue.set(false);
+      }
+    });
+
     effect(() => {
       const meta = this.variableMeta();
       if (!meta) {
@@ -97,6 +107,10 @@ export class EnvironmentVariableEditorComponent {
   protected handleDescriptionChange(next: string): void {
     this.description.set(next);
     this.scheduleSave({ description: next });
+  }
+
+  protected handleToggleShowValue(): void {
+    this.showValue.update((visible) => !visible);
   }
 
   private scheduleSave(patch: {

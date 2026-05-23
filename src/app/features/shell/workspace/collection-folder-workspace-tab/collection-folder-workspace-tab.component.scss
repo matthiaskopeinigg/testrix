@@ -45,6 +45,34 @@
   @include tab-chrome.workspace-tab-bar-cluster-trailing;
 }
 
+.folder-tab__environment-field {
+  flex: 0 0 auto;
+  width: 10rem;
+  min-width: 8rem;
+  max-width: 13rem;
+
+  @include tab-chrome.workspace-tab-toolbar-dropdown;
+
+  ::ng-deep .tx-dropdown-host {
+    min-width: 0;
+  }
+
+  ::ng-deep .tx-dropdown__trigger {
+    min-width: 0;
+  }
+
+  ::ng-deep .tx-dropdown__value {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  ::ng-deep .tx-dropdown__panel {
+    min-width: 10rem;
+    max-width: 18rem;
+  }
+}
+
 .folder-tab__sections-wrap {
   @include tab-chrome.workspace-tab-sections-wrap;
 }

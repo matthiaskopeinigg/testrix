@@ -100,6 +100,7 @@ export function createDefaultSettings(): SettingsFile {
       siblingSort: 'orderThenPriority',
       foldersFirst: true,
       showDescriptions: true,
+      useFolderPathInKeys: false,
     },
     testSuite: {
       expandFolderOnDrag: true,

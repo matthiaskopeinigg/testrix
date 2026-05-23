@@ -59,6 +59,15 @@
       [ngModel]="request().prependWwwOnSend"
       (ngModelChange)="emit({ prependWwwOnSend: $event })"
     />
+    <tx-toggle
+      label="Auto-detect Content-Type from request body on send"
+      [ngModel]="request().autoDetectContentTypeOnSend"
+      (ngModelChange)="emit({ autoDetectContentTypeOnSend: $event })"
+    />
+    <p class="tx-settings__tab-description">
+      When enabled, Send adds a <code>Content-Type</code> header from the body editor mode and payload
+      (for example JSON in a Text body). Add your own <code>Content-Type</code> header to override.
+    </p>
   </div>
   <tx-form-field label="Timeout" controlId="tx-settings-http-timeout">
     <tx-slider

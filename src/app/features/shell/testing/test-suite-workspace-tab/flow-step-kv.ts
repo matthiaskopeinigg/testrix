@@ -9,6 +9,7 @@ export function kvPairsToRows(pairs: readonly TestSuiteKeyValuePair[]): readonly
     enabled: pair.enabled,
     key: pair.key,
     value: pair.value,
+    description: pair.description,
   }));
 }
 
@@ -18,5 +19,6 @@ export function rowsToKvPairs(rows: readonly TxKeyValueRow[]): TestSuiteKeyValue
     key: row.key,
     value: row.value,
     enabled: row.enabled,
+    description: row.description?.trim() || undefined,
   }));
 }

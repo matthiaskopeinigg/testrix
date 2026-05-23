@@ -1,4 +1,4 @@
-import { isIpcErrorPayload } from '../errors/ipc-error-payload';
+import { unwrapIpcInvokeError } from '../errors/ipc-error-payload';
 
 import type { OutgoingHttpRequest } from './outgoing-request.schema';
 import type { HttpResponseSnapshot } from './outgoing-request.schema';
@@ -11,13 +11,22 @@ function newSnapshotId(): string {
  * Resolves a user-facing message from an IPC or network failure.
  */
 export function resolveHttpErrorMessage(error: unknown): string {
-  if (isIpcErrorPayload(error)) {
-    return error.userMessage;
+  const ipc = unwrapIpcInvokeError(error);
+  if (ipc) {
+    return formatHttpFailureMessage(ipc.userMessage);
   }
   if (error instanceof Error && error.message.trim()) {
-    return error.message;
+    return formatHttpFailureMessage(error.message);
   }
   return 'Request failed';
+}
+
+function formatHttpFailureMessage(message: string): string {
+  const trimmed = message.trim();
+  if (!trimmed || trimmed === 'Invalid URL') {
+    return 'The request URL is invalid or empty. Enter a full URL (for example, https://api.example.com).';
+  }
+  return trimmed;
 }
 
 /**

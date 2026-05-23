@@ -1,0 +1,29 @@
+<tx-modal
+  layer="stacked"
+  [open]="open()"
+  [title]="title()"
+  [ariaLabel]="title()"
+  [dismissOnBackdrop]="dismissOnBackdrop()"
+  (closed)="handleModalClosed()"
+>
+  <form class="tx-prompt-dialog" (ngSubmit)="handleSubmit()">
+    <tx-form-field [label]="label()" controlId="tx-prompt-dialog-input">
+      <tx-input
+        controlId="tx-prompt-dialog-input"
+        [placeholder]="placeholder()"
+        [ngModel]="value()"
+        (ngModelChange)="value.set($event)"
+        [ngModelOptions]="{ standalone: true }"
+      />
+    </tx-form-field>
+
+    <div class="tx-prompt-dialog__actions" role="group" [attr.aria-label]="title() + ' actions'">
+      <tx-button buttonType="button" variant="secondary" (pressed)="handleCancel()">
+        {{ cancelLabel() }}
+      </tx-button>
+      <tx-button buttonType="submit" variant="primary" [disabled]="!canSubmit()">
+        {{ confirmLabel() }}
+      </tx-button>
+    </div>
+  </form>
+</tx-modal>

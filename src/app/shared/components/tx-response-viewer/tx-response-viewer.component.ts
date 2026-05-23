@@ -16,6 +16,7 @@ import {
   detectResponseEditorLanguage,
   formatPrettyResponseBody,
   getResponseBodyText,
+  prepareHtmlPreviewDocument,
   previewKind,
 } from '@shared/http/response-body-display';
 import {
@@ -78,12 +79,10 @@ export class TxResponseViewerComponent {
   readonly compareRuns = output<{ readonly a: string; readonly b: string }>();
   readonly refreshDiff = output<void>();
   readonly saveExample = output<void>();
-  readonly saveSnapshot = output<void>();
   readonly pinBaseline = output<string>();
 
   protected readonly copyMenuOpen = signal(false);
   protected readonly copyFlash = signal<ResponseCopyActionId | null>(null);
-  protected readonly moreMenuOpen = signal(false);
 
   protected readonly copyActions = RESPONSE_COPY_ACTIONS;
 
@@ -116,7 +115,11 @@ export class TxResponseViewerComponent {
     if (!snap || previewKind(snap) !== 'html') {
       return null;
     }
-    return this.sanitizer.bypassSecurityTrustHtml(getResponseBodyText(snap));
+    const html = prepareHtmlPreviewDocument(
+      getResponseBodyText(snap),
+      snap.requestSummary.url,
+    );
+    return this.sanitizer.bypassSecurityTrustHtml(html);
   });
 
   protected readonly previewImageSrc = computed(() => {
@@ -174,13 +177,6 @@ export class TxResponseViewerComponent {
   protected handleToggleCopyMenu(event: MouseEvent): void {
     event.stopPropagation();
     this.copyMenuOpen.update((v) => !v);
-    this.moreMenuOpen.set(false);
-  }
-
-  protected handleToggleMoreMenu(event: MouseEvent): void {
-    event.stopPropagation();
-    this.moreMenuOpen.update((v) => !v);
-    this.copyMenuOpen.set(false);
   }
 
   protected async handleCopyAction(id: ResponseCopyActionId): Promise<void> {
@@ -225,16 +221,7 @@ export class TxResponseViewerComponent {
     this.closeMenus();
   }
 
-  protected handleSaveSnapshot(): void {
-    if (!this.canSaveToRequest()) {
-      return;
-    }
-    this.saveSnapshot.emit();
-    this.closeMenus();
-  }
-
   protected closeMenus(): void {
     this.copyMenuOpen.set(false);
-    this.moreMenuOpen.set(false);
   }
 }

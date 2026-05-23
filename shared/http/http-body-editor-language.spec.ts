@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  contentTypeFromBodySyntax,
   formatHttpBodyForPreview,
   inferHttpBodySyntaxMode,
   inferHttpBodySyntaxModeFromHeaders,
@@ -29,6 +30,15 @@ describe('inferHttpBodySyntaxMode', () => {
   it('detects XML from content-type or markup', () => {
     expect(inferHttpBodySyntaxMode('application/xml', '', false)).toBe('xml');
     expect(inferHttpBodySyntaxMode('', '<foo/>', false)).toBe('xml');
+  });
+});
+
+describe('contentTypeFromBodySyntax', () => {
+  it('maps syntax modes to MIME types', () => {
+    expect(contentTypeFromBodySyntax('json')).toBe('application/json');
+    expect(contentTypeFromBodySyntax('xml')).toBe('application/xml');
+    expect(contentTypeFromBodySyntax('html')).toBe('text/html');
+    expect(contentTypeFromBodySyntax('plain')).toBe('text/plain');
   });
 });
 

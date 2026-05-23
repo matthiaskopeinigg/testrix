@@ -31,14 +31,14 @@ describe('TxTagsInputComponent', () => {
     expect(fixture.nativeElement.querySelector('.tx-tags-input__panel')).toBeTruthy();
   });
 
-  it('opens the tags menu and adds a tag in compact mode', () => {
+  it('opens the add-tag panel and adds a tag in compact mode', () => {
     fixture.componentRef.setInput('compact', true);
     fixture.detectChanges();
 
     const emitted: string[][] = [];
     fixture.componentInstance.tagsChange.subscribe((tags) => emitted.push([...tags]));
 
-    const trigger = fixture.nativeElement.querySelector('.tx-tags-input__menu-trigger') as HTMLButtonElement;
+    const trigger = fixture.nativeElement.querySelector('.tx-tags-input__add-btn') as HTMLButtonElement;
     trigger.click();
     fixture.detectChanges();
 
@@ -52,6 +52,6 @@ describe('TxTagsInputComponent', () => {
 
     expect(emitted.at(-1)).toEqual(['smoke']);
     expect(fixture.nativeElement.textContent).toContain('smoke');
-    expect(fixture.nativeElement.querySelector('.tx-tags-input__menu-value')?.textContent).toContain('1 tag');
+    expect(fixture.nativeElement.querySelector('.tx-tags-input__compact-chips')?.textContent).toContain('smoke');
   });
 });

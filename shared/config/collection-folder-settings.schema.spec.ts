@@ -11,6 +11,7 @@ import {
 describe('collectionFolderSettingsSchema', () => {
   it('accepts default settings', () => {
     const settings = createDefaultCollectionFolderSettings();
+    expect(settings.environmentId).toBeNull();
     expect(collectionFolderSettingsSchema.parse(settings)).toEqual(settings);
   });
 
@@ -57,10 +58,12 @@ describe('enrichCollectionFolderSettings', () => {
 
   it('merges tags, docs, and transport', () => {
     const enriched = enrichCollectionFolderSettings({
+      environmentId: 'env-prod',
       tags: ['api'],
       docs: '## Notes',
       transport: { timeoutMs: 5000 },
     });
+    expect(enriched.environmentId).toBe('env-prod');
     expect(enriched.tags).toEqual(['api']);
     expect(enriched.docs).toBe('## Notes');
     expect(enriched.transport.timeoutMs).toBe(5000);

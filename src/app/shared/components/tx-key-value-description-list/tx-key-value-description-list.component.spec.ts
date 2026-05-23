@@ -30,8 +30,10 @@ describe('TxKeyValueDescriptionListComponent', () => {
     fixture.componentRef.setInput('valueInput', 'variables');
     fixture.detectChanges();
 
+    expect(fixture.nativeElement.querySelector('.tx-kv-desc-list__header')).toBeTruthy();
     expect(fixture.nativeElement.querySelector('.tx-kv-desc-list__value-hint')).toBeTruthy();
-    expect(fixture.nativeElement.textContent).toContain('Description');
+    expect(fixture.nativeElement.querySelector('.tx-field__label')).toBeNull();
+    expect(fixture.nativeElement.querySelectorAll('.tx-kv-desc-list__sr-only').length).toBe(3);
     expect(fixture.nativeElement.querySelector('#kvdd-r1, [id="kvdd-r1"]')).toBeTruthy();
   });
 

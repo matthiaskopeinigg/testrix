@@ -130,18 +130,55 @@
   width: 100%;
 }
 
-.tx-tags-input__menu-trigger {
+.tx-tags-input__compact-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
-  gap: 0.45rem;
+  gap: 0.4rem;
   width: 100%;
+}
+
+.tx-tags-input__compact-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+
+  ::ng-deep .tx-tag {
+    max-width: 100%;
+    padding: 0.15rem 0.4rem 0.15rem 0.45rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0;
+    text-transform: none;
+    border-color: color-mix(in srgb, var(--tx-border-0) 78%, transparent);
+    background: color-mix(in srgb, var(--tx-surface-2) 82%, var(--tx-surface-0));
+    cursor: default;
+
+    &::before {
+      display: none;
+    }
+  }
+
+  ::ng-deep .tx-tag__remove {
+    cursor: pointer;
+  }
+}
+
+.tx-tags-input__add-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-shrink: 0;
   min-height: var(--tx-control-height-sm, 30px);
-  padding: 0.28rem 0.5rem 0.28rem 0.55rem;
+  padding: 0.28rem 0.65rem;
   border: 0;
+  border-radius: var(--tx-radius-sm, 8px);
   font: inherit;
   font-size: 0.8125rem;
-  text-align: left;
+  font-weight: 600;
+  color: var(--tx-text-1);
   cursor: pointer;
 
   @include surface.control-surface;
@@ -149,39 +186,17 @@
 
   &:hover:not(:disabled) {
     @include surface.control-surface-hover;
+    color: var(--tx-text-0);
   }
 
   &:focus-visible,
   &.is-open {
     @include surface.control-surface-focus;
+    color: var(--tx-text-0);
   }
 
   &:disabled {
     @include surface.control-surface-disabled;
-  }
-}
-
-.tx-tags-input__menu-value {
-  flex: 1 1 auto;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--tx-text-0);
-
-  &.is-placeholder {
-    color: color-mix(in srgb, var(--tx-text-1) 90%, transparent);
-  }
-}
-
-.tx-tags-input__chevron {
-  flex-shrink: 0;
-  opacity: 0.72;
-  transition: transform var(--tx-duration-fast, 120ms) var(--tx-ease-out-expo, ease);
-
-  &.is-open {
-    transform: rotate(180deg);
-    opacity: 1;
   }
 }
 
@@ -212,7 +227,8 @@
 }
 
 .tx-tags-input--compact .tx-tags-input__panel {
-  inset-inline: 0 auto;
+  inset-inline-start: 0;
+  inset-inline-end: auto;
 }
 
 .tx-tags-input__panel-tags {

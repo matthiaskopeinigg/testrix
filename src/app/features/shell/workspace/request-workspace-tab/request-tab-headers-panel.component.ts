@@ -67,7 +67,9 @@ function headerKeyLower(key: string): string {
 
       <h2 class="request-panel__title">Request headers</h2>
       <tx-key-value-list
+        [compact]="true"
         keyLabel="Key"
+        keyInput="http-headers"
         valueLabel="Value"
         addLabel="Add header"
         valueInput="variables"
@@ -101,6 +103,7 @@ export class RequestTabHeadersPanelComponent {
       enabled: row.enabled,
       key: row.key,
       value: row.value,
+      description: row.description,
     }));
   }
 
@@ -126,6 +129,7 @@ export class RequestTabHeadersPanelComponent {
         enabled: row.enabled,
         key: row.key,
         value: row.value,
+        description: row.description?.trim() || undefined,
       })),
     });
   }

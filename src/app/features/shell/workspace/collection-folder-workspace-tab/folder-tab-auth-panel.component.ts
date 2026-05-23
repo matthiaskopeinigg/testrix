@@ -7,11 +7,11 @@ import type {
   CollectionOAuth2GrantType,
 } from '@shared/config';
 import { COLLECTION_OAUTH2_GRANT_TYPES } from '@shared/config';
+import type { DynamicVariableCatalogItem } from '@shared/dynamic-variables';
 
 import { TxDropdownComponent } from '@app/shared/components/tx-dropdown/tx-dropdown.component';
 import type { TxDropdownOption } from '@app/shared/components/tx-dropdown/tx-dropdown.types';
 import { TxFormFieldComponent } from '@app/shared/components/tx-form-field/tx-form-field.component';
-import { TxInputComponent } from '@app/shared/components/tx-input/tx-input.component';
 import { TxVariableInputComponent } from '@app/shared/components/tx-variable-input/tx-variable-input.component';
 
 const AUTH_TYPE_LABELS: Record<CollectionFolderAuthType, string> = {
@@ -45,7 +45,6 @@ const OAUTH_GRANT_OPTIONS: readonly TxDropdownOption[] = COLLECTION_OAUTH2_GRANT
     FormsModule,
     TxDropdownComponent,
     TxFormFieldComponent,
-    TxInputComponent,
     TxVariableInputComponent,
   ],
   templateUrl: './folder-tab-auth-panel.component.html',
@@ -55,8 +54,10 @@ const OAUTH_GRANT_OPTIONS: readonly TxDropdownOption[] = COLLECTION_OAUTH2_GRANT
 export class FolderTabAuthPanelComponent {
   readonly auth = input.required<CollectionFolderAuth>();
   readonly hasParentFolder = input(false);
+  readonly catalog = input<readonly DynamicVariableCatalogItem[]>([]);
 
   readonly authChange = output<CollectionFolderAuth>();
+  readonly environmentVariableClick = output<{ readonly key: string }>();
 
   protected readonly authTypeOptions = computed((): readonly TxDropdownOption[] => {
     const types: CollectionFolderAuthType[] = ['none', 'bearer', 'basic', 'apiKey', 'oauth2'];

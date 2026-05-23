@@ -1,3 +1,5 @@
+import { COMMON_HTTP_HEADER_NAMES } from '@shared/http/common-http-header-names';
+import { COMMON_HTTP_QUERY_PARAM_NAMES } from '@shared/http/common-http-query-param-names';
 import {
   validationSourcesForReferenceStepType,
   type TestSuiteStepType,
@@ -53,6 +55,23 @@ export function validationExpressionLabel(source: ValidationRule['source']): str
     case 'response_header':
     case 'request_header':
       return 'Header name';
+    case 'request_param':
+      return 'Param name';
+    default:
+      return null;
+  }
+}
+
+/** Suggestion catalog for validation expression fields, when applicable. */
+export function validationExpressionSuggestions(
+  source: ValidationRule['source'],
+): readonly string[] | null {
+  switch (source) {
+    case 'response_header':
+    case 'request_header':
+      return COMMON_HTTP_HEADER_NAMES;
+    case 'request_param':
+      return COMMON_HTTP_QUERY_PARAM_NAMES;
     default:
       return null;
   }

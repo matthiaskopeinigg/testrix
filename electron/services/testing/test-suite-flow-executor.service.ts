@@ -210,6 +210,9 @@ export class TestSuiteFlowExecutor {
             showBrowser,
             e2eScreenshotFolder: settings.http.testing.e2eScreenshotFolder,
             environmentIdOverride: options.environmentIdOverride,
+            environmentVariableKeys: {
+              useFolderPathInKeys: settings.environments.useFolderPathInKeys,
+            },
           });
           await this.refreshPendingInterceptorCaptures(showBrowser);
           stepDurations[step.id] = Date.now() - stepStartedAt;
@@ -277,6 +280,7 @@ export class TestSuiteFlowExecutor {
       readonly showBrowser: boolean;
       readonly e2eScreenshotFolder: string;
       readonly environmentIdOverride?: string | null;
+      readonly environmentVariableKeys: import('@shared/http/collection-execution.schema').EnvironmentVariableKeyMode;
     },
   ): Promise<void> {
     switch (step.stepType) {
@@ -312,9 +316,15 @@ export class TestSuiteFlowExecutor {
   private buildVariableContext(
     flow: TestSuiteFlow,
     environments: import('@shared/config').EnvironmentsFile,
-    environmentIdOverride?: string | null,
+    environmentIdOverride: string | null | undefined,
+    environmentVariableKeys: import('@shared/http/collection-execution.schema').EnvironmentVariableKeyMode,
   ): Record<string, string> {
-    const env = buildFlowEnvironmentVariableContext(flow, environments, environmentIdOverride);
+    const env = buildFlowEnvironmentVariableContext(
+      flow,
+      environments,
+      environmentIdOverride,
+      environmentVariableKeys,
+    );
     return { ...env, ...Object.fromEntries(this.flowVariables) };
   }
 
@@ -322,10 +332,16 @@ export class TestSuiteFlowExecutor {
     template: string,
     flow: TestSuiteFlow,
     environments: import('@shared/config').EnvironmentsFile,
-    environmentIdOverride?: string | null,
+    environmentIdOverride: string | null | undefined,
+    environmentVariableKeys: import('@shared/http/collection-execution.schema').EnvironmentVariableKeyMode,
   ): string {
     return resolveTemplateVariables(template, {
-      environment: this.buildVariableContext(flow, environments, environmentIdOverride),
+      environment: this.buildVariableContext(
+        flow,
+        environments,
+        environmentIdOverride,
+        environmentVariableKeys,
+      ),
     });
   }
 
@@ -336,6 +352,7 @@ export class TestSuiteFlowExecutor {
       readonly environments: import('@shared/config').EnvironmentsFile;
       readonly databaseConnections: readonly DatabaseConnection[];
       readonly environmentIdOverride?: string | null;
+      readonly environmentVariableKeys: import('@shared/http/collection-execution.schema').EnvironmentVariableKeyMode;
     },
   ): Promise<void> {
     const cfg = step.config as DatabaseStepConfig;
@@ -354,6 +371,7 @@ export class TestSuiteFlowExecutor {
       flow,
       ctx.environments,
       ctx.environmentIdOverride,
+      ctx.environmentVariableKeys,
     ).trim();
     if (!query) {
       throw new Error('DATABASE step needs a query.');
@@ -369,6 +387,7 @@ export class TestSuiteFlowExecutor {
       flow,
       ctx.environments,
       ctx.environmentIdOverride,
+      ctx.environmentVariableKeys,
     ).trim();
     if (alias) {
       this.flowVariables.set(alias, textOut);
@@ -442,12 +461,14 @@ export class TestSuiteFlowExecutor {
       readonly environments: import('@shared/config').EnvironmentsFile;
       readonly showBrowser: boolean;
       readonly environmentIdOverride?: string | null;
+      readonly environmentVariableKeys: import('@shared/http/collection-execution.schema').EnvironmentVariableKeyMode;
     },
   ): Promise<void> {
     const variableContext = this.buildVariableContext(
       flow,
       ctx.environments,
       ctx.environmentIdOverride,
+      ctx.environmentVariableKeys,
     );
     const cfg = resolveHttpListenerStepConfig(step.config as HttpListenerStepConfig, variableContext);
     const urlPattern = String(cfg.urlPattern ?? '').trim();
@@ -470,12 +491,14 @@ export class TestSuiteFlowExecutor {
       readonly environments: import('@shared/config').EnvironmentsFile;
       readonly showBrowser: boolean;
       readonly environmentIdOverride?: string | null;
+      readonly environmentVariableKeys: import('@shared/http/collection-execution.schema').EnvironmentVariableKeyMode;
     },
   ): Promise<void> {
     const variableContext = this.buildVariableContext(
       flow,
       ctx.environments,
       ctx.environmentIdOverride,
+      ctx.environmentVariableKeys,
     );
     const cfg = resolveHttpInterceptorStepConfig(
       step.config as HttpInterceptorStepConfig,
@@ -842,6 +865,7 @@ export class TestSuiteFlowExecutor {
       readonly environments: import('@shared/config').EnvironmentsFile;
       readonly appVersion: string;
       readonly environmentIdOverride?: string | null;
+      readonly environmentVariableKeys: import('@shared/http/collection-execution.schema').EnvironmentVariableKeyMode;
     },
   ): Promise<void> {
     const cfg = step.config as RequestStepConfig;
@@ -854,6 +878,7 @@ export class TestSuiteFlowExecutor {
         environments: ctx.environments,
         appVersion: ctx.appVersion,
         runScope: { runId: `flow-${step.id}` },
+        environmentVariableKeys: ctx.environmentVariableKeys,
       });
       if (!built) {
         throw new Error('Collection request not found.');
@@ -862,7 +887,7 @@ export class TestSuiteFlowExecutor {
         ...built.outgoing,
         runScope: { runId: `flow-${step.id}` },
       });
-      const snapshot = await executeHttpRequest(payload);
+      const { snapshot } = await executeHttpRequest(payload);
       this.captures.set(step.id, buildHttpResponseStepCapture(snapshot));
       if (!snapshot.status.ok) {
         throw new Error(formatHttpStepFailure(snapshot));
@@ -874,6 +899,7 @@ export class TestSuiteFlowExecutor {
       flow,
       ctx.environments,
       ctx.environmentIdOverride,
+      ctx.environmentVariableKeys,
     );
 
     const url = this.resolveFlowTemplate(
@@ -881,6 +907,7 @@ export class TestSuiteFlowExecutor {
       flow,
       ctx.environments,
       ctx.environmentIdOverride,
+      ctx.environmentVariableKeys,
     ).trim();
     if (!url) {
       throw new Error('REQUEST step needs a URL or collection request.');
@@ -921,7 +948,7 @@ export class TestSuiteFlowExecutor {
       variableContext,
     });
 
-    const snapshot = await executeHttpRequest(payload);
+    const { snapshot } = await executeHttpRequest(payload);
     this.captures.set(step.id, buildHttpResponseStepCapture(snapshot));
     if (!snapshot.status.ok) {
       throw new Error(formatHttpStepFailure(snapshot));

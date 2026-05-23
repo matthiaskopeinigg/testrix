@@ -193,10 +193,6 @@ export class RegressionWorkspaceTabComponent {
     () => !this.missing() && this.activeSection() !== 'results',
   );
 
-  protected readonly showResultsSplit = computed(
-    () => this.showResultsPanel() && !this.resultsPanelHidden(),
-  );
-
   protected readonly runProgressPercent = computed(() => {
     const total = this.metrics().total;
     if (total <= 0) {

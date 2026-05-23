@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 
 import {
   resolveRequestRunSession,
@@ -7,12 +7,13 @@ import {
 
 import { ConfigService } from '@app/core/config/config.service';
 import { HttpRequestService } from '@app/core/http/http-request.service';
+import { TxPromptDialogComponent } from '@app/shared/components/tx-prompt-dialog/tx-prompt-dialog.component';
 import { TxResponseViewerComponent } from '@app/shared/components/tx-response-viewer/tx-response-viewer.component';
 
 @Component({
   selector: 'app-request-response-panel',
   standalone: true,
-  imports: [TxResponseViewerComponent],
+  imports: [TxPromptDialogComponent, TxResponseViewerComponent],
   template: `
     <tx-response-viewer
       [snapshot]="http.selectedSnapshot()"
@@ -27,9 +28,18 @@ import { TxResponseViewerComponent } from '@app/shared/components/tx-response-vi
       (runSelect)="http.selectRun($event)"
       (compareRuns)="handleCompareRuns($event)"
       (saveExample)="handleSaveExample()"
-      (saveSnapshot)="handleSaveSnapshot()"
       (refreshDiff)="handleRefreshDiff()"
       (pinBaseline)="handlePinBaseline($event)"
+    />
+
+    <tx-prompt-dialog
+      [open]="namePromptOpen()"
+      title="Save as example"
+      label="Example name"
+      defaultValue="Example"
+      confirmLabel="Save example"
+      (submitted)="handleNamePromptSubmitted($event)"
+      (closed)="handleNamePromptClosed()"
     />
   `,
   styleUrl: './request-response-panel.component.scss',
@@ -40,6 +50,8 @@ export class RequestResponsePanelComponent {
   protected readonly http = inject(HttpRequestService);
 
   readonly requestId = input.required<string>();
+
+  protected readonly namePromptOpen = signal(false);
 
   protected readonly activeTab = computed((): RequestResponseTabId => {
     const session = this.configService.session();
@@ -77,19 +89,16 @@ export class RequestResponsePanelComponent {
   }
 
   protected handleSaveExample(): void {
-    const name = globalThis.prompt?.('Example name', 'Example') ?? 'Example';
-    if (name === null) {
-      return;
-    }
+    this.namePromptOpen.set(true);
+  }
+
+  protected handleNamePromptSubmitted(name: string): void {
+    this.namePromptOpen.set(false);
     this.http.saveExample(this.requestId(), name);
   }
 
-  protected handleSaveSnapshot(): void {
-    const name = globalThis.prompt?.('Snapshot name', 'Snapshot') ?? 'Snapshot';
-    if (name === null) {
-      return;
-    }
-    this.http.saveSnapshot(this.requestId(), name);
+  protected handleNamePromptClosed(): void {
+    this.namePromptOpen.set(false);
   }
 
   protected handleRefreshDiff(): void {

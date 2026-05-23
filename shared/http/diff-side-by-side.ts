@@ -2,7 +2,7 @@ import type { LineDiffHunk } from './response-diff';
 
 export const DIFF_MAX_PAIRED_LINES = 640;
 
-export type DiffSideLineKind = 'remove' | 'add' | 'unchanged' | 'empty';
+export type DiffSideLineKind = 'remove' | 'add' | 'unchanged' | 'change' | 'empty';
 
 export interface DiffSideLine {
   readonly lineNo: number | null;
@@ -21,31 +21,64 @@ export type DiffPairedDisplayRow =
 
 /**
  * Aligns line hunks into side-by-side rows (previous left, current right).
+ * Consecutive remove/add runs are zipped onto the same row so JSON value changes
+ * line up instead of appearing as unrelated deletions and insertions.
  */
 export function buildPairedDiffRows(hunks: readonly LineDiffHunk[]): readonly DiffPairedRow[] {
   const pairs: DiffPairedRow[] = [];
   let leftNo = 0;
   let rightNo = 0;
+  let index = 0;
 
-  for (const hunk of hunks) {
-    if (hunk.kind === 'remove') {
-      leftNo++;
-      pairs.push({
-        left: { lineNo: leftNo, text: hunk.line, kind: 'remove' },
-        right: { lineNo: null, text: '', kind: 'empty' },
-      });
-    } else if (hunk.kind === 'add') {
-      rightNo++;
-      pairs.push({
-        left: { lineNo: null, text: '', kind: 'empty' },
-        right: { lineNo: rightNo, text: hunk.line, kind: 'add' },
-      });
-    } else {
+  while (index < hunks.length) {
+    const hunk = hunks[index]!;
+
+    if (hunk.kind === 'unchanged') {
       leftNo++;
       rightNo++;
       pairs.push({
         left: { lineNo: leftNo, text: hunk.line, kind: 'unchanged' },
         right: { lineNo: rightNo, text: hunk.line, kind: 'unchanged' },
+      });
+      index++;
+      continue;
+    }
+
+    const removes: string[] = [];
+    while (index < hunks.length && hunks[index]!.kind === 'remove') {
+      removes.push(hunks[index]!.line);
+      index++;
+    }
+
+    const adds: string[] = [];
+    while (index < hunks.length && hunks[index]!.kind === 'add') {
+      adds.push(hunks[index]!.line);
+      index++;
+    }
+
+    const rowCount = Math.max(removes.length, adds.length);
+    for (let row = 0; row < rowCount; row++) {
+      const hasLeft = row < removes.length;
+      const hasRight = row < adds.length;
+      if (hasLeft) {
+        leftNo++;
+      }
+      if (hasRight) {
+        rightNo++;
+      }
+
+      const paired = hasLeft && hasRight;
+      pairs.push({
+        left: {
+          lineNo: hasLeft ? leftNo : null,
+          text: hasLeft ? removes[row]! : '',
+          kind: hasLeft ? (paired ? 'change' : 'remove') : 'empty',
+        },
+        right: {
+          lineNo: hasRight ? rightNo : null,
+          text: hasRight ? adds[row]! : '',
+          kind: hasRight ? (paired ? 'change' : 'add') : 'empty',
+        },
       });
     }
   }

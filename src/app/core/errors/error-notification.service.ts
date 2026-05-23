@@ -1,6 +1,6 @@
 import { Injectable, Signal, signal } from '@angular/core';
 
-import { isIpcErrorPayload } from '@shared/errors';
+import { unwrapIpcInvokeError } from '@shared/errors';
 
 export interface AppBannerError {
   readonly title: string;
@@ -16,14 +16,18 @@ export class ErrorNotificationService {
 
 
   reportUnknown(error: unknown): void {
-    if (isIpcErrorPayload(error)) {
-      this.state.set({ title: `Problem (${error.code})`, detail: error.userMessage });
+    const ipc = unwrapIpcInvokeError(error);
+    if (ipc) {
+      this.state.set({ title: `Problem (${ipc.code})`, detail: ipc.userMessage });
+      return;
+    }
+
+    if (error instanceof Error && error.message.trim()) {
+      this.reportGeneric(error.message.trim());
       return;
     }
 
     this.reportGeneric();
-
-
   }
 
 

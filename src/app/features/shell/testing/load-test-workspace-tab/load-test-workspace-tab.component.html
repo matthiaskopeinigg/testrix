@@ -65,6 +65,7 @@
 
     <tx-vertical-split-pane
       class="lt-tab__split"
+      revealLabel="Results"
       [secondaryVisible]="showResultsPanel()"
       [secondaryHidden]="resultsPanelHidden()"
       [secondaryHeight]="resultsPanelHeight()"
@@ -179,7 +180,7 @@
           }
         </div>
       </div>
-      @if (showResultsSplit()) {
+      @if (showResultsPanel()) {
         <div class="lt-tab__results-slot" txSplitSecondary>
           <app-lt-tab-results-panel
             [runState]="runState()"

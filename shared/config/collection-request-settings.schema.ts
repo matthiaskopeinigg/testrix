@@ -1,11 +1,15 @@
 import { z } from 'zod';
 
+import {
+  contentTypeFromBodySyntax,
+  inferHttpBodySyntaxMode,
+} from '../http/http-body-editor-language';
 import { httpResponseSnapshotSchema } from '../http/outgoing-request.schema';
 import {
   collectionFolderAuthSchema,
   collectionFolderScriptsSchema,
-  createDefaultCollectionFolderAuth,
   createDefaultCollectionFolderScripts,
+  type CollectionFolderAuth,
 } from './collection-folder-settings.schema';
 import { collectionTransportSettingsSchema } from './collection-transport-settings.schema';
 import {
@@ -216,6 +220,11 @@ export function createDefaultCollectionRequestBody(): CollectionRequestBody {
   return { mode: 'none' };
 }
 
+/** Default auth for a collection request (inherits from ancestor folders). */
+export function createDefaultCollectionRequestAuth(): CollectionFolderAuth {
+  return { type: 'inherit' };
+}
+
 export function createDefaultCollectionRequestSettings(): CollectionRequestSettings {
   return {
     environmentId: null,
@@ -225,7 +234,7 @@ export function createDefaultCollectionRequestSettings(): CollectionRequestSetti
     pathParams: [],
     headers: { rows: [], overrides: {} },
     body: createDefaultCollectionRequestBody(),
-    auth: createDefaultCollectionFolderAuth(),
+    auth: createDefaultCollectionRequestAuth(),
     scripts: createDefaultCollectionFolderScripts(),
     transport: {},
     tests: [],
@@ -305,17 +314,48 @@ export function enrichCollectionRequestSettings(raw: unknown): CollectionRequest
   return parsed.success ? parsed.data : defaults;
 }
 
-/** Suggested Content-Type from body mode (for header hint UI). */
+/** True when an enabled request header row uses the given name (case-insensitive). */
+export function requestHeaderRowsDefineKey(
+  headers: CollectionRequestHeaders,
+  headerName: string,
+): boolean {
+  const lower = headerName.trim().toLowerCase();
+  return headers.rows.some((row) => row.enabled && row.key.trim().toLowerCase() === lower);
+}
+
+/**
+ * Content-Type hint for the Headers panel when auto-detect on send is enabled and the request
+ * does not already define `Content-Type`.
+ */
+export function resolveRequestContentTypeHint(
+  body: CollectionRequestBody,
+  headers: CollectionRequestHeaders,
+): string | null {
+  const suggested = suggestRequestContentType(body);
+  if (!suggested || requestHeaderRowsDefineKey(headers, 'Content-Type')) {
+    return null;
+  }
+  return suggested;
+}
+
+/** Suggested Content-Type from body mode and payload shape (for send and header hint UI). */
 export function suggestRequestContentType(body: CollectionRequestBody): string | null {
   switch (body.mode) {
+    case 'none':
+      return null;
     case 'json':
       return 'application/json';
     case 'html':
       return 'text/html';
     case 'xml':
       return 'application/xml';
-    case 'text':
-      return 'text/plain';
+    case 'text': {
+      const raw = body.raw.trim();
+      if (!raw) {
+        return null;
+      }
+      return contentTypeFromBodySyntax(inferHttpBodySyntaxMode('', raw, false));
+    }
     case 'x-www-form-urlencoded':
       return 'application/x-www-form-urlencoded';
     case 'form-data':

@@ -104,7 +104,13 @@ const collectionsSettingsSchema = collectionsTreeDisplaySchema.extend({
   displayHttpMethod: httpMethodDisplaySchema,
 });
 
-const environmentsSettingsSchema = treeSidebarSettingsSchema;
+const environmentsSettingsSchema = treeSidebarSettingsSchema.extend({
+  /**
+   * When true, `{{placeholders}}` use folder labels as a dotted prefix (e.g. `{{url.magenta}}`).
+   * When false, only the variable key is used (e.g. `{{magenta}}`).
+   */
+  useFolderPathInKeys: z.boolean(),
+});
 
 const testSuiteTreeDisplaySchema = treeSidebarSettingsSchema.extend({
   /** When true, folder and flow tags appear in the test suite sidebar tree. */

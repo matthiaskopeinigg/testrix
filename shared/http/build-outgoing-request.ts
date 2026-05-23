@@ -2,9 +2,11 @@ import { findCollectionRequestInTree } from '../config/collect-collection-ancest
 import { applyPathParamsToUrl } from '../config/apply-path-params';
 import { getEnvironmentDefinition } from '../config/environment-variables';
 import { httpMethodAllowsRequestBody, type HttpMethodId } from '../config/http-settings.schema';
+import { resolveCollectionRequestEnvironmentId } from '../config/resolve-collection-request-environment';
 import {
   resolveCollectionRequestAuth,
   applyCollectionRequestAuth,
+  resolveCollectionFolderAuthValues,
 } from '../config/resolve-collection-request-auth';
 import { resolveCollectionTransport } from '../config/resolve-collection-transport';
 import {
@@ -88,14 +90,19 @@ export function buildOutgoingRequest(input: CollectionExecutionInput): BuildOutg
 
   const { request, ancestorFolders } = loc;
   const settings = request.settings;
+  const environmentId = resolveCollectionRequestEnvironmentId(
+    settings.environmentId,
+    ancestorFolders,
+  );
   const environment = getEnvironmentDefinition(
     input.environments.environments,
-    settings.environmentId ?? '',
+    environmentId,
   );
   const variableContext = resolveRequestVariables(
     ancestorFolders,
     environment,
     input.runScope?.sharedVariables ?? {},
+    input.environmentVariableKeys,
   );
 
   const resolveText = (text: string): string =>
@@ -119,7 +126,8 @@ export function buildOutgoingRequest(input: CollectionExecutionInput): BuildOutg
   let headers = resolveHeaderValues(resolvedHeadersToMap(headerRows), variableContext);
 
   const authResolved = resolveCollectionRequestAuth(settings.auth, ancestorFolders);
-  url = applyCollectionRequestAuth(authResolved.auth, headers, url);
+  const authForSend = resolveCollectionFolderAuthValues(authResolved.auth, resolveText);
+  url = applyCollectionRequestAuth(authForSend, headers, url);
 
   url = normalizeOutgoingRequestUrl(url, {
     defaultScheme: input.http.request.defaultUrlScheme,
@@ -133,9 +141,11 @@ export function buildOutgoingRequest(input: CollectionExecutionInput): BuildOutg
   let body = allowsBody ? encodeRequestBody(settings.body) : { kind: 'none' as const };
   if (allowsBody) {
     body = resolveEncodedBodyTemplates(body, resolveText);
-    const contentTypeHint = suggestRequestContentType(settings.body);
-    if (contentTypeHint?.trim() && !headerKeyExists(headers, 'content-type')) {
-      headers['Content-Type'] = contentTypeHint.trim();
+    if (input.http.request.autoDetectContentTypeOnSend) {
+      const contentTypeHint = suggestRequestContentType(settings.body);
+      if (contentTypeHint?.trim() && !headerKeyExists(headers, 'content-type')) {
+        headers['Content-Type'] = contentTypeHint.trim();
+      }
     }
   }
 
@@ -149,7 +159,7 @@ export function buildOutgoingRequest(input: CollectionExecutionInput): BuildOutg
         ? `Request (${authResolved.auth.type})`
         : 'None';
 
-  const outgoing = outgoingHttpRequestSchema.parse({
+  const outgoingCheck = outgoingHttpRequestSchema.safeParse({
     requestId: request.id,
     method,
     url,
@@ -171,9 +181,14 @@ export function buildOutgoingRequest(input: CollectionExecutionInput): BuildOutg
       retries: transport.retries,
     },
     scripts,
-    environmentId: settings.environmentId ?? null,
+    environmentId,
     variableContext: { ...variableContext },
   });
+  if (!outgoingCheck.success) {
+    return null;
+  }
+
+  const outgoing = outgoingCheck.data;
 
   return {
     outgoing,

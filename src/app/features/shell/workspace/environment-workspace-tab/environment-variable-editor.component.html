@@ -20,6 +20,15 @@
         <label class="tx-field__label" for="env-var-value">Value</label>
         <button
           type="button"
+          class="env-var-editor__value-toggle"
+          [attr.aria-label]="showValue() ? 'Hide value' : 'Show value'"
+          [attr.aria-pressed]="showValue()"
+          (click)="handleToggleShowValue()"
+        >
+          <tx-icon [name]="showValue() ? 'eyeOff' : 'eye'" [size]="16" aria-hidden="true" />
+        </button>
+        <button
+          type="button"
           class="env-var-editor__value-hint"
           aria-label="About dynamic placeholders in values"
           [txTooltip]="valueHintTooltip"
@@ -31,6 +40,8 @@
       <div class="tx-field__control">
         <tx-variable-input
           id="env-var-value"
+          [maskValue]="true"
+          [valueRevealed]="showValue()"
           [showPlaceholderHint]="false"
           [ngModel]="value()"
           (ngModelChange)="handleValueChange($event)"

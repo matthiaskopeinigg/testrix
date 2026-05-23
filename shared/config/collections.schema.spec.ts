@@ -55,7 +55,7 @@ describe('collectionsFileSchema', () => {
       kind: 'folder',
       children: [],
     });
-    expect(enriched.settings.auth.type).toBe('none');
+    expect(enriched.settings.auth.type).toBe('inherit');
     expect(enriched.settings.scripts).toEqual({ pre: '', post: '' });
   });
 
@@ -68,7 +68,7 @@ describe('collectionsFileSchema', () => {
       url: '/x',
     });
     expect(enriched.settings.body.mode).toBe('none');
-    expect(enriched.settings.auth.type).toBe('none');
+    expect(enriched.settings.auth.type).toBe('inherit');
   });
 
   it('enrichCollectionWebsocketNode fills default settings', () => {
@@ -78,7 +78,7 @@ describe('collectionsFileSchema', () => {
       kind: 'websocket',
       wsPath: 'ws://localhost/x',
     });
-    expect(enriched.settings.auth.type).toBe('none');
+    expect(enriched.settings.auth.type).toBe('inherit');
     expect(enriched.settings.message).toBe('');
   });
 
@@ -111,7 +111,7 @@ describe('migrateCollections', () => {
 
     expect(migrated.nodes[0]?.kind).toBe('websocket');
     if (migrated.nodes[0]?.kind === 'websocket') {
-      expect(migrated.nodes[0].settings.auth.type).toBe('none');
+      expect(migrated.nodes[0].settings.auth.type).toBe('inherit');
       expect(migrated.nodes[0].settings.message).toBe('');
     }
   });

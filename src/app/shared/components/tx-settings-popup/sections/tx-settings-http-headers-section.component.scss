@@ -1,3 +1,7 @@
+:host ::ng-deep tx-key-value-list .tx-key-value-list__row--with-description {
+  grid-template-columns: minmax(6.5rem, 0.85fr) minmax(7rem, 1.15fr) minmax(5.5rem, 0.9fr) auto;
+}
+
 .tx-settings-http-headers__hint {
   margin: 0 0 0.75rem;
   font-size: 0.8125rem;

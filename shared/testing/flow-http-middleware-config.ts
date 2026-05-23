@@ -1,7 +1,9 @@
 import {
   collectEnvironmentVariables,
+  DEFAULT_ENVIRONMENT_VARIABLE_KEY_OPTIONS,
   environmentVariablesToMap,
   getEnvironmentDefinition,
+  type EnvironmentVariableKeyOptions,
 } from '../config/environment-variables';
 import type { EnvironmentsFile } from '../config/environments.schema';
 import { resolveTemplateVariables } from '../dynamic-variables/template-variables';
@@ -41,13 +43,14 @@ export function buildFlowEnvironmentVariableContext(
   flow: TestSuiteFlow,
   environments: EnvironmentsFile,
   environmentIdOverride?: string | null,
+  keyOptions: EnvironmentVariableKeyOptions = DEFAULT_ENVIRONMENT_VARIABLE_KEY_OPTIONS,
 ): Readonly<Record<string, string>> {
   const effectiveId = environmentIdOverride ?? flow.environmentId ?? null;
   const environment = getEnvironmentDefinition(environments.environments, effectiveId);
   if (!environment) {
     return {};
   }
-  return environmentVariablesToMap(collectEnvironmentVariables(environment.nodes));
+  return environmentVariablesToMap(collectEnvironmentVariables(environment.nodes, keyOptions));
 }
 
 function resolveText(value: string, variableContext: Readonly<Record<string, string>>): string {

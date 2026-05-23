@@ -17,9 +17,13 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: color-mix(in srgb, var(--tx-scrim, var(--tx-surface-0)) 58%, transparent);
+  background: color-mix(in srgb, var(--tx-scrim, var(--tx-surface-0)) 48%, transparent);
+  backdrop-filter: blur(28px) saturate(1.14);
+  -webkit-backdrop-filter: blur(28px) saturate(1.14);
   opacity: 0;
-  transition: opacity var(--tx-settings-backdrop-duration) var(--tx-ease-out-expo, cubic-bezier(0.16, 1, 0.3, 1));
+  transition:
+    opacity var(--tx-settings-backdrop-duration) var(--tx-ease-out-expo, cubic-bezier(0.16, 1, 0.3, 1)),
+    backdrop-filter var(--tx-settings-backdrop-duration) var(--tx-ease-out-expo, cubic-bezier(0.16, 1, 0.3, 1));
 
   &.tx-settings--shown {
     opacity: 1;

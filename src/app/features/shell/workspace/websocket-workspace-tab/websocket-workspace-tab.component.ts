@@ -27,6 +27,7 @@ import {
   type WorkspaceEditorLayoutId,
 } from '@shared/config';
 
+import { HttpRequestService } from '@app/core/http/http-request.service';
 import { CollectionsService } from '@app/core/collections/collections.service';
 import { ConfigService } from '@app/core/config/config.service';
 import { EnvironmentsService } from '@app/core/environments/environments.service';
@@ -52,12 +53,13 @@ import { TxFormFieldComponent } from '@app/shared/components/tx-form-field/tx-fo
 import { TxIconComponent } from '@app/shared/components/tx-icon/tx-icon.component';
 import { TxKeyValueDescriptionListComponent } from '@app/shared/components/tx-key-value-description-list/tx-key-value-description-list.component';
 import type { TxKeyValueDescriptionRow } from '@app/shared/components/tx-key-value-description-list/tx-key-value-description-list.types';
+import { TxKeyValueListComponent } from '@app/shared/components/tx-key-value-list/tx-key-value-list.component';
+import type { TxKeyValueRow } from '@app/shared/components/tx-key-value-list/tx-key-value-list.types';
 import { TxVerticalSplitPaneComponent } from '@app/shared/components/tx-vertical-split-pane/tx-vertical-split-pane.component';
 
 import { WsTabMessagesPanelComponent, type WsConnectionState } from './ws-tab-messages-panel.component';
 import { WsTabOverviewPanelComponent } from './ws-tab-overview-panel.component';
 import { WsTabSettingsPanelComponent } from './ws-tab-settings-panel.component';
-import { buildWsVariableCatalog } from './ws-variable-catalog';
 
 interface WsTabNavItem {
   readonly id: WebsocketTabSectionId;
@@ -97,6 +99,7 @@ const SCRIPT_EDITOR_PLACEHOLDER = `// Postman-style script APIs (Ctrl+Space for 
     TxFormFieldComponent,
     TxIconComponent,
     TxKeyValueDescriptionListComponent,
+    TxKeyValueListComponent,
     TxVerticalSplitPaneComponent,
     RequestTabUrlInputComponent,
     FolderTabAuthPanelComponent,
@@ -113,6 +116,7 @@ export class WebsocketWorkspaceTabComponent {
   private readonly collectionsService = inject(CollectionsService);
   private readonly configService = inject(ConfigService);
   private readonly environmentsService = inject(EnvironmentsService);
+  private readonly httpRequest = inject(HttpRequestService);
   private readonly workspaceEditor = inject(WorkspaceEditorService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly uiPreferences = inject(UiPreferencesService);
@@ -219,8 +223,17 @@ export class WebsocketWorkspaceTabComponent {
     return options;
   });
 
+  protected readonly environmentKeyOptions = computed(() => ({
+    useFolderPathInKeys:
+      this.configService.settings()?.environments.useFolderPathInKeys ?? false,
+  }));
+
   protected readonly variableCatalog = computed(() =>
-    buildWsVariableCatalog(this.activeEnvironment()),
+    this.httpRequest.buildVariableCatalog(
+      this.activeEnvironment(),
+      this.environmentKeyOptions(),
+      this.websocketEnvironmentId(),
+    ),
   );
 
   protected readonly connectButtonLabel = computed(() =>
@@ -233,7 +246,7 @@ export class WebsocketWorkspaceTabComponent {
 
   protected readonly isConnecting = computed(() => this.connectionState() === 'connecting');
 
-  protected readonly queryRows = computed((): readonly TxKeyValueDescriptionRow[] =>
+  protected readonly queryRows = computed((): readonly TxKeyValueRow[] =>
     this.settings().queryParams.map((row) => ({
       id: row.id,
       enabled: row.enabled,
@@ -375,7 +388,7 @@ export class WebsocketWorkspaceTabComponent {
     this.patchSettings({ environmentId: value || null });
   }
 
-  protected handleQueryParamsChange(rows: readonly TxKeyValueDescriptionRow[]): void {
+  protected handleQueryParamsChange(rows: readonly TxKeyValueRow[]): void {
     this.patchSettings({
       queryParams: rows.map(
         (row): HttpKeyValueRow => ({
@@ -449,6 +462,7 @@ export class WebsocketWorkspaceTabComponent {
       this.environmentsService.environments(),
       event.key,
       this.websocketEnvironmentId(),
+      this.environmentKeyOptions(),
     );
   }
 

@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, input, output } from '@an
 import { FormsModule } from '@angular/forms';
 
 import type { CollectionFolderScriptPaneId, CollectionFolderScripts } from '@shared/config';
+import type { DynamicVariableCatalogItem } from '@shared/dynamic-variables';
 
 import { TxCodeEditorComponent } from '@app/shared/components/tx-code-editor/tx-code-editor.component';
 import type { TxCodeEditorCompletionItem } from '@app/shared/components/tx-code-editor/tx-code-editor-completion';
@@ -49,6 +50,7 @@ const SCRIPT_EDITOR_PLACEHOLDER = `// Postman-style script APIs (Ctrl+Space for 
           [hideToolbarActions]="true"
           [framed]="false"
           [extraCompletionItems]="completionItems()"
+          [variableCatalog]="variableCatalog()"
           [ngModel]="activeSource()"
           (ngModelChange)="handleScriptChange($event)"
         />
@@ -62,6 +64,7 @@ export class RequestTabScriptsPanelComponent {
   readonly scripts = input.required<CollectionFolderScripts>();
   readonly activePane = input<CollectionFolderScriptPaneId>('pre');
   readonly completionItems = input<readonly TxCodeEditorCompletionItem[]>([]);
+  readonly variableCatalog = input<readonly DynamicVariableCatalogItem[]>([]);
 
   readonly scriptsChange = output<CollectionFolderScripts>();
   readonly activePaneChange = output<CollectionFolderScriptPaneId>();

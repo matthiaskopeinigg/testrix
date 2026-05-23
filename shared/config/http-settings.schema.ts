@@ -119,6 +119,8 @@ export const httpRequestSettingsSchema = z.object({
   autoFixUrlOnSend: z.boolean(),
   /** When auto-fix is on, prepend `www.` to bare domains such as `google.at`. */
   prependWwwOnSend: z.boolean(),
+  /** When true, adds `Content-Type` on send from body mode and payload shape when not set manually. */
+  autoDetectContentTypeOnSend: z.boolean(),
   timeoutMs: z.number().int().min(0).max(600_000),
   useCookies: z.boolean(),
   http2Enabled: z.boolean(),
@@ -515,6 +517,7 @@ export function createDefaultHttpSettings(): HttpSettings {
       defaultUrlScheme: 'https',
       autoFixUrlOnSend: true,
       prependWwwOnSend: true,
+      autoDetectContentTypeOnSend: true,
       timeoutMs: 30_000,
       useCookies: true,
       http2Enabled: true,

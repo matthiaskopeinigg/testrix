@@ -25,6 +25,19 @@
   overflow: hidden;
 }
 
+.tx-vertical-split-pane__panel-region {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  flex-shrink: 0;
+  min-height: 0;
+  overflow: hidden;
+
+  &--motion {
+    transition: height var(--tx-duration-base, 180ms) var(--tx-ease-out-expo, cubic-bezier(0.16, 1, 0.3, 1));
+  }
+}
+
 .tx-vertical-split-pane__handle {
   position: relative;
   flex: 0 0 14px;
@@ -81,6 +94,27 @@
   padding: 0.45rem 0.5rem 0.55rem;
   border-top: 1px solid var(--tx-border-0);
   background: color-mix(in srgb, var(--tx-surface-2) 75%, transparent);
+  opacity: 1;
+  transform: translateY(0);
+
+  &--enter {
+    opacity: 0;
+    transform: translateY(6px);
+    animation: tx-vertical-split-reveal-in var(--tx-duration-base, 180ms)
+      var(--tx-ease-out-expo, cubic-bezier(0.16, 1, 0.3, 1)) both;
+  }
+}
+
+@keyframes tx-vertical-split-reveal-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .tx-vertical-split-pane__reveal-pill {
@@ -98,4 +132,57 @@
   min-height: 140px;
   overflow: hidden;
   background: var(--tx-surface-1);
+}
+
+.tx-vertical-split-pane__secondary-content {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  opacity: 0;
+  transform: translateY(8px);
+  transition:
+    opacity var(--tx-duration-base, 180ms) var(--tx-ease-out-expo, cubic-bezier(0.16, 1, 0.3, 1)),
+    transform var(--tx-duration-base, 180ms) var(--tx-ease-out-expo, cubic-bezier(0.16, 1, 0.3, 1));
+
+  &--visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+:host-context(html[data-animation-speed='none']) {
+  .tx-vertical-split-pane__panel-region--motion {
+    transition: none !important;
+  }
+
+  .tx-vertical-split-pane__reveal--enter {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .tx-vertical-split-pane__secondary-content {
+    transition: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tx-vertical-split-pane__panel-region--motion {
+    transition: none !important;
+  }
+
+  .tx-vertical-split-pane__reveal--enter {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .tx-vertical-split-pane__secondary-content {
+    transition: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
 }

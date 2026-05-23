@@ -25,6 +25,7 @@ import {
   type WorkspaceEditorLayoutId,
 } from '@shared/config';
 
+import { HttpRequestService } from '@app/core/http/http-request.service';
 import { CollectionsService } from '@app/core/collections/collections.service';
 import { ConfigService } from '@app/core/config/config.service';
 import { EnvironmentsService } from '@app/core/environments/environments.service';
@@ -33,17 +34,24 @@ import { UiPreferencesService } from '@app/core/ui/ui-preferences.service';
 import { WorkspaceTabMotionController } from '@app/core/ui/workspace-tab-motion';
 import { openEnvironmentVariableTab } from '@app/core/workspace/open-environment-variable-tab';
 import { WorkspaceEditorService } from '@app/core/workspace/workspace-editor.service';
-import { findCollectionNode } from '@app/features/shell/collections/collection-tree.mutations';
+import { findCollectionNode, collectAncestorFolders, countFolderDescendantItems } from '@app/features/shell/collections/collection-tree.mutations';
+import { getEnvironmentDefinition } from '@app/features/shell/environments/environment-profile.utils';
 import { TxBannerComponent } from '@app/shared/components/tx-banner/tx-banner.component';
 import { TxCodeEditorComponent } from '@app/shared/components/tx-code-editor/tx-code-editor.component';
+import { TxDropdownComponent } from '@app/shared/components/tx-dropdown/tx-dropdown.component';
+import type { TxDropdownOption } from '@app/shared/components/tx-dropdown/tx-dropdown.types';
+import { TxFormFieldComponent } from '@app/shared/components/tx-form-field/tx-form-field.component';
 import { TxIconComponent } from '@app/shared/components/tx-icon/tx-icon.component';
 import { TxKeyValueDescriptionListComponent } from '@app/shared/components/tx-key-value-description-list/tx-key-value-description-list.component';
 import type { TxKeyValueDescriptionRow } from '@app/shared/components/tx-key-value-description-list/tx-key-value-description-list.types';
 
 import type { TxCodeEditorCompletionItem } from '@app/shared/components/tx-code-editor/tx-code-editor-completion';
 
-import { buildFolderVariableCatalog } from './folder-variable-catalog';
 import { FolderTabAuthPanelComponent } from './folder-tab-auth-panel.component';
+import {
+  previewFolderVariableValue,
+  type FolderOverviewContentsCounts,
+} from './folder-tab-overview-summary';
 import { FolderTabOverviewPanelComponent } from './folder-tab-overview-panel.component';
 import { FolderTabDocsPanelComponent } from './folder-tab-docs-panel.component';
 import { FolderTabSettingsPanelComponent } from './folder-tab-settings-panel.component';
@@ -81,6 +89,8 @@ const NAV_ITEMS: readonly FolderTabNavItem[] = [
     FormsModule,
     TxBannerComponent,
     TxCodeEditorComponent,
+    TxDropdownComponent,
+    TxFormFieldComponent,
     TxIconComponent,
     TxKeyValueDescriptionListComponent,
     FolderTabAuthPanelComponent,
@@ -96,6 +106,7 @@ export class CollectionFolderWorkspaceTabComponent {
   private readonly collectionsService = inject(CollectionsService);
   private readonly configService = inject(ConfigService);
   private readonly environmentsService = inject(EnvironmentsService);
+  private readonly httpRequest = inject(HttpRequestService);
   private readonly workspaceEditor = inject(WorkspaceEditorService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly uiPreferences = inject(UiPreferencesService);
@@ -154,12 +165,42 @@ export class CollectionFolderWorkspaceTabComponent {
 
   protected readonly auth = computed(() => this.settings().auth);
 
-  protected readonly variableCount = computed(
-    () => this.settings().variables.filter((row) => row.key.trim()).length,
-  );
+  protected readonly parentPath = computed(() => {
+    const ancestors = collectAncestorFolders(this.collectionsService.nodes(), this.resourceId());
+    if (ancestors.length === 0) {
+      return '';
+    }
+    return ancestors.map((folder) => folder.label).join(' / ');
+  });
 
-  protected readonly headerCount = computed(
-    () => this.settings().headers.filter((row) => row.key.trim()).length,
+  protected readonly contentsCounts = computed((): FolderOverviewContentsCounts => {
+    const node = this.folderLoc()?.node;
+    return countFolderDescendantItems(node?.children);
+  });
+
+  protected readonly ancestorFolderVariables = computed(() => {
+    const rows: { source: string; key: string }[] = [];
+    for (const folder of collectAncestorFolders(this.collectionsService.nodes(), this.resourceId())) {
+      if (folder.data?.kind !== 'folder' || !folder.data.settings) {
+        continue;
+      }
+      for (const row of folder.data.settings.variables) {
+        const key = row.key.trim();
+        if (key) {
+          rows.push({ source: folder.label, key });
+        }
+      }
+    }
+    return rows;
+  });
+
+  protected readonly ownVariables = computed(() =>
+    this.settings()
+      .variables.filter((row) => row.key.trim())
+      .map((row) => ({
+        key: row.key.trim(),
+        valuePreview: previewFolderVariableValue(row.value),
+      })),
   );
 
   protected readonly tags = computed(() => this.settings().tags);
@@ -170,9 +211,51 @@ export class CollectionFolderWorkspaceTabComponent {
 
   protected readonly scripts = computed(() => this.settings().scripts);
 
-  protected readonly variableCatalog = computed(() =>
-    buildFolderVariableCatalog(this.environmentsService.environments()),
+  protected readonly environmentKeyOptions = computed(() => ({
+    useFolderPathInKeys:
+      this.configService.settings()?.environments.useFolderPathInKeys ?? false,
+  }));
+
+  /** Persisted on the folder in collections.json (`settings.environmentId`). */
+  protected readonly folderEnvironmentId = computed(() => {
+    const id = this.settings().environmentId;
+    if (!id) {
+      return null;
+    }
+    return getEnvironmentDefinition(this.environmentsService.environments(), id) ? id : null;
+  });
+
+  protected readonly environmentDropdownValue = computed(
+    () => this.folderEnvironmentId() ?? '',
   );
+
+  protected readonly activeEnvironment = computed(() => {
+    const id = this.folderEnvironmentId();
+    if (!id) {
+      return null;
+    }
+    return getEnvironmentDefinition(this.environmentsService.environments(), id);
+  });
+
+  protected readonly environmentOptions = computed((): readonly TxDropdownOption[] => {
+    const options: TxDropdownOption[] = [{ value: '', label: 'No environment' }];
+    for (const environment of this.environmentsService.environments()) {
+      options.push({ value: environment.id, label: environment.name });
+    }
+    return options;
+  });
+
+  protected readonly variableCatalog = computed(() => {
+    const folderKeys = this.settings().variables
+      .map((row) => row.key.trim())
+      .filter((key) => key.length > 0);
+    return this.httpRequest.buildVariableCatalog(
+      this.activeEnvironment(),
+      this.environmentKeyOptions(),
+      this.folderEnvironmentId(),
+      folderKeys,
+    );
+  });
 
   protected readonly activeScriptSource = computed(() => {
     const scripts = this.scripts();
@@ -330,6 +413,11 @@ export class CollectionFolderWorkspaceTabComponent {
     this.patchSettings({ auth });
   }
 
+  protected handleEnvironmentChange(value: string): void {
+    const nextId = value.trim() || null;
+    this.patchSettings({ environmentId: nextId });
+  }
+
   protected handleTagsChange(tags: readonly string[]): void {
     this.patchSettings({ tags: [...tags] });
   }
@@ -347,6 +435,8 @@ export class CollectionFolderWorkspaceTabComponent {
       this.workspaceEditor,
       this.environmentsService.environments(),
       event.key,
+      this.folderEnvironmentId(),
+      this.environmentKeyOptions(),
     );
   }
 
@@ -362,6 +452,7 @@ export class CollectionFolderWorkspaceTabComponent {
 
   private patchSettings(
     patch: Partial<{
+      environmentId: string | null;
       tags: string[];
       docs: string;
       variables: CollectionDescribedKeyValueRow[];

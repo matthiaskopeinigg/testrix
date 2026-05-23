@@ -22,7 +22,9 @@ describe('settingsFileSchema', () => {
     expect(settings.environments.animateMove).toBe(true);
     expect(settings.environments.animateExpand).toBe(true);
     expect(settings.environments.showDescriptions).toBe(true);
+    expect(settings.environments.useFolderPathInKeys).toBe(false);
     expect(settings.http.request.timeoutMs).toBe(30_000);
+    expect(settings.http.request.autoDetectContentTypeOnSend).toBe(true);
     expect(settings.http.headers.applyDefaultHeaders).toBe(true);
     expect(settings.http.headers.rows.length).toBeGreaterThanOrEqual(4);
     expect(settings.http.headers.rows[0]?.value).toMatch(/^Testrix\//);

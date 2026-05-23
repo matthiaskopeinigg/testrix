@@ -451,6 +451,17 @@
                       When enabled, folder and variable descriptions appear under names in the
                       environment variable tree.
                     </p>
+                    <tx-toggle
+                      label="Use folder path in variable placeholders"
+                      [ngModel]="s.environments.useFolderPathInKeys"
+                      (ngModelChange)="patchEnvironmentsToggle('useFolderPathInKeys', $event)"
+                    />
+                    <p class="tx-settings__tab-description">
+                      When enabled, placeholders include folder labels, for example
+                      <code>{{ '{{url.magenta}}' }}</code> or <code>{{ '{{user.b2c.prepaid}}' }}</code>.
+                      When disabled, only the variable key is used, for example
+                      <code>{{ '{{magenta}}' }}</code> or <code>{{ '{{prepaid}}' }}</code>.
+                    </p>
                   </div>
                   </div>
                 </section>

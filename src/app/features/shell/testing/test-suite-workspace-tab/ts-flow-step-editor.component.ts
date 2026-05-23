@@ -5,6 +5,7 @@ import { getEnvironmentDefinition } from '@shared/config';
 import type { TestSuiteFlow, TestSuiteFlowStep } from '@shared/testing';
 import { resolveFlowStepRunError } from '@shared/testing';
 
+import { ConfigService } from '@app/core/config/config.service';
 import { EnvironmentsService } from '@app/core/environments/environments.service';
 
 import { TxBannerComponent } from '@app/shared/components/tx-banner/tx-banner.component';
@@ -63,6 +64,7 @@ import { TsFlowWaitStepPanelComponent } from './ts-flow-wait-step-panel.componen
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TsFlowStepEditorComponent {
+  private readonly configService = inject(ConfigService);
   private readonly environmentsService = inject(EnvironmentsService);
 
   readonly step = input<TestSuiteFlowStep | null>(null);
@@ -134,6 +136,11 @@ export class TsFlowStepEditorComponent {
     return trimmed.length > 0 ? trimmed : FLOW_STEP_GUIDED_TITLES[step.stepType];
   });
 
+  protected readonly environmentKeyOptions = computed(() => ({
+    useFolderPathInKeys:
+      this.configService.settings()?.environments.useFolderPathInKeys ?? false,
+  }));
+
   protected readonly variableCatalog = computed(() => {
     const flow = this.flow();
     const step = this.step();
@@ -144,7 +151,12 @@ export class TsFlowStepEditorComponent {
       this.environmentsService.environments(),
       flow.environmentId,
     );
-    return collectPriorFlowPlaceholderKeys(flow, step.id, environment);
+    return collectPriorFlowPlaceholderKeys(
+      flow,
+      step.id,
+      environment,
+      this.environmentKeyOptions(),
+    );
   });
 
   protected readonly refStepOptions = computed(() => {

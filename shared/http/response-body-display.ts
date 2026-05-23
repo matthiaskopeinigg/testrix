@@ -109,3 +109,53 @@ export function previewKind(snapshot: HttpResponseSnapshot | null): 'html' | 'im
   }
   return 'none';
 }
+
+/**
+ * Directory URL used to resolve relative stylesheet, script, and image paths in HTML preview.
+ */
+export function resolvePreviewBaseHref(requestUrl: string): string {
+  const trimmed = requestUrl.trim();
+  if (!trimmed) {
+    return '';
+  }
+
+  try {
+    const withScheme = /^[a-z][a-z0-9+.-]*:/i.test(trimmed) ? trimmed : `https://${trimmed}`;
+    const url = new URL(withScheme);
+    const path = url.pathname;
+    if (path.endsWith('/')) {
+      return url.href;
+    }
+    const lastSlash = path.lastIndexOf('/');
+    url.pathname = lastSlash >= 0 ? `${path.slice(0, lastSlash + 1)}` : '/';
+    return url.href;
+  } catch {
+    return '';
+  }
+}
+
+function escapeHtmlAttribute(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;');
+}
+
+/**
+ * Injects a `<base href>` so iframe `srcdoc` previews resolve relative CSS and assets.
+ */
+export function prepareHtmlPreviewDocument(html: string, requestUrl: string): string {
+  const baseHref = resolvePreviewBaseHref(requestUrl);
+  if (!baseHref || /<base\b/i.test(html)) {
+    return html;
+  }
+
+  const baseTag = `<base href="${escapeHtmlAttribute(baseHref)}">`;
+  if (/<head[\s>]/i.test(html)) {
+    return html.replace(/<head(\s[^>]*)?>/i, (match) => `${match}${baseTag}`);
+  }
+  if (/<html[\s>]/i.test(html)) {
+    return html.replace(/<html(\s[^>]*)?>/i, (match) => `${match}<head>${baseTag}</head>`);
+  }
+  return `<head>${baseTag}</head>${html}`;
+}

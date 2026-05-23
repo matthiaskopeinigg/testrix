@@ -10,7 +10,9 @@ export interface ResolvedCollectionRequestAuth {
 
 /**
  * Resolves auth for a request: request auth unless `inherit`, then nearest ancestor
- * folder with a non-inherit auth (root → leaf scan on ancestors, request wins if set).
+ * folder with a concrete auth type (leaf → root). Folder `inherit` and legacy `none`
+ * entries pass through so parent folder auth (e.g. API key on a root folder) still
+ * applies to deeply nested requests. Request-level `none` disables auth entirely.
  */
 export function resolveCollectionRequestAuth(
   requestAuth: CollectionFolderAuth,
@@ -23,17 +25,57 @@ export function resolveCollectionRequestAuth(
   for (let i = ancestorFolders.length - 1; i >= 0; i--) {
     const folder = ancestorFolders[i];
     const auth = folder.settings.auth;
-    if (auth.type !== 'inherit') {
-      return {
-        auth,
-        source: 'folder',
-        folderId: folder.id,
-        folderLabel: folder.label,
-      };
+    if (auth.type === 'inherit' || auth.type === 'none') {
+      continue;
     }
+    return {
+      auth,
+      source: 'folder',
+      folderId: folder.id,
+      folderLabel: folder.label,
+    };
   }
 
   return { auth: { type: 'none' }, source: 'none' };
+}
+
+/**
+ * Resolves `{{variable}}` and `$` placeholders in auth field values before send.
+ */
+export function resolveCollectionFolderAuthValues(
+  auth: CollectionFolderAuth,
+  resolveText: (text: string) => string,
+): CollectionFolderAuth {
+  switch (auth.type) {
+    case 'bearer':
+      return { ...auth, token: resolveText(auth.token) };
+    case 'basic':
+      return {
+        ...auth,
+        username: resolveText(auth.username),
+        password: resolveText(auth.password),
+      };
+    case 'apiKey':
+      return {
+        ...auth,
+        name: resolveText(auth.name),
+        value: resolveText(auth.value),
+      };
+    case 'oauth2':
+      return {
+        ...auth,
+        authUrl: resolveText(auth.authUrl),
+        tokenUrl: resolveText(auth.tokenUrl),
+        clientId: resolveText(auth.clientId),
+        clientSecret: resolveText(auth.clientSecret),
+        scope: resolveText(auth.scope),
+        redirectUri: resolveText(auth.redirectUri),
+      };
+    case 'inherit':
+    case 'none':
+    default:
+      return auth;
+  }
 }
 
 function headerKeyExists(headers: Readonly<Record<string, string>>, name: string): boolean {

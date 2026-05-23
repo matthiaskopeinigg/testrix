@@ -268,16 +268,17 @@ export function compareResponseSnapshots(
   const textB = getBodyText(b);
   const jsonA = tryParseJson(textA);
   const jsonB = tryParseJson(textB);
-  const useJsonPaths = jsonA !== null && jsonB !== null && !normalizeJson;
+  const bothJson = jsonA !== null && jsonB !== null;
 
   let bodyMode: ResponseDiffResult['bodyMode'] = 'text';
   let jsonPaths: JsonPathDiffRow[] = [];
   let lineHunks: LineDiffHunk[] = [];
 
-  if (useJsonPaths) {
-    bodyMode = 'json';
+  if (bothJson) {
     jsonPaths = diffJsonPaths(jsonA, jsonB);
-  } else if (textA || textB) {
+  }
+
+  if (textA || textB) {
     const preparedA = bodyTextForDiff(a, normalizeJson);
     const preparedB = bodyTextForDiff(b, normalizeJson);
     const parts = diffLines(preparedA, preparedB);
@@ -289,18 +290,40 @@ export function compareResponseSnapshots(
       const kind: LineDiffHunk['kind'] = part.added ? 'add' : part.removed ? 'remove' : 'unchanged';
       return lines.map((line: string) => ({ kind, line }));
     });
-  } else {
+  }
+
+  const lineDiffHasChanges = lineHunks.some((h) => h.kind !== 'unchanged');
+  if (bothJson && !normalizeJson && !lineDiffHasChanges) {
+    bodyMode = 'json';
+  } else if (lineHunks.length > 0) {
+    bodyMode = 'text';
+  } else if (bothJson) {
+    bodyMode = 'json';
+  } else if (!textA && !textB) {
     bodyMode = 'binary';
   }
 
+  const jsonBodyChanges = jsonPaths.length;
+  const lineBodyChanges = lineHunks.filter((h) => h.kind !== 'unchanged').length;
   const bodyChanges =
-    bodyMode === 'json' ? jsonPaths.length : lineHunks.filter((h) => h.kind !== 'unchanged').length;
+    bothJson && jsonBodyChanges > 0 && (normalizeJson || lineHunks.length === 0)
+      ? jsonBodyChanges
+      : lineBodyChanges;
 
   const pass = !statusChanged && headersChanged === 0 && headersRemoved === 0 && bodyChanges === 0;
 
+  const useJsonSummary = bothJson && jsonPaths.length > 0 && (normalizeJson || lineHunks.length === 0);
+  const bodyAdded = useJsonSummary
+    ? jsonPaths.filter((p) => p.kind === 'added').length
+    : lineHunks.filter((h) => h.kind === 'add').length;
+  const bodyRemoved = useJsonSummary
+    ? jsonPaths.filter((p) => p.kind === 'removed').length
+    : lineHunks.filter((h) => h.kind === 'remove').length;
+  const bodyChanged = useJsonSummary ? jsonPaths.filter((p) => p.kind === 'changed').length : 0;
+
   const summaryLabel = pass
     ? 'No differences'
-    : `+${headersAdded + (bodyMode === 'json' ? jsonPaths.filter((p) => p.kind === 'added').length : lineHunks.filter((h) => h.kind === 'add').length)} −${headersRemoved + (bodyMode === 'json' ? jsonPaths.filter((p) => p.kind === 'removed').length : lineHunks.filter((h) => h.kind === 'remove').length)} ~${headersChanged + (bodyMode === 'json' ? jsonPaths.filter((p) => p.kind === 'changed').length : 0)}`;
+    : `+${headersAdded + bodyAdded} −${headersRemoved + bodyRemoved} ~${headersChanged + bodyChanged}`;
 
   return {
     summary: {

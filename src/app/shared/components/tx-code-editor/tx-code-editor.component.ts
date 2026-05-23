@@ -2,6 +2,7 @@ import {
   AfterViewInit,
   ChangeDetectionStrategy,
   Component,
+  DestroyRef,
   ElementRef,
   HostListener,
   computed,
@@ -104,6 +105,7 @@ import { TxCodeEditorUndoStack, type TxCodeEditorUndoSnapshot } from './tx-code-
 export class TxCodeEditorComponent implements ControlValueAccessor, AfterViewInit {
   private readonly config = inject(ConfigService);
   private readonly hostRef = inject(ElementRef<HTMLElement>);
+  private readonly destroyRef = inject(DestroyRef);
   private readonly tooltips = inject(TxTooltipService);
   private readonly uiPreferences = inject(UiPreferencesService);
 
@@ -247,6 +249,8 @@ export class TxCodeEditorComponent implements ControlValueAccessor, AfterViewIni
       }
       this.applyExternalContent(bound);
     });
+
+    this.destroyRef.onDestroy(() => this.hideVariableTooltip());
   }
 
   private applyExternalContent(next: string): void {
@@ -388,6 +392,7 @@ export class TxCodeEditorComponent implements ControlValueAccessor, AfterViewIni
     if (varId.startsWith('env:')) {
       ev.preventDefault();
       ev.stopPropagation();
+      this.hideVariableTooltip();
       const key = varId.slice(4);
       if (key) {
         this.environmentVariableClick.emit({ key });
@@ -798,6 +803,8 @@ export class TxCodeEditorComponent implements ControlValueAccessor, AfterViewIni
     if (this.tooltipAnchor) {
       this.tooltips.hide(this.tooltipAnchor);
       this.tooltipAnchor = null;
+    } else {
+      this.tooltips.hideImmediate();
     }
   }
 

@@ -17,11 +17,13 @@ import { TxIconComponent } from '@app/shared/components/tx-icon/tx-icon.componen
 import { TxDropdownComponent } from '@app/shared/components/tx-dropdown/tx-dropdown.component';
 import { TxFormFieldComponent } from '@app/shared/components/tx-form-field/tx-form-field.component';
 import { TxInputComponent } from '@app/shared/components/tx-input/tx-input.component';
+import { TxSuggestInputComponent } from '@app/shared/components/tx-suggest-input/tx-suggest-input.component';
 
 import { FLOW_STEP_VALIDATION_OPERATOR_OPTIONS } from './flow-step-editor-options';
 import {
   buildValidationSourceOptions,
   validationExpressionLabel,
+  validationExpressionSuggestions,
   validationReferenceHint,
 } from './flow-step-validation-options';
 
@@ -32,6 +34,7 @@ import {
     FormsModule,
     TxFormFieldComponent,
     TxInputComponent,
+    TxSuggestInputComponent,
     TxDropdownComponent,
     TxButtonComponent,
     TxIconComponent,
@@ -93,6 +96,12 @@ export class TsFlowValidationStepPanelComponent {
 
   protected expressionLabel(source: ValidationStepConfig['rules'][number]['source']): string | null {
     return validationExpressionLabel(source);
+  }
+
+  protected expressionSuggestions(
+    source: ValidationStepConfig['rules'][number]['source'],
+  ): readonly string[] | null {
+    return validationExpressionSuggestions(source);
   }
 
   protected handleRefStepChange(refStepId: string): void {

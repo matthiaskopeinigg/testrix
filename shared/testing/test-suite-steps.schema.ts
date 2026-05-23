@@ -33,6 +33,7 @@ export const testSuiteKeyValuePairSchema = z.object({
   key: z.string(),
   value: z.string(),
   enabled: z.boolean().default(true),
+  description: z.string().optional(),
 });
 
 export type TestSuiteKeyValuePair = z.infer<typeof testSuiteKeyValuePairSchema>;

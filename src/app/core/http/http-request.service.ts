@@ -24,7 +24,15 @@ import {
 } from '@shared/config/request-runs-session.schema';
 import { fromTreeNodes } from '@app/features/shell/collections/collection-tree.adapter';
 import { findCollectionNode } from '@app/features/shell/collections/collection-tree.mutations';
-import { createDefaultEnvironments } from '@shared/config';
+import {
+  createDefaultEnvironments,
+  findCollectionRequestInTree,
+  resolveCollectionRequestEnvironmentId,
+  type EnvironmentDefinition,
+  type EnvironmentVariableKeyOptions,
+} from '@shared/config';
+import type { DynamicVariableCatalogItem } from '@shared/dynamic-variables';
+import { buildCollectionVariableCatalog } from '@app/features/shell/workspace/request-workspace-tab/request-variable-catalog';
 
 import { CollectionsService } from '../collections/collections.service';
 import { ConfigService } from '../config/config.service';
@@ -51,6 +59,82 @@ export class HttpRequestService {
   private readonly lastDiffState = signal<ResponseDiffResult | null>(null);
   private readonly manualDiffState = signal<ResponseDiffResult | null>(null);
   private readonly diffCompareOptions = signal<CompareResponseOptions>({ normalizeJson: true });
+  /** Script-updated values per environment profile (post-response `pm.environment.set`). */
+  private readonly sessionVariablesByEnvironmentId = signal<
+    Readonly<Record<string, Readonly<Record<string, string>>>>
+  >({});
+
+  /** Keys cached by scripts for the active environment (autocomplete in auth/headers). */
+  sessionVariableKeys(environmentId: string | null): readonly string[] {
+    if (!environmentId) {
+      return [];
+    }
+    return Object.keys(this.sessionVariablesByEnvironmentId()[environmentId] ?? {});
+  }
+
+  /** All script-cached keys across every environment profile in this session. */
+  allSessionVariableKeys(): readonly string[] {
+    const keys = new Set<string>();
+    for (const map of Object.values(this.sessionVariablesByEnvironmentId())) {
+      for (const key of Object.keys(map)) {
+        keys.add(key);
+      }
+    }
+    return [...keys];
+  }
+
+  /**
+   * Variable catalog for workspace inputs: `$` dynamics, environment `{{keys}}`, and script session cache.
+   */
+  buildVariableCatalog(
+    environment: EnvironmentDefinition | null | undefined,
+    keyOptions: EnvironmentVariableKeyOptions,
+    environmentId: string | null = null,
+    extraKeys: readonly string[] = [],
+  ): readonly DynamicVariableCatalogItem[] {
+    const scopedKeys = environmentId ? this.sessionVariableKeys(environmentId) : [];
+    const sessionKeys = [...new Set([...scopedKeys, ...this.allSessionVariableKeys(), ...extraKeys])];
+    return buildCollectionVariableCatalog(environment, keyOptions, sessionKeys);
+  }
+
+  private sessionVariableOverrides(environmentId: string | null): Readonly<Record<string, string>> {
+    if (!environmentId) {
+      return {};
+    }
+    return this.sessionVariablesByEnvironmentId()[environmentId] ?? {};
+  }
+
+  private mergeSessionVariables(
+    environmentId: string | null,
+    patch: Readonly<Record<string, string>>,
+  ): void {
+    if (!environmentId) {
+      return;
+    }
+    const keys = Object.entries(patch).filter(([key, value]) => key.trim() && value !== undefined);
+    if (keys.length === 0) {
+      return;
+    }
+    this.sessionVariablesByEnvironmentId.update((current) => {
+      const prev = current[environmentId] ?? {};
+      const next = { ...prev };
+      for (const [key, value] of keys) {
+        next[key] = value;
+      }
+      return { ...current, [environmentId]: next };
+    });
+  }
+
+  private resolveEffectiveEnvironmentId(requestId: string): string | null {
+    const loc = findCollectionRequestInTree(this.collectionNodes(), requestId);
+    if (!loc) {
+      return null;
+    }
+    return resolveCollectionRequestEnvironmentId(
+      loc.request.settings.environmentId,
+      loc.ancestorFolders,
+    );
+  }
 
   readonly inFlight = computed(() => this.inFlightState());
   readonly selectedSnapshot = computed(() => {
@@ -170,16 +254,32 @@ export class HttpRequestService {
     }
 
     const nodes = this.collectionNodes();
+    const environmentId = this.resolveEffectiveEnvironmentId(requestId);
     const built = buildOutgoingRequest({
       requestId,
       nodes,
       http,
       environments: this.environmentsFile(),
       appVersion: api.versions.app || '0.0.0',
+      environmentVariableKeys: {
+        useFolderPathInKeys: settings.environments.useFolderPathInKeys,
+      },
+      runScope: {
+        runId: `run-${Date.now()}`,
+        sharedVariables: this.sessionVariableOverrides(environmentId),
+      },
     });
 
     if (!built) {
-      this.notifier.reportUnknown(new Error('Request not found in collection.'));
+      const loc = findCollectionNode(this.collectionsService.nodes(), requestId);
+      const rawUrl = loc?.node.data?.url?.trim() ?? '';
+      this.notifier.reportUnknown(
+        new Error(
+          rawUrl
+            ? 'Request could not be built. Check URL, auth, and transport settings.'
+            : 'Enter a URL before sending.',
+        ),
+      );
       return null;
     }
 
@@ -189,7 +289,10 @@ export class HttpRequestService {
 
     const payload = {
       ...built.outgoing,
-      runScope: { runId: `run-${Date.now()}` },
+      runScope: {
+        runId: `run-${Date.now()}`,
+        sharedVariables: this.sessionVariableOverrides(built.outgoing.environmentId),
+      },
     };
     const payloadCheck = sendHttpRequestPayloadSchema.safeParse(payload);
     if (!payloadCheck.success) {
@@ -202,7 +305,11 @@ export class HttpRequestService {
     }
 
     try {
-      const { snapshot } = await api.http.send(payloadCheck.data);
+      const { snapshot, scriptVariablePatch } = await api.http.send(payloadCheck.data);
+
+      if (scriptVariablePatch && built.outgoing.environmentId) {
+        this.mergeSessionVariables(built.outgoing.environmentId, scriptVariablePatch);
+      }
 
       this.pushRun(requestId, snapshot);
       this.selectedRunId.set(snapshot.id);
@@ -285,6 +392,26 @@ export class HttpRequestService {
     return this.collectionsService.patchRequestSettings(requestId, {
       examples: [...settings.examples, example],
     });
+  }
+
+  /** Loads a saved example into the response viewer run list. */
+  showExample(requestId: string, exampleId: string): boolean {
+    const node = findCollectionNode(this.collectionsService.nodes(), requestId);
+    const settings = node?.node.data?.requestSettings;
+    if (!node || node.node.data?.kind !== 'request' || !settings) {
+      return false;
+    }
+    const example = settings.examples.find((entry) => entry.id === exampleId);
+    if (!example) {
+      return false;
+    }
+    const snap = example.snapshot;
+    const existing = this.runsByRequest()[requestId] ?? [];
+    if (!existing.some((run) => run.id === snap.id)) {
+      this.pushRun(requestId, { ...snap });
+    }
+    this.selectedRunId.set(snap.id);
+    return true;
   }
 
   saveSnapshot(requestId: string, name: string): boolean {

@@ -26,6 +26,18 @@ describe('environment-tree.mutations', () => {
     expect(rootLoc?.parent).toBeNull();
   });
 
+  it('creates nested folders under an existing folder', () => {
+    const root = toTreeNodes(ENVIRONMENT_SCOPE_FIXTURE);
+    const outer = createEnvironmentFolder(root, null, 'url');
+    expect(outer).not.toBeNull();
+    const nested = createEnvironmentFolder(outer!.nodes, outer!.nodeId, 'magenta');
+    expect(nested).not.toBeNull();
+    const outerLoc = findEnvironmentNode(nested!.nodes, outer!.nodeId);
+    const childFolder = outerLoc?.node.children?.find((c) => c.label === 'magenta');
+    expect(childFolder).toBeDefined();
+    expect(childFolder?.kind).toBe('folder');
+  });
+
   it('deletes folder and its variables', () => {
     const root = toTreeNodes(ENVIRONMENT_SCOPE_FIXTURE);
     const withFolder = createEnvironmentFolder(root, null, 'Temp');

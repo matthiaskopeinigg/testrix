@@ -709,7 +709,13 @@ export class TxSettingsPopupComponent {
   }
 
   protected async patchEnvironmentsToggle(
-    key: 'expandFolderOnDrag' | 'animateMove' | 'animateExpand' | 'foldersFirst' | 'showDescriptions',
+    key:
+      | 'expandFolderOnDrag'
+      | 'animateMove'
+      | 'animateExpand'
+      | 'foldersFirst'
+      | 'showDescriptions'
+      | 'useFolderPathInKeys',
     value: boolean,
   ): Promise<void> {
     await this.patch({ environments: { [key]: value } });

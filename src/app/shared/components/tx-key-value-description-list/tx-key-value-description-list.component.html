@@ -5,12 +5,37 @@
 >
   @if (rows().length === 0) {
     <p class="tx-kv-desc-list__empty">No rows yet.</p>
+  } @else {
+    <div class="tx-kv-desc-list__header">
+      <div class="tx-kv-desc-list__header-key">
+        @if (showEnabled()) {
+          <span class="tx-kv-desc-list__header-enabled-spacer"></span>
+        }
+        <span class="tx-kv-desc-list__header-label">{{ keyLabel() }}</span>
+      </div>
+      <div class="tx-kv-desc-list__header-value">
+        <span class="tx-kv-desc-list__header-label">{{ valueLabel() }}</span>
+        @if (valueInput() === 'variables') {
+          <button
+            type="button"
+            class="tx-kv-desc-list__value-hint"
+            aria-label="About dynamic placeholders in values"
+            [txTooltip]="valueHintTooltip()"
+            txTooltipPosition="top"
+          >
+            <tx-icon name="help" [size]="14" aria-hidden="true" />
+          </button>
+        }
+      </div>
+      <span class="tx-kv-desc-list__header-label">{{ descriptionLabel() }}</span>
+      <span class="tx-kv-desc-list__header-action"></span>
+    </div>
   }
 
   @for (row of rows(); track row.id) {
     <div class="tx-kv-desc-list__row">
       <div class="tx-kv-desc-list__key-cell">
-        <label class="tx-field__label" [for]="'kvdk-' + row.id">{{ keyLabel() }}</label>
+        <label class="tx-kv-desc-list__sr-only" [for]="'kvdk-' + row.id">{{ keyLabel() }}</label>
         <div class="tx-kv-desc-list__key-control">
           @if (showEnabled()) {
             <label class="tx-kv-desc-list__enabled">
@@ -25,65 +50,65 @@
             </label>
           }
           <div class="tx-field__control">
-            <tx-input
-              [controlId]="'kvdk-' + row.id"
-              [ngModel]="row.key"
-              (ngModelChange)="handleKeyChange(row.id, $event)"
-              placeholder="Name"
-            />
+            @if (usesKeySuggestions()) {
+              <tx-suggest-input
+                [controlId]="'kvdk-' + row.id"
+                [suggestions]="keySuggestions()"
+                [completionPlacement]="completionPlacement()"
+                [completionLabel]="keyCompletionLabel()"
+                [ngModel]="row.key"
+                (ngModelChange)="handleKeyChange(row.id, $event)"
+                [placeholder]="keyPlaceholder()"
+              />
+            } @else {
+              <tx-input
+                [controlId]="'kvdk-' + row.id"
+                [ngModel]="row.key"
+                (ngModelChange)="handleKeyChange(row.id, $event)"
+                [placeholder]="keyPlaceholder()"
+              />
+            }
           </div>
         </div>
       </div>
 
-      @if (valueInput() === 'variables') {
-        <div class="tx-field tx-kv-desc-list__value-field">
-          <div class="tx-kv-desc-list__label-row">
-            <label class="tx-field__label" [for]="'kvdv-' + row.id">{{ valueLabel() }}</label>
-            <button
-              type="button"
-              class="tx-kv-desc-list__value-hint"
-              aria-label="About dynamic placeholders in values"
-              [txTooltip]="valueHintTooltip()"
-              txTooltipPosition="top"
-            >
-              <tx-icon name="help" [size]="14" aria-hidden="true" />
-            </button>
-          </div>
-          <div class="tx-field__control">
+      <div class="tx-kv-desc-list__value-cell">
+        <label class="tx-kv-desc-list__sr-only" [for]="'kvdv-' + row.id">{{ valueLabel() }}</label>
+        <div class="tx-field__control">
+          @if (valueInput() === 'variables') {
             <tx-variable-input
               [controlId]="'kvdv-' + row.id"
               [catalog]="variableCatalog()"
+              [completionPlacement]="completionPlacement()"
+              [valueSuggestions]="headerValueSuggestionsFor(row.key)"
               [showPlaceholderHint]="false"
               [ngModel]="row.value"
               (ngModelChange)="handleValueChange(row.id, $event)"
               (environmentVariableClick)="environmentVariableClick.emit($event)"
               placeholder="Value or $variable"
             />
-          </div>
+          } @else {
+            <tx-input
+              [controlId]="'kvdv-' + row.id"
+              [ngModel]="row.value"
+              (ngModelChange)="handleValueChange(row.id, $event)"
+              placeholder="Value"
+            />
+          }
         </div>
-      } @else {
-        <tx-form-field class="tx-kv-desc-list__field" [label]="valueLabel()" [controlId]="'kvdv-' + row.id">
-          <tx-input
-            [controlId]="'kvdv-' + row.id"
-            [ngModel]="row.value"
-            (ngModelChange)="handleValueChange(row.id, $event)"
-            placeholder="Value"
-          />
-        </tx-form-field>
-      }
+      </div>
 
-      <tx-form-field
-        class="tx-kv-desc-list__field"
-        [label]="descriptionLabel()"
-        [controlId]="'kvdd-' + row.id"
-      >
-        <tx-input
-          [controlId]="'kvdd-' + row.id"
-          [ngModel]="row.description ?? ''"
-          (ngModelChange)="handleDescriptionChange(row.id, $event)"
-          placeholder="Optional notes"
-        />
-      </tx-form-field>
+      <div class="tx-kv-desc-list__desc-cell">
+        <label class="tx-kv-desc-list__sr-only" [for]="'kvdd-' + row.id">{{ descriptionLabel() }}</label>
+        <div class="tx-field__control">
+          <tx-input
+            [controlId]="'kvdd-' + row.id"
+            [ngModel]="row.description ?? ''"
+            (ngModelChange)="handleDescriptionChange(row.id, $event)"
+            placeholder="Optional notes"
+          />
+        </div>
+      </div>
 
       <button
         type="button"

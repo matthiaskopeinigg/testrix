@@ -23,10 +23,10 @@ import { TxTextareaComponent } from '@app/shared/components/tx-textarea/tx-texta
       </tx-form-field>
 
       <tx-form-field label="Tags" controlId="ws-tags">
-        <p class="request-panel__hint request-panel__hint--compact">Press Enter to add each tag.</p>
         <tx-tags-input
-          id="ws-tags"
-          placeholder="realtime, chat"
+          controlId="ws-tags"
+          [compact]="true"
+          placeholder="Add a tag"
           [ngModel]="tags()"
           (ngModelChange)="tagsChange.emit($event)"
         />

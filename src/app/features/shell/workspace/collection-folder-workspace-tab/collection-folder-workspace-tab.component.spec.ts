@@ -84,8 +84,8 @@ describe('CollectionFolderWorkspaceTabComponent', () => {
   it('shows overview by default with description field', () => {
     const textarea = fixture.nativeElement.querySelector('#folder-description');
     expect(textarea).toBeTruthy();
-    expect(fixture.nativeElement.textContent).toContain('Authorization');
-    expect(fixture.nativeElement.textContent).toContain('Folder settings');
+    expect(fixture.nativeElement.textContent).toContain('Configuration');
+    expect(fixture.nativeElement.textContent).toContain('Contents');
   });
 
   it('shows bearer fields when auth section is selected', async () => {

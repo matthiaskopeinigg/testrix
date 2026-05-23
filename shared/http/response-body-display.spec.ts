@@ -4,6 +4,7 @@ import type { HttpResponseSnapshot } from './outgoing-request.schema';
 import {
   detectResponseEditorLanguage,
   formatPrettyResponseBody,
+  prepareHtmlPreviewDocument,
   previewKind,
 } from './response-body-display';
 
@@ -53,5 +54,24 @@ describe('previewKind', () => {
   it('returns html for HTML bodies', () => {
     const snap = snapshot({ text: '<html></html>', contentType: 'text/html' });
     expect(previewKind(snap)).toBe('html');
+  });
+});
+
+describe('prepareHtmlPreviewDocument', () => {
+  it('injects base href into head for relative assets', () => {
+    const html = '<html><head><title>x</title></head><body></body></html>';
+    const out = prepareHtmlPreviewDocument(html, 'https://magenta.at/home');
+    expect(out).toContain('<base href="https://magenta.at/">');
+  });
+
+  it('adds head with base when document has no head', () => {
+    const html = '<html><body>Hi</body></html>';
+    const out = prepareHtmlPreviewDocument(html, 'magenta.at');
+    expect(out).toContain('<head><base href="https://magenta.at/"></head>');
+  });
+
+  it('does not duplicate an existing base tag', () => {
+    const html = '<html><head><base href="https://other.test/"></head></html>';
+    expect(prepareHtmlPreviewDocument(html, 'https://magenta.at/')).toBe(html);
   });
 });

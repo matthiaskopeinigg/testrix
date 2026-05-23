@@ -51,8 +51,13 @@
   display: flex;
   align-items: center;
   gap: 0.35rem;
+
+  .tx-field__label {
+    margin-right: auto;
+  }
 }
 
+.env-var-editor__value-toggle,
 .env-var-editor__value-hint {
   display: inline-flex;
   flex-shrink: 0;
@@ -65,7 +70,7 @@
   border-radius: var(--tx-radius-sm, 8px);
   background: transparent;
   color: var(--tx-text-1);
-  cursor: help;
+  cursor: pointer;
 
   &:hover {
     color: var(--tx-text-0);
@@ -76,4 +81,8 @@
     outline: none;
     box-shadow: 0 0 0 2px color-mix(in srgb, var(--tx-focus-ring) 55%, transparent);
   }
+}
+
+.env-var-editor__value-hint {
+  cursor: help;
 }

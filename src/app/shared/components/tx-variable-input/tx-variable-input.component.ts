@@ -2,6 +2,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  DestroyRef,
   ElementRef,
   forwardRef,
   HostListener,
@@ -24,7 +25,21 @@ import {
   type DynamicVariableCatalogItem,
 } from '@shared/dynamic-variables';
 
+import {
+  positionFixedCompletionPopup,
+  scheduleFixedCompletionPosition,
+  TX_COMPLETION_PLACEMENT_DEFAULT,
+  type TxCompletionPlacement,
+} from '../tx-completion-popup/tx-completion-popup-placement';
+
+import { isSuggestTriggerKeydown } from '../tx-suggest-input/tx-suggest-input-keyboard';
+
 import { caretIndexFromClientX } from './tx-variable-input-caret';
+import { findLiteralValueSuggestions } from './tx-variable-input-literal-suggestions';
+import {
+  escapeVariableInputMaskHtml,
+  maskVariableInputDisplay,
+} from './tx-variable-input-mask';
 import { TxVariableInputHighlightHtmlPipe } from './tx-variable-input-highlight-html.pipe';
 
 @Component({
@@ -47,6 +62,7 @@ import { TxVariableInputHighlightHtmlPipe } from './tx-variable-input-highlight-
 })
 export class TxVariableInputComponent implements ControlValueAccessor {
   private static nextId = 0;
+  private static readonly COMPLETION_GAP_PX = 4;
 
   readonly controlId = input('');
   readonly placeholder = input('');
@@ -59,23 +75,61 @@ export class TxVariableInputComponent implements ControlValueAccessor {
   readonly showPlaceholderHint = input(false);
   /** Catalog used for `$` autocomplete; defaults to app-wide {@link DYNAMIC_VARIABLES}. */
   readonly catalog = input<readonly DynamicVariableCatalogItem[]>(DYNAMIC_VARIABLES);
+  /** Fixed suggestion panel placement relative to the field. */
+  readonly completionPlacement = input<TxCompletionPlacement>(TX_COMPLETION_PLACEMENT_DEFAULT);
+  /**
+   * Literal value suggestions (e.g. common header values for the row key).
+   * Shown when `$` / `{{}}` completion is not active.
+   */
+  readonly valueSuggestions = input<readonly string[]>([]);
+  /** When true, the value can be masked until {@link valueRevealed} is set. */
+  readonly maskValue = input(false);
+  /** When false with {@link maskValue}, displays asterisks instead of the raw value. */
+  readonly valueRevealed = input(true);
 
   /** Emitted when the user clicks a highlighted `{{environment}}` placeholder. */
   readonly environmentVariableClick = output<{ readonly key: string }>();
 
+  private readonly destroyRef = inject(DestroyRef);
   private readonly hostEl = inject(ElementRef<HTMLElement>);
   private readonly tooltips = inject(TxTooltipService);
   private readonly uiPreferences = inject(UiPreferencesService);
   private readonly nativeInput = viewChild<ElementRef<HTMLInputElement>>('nativeInput');
+  private readonly completionPanel = viewChild<ElementRef<HTMLElement>>('completionPanel');
+
+  constructor() {
+    const onScroll = (): void => {
+      if (this.completionOpen()) {
+        this.positionCompletion();
+      }
+    };
+    document.addEventListener('scroll', onScroll, { capture: true });
+    this.destroyRef.onDestroy(() => {
+      document.removeEventListener('scroll', onScroll, { capture: true });
+      this.hideVariableTooltip();
+      this.clearTokenHover();
+    });
+  }
 
   protected readonly autoId = `tx-variable-input-${TxVariableInputComponent.nextId++}`;
   protected readonly value = signal('');
 
-  protected readonly highlightedHtml = computed(() =>
-    highlightTemplateVariables(this.value(), this.catalog()),
+  protected readonly highlightedHtml = computed(() => {
+    if (this.maskValue() && !this.valueRevealed()) {
+      return escapeVariableInputMaskHtml(maskVariableInputDisplay(this.value()));
+    }
+    return highlightTemplateVariables(this.value(), this.catalog());
+  });
+
+  protected readonly isValueMasked = computed(
+    () => this.maskValue() && !this.valueRevealed(),
   );
 
   protected readonly completionOpen = signal(false);
+  protected readonly completionPositioned = signal(false);
+  protected readonly resolvedCompletionPlacement = signal<TxCompletionPlacement>(
+    TX_COMPLETION_PLACEMENT_DEFAULT,
+  );
   protected readonly completionItems = signal<readonly DynamicVariableCatalogItem[]>([]);
   protected readonly completionIndex = signal(0);
 
@@ -85,6 +139,13 @@ export class TxVariableInputComponent implements ControlValueAccessor {
 
   private onChange: (value: string) => void = () => {};
   private onTouched: () => void = () => {};
+
+  @HostListener('window:resize')
+  onWindowResize(): void {
+    if (this.completionOpen()) {
+      this.positionCompletion();
+    }
+  }
 
   @HostListener('document:mousedown', ['$event'])
   onDocumentMouseDown(ev: MouseEvent): void {
@@ -108,6 +169,10 @@ export class TxVariableInputComponent implements ControlValueAccessor {
     this.value.set(raw);
     this.onChange(raw);
     this.refreshCompletion(inputEl);
+  }
+
+  protected handleFocus(event: Event): void {
+    this.refreshCompletion(event.target as HTMLInputElement);
   }
 
   protected handleBlur(): void {
@@ -158,6 +223,9 @@ export class TxVariableInputComponent implements ControlValueAccessor {
   }
 
   protected handleHitPointerOver(ev: PointerEvent): void {
+    if (this.isValueMasked()) {
+      return;
+    }
     const span = this.findVariableSpan(ev.target);
     if (!span || !this.canShowTooltips()) {
       return;
@@ -186,6 +254,9 @@ export class TxVariableInputComponent implements ControlValueAccessor {
   }
 
   protected handleHitPointerDown(ev: PointerEvent): void {
+    if (this.isValueMasked()) {
+      return;
+    }
     const inputEl = this.nativeInput()?.nativeElement;
     if (!inputEl || this.disabled()) {
       return;
@@ -200,6 +271,8 @@ export class TxVariableInputComponent implements ControlValueAccessor {
     if (varId.startsWith('env:')) {
       ev.preventDefault();
       ev.stopPropagation();
+      this.hideVariableTooltip();
+      this.clearTokenHover();
       const key = varId.slice(4);
       if (key) {
         this.environmentVariableClick.emit({ key });
@@ -215,6 +288,13 @@ export class TxVariableInputComponent implements ControlValueAccessor {
 
   protected handleKeydown(ev: KeyboardEvent): void {
     if (this.disabled()) {
+      return;
+    }
+
+    const inputEl = this.nativeInput()?.nativeElement;
+    if (isSuggestTriggerKeydown(ev) && inputEl) {
+      ev.preventDefault();
+      this.refreshCompletion(inputEl);
       return;
     }
 
@@ -284,24 +364,61 @@ export class TxVariableInputComponent implements ControlValueAccessor {
   }
 
   private refreshCompletion(inputEl: HTMLInputElement): void {
-    const result = findTemplateVariableSuggestions(
+    const templateResult = findTemplateVariableSuggestions(
       inputEl.value,
       inputEl.selectionStart ?? inputEl.value.length,
       this.catalog(),
     );
+    const result =
+      templateResult ??
+      findLiteralValueSuggestions(inputEl.value, this.valueSuggestions());
     if (!result || result.items.length === 0) {
       this.closeCompletion();
       return;
     }
+    this.openCompletion(result);
+  }
+
+  private openCompletion(result: {
+    readonly context: { readonly replaceStart: number; readonly replaceEnd: number };
+    readonly items: readonly DynamicVariableCatalogItem[];
+  }): void {
     this.completionReplaceStart = result.context.replaceStart;
     this.completionReplaceEnd = result.context.replaceEnd;
     this.completionItems.set(result.items);
     this.completionIndex.set(0);
+    this.completionPositioned.set(false);
     this.completionOpen.set(true);
+    scheduleFixedCompletionPosition(() => {
+      if (this.completionOpen()) {
+        this.positionCompletion();
+      }
+    });
+  }
+
+  private positionCompletion(): void {
+    const panelEl = this.completionPanel()?.nativeElement;
+    const fieldEl = this.hostEl.nativeElement.querySelector('.tx-variable-input__field');
+    const anchor =
+      fieldEl instanceof HTMLElement
+        ? fieldEl
+        : this.nativeInput()?.nativeElement;
+    if (!panelEl || !anchor) {
+      return;
+    }
+    const resolved = positionFixedCompletionPopup({
+      anchor,
+      panel: panelEl,
+      placement: this.completionPlacement(),
+      gapPx: TxVariableInputComponent.COMPLETION_GAP_PX,
+    });
+    this.resolvedCompletionPlacement.set(resolved);
+    this.completionPositioned.set(true);
   }
 
   private closeCompletion(): void {
     this.completionOpen.set(false);
+    this.completionPositioned.set(false);
     this.completionItems.set([]);
     this.completionIndex.set(0);
   }
@@ -314,6 +431,8 @@ export class TxVariableInputComponent implements ControlValueAccessor {
     if (this.tooltipAnchor) {
       this.tooltips.hide(this.tooltipAnchor);
       this.tooltipAnchor = null;
+    } else {
+      this.tooltips.hideImmediate();
     }
   }
 

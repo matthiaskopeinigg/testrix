@@ -70,25 +70,16 @@ async function buildRequestBody(
     case 'none':
       return {};
     case 'text':
-      return { body: body.content, headers: { 'Content-Type': body.contentType } };
+      return { body: body.content };
     case 'urlencoded':
-      return {
-        body: body.content,
-        headers: { 'Content-Type': body.contentType },
-      };
+      return { body: body.content };
     case 'binary': {
       const bytes = await fs.readFile(body.filePath);
-      return {
-        body: bytes,
-        headers: body.contentType ? { 'Content-Type': body.contentType } : {},
-      };
+      return { body: bytes };
     }
     case 'binary-inline': {
       const bytes = Buffer.from(body.base64, 'base64');
-      return {
-        body: bytes,
-        headers: body.contentType ? { 'Content-Type': body.contentType } : {},
-      };
+      return { body: bytes };
     }
     case 'multipart': {
       const built = await buildMultipartBody(body.parts);
@@ -132,7 +123,11 @@ function shouldRetry(status: number, attempt: number, maxAttempts: number): bool
 async function executeOnce(
   payload: SendHttpRequestPayload,
   scriptVars: Record<string, string>,
-): Promise<HttpResponseSnapshot> {
+): Promise<{
+  readonly snapshot: HttpResponseSnapshot;
+  readonly variableContext: Record<string, string>;
+  readonly scriptVariablePatch: Record<string, string>;
+}> {
   const wallStart = performance.now();
   const pre = runRequestScripts(payload.scripts.pre, {
     variables: scriptVars,
@@ -215,20 +210,37 @@ async function executeOnce(
     meta: payload.runScope ? { runScope: payload.runScope } : undefined,
   };
 
-  runRequestScripts(payload.scripts.post, {
+  const beforePostContext = { ...payload.variableContext, ...scriptVars };
+
+  const post = runRequestScripts(payload.scripts.post, {
     variables: scriptVars,
     environment: payload.variableContext,
     collectionVariables: payload.variableContext,
     response: snapshot,
   });
+  Object.assign(scriptVars, post.variables);
 
-  return snapshot;
+  const variableContext = { ...payload.variableContext, ...scriptVars };
+  const scriptVariablePatch: Record<string, string> = {};
+  for (const [key, value] of Object.entries(variableContext)) {
+    if (beforePostContext[key] !== value) {
+      scriptVariablePatch[key] = value;
+    }
+  }
+
+  return { snapshot, variableContext, scriptVariablePatch };
 }
 
 /**
  * Executes an HTTP request with retries, cookies, scripts, and transport options.
  */
-export async function executeHttpRequest(payload: SendHttpRequestPayload): Promise<HttpResponseSnapshot> {
+export async function executeHttpRequest(
+  payload: SendHttpRequestPayload,
+): Promise<{
+  readonly snapshot: HttpResponseSnapshot;
+  readonly variableContext: Record<string, string>;
+  readonly scriptVariablePatch: Record<string, string>;
+}> {
   const scriptVars: Record<string, string> = { ...payload.variableContext };
   const retries = payload.transport.retries;
   const maxAttempts = retries.enabled ? Math.max(1, retries.maxAttempts) : 1;
@@ -236,14 +248,18 @@ export async function executeHttpRequest(payload: SendHttpRequestPayload): Promi
   let lastError: unknown;
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
-      const snapshot = await executeOnce(payload, scriptVars);
-      if (!retries.enabled || !shouldRetry(snapshot.status.code, attempt, maxAttempts)) {
+      const result = await executeOnce(payload, scriptVars);
+      if (!retries.enabled || !shouldRetry(result.snapshot.status.code, attempt, maxAttempts)) {
         return {
-          ...snapshot,
-          meta: { ...snapshot.meta, attempt, fromRetry: attempt > 1 },
+          snapshot: {
+            ...result.snapshot,
+            meta: { ...result.snapshot.meta, attempt, fromRetry: attempt > 1 },
+          },
+          variableContext: result.variableContext,
+          scriptVariablePatch: result.scriptVariablePatch,
         };
       }
-      lastError = new Error(`HTTP ${snapshot.status.code}`);
+      lastError = new Error(`HTTP ${result.snapshot.status.code}`);
     } catch (error: unknown) {
       lastError = error;
       if (attempt >= maxAttempts) {
@@ -263,6 +279,20 @@ export async function executeHttpRequest(payload: SendHttpRequestPayload): Promi
     }
   }
 
-  const message = lastError instanceof Error ? lastError.message : 'Request failed';
+  const message = resolveHttpExecutorFailureMessage(lastError);
   throw new TestrixError(ErrorCodes.HTTP_REQUEST_FAILED, message);
+}
+
+function resolveHttpExecutorFailureMessage(error: unknown): string {
+  if (error instanceof TestrixError) {
+    return error.userMessage;
+  }
+  if (error instanceof Error) {
+    const msg = error.message.trim();
+    if (!msg || msg === 'Invalid URL') {
+      return 'The request URL is invalid or empty. Enter a full URL (for example, https://api.example.com).';
+    }
+    return msg;
+  }
+  return 'Request failed';
 }

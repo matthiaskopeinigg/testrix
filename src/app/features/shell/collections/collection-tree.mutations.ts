@@ -406,6 +406,34 @@ export function collectAncestorFolders(
   return ancestors;
 }
 
+/** Counts nested requests and subfolders under a folder node. */
+export function countFolderDescendantItems(
+  children: readonly CollectionTreeNode[] | undefined,
+): { readonly requests: number; readonly folders: number } {
+  let requests = 0;
+  let folders = 0;
+
+  const walk = (list: readonly CollectionTreeNode[]) => {
+    for (const node of list) {
+      const kind = node.data?.kind ?? node.kind;
+      if (kind === 'request') {
+        requests += 1;
+      } else if (kind === 'folder') {
+        folders += 1;
+      }
+      if (node.children?.length) {
+        walk(node.children);
+      }
+    }
+  };
+
+  if (children?.length) {
+    walk(children);
+  }
+
+  return { requests, folders };
+}
+
 /** Sets request description (empty string clears). */
 export function setCollectionRequestDescription(
   nodes: readonly CollectionTreeNode[],

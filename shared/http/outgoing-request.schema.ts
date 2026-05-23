@@ -125,6 +125,10 @@ export type HttpResponseSnapshot = z.infer<typeof httpResponseSnapshotSchema>;
 
 export const outgoingHttpResponseSchema = z.object({
   snapshot: httpResponseSnapshotSchema,
+  /** Resolved variable map after pre/post scripts (for session caching in the renderer). */
+  variableContext: z.record(z.string(), z.string()).optional(),
+  /** Keys changed by pre/post scripts during the request. */
+  scriptVariablePatch: z.record(z.string(), z.string()).optional(),
 });
 
 export type OutgoingHttpResponse = z.infer<typeof outgoingHttpResponseSchema>;

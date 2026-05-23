@@ -2,6 +2,7 @@
   <div
     class="tx-variable-input__field"
     [class.tx-variable-input__field--disabled]="disabled()"
+    [class.tx-variable-input__field--masked]="isValueMasked()"
     (mouseenter)="handleFieldMouseEnter($event)"
     (mouseleave)="handleFieldMouseLeave($event)"
   >
@@ -26,6 +27,7 @@
       [attr.aria-controls]="completionOpen() ? effectiveId() + '-completion' : null"
       [attr.aria-autocomplete]="completionOpen() ? 'list' : null"
       (input)="handleInput($event)"
+      (focus)="handleFocus($event)"
       (keydown)="handleKeydown($event)"
       (scroll)="handleScroll()"
       (blur)="handleBlur()"
@@ -34,13 +36,22 @@
 
   @if (completionOpen()) {
     <div
+      #completionPanel
       [id]="effectiveId() + '-completion'"
-      class="tx-variable-input__completion"
+      class="tx-variable-input__completion tx-completion-popup"
+      [class.tx-completion-popup--above]="resolvedCompletionPlacement() === 'above'"
+      [class.tx-completion-popup--below]="resolvedCompletionPlacement() === 'below'"
+      [class.tx-completion-popup--positioned]="completionPositioned()"
       role="listbox"
       aria-label="Dynamic variable suggestions"
     >
-      <p class="tx-variable-input__completion-hint">↑↓ Enter Tab · Esc dismiss</p>
-      <div class="tx-variable-input__completion-list">
+      <p class="tx-variable-input__completion-hint tx-completion-popup__hint">
+        @if (valueSuggestions().length > 0) {
+          Ctrl+Space ·
+        }
+        ↑↓ Enter Tab · Esc
+      </p>
+      <div class="tx-variable-input__completion-list tx-completion-popup__list">
         @for (item of completionItems(); track item.id; let index = $index) {
           <button
             type="button"

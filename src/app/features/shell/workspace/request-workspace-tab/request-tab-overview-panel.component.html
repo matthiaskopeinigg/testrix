@@ -1,0 +1,169 @@
+<div class="req-overview">
+  <header class="req-overview__hero">
+    <div class="req-overview__hero-main">
+      <h2 class="req-overview__title">Overview</h2>
+      <p class="req-overview__subtitle">
+        Request metadata, last response, and a quick path into configuration.
+      </p>
+    </div>
+    <div class="req-overview__endpoint" aria-label="Request endpoint">
+      <span class="req-overview__method" [attr.data-method]="method()">{{ method() }}</span>
+      <code class="req-overview__url">{{ urlPath() || '—' }}</code>
+    </div>
+  </header>
+
+  <div class="req-overview__layout">
+    <section class="req-overview-card req-overview-card--about" aria-label="About this request">
+      <h3 class="req-overview-card__title">About</h3>
+      <tx-form-field label="Description" controlId="request-description">
+        <tx-textarea
+          id="request-description"
+          [ngModel]="description()"
+          (ngModelChange)="descriptionChange.emit($event)"
+          placeholder="Short notes about this request"
+        />
+      </tx-form-field>
+
+      <tx-form-field label="Tags" controlId="request-tags">
+        <tx-tags-input
+          controlId="request-tags"
+          [compact]="true"
+          placeholder="Add a tag"
+          [ngModel]="tags()"
+          (ngModelChange)="tagsChange.emit($event)"
+        />
+      </tx-form-field>
+
+      <p class="req-overview__env">
+        <tx-icon name="globe" [size]="12" aria-hidden="true" />
+        Environment: <strong>{{ environmentName() }}</strong>
+      </p>
+    </section>
+
+    <section class="req-overview-card req-overview-card--run" aria-label="Last response">
+      <div class="req-overview-card__head">
+        <h3 class="req-overview-card__title">Last response</h3>
+        @if (lastRun()) {
+          <tx-tag [variant]="statusVariant(lastRun()!.status.ok)" casing="normal">
+            {{ lastRun()!.status.code }} {{ lastRun()!.status.text }}
+          </tx-tag>
+        }
+      </div>
+
+      @if (lastRun(); as run) {
+        <p class="req-overview-run__time">{{ formatRunTime(run.capturedAt) }}</p>
+
+        <div class="req-overview-run__stats">
+          @for (stat of lastRunStats(run); track stat.label) {
+            <article class="req-overview-run-stat">
+              <div class="req-overview-run-stat__head">
+                <span class="req-overview-run-stat__icon" aria-hidden="true">
+                  <tx-icon [name]="stat.icon" [size]="14" />
+                </span>
+                <span class="req-overview-run-stat__label">{{ stat.label }}</span>
+              </div>
+              <strong class="req-overview-run-stat__value">{{ stat.value }}</strong>
+            </article>
+          }
+        </div>
+
+        <div class="req-overview-run__footer">
+          <p class="req-overview-run__history">{{ runCountLabel() }}</p>
+          <tx-button variant="secondary" (pressed)="openResponse.emit()">View response</tx-button>
+        </div>
+      } @else {
+        <div class="req-overview-empty">
+          <span class="req-overview-empty__icon" aria-hidden="true">
+            <tx-icon name="zap" [size]="18" />
+          </span>
+          <p class="req-overview-empty__title">No responses yet</p>
+          <p class="req-overview-empty__hint">
+            Send this request to capture status, timing, and body here. Save examples from the response panel.
+          </p>
+        </div>
+      }
+    </section>
+  </div>
+
+  <section class="req-overview-config" aria-label="Configuration summary">
+    <div class="req-overview-config__head">
+      <h3 class="req-overview-card__title">Configuration</h3>
+      <p class="req-overview-config__hint">Jump to a section to edit settings.</p>
+    </div>
+
+    <div class="req-overview-config__grid">
+      @for (card of configCards(); track card.section) {
+        <button type="button" class="req-overview-config-card" (click)="sectionSelect.emit(card.section)">
+          <span class="req-overview-config-card__icon" aria-hidden="true">
+            <tx-icon [name]="card.icon" [size]="16" />
+          </span>
+          <span class="req-overview-config-card__body">
+            <span class="req-overview-config-card__label">{{ card.label }}</span>
+            <span class="req-overview-config-card__value">{{ card.value }}</span>
+          </span>
+          <tx-icon class="req-overview-config-card__chevron" name="chevronRight" [size]="14" aria-hidden="true" />
+        </button>
+      }
+    </div>
+  </section>
+
+  @if (folderVariables().length > 0) {
+    <section class="req-overview-card req-overview-card--vars" aria-label="Folder variables">
+      <h3 class="req-overview-card__title">Folder variables</h3>
+      <p class="req-overview-vars__hint">From ancestor collection folders (not the active environment).</p>
+      <ul class="req-overview-vars__list">
+        @for (row of folderVariablesPreview(); track row.source + row.key) {
+          <li class="req-overview-vars__row">
+            <span class="req-overview-vars__source">{{ row.source }}</span>
+            <code class="req-overview-vars__key">{{ row.key }}</code>
+          </li>
+        }
+      </ul>
+      @if (folderVariablesOverflow() > 0) {
+        <p class="req-overview-vars__more">+ {{ folderVariablesOverflow() }} more</p>
+      }
+    </section>
+  }
+
+  <section class="req-overview-card req-overview-card--saved" aria-label="Saved examples">
+    <div class="req-overview-card__head">
+      <h3 class="req-overview-card__title">Examples</h3>
+      @if (examples().length > 0) {
+        <span class="req-overview-saved__count">{{ examples().length }}</span>
+      }
+    </div>
+    @if (examples().length === 0) {
+      <p class="req-overview-saved__empty">
+        Send a request, then use <strong>Save as example</strong> in the response panel.
+      </p>
+    } @else {
+      <ul class="req-overview-saved__list">
+        @for (ex of examples(); track ex.id) {
+          <li>
+            <button
+              type="button"
+              class="req-overview-saved__row"
+              [attr.aria-label]="'Open example ' + ex.name"
+              (click)="handleExampleSelect(ex.id)"
+            >
+              <tx-tag [variant]="ex.snapshot.status.ok ? 'success' : 'error'" casing="normal">
+                {{ ex.snapshot.status.code }}
+              </tx-tag>
+              <p class="req-overview-saved__body">
+                <span class="req-overview-saved__name">{{ ex.name }}</span>
+                @if (ex.isDefault) {
+                  <tx-tag variant="info" casing="normal">Default</tx-tag>
+                }
+                @if (ex.description) {
+                  <span class="req-overview-saved__meta">{{ ex.description }}</span>
+                }
+              </p>
+              <span class="req-overview-saved__meta">{{ formatExampleMeta(ex.snapshot) }}</span>
+              <tx-icon class="req-overview-saved__chevron" name="chevronRight" [size]="14" aria-hidden="true" />
+            </button>
+          </li>
+        }
+      </ul>
+    }
+  </section>
+</div>

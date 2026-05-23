@@ -55,7 +55,7 @@
             controlId="request-url"
             [pathParams]="settings().pathParams"
             [catalog]="variableCatalog()"
-            [ngModel]="urlPath()"
+            [ngModel]="urlDisplay()"
             (ngModelChange)="handleUrlPathChange($event)"
             (environmentVariableClick)="handleEnvironmentVariableClick($event)"
             (sendRequest)="handleSend()"
@@ -296,7 +296,7 @@
         }
       </div>
       </div>
-      @if (showResponseSplit()) {
+      @if (showResponsePanel()) {
         <div class="request-tab__response-slot" txSplitSecondary>
           @if (responsePanelComponent(); as responsePanel) {
             <ng-container

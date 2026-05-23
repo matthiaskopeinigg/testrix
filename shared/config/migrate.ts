@@ -287,6 +287,10 @@ function migrateHttpSection(
         typeof request.prependWwwOnSend === 'boolean'
           ? request.prependWwwOnSend
           : defaults.request.prependWwwOnSend,
+      autoDetectContentTypeOnSend:
+        typeof request.autoDetectContentTypeOnSend === 'boolean'
+          ? request.autoDetectContentTypeOnSend
+          : defaults.request.autoDetectContentTypeOnSend,
     },
     retries: subsection('retries'),
     testing: subsection('testing'),

@@ -26,7 +26,7 @@ export function wrapInvokeHandler<P, R>(
     } catch (error: unknown) {
       // eslint-disable-next-line no-console
       console.error(`[ipc] ${channel}`, error);
-      throw serializeIpcFailure(error);
+      throw createIpcRejection(error);
     }
   };
 }
@@ -41,4 +41,17 @@ export function serializeIpcFailure(error: unknown): IpcErrorPayload & { name?: 
     userMessage: 'Something went wrong.',
     name: 'TestrixError',
   };
+}
+
+/** Rejects with an `Error` so Electron forwards `message` to the renderer (not `[object Object]`). */
+export function createIpcRejection(error: unknown): Error & IpcErrorPayload {
+  if (error instanceof TestrixError) {
+    return error;
+  }
+  const payload = serializeIpcFailure(error);
+  const rejection = new Error(payload.userMessage) as Error & IpcErrorPayload;
+  rejection.code = payload.code;
+  rejection.userMessage = payload.userMessage;
+  rejection.name = payload.name ?? 'TestrixError';
+  return rejection;
 }

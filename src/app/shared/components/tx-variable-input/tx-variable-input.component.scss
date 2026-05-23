@@ -1,11 +1,18 @@
 @use '../../styles/control-surface' as surface;
 @use '../../styles/interactive-motion' as motion;
+@use '../tx-completion-popup/tx-completion-popup';
 
 :host {
   display: block;
   box-sizing: border-box;
   min-width: 0;
   width: 100%;
+  position: relative;
+  z-index: 0;
+}
+
+:host(:focus-within) {
+  z-index: 12;
 }
 
 .tx-variable-input {
@@ -34,6 +41,13 @@
 
   &--disabled {
     @include surface.control-surface-disabled;
+  }
+
+  &--masked {
+    .tx-variable-input__control {
+      -webkit-text-security: disc;
+      caret-color: var(--tx-text-0);
+    }
   }
 }
 
@@ -138,34 +152,6 @@
   &:disabled {
     cursor: not-allowed;
   }
-}
-
-.tx-variable-input__completion {
-  position: absolute;
-  z-index: 20;
-  top: calc(100% + 4px);
-  left: 0;
-  right: 0;
-  border: 1px solid var(--tx-border-0);
-  border-radius: var(--tx-radius-sm, 8px);
-  background: var(--tx-surface-0);
-  box-shadow: 0 8px 24px color-mix(in srgb, var(--tx-text-0) 12%, transparent);
-  max-height: 220px;
-}
-
-.tx-variable-input__completion-hint {
-  padding: 4px 10px 2px;
-  font-size: 0.625rem;
-  font-weight: 600;
-  color: var(--tx-text-1);
-  opacity: 0.75;
-  user-select: none;
-}
-
-.tx-variable-input__completion-list {
-  max-height: 180px;
-  overflow-y: auto;
-  padding: 0 4px 6px;
 }
 
 .tx-variable-input__completion-item {

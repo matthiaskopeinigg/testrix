@@ -15,6 +15,26 @@ describe('resolveHttpErrorMessage', () => {
       }),
     ).toBe('getaddrinfo ENOTFOUND googler');
   });
+
+  it('rewrites Invalid URL from IPC rejections', () => {
+    const err = new Error('Invalid URL') as Error & {
+      code: string;
+      userMessage: string;
+    };
+    err.code = 'HTTP_REQUEST_FAILED';
+    err.userMessage = 'Invalid URL';
+    expect(resolveHttpErrorMessage(err)).toBe(
+      'The request URL is invalid or empty. Enter a full URL (for example, https://api.example.com).',
+    );
+  });
+
+  it('unwraps legacy Electron invoke errors', () => {
+    expect(
+      resolveHttpErrorMessage(new Error("Error invoking remote method 'http:send': Invalid URL")),
+    ).toBe(
+      'The request URL is invalid or empty. Enter a full URL (for example, https://api.example.com).',
+    );
+  });
 });
 
 describe('createFailedHttpResponseSnapshot', () => {

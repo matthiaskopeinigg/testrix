@@ -25,7 +25,7 @@ describe('resolveCollectionRequestAuth', () => {
     expect(resolved.auth.type).toBe('bearer');
   });
 
-  it('inherits from nearest folder', () => {
+  it('inherits from nearest folder with concrete auth', () => {
     const resolved = resolveCollectionRequestAuth(
       { type: 'inherit' },
       [
@@ -49,6 +49,43 @@ describe('resolveCollectionRequestAuth', () => {
     );
     expect(resolved.source).toBe('folder');
     expect(resolved.folderId).toBe('f2');
+  });
+
+  it('passes through intermediate folder none to parent folder auth', () => {
+    const resolved = resolveCollectionRequestAuth(
+      { type: 'inherit' },
+      [
+        {
+          id: 'oneweb',
+          label: 'OneWeb',
+          settings: {
+            ...createDefaultCollectionFolderSettings(),
+            auth: {
+              type: 'apiKey',
+              name: 'Authorization',
+              value: 'secret-key',
+              in: 'header',
+            },
+          },
+        },
+        {
+          id: 'b2c',
+          label: 'b2c',
+          settings: {
+            ...createDefaultCollectionFolderSettings(),
+            auth: { type: 'none' },
+          },
+        },
+      ],
+    );
+    expect(resolved.source).toBe('folder');
+    expect(resolved.folderId).toBe('oneweb');
+    expect(resolved.auth).toEqual({
+      type: 'apiKey',
+      name: 'Authorization',
+      value: 'secret-key',
+      in: 'header',
+    });
   });
 });
 

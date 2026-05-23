@@ -26,14 +26,19 @@ import {
   DEFAULT_HTTP_ACTIVE_SECTION_ON_OPEN,
   HTTP_METHOD_IDS,
   buildRequestCodeSnippetInput,
+  buildCollectionEnvironmentDropdownOptions,
   createDefaultCollectionRequestSettings,
+  environmentIdFromDropdownValue,
   parseRequestUrlInput,
+  buildRequestDisplayUrl,
   resolveCollectionRequestHeaders,
   resolveCollectionRequestAuth,
+  resolveCollectionRequestEnvironmentId,
   resolveCollectionRequestTabUi,
   resolveRequestRunSession,
-  suggestRequestContentType,
+  resolveRequestContentTypeHint,
   syncPathParamsWithUrl,
+  toEnvironmentDropdownValue,
   type RequestCodeSnippetInput,
   type WorkspaceEditorLayoutId,
 } from '@shared/config';
@@ -70,7 +75,6 @@ import {
 } from './request-tab-section-loader';
 import { RequestTabDynamicOutletComponent } from './request-tab-dynamic-outlet.component';
 import { RequestTabSectionOutletComponent } from './request-tab-section-outlet.component';
-import { buildRequestVariableCatalog } from './request-variable-catalog';
 
 interface RequestTabNavItem {
   readonly id: HttpRequestSectionId;
@@ -81,9 +85,9 @@ interface RequestTabNavItem {
 const NAV_ITEMS: readonly RequestTabNavItem[] = [
   { id: 'overview', label: 'Overview', icon: 'info' },
   { id: 'params', label: 'Params', icon: 'hash' },
-  { id: 'auth', label: 'Auth', icon: 'lock' },
   { id: 'headers', label: 'Headers', icon: 'layers' },
   { id: 'body', label: 'Body', icon: 'file-text' },
+  { id: 'auth', label: 'Auth', icon: 'lock' },
   { id: 'scripts', label: 'Scripts', icon: 'code' },
   { id: 'settings', label: 'Settings', icon: 'sliders' },
   { id: 'docs', label: 'Docs', icon: 'file-text' },
@@ -150,6 +154,9 @@ export class RequestWorkspaceTabComponent {
   protected readonly overviewPanelOutputs = {
     descriptionChange: (value: unknown) => this.handleDescriptionChange(value as string),
     tagsChange: (value: unknown) => this.handleTagsChange(value as readonly string[]),
+    sectionSelect: (value: unknown) => this.handleSectionSelect(value as HttpRequestSectionId),
+    openResponse: () => this.handleOpenResponse(),
+    exampleSelect: (value: unknown) => this.handleExampleSelect(value as string),
   };
 
   protected readonly paramsPanelOutputs = {
@@ -164,6 +171,8 @@ export class RequestWorkspaceTabComponent {
   protected readonly authPanelOutputs = {
     authChange: (value: unknown) =>
       this.handleSettingsPatch({ auth: value as CollectionRequestSettings['auth'] }),
+    environmentVariableClick: (value: unknown) =>
+      this.handleEnvironmentVariableClick(value as { readonly key: string }),
   };
 
   protected readonly headersPanelOutputs = {
@@ -210,6 +219,10 @@ export class RequestWorkspaceTabComponent {
 
   /** Stored path only (no query string). */
   protected readonly urlPath = signal('');
+
+  protected readonly urlDisplay = computed(() =>
+    buildRequestDisplayUrl(this.urlPath(), this.settings().queryParams),
+  );
   protected readonly descriptionDraft = signal('');
 
   private sessionUiLoadKey: string | null = null;
@@ -235,10 +248,6 @@ export class RequestWorkspaceTabComponent {
     () => this.httpRequest.inFlight() || this.httpRequest.runs().length > 0,
   );
 
-  protected readonly showResponseSplit = computed(
-    () => this.showResponsePanel() && !this.responsePanelHidden(),
-  );
-
   protected readonly missing = computed(
     () => !this.collectionLoc() && !this.historyMeta(),
   );
@@ -257,41 +266,66 @@ export class RequestWorkspaceTabComponent {
       createDefaultCollectionRequestSettings(),
   );
 
-  protected readonly contentTypeHint = computed(() =>
-    suggestRequestContentType(this.settings().body),
-  );
-
-  /** Persisted on the request in collections.json (`settings.environmentId`). */
-  protected readonly requestEnvironmentId = computed(() => {
-    const id = this.settings().environmentId;
-    if (!id) {
+  protected readonly contentTypeHint = computed(() => {
+    if (!this.configService.settings()?.http.request.autoDetectContentTypeOnSend) {
       return null;
     }
-    return getEnvironmentDefinition(this.environmentsService.environments(), id) ? id : null;
+    const settings = this.settings();
+    return resolveRequestContentTypeHint(settings.body, settings.headers);
   });
 
-  protected readonly environmentDropdownValue = computed(
-    () => this.requestEnvironmentId() ?? '',
+  private readonly ancestorFolderRefs = computed(() =>
+    this.ancestorFolders()
+      .filter((n) => n.data?.kind === 'folder' && n.data.settings)
+      .map((n) => ({
+        id: n.id,
+        label: n.label,
+        settings: n.data!.settings!,
+      })),
+  );
+
+  /** Effective environment for send and variable catalog (request → ancestor folders). */
+  protected readonly effectiveEnvironmentId = computed(() => {
+    const environments = this.environmentsService.environments();
+    const resolved = resolveCollectionRequestEnvironmentId(
+      this.settings().environmentId,
+      this.ancestorFolderRefs(),
+    );
+    if (!resolved || !getEnvironmentDefinition(environments, resolved)) {
+      return null;
+    }
+    return resolved;
+  });
+
+  protected readonly environmentDropdownValue = computed(() =>
+    toEnvironmentDropdownValue(this.settings().environmentId),
   );
 
   protected readonly activeEnvironment = computed(() => {
-    const id = this.requestEnvironmentId();
+    const id = this.effectiveEnvironmentId();
     if (!id) {
       return null;
     }
     return getEnvironmentDefinition(this.environmentsService.environments(), id);
   });
 
-  protected readonly environmentOptions = computed((): readonly TxDropdownOption[] => {
-    const options: TxDropdownOption[] = [{ value: '', label: 'No environment' }];
-    for (const environment of this.environmentsService.environments()) {
-      options.push({ value: environment.id, label: environment.name });
-    }
-    return options;
-  });
+  protected readonly environmentOptions = computed((): readonly TxDropdownOption[] =>
+    buildCollectionEnvironmentDropdownOptions(this.environmentsService.environments(), {
+      includeInherit: this.hasParentFolder(),
+    }),
+  );
+
+  protected readonly environmentKeyOptions = computed(() => ({
+    useFolderPathInKeys:
+      this.configService.settings()?.environments.useFolderPathInKeys ?? false,
+  }));
 
   protected readonly variableCatalog = computed(() =>
-    buildRequestVariableCatalog(this.activeEnvironment()),
+    this.httpRequest.buildVariableCatalog(
+      this.activeEnvironment(),
+      this.environmentKeyOptions(),
+      this.effectiveEnvironmentId(),
+    ),
   );
 
   protected readonly codeSnippetInput = computed((): RequestCodeSnippetInput | null => {
@@ -351,29 +385,23 @@ export class RequestWorkspaceTabComponent {
       return null;
     }
     const settings = this.configService.settings();
-    const ancestors = this.ancestorFolders();
+    const ancestors = this.ancestorFolderRefs();
     return {
       globalHeaders: settings?.http.headers ?? {
         applyDefaultHeaders: true,
         rows: [],
       },
-      ancestorFolders: ancestors
-        .filter((n) => n.data?.kind === 'folder' && n.data.settings)
-        .map((n) => ({
-          id: n.id,
-          label: n.label,
-          settings: n.data!.settings!,
-        })),
+      ancestorFolders: ancestors,
       requestHeaders: this.settings().headers,
     };
   });
 
-  protected readonly inheritedVariableLines = computed(() => {
+  protected readonly folderVariables = computed(() => {
     const loc = this.collectionLoc();
     if (!loc) {
       return [];
     }
-    const lines: string[] = [];
+    const rows: { source: string; key: string }[] = [];
     for (const folder of this.ancestorFolders()) {
       if (folder.data?.kind !== 'folder' || !folder.data.settings) {
         continue;
@@ -381,13 +409,21 @@ export class RequestWorkspaceTabComponent {
       for (const row of folder.data.settings.variables) {
         const key = row.key.trim();
         if (key) {
-          lines.push(`${folder.label} · ${key}`);
+          rows.push({ source: folder.label, key });
         }
       }
     }
+    return rows;
+  });
+
+  protected readonly inheritedVariableLines = computed(() => {
+    const lines = this.folderVariables().map((row) => `${row.source} · ${row.key}`);
     const environment = this.activeEnvironment();
     if (environment) {
-      for (const entry of collectEnvironmentVariables(environment.nodes)) {
+      for (const entry of collectEnvironmentVariables(
+        environment.nodes,
+        this.environmentKeyOptions(),
+      )) {
         lines.push(`${environment.name} · ${entry.key}`);
       }
     }
@@ -446,10 +482,14 @@ export class RequestWorkspaceTabComponent {
         return {
           description: this.descriptionDraft(),
           tags: this.settings().tags,
-          auth: this.settings().auth,
-          inheritedVariableLines: this.inheritedVariableLines(),
+          method: this.method(),
+          urlPath: this.urlDisplay(),
+          environmentName: this.activeEnvironment()?.name ?? 'No environment',
+          settings: this.settings(),
+          folderVariables: this.folderVariables(),
           examples: this.settings().examples,
-          snapshots: this.settings().snapshots,
+          lastRun: this.httpRequest.selectedSnapshot() ?? this.httpRequest.runs()[0] ?? null,
+          runCount: this.httpRequest.runs().length,
         };
       case 'params':
         return {
@@ -461,6 +501,7 @@ export class RequestWorkspaceTabComponent {
         return {
           auth: this.settings().auth,
           hasParentFolder: this.hasParentFolder(),
+          catalog: this.variableCatalog(),
         };
       case 'headers': {
         const headerInput = this.headerResolveInput();
@@ -484,6 +525,7 @@ export class RequestWorkspaceTabComponent {
           scripts: this.settings().scripts,
           activePane: this.activeScriptPane(),
           completionItems: this.scriptCompletionItems(),
+          variableCatalog: this.variableCatalog(),
         };
       case 'settings':
         return {
@@ -562,7 +604,7 @@ export class RequestWorkspaceTabComponent {
     });
 
     effect(() => {
-      if (!this.showResponseSplit() || this.responsePanelComponent()) {
+      if (!this.showResponsePanel() || this.responsePanelComponent()) {
         return;
       }
       void import('./request-response-panel.component').then((module) => {
@@ -612,6 +654,19 @@ export class RequestWorkspaceTabComponent {
     this.scheduleTabUiPersist();
   }
 
+  protected handleOpenResponse(): void {
+    this.handleResponsePanelHidden(false);
+  }
+
+  protected handleExampleSelect(exampleId: string): void {
+    if (!exampleId.trim()) {
+      return;
+    }
+    if (this.httpRequest.showExample(this.resourceId(), exampleId)) {
+      this.handleOpenResponse();
+    }
+  }
+
   protected handleScriptPaneSelect(pane: 'pre' | 'post'): void {
     if (pane !== this.activeScriptPane() && this.activeSection() === 'scripts') {
       this.tabMotion.onSectionChange('scripts', 3);
@@ -625,8 +680,7 @@ export class RequestWorkspaceTabComponent {
   }
 
   protected handleEnvironmentChange(value: string): void {
-    const nextId = value.trim() || null;
-    this.patchSettings({ environmentId: nextId });
+    this.patchSettings({ environmentId: environmentIdFromDropdownValue(value) });
   }
 
   protected handleUrlPathChange(display: string): void {
@@ -731,7 +785,8 @@ export class RequestWorkspaceTabComponent {
       this.workspaceEditor,
       this.environmentsService.environments(),
       event.key,
-      this.requestEnvironmentId(),
+      this.effectiveEnvironmentId(),
+      this.environmentKeyOptions(),
     );
   }
 

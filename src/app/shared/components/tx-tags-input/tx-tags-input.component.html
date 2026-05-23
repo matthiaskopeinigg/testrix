@@ -4,29 +4,32 @@
     [class.tx-tags-input--disabled]="disabled()"
     [class.tx-tags-input--open]="panelOpen()"
   >
-    <button
-      type="button"
-      class="tx-tags-input__menu-trigger"
-      [class.is-open]="panelOpen()"
-      [attr.aria-expanded]="panelOpen()"
-      aria-haspopup="dialog"
-      [attr.aria-controls]="panelOpen() ? effectiveId() + '-panel' : null"
-      [attr.aria-label]="tags().length === 0 ? 'Tags' : tags().length + ' tags'"
-      [disabled]="disabled()"
-      (click)="handleTogglePanel($event)"
-    >
-      <tx-icon name="tag" [size]="14" aria-hidden="true" />
-      <span class="tx-tags-input__menu-value" [class.is-placeholder]="tags().length === 0">
-        {{ triggerLabel() }}
-      </span>
-      <tx-icon
-        class="tx-tags-input__chevron"
-        [class.is-open]="panelOpen()"
-        name="chevronDown"
-        [size]="16"
-        aria-hidden="true"
-      />
-    </button>
+    <div class="tx-tags-input__compact-row" role="group" aria-label="Tags">
+      <div class="tx-tags-input__compact-chips" role="list">
+        @for (tag of tags(); track tag) {
+          <tx-tag variant="default" casing="normal" [removable]="!disabled()" (removed)="handleRemoveTag(tag)">
+            {{ tag }}
+          </tx-tag>
+        }
+      </div>
+
+      @if (canAddMore()) {
+        <button
+          type="button"
+          class="tx-tags-input__add-btn"
+          [class.is-open]="panelOpen()"
+          [attr.aria-expanded]="panelOpen()"
+          aria-haspopup="dialog"
+          [attr.aria-controls]="panelOpen() ? effectiveId() + '-panel' : null"
+          [attr.aria-label]="tags().length === 0 ? 'Add tags' : 'Add another tag'"
+          [disabled]="disabled()"
+          (click)="handleTogglePanel($event)"
+        >
+          <tx-icon name="plus" [size]="14" aria-hidden="true" />
+          <span>Add tag</span>
+        </button>
+      }
+    </div>
 
     @if (panelOpen()) {
       <div

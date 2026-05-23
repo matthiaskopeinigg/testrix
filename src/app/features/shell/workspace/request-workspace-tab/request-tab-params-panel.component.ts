@@ -6,8 +6,8 @@ import type { HttpKeyValueRow } from '@shared/config';
 
 import { TxFormFieldComponent } from '@app/shared/components/tx-form-field/tx-form-field.component';
 import { TxInputComponent } from '@app/shared/components/tx-input/tx-input.component';
-import { TxKeyValueDescriptionListComponent } from '@app/shared/components/tx-key-value-description-list/tx-key-value-description-list.component';
-import type { TxKeyValueDescriptionRow } from '@app/shared/components/tx-key-value-description-list/tx-key-value-description-list.types';
+import { TxKeyValueListComponent } from '@app/shared/components/tx-key-value-list/tx-key-value-list.component';
+import type { TxKeyValueRow } from '@app/shared/components/tx-key-value-list/tx-key-value-list.types';
 import { TxVariableInputComponent } from '@app/shared/components/tx-variable-input/tx-variable-input.component';
 import { DYNAMIC_VARIABLES, type DynamicVariableCatalogItem } from '@shared/dynamic-variables';
 
@@ -18,7 +18,7 @@ import { DYNAMIC_VARIABLES, type DynamicVariableCatalogItem } from '@shared/dyna
     FormsModule,
     TxFormFieldComponent,
     TxInputComponent,
-    TxKeyValueDescriptionListComponent,
+    TxKeyValueListComponent,
     TxVariableInputComponent,
   ],
   template: `
@@ -58,12 +58,15 @@ import { DYNAMIC_VARIABLES, type DynamicVariableCatalogItem } from '@shared/dyna
       }
 
       <h2 class="request-panel__title">Query parameters</h2>
-      <tx-key-value-description-list
+      <tx-key-value-list
+        [compact]="true"
         keyLabel="Key"
+        keyInput="query-params"
         valueLabel="Value"
         descriptionLabel="Description"
         addLabel="Add query param"
         valueInput="variables"
+        [showDescription]="true"
         [showEnabled]="true"
         [maxRows]="64"
         [rows]="queryRows()"
@@ -85,7 +88,7 @@ export class RequestTabParamsPanelComponent {
   readonly queryParamsChange = output<readonly HttpKeyValueRow[]>();
   readonly environmentVariableClick = output<{ readonly key: string }>();
 
-  protected queryRows(): readonly TxKeyValueDescriptionRow[] {
+  protected queryRows(): readonly TxKeyValueRow[] {
     return this.queryParams().map((row) => ({
       id: row.id,
       enabled: row.enabled,
@@ -110,7 +113,7 @@ export class RequestTabParamsPanelComponent {
     );
   }
 
-  protected handleQueryChange(rows: readonly TxKeyValueDescriptionRow[]): void {
+  protected handleQueryChange(rows: readonly TxKeyValueRow[]): void {
     this.queryParamsChange.emit(
       rows.map((row) => ({
         id: row.id,

@@ -176,10 +176,6 @@ export class LoadTestWorkspaceTabComponent {
 
   protected readonly showResultsPanel = computed(() => !this.missing());
 
-  protected readonly showResultsSplit = computed(
-    () => this.showResultsPanel() && !this.resultsPanelHidden(),
-  );
-
   protected readonly runButtonLabel = computed(() => (this.running() ? 'Cancel' : 'Start load test'));
 
   protected readonly runButtonVariant = computed((): 'primary' | 'secondary' =>

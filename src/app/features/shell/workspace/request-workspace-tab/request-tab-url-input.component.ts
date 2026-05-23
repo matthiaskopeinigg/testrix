@@ -2,6 +2,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  DestroyRef,
   ElementRef,
   forwardRef,
   inject,
@@ -58,10 +59,15 @@ export class RequestTabUrlInputComponent implements ControlValueAccessor {
   /** Fired when Enter is pressed and variable completion is not active. */
   readonly sendRequest = output<void>();
 
+  private readonly destroyRef = inject(DestroyRef);
   private readonly hostEl = inject(ElementRef<HTMLElement>);
   private readonly tooltips = inject(TxTooltipService);
   private readonly uiPreferences = inject(UiPreferencesService);
   private readonly nativeInput = viewChild<ElementRef<HTMLInputElement>>('nativeInput');
+
+  constructor() {
+    this.destroyRef.onDestroy(() => this.hideTooltip());
+  }
 
   protected readonly autoId = `request-tab-url-${RequestTabUrlInputComponent.nextId++}`;
   protected readonly value = signal('');
@@ -185,6 +191,8 @@ export class RequestTabUrlInputComponent implements ControlValueAccessor {
       if (varId.startsWith('env:')) {
         ev.preventDefault();
         ev.stopPropagation();
+        this.hideTooltip();
+        this.clearPathParamHover();
         const key = varId.slice(4);
         if (key) {
           this.environmentVariableClick.emit({ key });
@@ -358,6 +366,8 @@ export class RequestTabUrlInputComponent implements ControlValueAccessor {
     if (this.tooltipAnchor) {
       this.tooltips.hide(this.tooltipAnchor);
       this.tooltipAnchor = null;
+    } else {
+      this.tooltips.hideImmediate();
     }
   }
 

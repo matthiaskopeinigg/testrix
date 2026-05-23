@@ -61,6 +61,25 @@ export function inferHttpBodySyntaxMode(
   return 'plain';
 }
 
+/** Maps inferred body syntax to a default `Content-Type` request header value. */
+export function contentTypeFromBodySyntax(mode: HttpBodySyntaxMode): string {
+  switch (mode) {
+    case 'json':
+    case 'graphql':
+      return 'application/json';
+    case 'xml':
+      return 'application/xml';
+    case 'html':
+      return 'text/html';
+    case 'css':
+      return 'text/css';
+    case 'scss':
+      return 'text/x-scss';
+    default:
+      return 'text/plain';
+  }
+}
+
 /** Reads Content-Type from header rows and infers syntax mode. */
 export function inferHttpBodySyntaxModeFromHeaders(
   headers: readonly HttpResponseHeader[] | undefined,

@@ -106,6 +106,7 @@
 
     <tx-vertical-split-pane
       class="rg-tab__split"
+      revealLabel="Regression run"
       [secondaryVisible]="showResultsPanel()"
       [secondaryHidden]="resultsPanelHidden()"
       [secondaryHeight]="resultsPanelHeight()"
@@ -258,7 +259,7 @@
           }
         </div>
       </div>
-      @if (showResultsSplit()) {
+      @if (showResultsPanel()) {
         <div class="rg-tab__results-slot" txSplitSecondary>
           <app-rg-tab-results-panel
             [runState]="runState()"

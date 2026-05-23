@@ -24,8 +24,12 @@ export function registerHttpHandlers(ipc: IpcMainBinder): void {
           `Invalid HTTP request payload${detail}`,
         );
       }
-      const snapshot = await executeHttpRequest(parsed.data);
-      return { snapshot };
+      const result = await executeHttpRequest(parsed.data);
+      return {
+        snapshot: result.snapshot,
+        variableContext: result.variableContext,
+        scriptVariablePatch: result.scriptVariablePatch,
+      };
     }),
   );
 

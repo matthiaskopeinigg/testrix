@@ -4,6 +4,12 @@ import { collectionNodeSchema } from '../config/collections.schema';
 import { httpSettingsSchema } from '../config/http-settings.schema';
 import { environmentsFileSchema } from '../config/environments.schema';
 
+export const environmentVariableKeyModeSchema = z.object({
+  useFolderPathInKeys: z.boolean(),
+});
+
+export type EnvironmentVariableKeyMode = z.infer<typeof environmentVariableKeyModeSchema>;
+
 export const collectionRunScopeSchema = z.object({
   runId: z.string().min(1),
   folderId: z.string().optional(),
@@ -20,6 +26,7 @@ export const collectionExecutionInputSchema = z.object({
   environments: environmentsFileSchema,
   appVersion: z.string(),
   runScope: collectionRunScopeSchema.optional(),
+  environmentVariableKeys: environmentVariableKeyModeSchema.optional(),
 });
 
 export type CollectionExecutionInput = z.infer<typeof collectionExecutionInputSchema>;

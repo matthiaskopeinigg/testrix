@@ -46,11 +46,21 @@
           </tx-form-field>
           @if (expressionLabel(rule.source); as exprLabel) {
             <tx-form-field [label]="exprLabel" [controlId]="'ts-val-expr-' + $index">
-              <tx-input
-                [controlId]="'ts-val-expr-' + $index"
-                [ngModel]="rule.expression"
-                (ngModelChange)="patchRule($index, { expression: $event })"
-              />
+              @if (expressionSuggestions(rule.source); as catalog) {
+                <tx-suggest-input
+                  [controlId]="'ts-val-expr-' + $index"
+                  [suggestions]="catalog"
+                  [completionLabel]="exprLabel"
+                  [ngModel]="rule.expression"
+                  (ngModelChange)="patchRule($index, { expression: $event })"
+                />
+              } @else {
+                <tx-input
+                  [controlId]="'ts-val-expr-' + $index"
+                  [ngModel]="rule.expression"
+                  (ngModelChange)="patchRule($index, { expression: $event })"
+                />
+              }
             </tx-form-field>
           }
           <tx-form-field label="Operator" [controlId]="'ts-val-op-' + $index">

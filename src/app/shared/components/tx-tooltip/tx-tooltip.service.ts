@@ -14,6 +14,15 @@ export class TxTooltipService {
   private showTimer: ReturnType<typeof setTimeout> | null = null;
   private anchor: HTMLElement | null = null;
 
+  constructor() {
+    if (typeof document === 'undefined') {
+      return;
+    }
+    const dismiss = (): void => this.hideImmediate();
+    document.addEventListener('mousedown', dismiss, { capture: true });
+    document.addEventListener('touchstart', dismiss, { capture: true, passive: true });
+  }
+
   show(anchor: HTMLElement, text: string, position: TxTooltipPosition): void {
     const trimmed = text.trim();
     if (!trimmed) {

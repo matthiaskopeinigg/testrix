@@ -4,4 +4,6 @@ export interface TxKeyValueRow {
   readonly enabled: boolean;
   readonly key: string;
   readonly value: string;
+  /** Optional notes (HTTP header rows in collections/settings). */
+  readonly description?: string;
 }

@@ -37,7 +37,7 @@
                     <div
                       class="tx-diff-view__cell tx-diff-view__cell--left"
                       [class.row-empty]="row.pair.left.kind === 'empty'"
-                      [class.row-remove]="row.pair.left.kind === 'remove'"
+                      [class.row-remove]="row.pair.left.kind === 'remove' || row.pair.left.kind === 'change'"
                       [class.row-equal]="row.pair.left.kind === 'unchanged'"
                     >
                       <span class="tx-diff-view__gutter">{{ row.pair.left.lineNo ?? '' }}</span>
@@ -46,7 +46,7 @@
                     <div
                       class="tx-diff-view__cell tx-diff-view__cell--right"
                       [class.row-empty]="row.pair.right.kind === 'empty'"
-                      [class.row-add]="row.pair.right.kind === 'add'"
+                      [class.row-add]="row.pair.right.kind === 'add' || row.pair.right.kind === 'change'"
                       [class.row-equal]="row.pair.right.kind === 'unchanged'"
                     >
                       <span class="tx-diff-view__gutter">{{ row.pair.right.lineNo ?? '' }}</span>

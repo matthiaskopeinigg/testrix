@@ -19,6 +19,7 @@ export * from './components/tx-button/tx-button.component';
 
 export * from './components/tx-modal/tx-modal.component';
 export * from './components/tx-confirm-dialog/tx-confirm-dialog.component';
+export * from './components/tx-prompt-dialog/tx-prompt-dialog.component';
 
 export * from './components/tx-form-field/tx-form-field.component';
 
@@ -28,17 +29,31 @@ export * from './components/tx-theme-layout-preview/tx-theme-layout-preview.comp
 
 export * from './components/tx-input/tx-input.component';
 
+export * from './components/tx-suggest-input/tx-suggest-input.component';
+export {
+  positionFixedCompletionPopup,
+  scheduleFixedCompletionPosition,
+  TX_COMPLETION_PLACEMENT_DEFAULT,
+  type TxCompletionPlacement,
+} from './components/tx-completion-popup/tx-completion-popup-placement';
+
 export * from './components/tx-inline-rename-input/tx-inline-rename-input.component';
 
 export * from './components/tx-variable-input/tx-variable-input.component';
 
 export * from './components/tx-key-value-list/tx-key-value-list.component';
 export type { TxKeyValueRow } from './components/tx-key-value-list/tx-key-value-list.types';
-export type { TxKeyValueListValueInput } from './components/tx-key-value-list/tx-key-value-list.component';
+export type {
+  TxKeyValueListKeyInput,
+  TxKeyValueListValueInput,
+} from './components/tx-key-value-list/tx-key-value-list.component';
 
 export * from './components/tx-key-value-description-list/tx-key-value-description-list.component';
 export type { TxKeyValueDescriptionRow } from './components/tx-key-value-description-list/tx-key-value-description-list.types';
-export type { TxKeyValueDescriptionListValueInput } from './components/tx-key-value-description-list/tx-key-value-description-list.component';
+export type {
+  TxKeyValueDescriptionListKeyInput,
+  TxKeyValueDescriptionListValueInput,
+} from './components/tx-key-value-description-list/tx-key-value-description-list.component';
 
 export * from './components/tx-dropdown/tx-dropdown.component';
 export type { TxDropdownOption, TxDropdownPlacement } from './components/tx-dropdown/tx-dropdown.types';

@@ -1,0 +1,52 @@
+<div class="tx-suggest-input">
+  <input
+    #nativeInput
+    class="tx-suggest-input__control"
+    [id]="effectiveId()"
+    type="text"
+    [value]="value()"
+    [placeholder]="placeholder()"
+    [disabled]="disabled()"
+    [attr.aria-label]="ariaLabel() || null"
+    [attr.aria-expanded]="completionOpen()"
+    [attr.aria-controls]="completionOpen() ? effectiveId() + '-completion' : null"
+    [attr.aria-autocomplete]="completionOpen() ? 'list' : null"
+    (input)="handleInput($event)"
+    (focus)="handleFocus()"
+    (keydown)="handleKeydown($event)"
+    (blur)="handleBlur()"
+  />
+
+  @if (completionOpen()) {
+    <div
+      #completionPanel
+      [id]="effectiveId() + '-completion'"
+      class="tx-suggest-input__completion tx-completion-popup"
+      [class.tx-completion-popup--above]="resolvedCompletionPlacement() === 'above'"
+      [class.tx-completion-popup--below]="resolvedCompletionPlacement() === 'below'"
+      [class.tx-completion-popup--positioned]="completionPositioned()"
+      role="listbox"
+      [attr.aria-label]="completionLabel()"
+    >
+      <p class="tx-suggest-input__completion-hint tx-completion-popup__hint">Ctrl+Space · ↑↓ Enter Tab · Esc</p>
+      <div class="tx-suggest-input__completion-list tx-completion-popup__list">
+        @for (item of completionItems(); track item; let index = $index) {
+          <button
+            type="button"
+            class="tx-suggest-input__completion-item"
+            role="option"
+            [class.is-active]="index === completionIndex()"
+            [attr.aria-selected]="index === completionIndex()"
+            (mouseenter)="completionIndex.set(index)"
+            (mousedown)="$event.preventDefault()"
+            (click)="applyCompletion(item)"
+          >
+            {{ item }}
+          </button>
+        } @empty {
+          <p class="tx-suggest-input__completion-empty">No matches</p>
+        }
+      </div>
+    </div>
+  }
+</div>

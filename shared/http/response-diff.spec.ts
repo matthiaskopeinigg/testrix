@@ -58,6 +58,29 @@ describe('compareResponseSnapshots', () => {
     expect(result.lineHunks.length).toBeGreaterThan(2);
   });
 
+  it('uses structural json path counts when normalize JSON is enabled', () => {
+    const a = snapshot({
+      id: 'a',
+      body: {
+        encoding: 'text',
+        text: '{"token":{"accessToken":"old","accessExpiresIn":652}}',
+      },
+    });
+    const b = snapshot({
+      id: 'b',
+      body: {
+        encoding: 'text',
+        text: '{"token":{"accessToken":"new","accessExpiresIn":899}}',
+      },
+    });
+
+    const result = compareResponseSnapshots(a, b, { normalizeJson: true });
+    expect(result.bodyMode).toBe('text');
+    expect(result.lineHunks.length).toBeGreaterThan(0);
+    expect(result.jsonPaths.some((p) => p.path.includes('accessToken'))).toBe(true);
+    expect(result.summary.bodyChanges).toBe(result.jsonPaths.length);
+  });
+
   it('produces line hunks for non-JSON text bodies', () => {
     const a = snapshot({ id: 'a', body: { encoding: 'text', text: 'line one\n' } });
     const b = snapshot({ id: 'b', body: { encoding: 'text', text: 'line two\n' } });
