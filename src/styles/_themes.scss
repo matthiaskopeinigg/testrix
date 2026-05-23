@@ -1,4 +1,20 @@
+@use 'sass:color';
 @use './tokens';
+
+/**
+ * True when foreground text is lighter than the page background (dark UI themes).
+ */
+@function tx-theme-is-dark($text, $bg) {
+  @return color.channel($text, 'lightness', $space: hsl) >
+    color.channel($bg, 'lightness', $space: hsl);
+}
+
+/** Extra contrast tuning for light IDE themes (VS Code, GitHub, …). */
+@mixin tx-theme-light-polish($muted-text, $elevated-surface, $primary, $surface) {
+  --tx-text-2: #{$muted-text};
+  --tx-surface-elevated: #{$elevated-surface};
+  --tx-primary-subtle: #{color-mix(in srgb, #{$primary} 10%, #{$surface})};
+}
 
 @mixin tx-theme-palette(
   $bg,
@@ -15,6 +31,15 @@
   --tx-surface-2: #{color-mix(in srgb, #{$surface} 88%, #{$bg})};
   --tx-text-0: #{$text};
   --tx-text-1: #{color-mix(in srgb, #{$text} 72%, #{$bg})};
+  @if tx-theme-is-dark($text, $bg) {
+    --tx-text-2: #{color-mix(in srgb, #{$text} 68%, #{$bg})};
+    --tx-surface-elevated: #{color-mix(in srgb, #{$surface} 88%, #{$bg} 12%)};
+    --tx-surface-inset: #{color-mix(in srgb, #{$bg} 62%, #{$surface} 38%)};
+  } @else {
+    --tx-text-2: #{color-mix(in srgb, #{$text} 58%, #{$bg})};
+    --tx-surface-elevated: #{color-mix(in srgb, #{$surface} 88%, #{$text} 12%)};
+    --tx-surface-inset: #{$surface};
+  }
   --tx-border-0: #{color-mix(in srgb, #{$border} 70%, transparent)};
   --tx-border-strong: #{color-mix(in srgb, #{$border} 90%, transparent)};
   --tx-focus-ring: #{color-mix(in srgb, #{$primary} 55%, transparent)};
@@ -191,6 +216,7 @@ body.theme-one-dark {
 html.theme-github-light,
 body.theme-github-light {
   @include tx-theme-palette(#ffffff, #f6f8fa, #1f2328, #0969da, #8250df, #1a7f37, #d0d7de, #1f2328);
+  @include tx-theme-light-polish(#656d76, #eef1f4, #0969da, #f6f8fa);
 }
 
 html.theme-github-dark,
@@ -326,6 +352,7 @@ body.theme-quiet-light {
 html.theme-vscode-light,
 body.theme-vscode-light {
   @include tx-theme-palette(#ffffff, #f3f3f3, #333333, #006ab1, #795e26, #098658, #e5e5e5, #333333);
+  @include tx-theme-light-polish(#717171, #e8e8e8, #006ab1, #f3f3f3);
 }
 
 html.theme-vscode-dark,

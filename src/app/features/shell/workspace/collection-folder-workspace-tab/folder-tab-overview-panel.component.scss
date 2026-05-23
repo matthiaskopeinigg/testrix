@@ -41,7 +41,7 @@
   padding: 0.35rem 0.55rem;
   border-radius: var(--tx-radius-sm, 8px);
   border: 1px solid color-mix(in srgb, var(--tx-border-0) 45%, transparent);
-  background: color-mix(in srgb, var(--tx-surface-0) 72%, transparent);
+  background: var(--tx-surface-inset);
   color: var(--tx-text-1);
 
   tx-icon {
@@ -93,7 +93,7 @@
   padding: 0.85rem 0.9rem;
   border-radius: var(--tx-radius-sm, 8px);
   border: 1px solid color-mix(in srgb, var(--tx-border-0) 55%, transparent);
-  background: color-mix(in srgb, var(--tx-surface-1) 88%, #000 12%);
+  background: var(--tx-surface-elevated);
   min-width: 0;
 }
 
@@ -148,7 +148,7 @@
   padding: 0.5rem 0.55rem;
   border-radius: var(--tx-radius-sm, 8px);
   border: 1px solid color-mix(in srgb, var(--tx-border-0) 40%, transparent);
-  background: color-mix(in srgb, var(--tx-surface-0) 72%, transparent);
+  background: var(--tx-surface-inset);
 }
 
 .folder-overview-contents-stat__head {
@@ -231,7 +231,7 @@
   padding: 0.65rem 0.7rem;
   border-radius: var(--tx-radius-sm, 8px);
   border: 1px solid color-mix(in srgb, var(--tx-border-0) 55%, transparent);
-  background: color-mix(in srgb, var(--tx-surface-1) 88%, #000 12%);
+  background: var(--tx-surface-elevated);
   text-align: left;
   cursor: pointer;
   transition:
@@ -277,6 +277,7 @@
 
 .folder-overview-config-card__value {
   font-size: 0.8125rem;
+  font-weight: 500;
   line-height: 1.35;
   color: var(--tx-text-0);
   overflow: hidden;
@@ -312,7 +313,7 @@
   font-size: 0.6875rem;
   font-weight: 700;
   color: var(--tx-text-1);
-  background: color-mix(in srgb, var(--tx-surface-0) 80%, transparent);
+  background: color-mix(in srgb, var(--tx-surface-inset) 85%, var(--tx-surface-elevated));
   border: 1px solid color-mix(in srgb, var(--tx-border-0) 50%, transparent);
 }
 
@@ -339,7 +340,7 @@
   align-items: center;
   padding: 0.4rem 0.55rem;
   border-bottom: 1px solid color-mix(in srgb, var(--tx-border-0) 45%, transparent);
-  background: color-mix(in srgb, var(--tx-surface-0) 55%, transparent);
+  background: var(--tx-surface-inset);
 
   &:last-child {
     border-bottom: 0;

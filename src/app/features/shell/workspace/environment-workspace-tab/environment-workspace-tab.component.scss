@@ -24,7 +24,7 @@
   min-width: 12rem;
   max-width: 22rem;
   min-height: 0;
-  background: color-mix(in srgb, var(--tx-surface-1) 88%, #000 12%);
+  background: var(--tx-surface-elevated);
 }
 
 .env-workspace__divider {

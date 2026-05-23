@@ -418,7 +418,7 @@ html[data-animation-speed='none'] {
   min-height: 0;
   min-width: 0;
   overflow: hidden;
-  background: color-mix(in srgb, var(--tx-surface-1) 88%, #000 12%);
+  background: var(--tx-surface-elevated);
   border-right: 1px solid color-mix(in srgb, var(--tx-border-0) 48%, transparent);
 }
 

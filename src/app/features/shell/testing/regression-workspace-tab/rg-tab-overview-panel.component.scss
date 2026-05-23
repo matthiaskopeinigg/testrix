@@ -52,7 +52,7 @@
   padding: 0.85rem 0.9rem;
   border-radius: var(--tx-radius-sm, 8px);
   border: 1px solid color-mix(in srgb, var(--tx-border-0) 55%, transparent);
-  background: color-mix(in srgb, var(--tx-surface-1) 88%, #000 12%);
+  background: var(--tx-surface-elevated);
   min-width: 0;
 }
 
@@ -189,7 +189,7 @@
   padding: 0.65rem 0.7rem;
   border-radius: var(--tx-radius-sm, 8px);
   border: 1px solid color-mix(in srgb, var(--tx-border-0) 55%, transparent);
-  background: color-mix(in srgb, var(--tx-surface-1) 88%, #000 12%);
+  background: var(--tx-surface-elevated);
   color: inherit;
   text-align: left;
   cursor: pointer;

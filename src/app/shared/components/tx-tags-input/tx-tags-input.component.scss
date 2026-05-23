@@ -268,7 +268,7 @@
   padding: 0.4rem 0.55rem;
   border: 1px solid color-mix(in srgb, var(--tx-border-0) 80%, transparent);
   border-radius: var(--tx-radius-sm, 8px);
-  background: color-mix(in srgb, var(--tx-surface-0) 92%, #000 8%);
+  background: var(--tx-surface-elevated);
   color: var(--tx-text-0);
   font: inherit;
   font-size: 0.8125rem;

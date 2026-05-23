@@ -55,6 +55,9 @@
   --tx-surface-2: #252019;
   --tx-text-0: #ede5d8;
   --tx-text-1: #a89b8a;
+  --tx-text-2: #8a8175;
+  --tx-surface-elevated: color-mix(in srgb, #221e1a 88%, #1a1714 12%);
+  --tx-surface-inset: color-mix(in srgb, #1a1714 62%, #221e1a 38%);
   --tx-border-0: color-mix(in srgb, #f3ece2 14%, transparent);
   --tx-border-strong: color-mix(in srgb, #f3ece2 28%, transparent);
   --tx-focus-ring: color-mix(in srgb, #e0b85a 55%, transparent);
