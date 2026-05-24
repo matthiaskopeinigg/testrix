@@ -161,6 +161,8 @@ export {
 
 export * from './components/tx-settings-popup/tx-settings-popup.component';
 
+export * from './components/tx-help-popup/tx-help-popup.component';
+
 export * from './components/tx-window-titlebar/tx-window-titlebar.component';
 
 export * from './icons';

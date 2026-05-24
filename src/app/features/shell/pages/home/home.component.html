@@ -321,3 +321,5 @@
   </tx-form-field>
   <tx-button variant="secondary" (click)="handleCloseModal()">Close</tx-button>
 </tx-modal>
+
+<tx-help-popup [open]="wikiOpen()" (closed)="handleCloseWiki()" />

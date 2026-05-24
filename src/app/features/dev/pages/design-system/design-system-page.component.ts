@@ -27,7 +27,6 @@ import type {
 } from '@app/core/design-system/design-system.types';
 import { ElectronService } from '@app/core/electron/electron.service';
 import { UpdateService } from '@app/core/updater/update.service';
-import { TxNotificationService } from '@app/core/notifications/tx-notification.service';
 import { replayEntranceStagger } from '@app/core/ui/entrance-stagger';
 import { UiPreferencesService } from '@app/core/ui/ui-preferences.service';
 import {
@@ -35,6 +34,7 @@ import {
   workspaceSidebarFooterItems,
 } from '@app/features/shell/workspace/workspace-sidebar.constants';
 import { TxButtonComponent } from '@app/shared/components/tx-button/tx-button.component';
+import { TxHelpPopupComponent } from '@app/shared/components/tx-help-popup/tx-help-popup.component';
 import { TxIconComponent } from '@app/shared/components/tx-icon/tx-icon.component';
 import { TxInputComponent } from '@app/shared/components/tx-input/tx-input.component';
 import { TxSidebarComponent } from '@app/shared/components/tx-sidebar/tx-sidebar.component';
@@ -55,6 +55,7 @@ import { DsUiKitPanelComponent } from './panels/ds-ui-kit-panel.component';
   imports: [
     FormsModule,
     TxButtonComponent,
+    TxHelpPopupComponent,
     TxIconComponent,
     TxInputComponent,
     TxSidebarComponent,
@@ -75,7 +76,6 @@ export class DesignSystemPageComponent implements OnInit {
   private readonly electron = inject(ElectronService);
   private readonly router = inject(Router);
   private readonly uiPreferences = inject(UiPreferencesService);
-  private readonly notifications = inject(TxNotificationService);
   private readonly updates = inject(UpdateService);
 
   readonly navGroups = DESIGN_SYSTEM_NAV;
@@ -100,6 +100,7 @@ export class DesignSystemPageComponent implements OnInit {
   readonly debugEnabled = signal(false);
   protected readonly navFilter = signal('');
   protected readonly contentStaggerPlay = signal(false);
+  protected readonly wikiOpen = signal(false);
 
   protected readonly showDevToolkit = computed(
     () => typeof ngDevMode !== 'undefined' && ngDevMode && this.electron.isDevToolkit(),
@@ -214,7 +215,7 @@ export class DesignSystemPageComponent implements OnInit {
 
   protected handleSidebarSelect(id: string): void {
     if (id === 'help') {
-      this.notifications.showSuccess('Help documentation is coming soon.');
+      this.wikiOpen.set(true);
       return;
     }
 
@@ -223,6 +224,10 @@ export class DesignSystemPageComponent implements OnInit {
     }
 
     void this.router.navigateByUrl('/home');
+  }
+
+  protected handleCloseWiki(): void {
+    this.wikiOpen.set(false);
   }
 
   protected simulateUpdateAvailable(): void {

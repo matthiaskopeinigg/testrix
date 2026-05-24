@@ -1,9 +1,16 @@
 import type { BrowserWindowConstructorOptions } from 'electron';
 
+/** Frameless, fixed-size error dialog — content is authored to fit without scrolling. */
 export const errorWindowDefaults: BrowserWindowConstructorOptions = {
-  width: 520,
-  height: 360,
-  resizable: true,
+  width: 480,
+  height: 400,
+  frame: false,
+  transparent: true,
+  resizable: false,
+  maximizable: false,
+  minimizable: true,
+  fullscreenable: false,
   show: false,
-  backgroundColor: '#0a0908',
+  hasShadow: true,
+  backgroundColor: '#00000000',
 };

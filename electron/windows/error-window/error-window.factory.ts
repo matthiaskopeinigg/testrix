@@ -2,6 +2,8 @@ import { BrowserWindow } from 'electron';
 
 import { appIconBrowserWindowOptions } from '../../config/app-icon';
 import { resolveErrorHtmlPath } from '../../config/paths';
+import { buildErrorReportIssueUrl } from '../../config/repository';
+import { attachExternalLinkHandlers } from '../main-window/external-link-handlers';
 
 import { errorWindowDefaults } from './error-window.options';
 
@@ -18,11 +20,16 @@ export function createErrorWindow(message: string, parent?: BrowserWindow): Brow
     },
   });
 
+  win.removeMenu();
+  win.center();
+  attachExternalLinkHandlers(win);
+
   void win.loadFile(resolveErrorHtmlPath());
   win.webContents.once('did-finish-load', () => {
+    const reportUrl = buildErrorReportIssueUrl(message);
     void win.webContents
       .executeJavaScript(
-        `(()=>{var el=document.getElementById('tx-error-message'); if(el){el.textContent=${JSON.stringify(message)};}})();`,
+        `(()=>{var fn=window.txErrorSetup; if(typeof fn==='function'){fn(${JSON.stringify(message)}, ${JSON.stringify(reportUrl)});} else {var el=document.getElementById('tx-error-message'); if(el){el.textContent=${JSON.stringify(message)};}}})();`,
       )
       .then(() => {
         win.show();

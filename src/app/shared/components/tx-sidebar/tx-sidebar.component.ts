@@ -123,7 +123,7 @@ export class TxSidebarComponent {
     }
 
     // Context menus and modals portal to document.body; ignore those interactions.
-    if (target instanceof Element && target.closest('.tx-context-menu, .tx-modal-root')) {
+    if (target instanceof Element && target.closest('.tx-context-menu, .tx-modal-root, .tx-overlay-dialog')) {
       return;
     }
 

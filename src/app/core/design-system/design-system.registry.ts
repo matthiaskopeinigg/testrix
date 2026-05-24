@@ -93,6 +93,16 @@ export const DESIGN_SYSTEM_COMPONENTS: readonly DesignSystemComponentEntry[] = [
     kind: 'component',
   },
   {
+    id: 'help-popup',
+    label: 'Help popup',
+    selector: 'tx-help-popup',
+    importPath: '@app/shared/components/tx-help-popup/tx-help-popup.component',
+    description:
+      'Settings-style overlay wiki with grouped sidebar nav, search, and section content from @shared/help.',
+    supportsDebug: true,
+    kind: 'component',
+  },
+  {
     id: 'error-banner',
     label: 'Error banner',
     selector: 'tx-error-banner',
