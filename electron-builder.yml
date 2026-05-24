@@ -1,84 +1,79 @@
-appId: dev.testrix.app
-productName: Testrix
-copyright: Copyright © 2026 Testrix contributors
-
-publish:
-  - provider: github
-    owner: matthiaskopeinigg
-    repo: testrix
-
-directories:
-  output: release
-  buildResources: build
-
-files:
-  - package.json
-  - dist/electron/**/*
-
-asar: true
-
-extraResources:
-  - from: build/icons/icon.ico
-    to: icon.ico
-  - from: dist/testrix/browser
-    to: browser
-  - from: dist/electron/preload
-    to: preload
-  - from: electron/splash
-    to: splash
-  - from: electron/error
-    to: error
-
-win:
-  target:
-    - nsis
-  icon: build/icons/icon.ico
-
-mac:
-  target:
-    - target: dmg
-      arch:
-        - x64
-        - arm64
-  artifactName: ${productName}-${version}-${arch}.${ext}
-  icon: build/icons/icon-1024.png
-  hardenedRuntime: false
-  gatekeeperAssess: false
-
-dmg:
-  iconSize: 80
-  title: ${productName} ${version}
-  contents:
-    - x: 130
-      y: 220
-      type: file
-      path: '${productName}.app'
-    - x: 410
-      y: 220
-      type: link
-      path: /Applications
-
-linux:
-  target:
-    - AppImage
-    - deb
-  maintainer: testrix@localhost
-  vendor: Testrix
-  category: Utility
-  synopsis: Desktop shell for Testrix
-
-deb:
-  afterInstall: build/installer/linux/postinst.sh
-  beforeRemove: build/installer/linux/prerm.sh
-
-nsis:
-  oneClick: false
-  allowElevation: true
-  allowToChangeInstallationDirectory: true
-  license: LICENSE
-  deleteAppDataOnUninstall: false
-  differentialPackage: false
-  installerSidebar: build/installer/windows/assets/installer-sidebar.bmp
-  installerHeader: build/installer/windows/assets/installer-header.bmp
-  uninstallerSidebar: build/installer/windows/assets/uninstaller-sidebar.bmp
-  include: build/installer/windows/installer.nsh
+appId: dev.testrix.app
+productName: Testrix
+copyright: Copyright © 2026 Testrix contributors
+
+publish:
+  - provider: github
+    owner: matthiaskopeinigg
+    repo: testrix
+
+directories:
+  output: release
+  buildResources: build
+
+files:
+  - package.json
+  - dist/electron/**/*
+
+asar: true
+
+electronFuses:
+  enableEmbeddedAsarIntegrityValidation: false
+
+npmRebuild: false
+
+extraResources:
+  - from: build/icons/icon.ico
+    to: icon.ico
+  - from: dist/testrix/browser
+    to: browser
+  - from: dist/electron/preload
+    to: preload
+  - from: electron/splash
+    to: splash
+  - from: electron/error
+    to: error
+
+win:
+  target:
+    - dir
+  icon: build/icons/icon.ico
+  forceCodeSigning: false
+  signAndEditExecutable: false
+
+mac:
+  target:
+    - target: dmg
+      arch:
+        - x64
+        - arm64
+  artifactName: ${productName}-${version}-${arch}.${ext}
+  icon: build/icons/icon-1024.png
+  hardenedRuntime: false
+  gatekeeperAssess: false
+
+dmg:
+  iconSize: 80
+  title: ${productName} ${version}
+  contents:
+    - x: 130
+      y: 220
+      type: file
+      path: '${productName}.app'
+    - x: 410
+      y: 220
+      type: link
+      path: /Applications
+
+linux:
+  target:
+    - AppImage
+    - deb
+  maintainer: testrix@localhost
+  vendor: Testrix
+  category: Utility
+  synopsis: Desktop shell for Testrix
+
+deb:
+  afterInstall: build/installer/linux/postinst.sh
+  afterRemove: build/installer/linux/prerm.sh

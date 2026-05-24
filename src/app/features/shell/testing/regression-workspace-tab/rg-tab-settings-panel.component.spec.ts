@@ -16,7 +16,7 @@ describe('RgTabSettingsPanelComponent', () => {
       providers: [
         {
           provide: TxIconService,
-          useValue: { getIcon: vi.fn().mockReturnValue('') },
+          useValue: { loadIconInner: () => Promise.resolve('') },
         },
       ],
     }).compileComponents();

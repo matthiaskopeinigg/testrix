@@ -19,7 +19,7 @@ describe('TxSettingsDatabasesSectionComponent', () => {
         { provide: ConfigService, useValue: { settings: () => createDefaultSettings() } },
         {
           provide: TxIconService,
-          useValue: { getSvg: () => '', register: () => undefined },
+          useValue: { loadIconInner: () => Promise.resolve('<path d="M0 0"/>') },
         },
       ],
     });

@@ -56,7 +56,7 @@ describe('test-suite-flow-tree.adapter', () => {
     validation.config = { refStepId: 'step-req', rules: [] };
 
     const tree = toFlowStepTreeNodes([request, validation]);
-    expect(tree[1]?.subtitle).toBe('Validates → Get health');
+    expect(tree[1]?.subtitle).toBe('Check expected result · Validates → Get health');
     expect(tree[1]?.data?.refStepId).toBe('step-req');
   });
 });

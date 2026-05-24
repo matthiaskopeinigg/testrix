@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; script-src 'self'" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="dark" />
+    <title>Testrix Setup</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="installer">
+      <header class="titlebar">
+        <span class="titlebar-title">Testrix Setup</span>
+        <div class="titlebar-controls">
+          <button type="button" class="titlebar-btn" id="btn-titlebar-min" aria-label="Minimize" title="Minimize">
+            <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path d="M1 5h8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" /></svg>
+          </button>
+          <button type="button" class="titlebar-btn titlebar-btn--close" id="btn-titlebar-close" aria-label="Close" title="Close">
+            <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path d="M1 1l8 8M9 1l-8 8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" /></svg>
+          </button>
+        </div>
+      </header>
+
+      <main class="installer-body">
+        <section class="hero" aria-labelledby="hero-title">
+          <div class="hero-logo-frame" aria-hidden="true">
+            <img class="hero-logo" src="./assets/logo.png" width="96" height="96" alt="" />
+          </div>
+          <h1 id="hero-title" class="hero-title">Install Testrix</h1>
+          <p class="hero-subtitle">
+            <span id="meta-version" class="hero-version">—</span>
+            <span class="hero-dot" aria-hidden="true">·</span>
+            <span>Matthias Kopeinigg</span>
+          </p>
+        </section>
+
+        <div id="panel-install" class="install-stack">
+          <div id="payload-warning" class="alert alert-error hidden" role="alert">
+            <p id="payload-msg" class="message error"></p>
+          </div>
+
+          <section class="setup-section" aria-labelledby="scope-section-label">
+            <p id="scope-section-label" class="section-label">Install for</p>
+            <div class="scope-options" role="radiogroup" aria-labelledby="scope-section-label">
+              <label class="scope-option">
+                <input type="radio" name="scope" value="user" checked />
+                <span class="scope-option-body">
+                  <span class="scope-option-title">Only for me</span>
+                  <span class="scope-option-sub">Recommended. No administrator rights needed.</span>
+                </span>
+              </label>
+              <label class="scope-option">
+                <input type="radio" name="scope" value="machine" />
+                <span class="scope-option-body">
+                  <span class="scope-option-title">Everyone on this PC</span>
+                  <span class="scope-option-sub">Installs under Program Files. Requires admin.</span>
+                </span>
+              </label>
+            </div>
+          </section>
+
+          <section class="setup-section">
+            <label class="section-label" for="install-dir">Destination folder</label>
+            <input id="install-dir" type="text" spellcheck="false" autocomplete="off" />
+          </section>
+
+          <div id="progress-wrap" class="progress-wrap" aria-live="polite">
+            <div class="progress-header">
+              <p id="progress-label" class="message progress-label">Installing files…</p>
+              <p id="progress-percent" class="progress-percent" aria-hidden="true">0%</p>
+            </div>
+            <div id="progress-track" class="progress-track indeterminate" role="progressbar" aria-valuemin="0" aria-valuemax="100">
+              <div id="progress-fill" class="progress-fill"></div>
+            </div>
+          </div>
+
+          <div id="install-error-wrap" class="alert alert-error hidden" role="alert">
+            <p class="alert-title">Installation failed</p>
+            <p id="install-error" class="message error"></p>
+          </div>
+        </div>
+
+        <div id="panel-done" class="panel-done hidden" role="status">
+          <div class="panel-done-icon" aria-hidden="true">
+            <svg width="32" height="32" viewBox="0 0 32 32"><path d="M9 16.5l5 5 9-11" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" /></svg>
+          </div>
+          <p class="done-title">Setup finished</p>
+          <p class="done-subtitle">Start Testrix from the Start menu or your desktop.</p>
+        </div>
+      </main>
+
+      <footer class="installer-footer">
+        <button type="button" class="installer-info-btn" id="btn-info" title="Installer help" aria-label="Installer help">
+          <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+            <circle cx="7" cy="7" r="6" fill="none" stroke="currentColor" stroke-width="1.2" />
+            <path d="M7 6v4M7 3.5v0.6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
+          </svg>
+        </button>
+        <div class="installer-footer-spacer"></div>
+        <label id="launch-wrap" class="installer-launch">
+          <input type="checkbox" id="chk-launch" checked />
+          <span>Launch when ready</span>
+        </label>
+        <button type="button" class="btn btn-secondary" id="btn-quit">Cancel</button>
+        <button type="button" class="btn btn-primary" id="btn-install">Install</button>
+        <button type="button" class="btn btn-primary hidden" id="btn-close">Close</button>
+      </footer>
+    </div>
+
+    <div id="help-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="help-modal-title">
+      <div class="modal-backdrop" id="help-modal-backdrop"></div>
+      <div class="modal-card" role="document">
+        <header class="modal-header">
+          <h2 id="help-modal-title">Installer help</h2>
+          <button type="button" class="modal-close" id="btn-help-close" aria-label="Close help">
+            <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" /></svg>
+          </button>
+        </header>
+        <div class="modal-body">
+          <p id="help-intro">
+            This installer copies Testrix to your computer and creates the shortcuts that match your operating system.
+          </p>
+
+          <h3 class="modal-section-title">Install scope</h3>
+          <ul class="modal-list" id="help-scope-list">
+            <li><strong>Only for me</strong> — installs under your user profile. No administrator rights required.</li>
+            <li><strong>Everyone on this PC</strong> — installs to a system-wide location. Will prompt for administrator rights.</li>
+          </ul>
+
+          <h3 class="modal-section-title">Uninstall later</h3>
+          <p id="help-uninstall">
+            Open your OS app manager, find <strong>Testrix</strong>, and choose Uninstall.
+          </p>
+
+          <h3 class="modal-section-title">Other platforms</h3>
+          <p>
+            Testrix ships installers for Windows, macOS and Linux. If you also use another OS, grab the matching artifact from the
+            <a href="#" class="ext-link" data-href="https://github.com/matthiaskopeinigg/testrix/releases">Releases page</a>:
+          </p>
+          <ul class="modal-list modal-list--platforms">
+            <li><strong>Windows</strong> — <code>Testrix Setup.exe</code> (this installer)</li>
+            <li><strong>macOS</strong> — <code>.dmg</code>, drag the app to <em>Applications</em></li>
+            <li><strong>Linux</strong> — <code>.AppImage</code> (portable) or <code>.deb</code> (Debian / Ubuntu)</li>
+          </ul>
+
+          <h3 class="modal-section-title">Troubleshooting</h3>
+          <p>If the installer says the payload is missing, rebuild with <code>npm run electron:pack</code> so the application files are bundled inside the setup executable.</p>
+        </div>
+        <footer class="modal-footer">
+          <button type="button" class="btn btn-primary" id="btn-help-done">Got it</button>
+        </footer>
+      </div>
+    </div>
+
+    <script src="./app.js"></script>
+  </body>
+</html>

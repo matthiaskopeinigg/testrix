@@ -9,8 +9,13 @@ import { collectPriorFlowPlaceholderKeys } from './flow-step-variable-catalog';
 const baseFlow = (nodes: TestSuiteFlow['nodes'] = []): TestSuiteFlow => ({
   id: 'flow-1',
   name: 'Flow',
+  description: '',
+  tags: [],
   environmentId: 'env-1',
+  lastRunStatus: 'never',
+  lastRunAt: null,
   nodes,
+  updatedAt: '2026-01-01T00:00:00.000Z',
 });
 
 const testEnvironment: EnvironmentDefinition = {
@@ -41,6 +46,8 @@ describe('collectPriorFlowPlaceholderKeys', () => {
     const flow = baseFlow([
       {
         id: 'step-1',
+        type: 'step',
+        parentId: null,
         stepType: 'MANUAL',
         name: 'Set token',
         enabled: true,
@@ -48,6 +55,8 @@ describe('collectPriorFlowPlaceholderKeys', () => {
       },
       {
         id: 'step-2',
+        type: 'step',
+        parentId: null,
         stepType: 'REQUEST',
         name: 'Call API',
         enabled: true,
@@ -64,6 +73,8 @@ describe('collectPriorFlowPlaceholderKeys', () => {
     const flow = baseFlow([
       {
         id: 'step-1',
+        type: 'step',
+        parentId: null,
         stepType: 'REQUEST',
         name: 'First',
         enabled: true,
@@ -71,6 +82,8 @@ describe('collectPriorFlowPlaceholderKeys', () => {
       },
       {
         id: 'step-2',
+        type: 'step',
+        parentId: null,
         stepType: 'MANUAL',
         name: 'Later manual',
         enabled: true,

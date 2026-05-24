@@ -29,8 +29,12 @@ yarn-error.log
 !.vscode/mcp.json
 .history/*
 
+# Cursor (rules stay tracked; local debug logs do not)
+.cursor/debug*.log
+
 # Miscellaneous
 /.angular/cache
+.angular/
 .sass-cache/
 /connect.lock
 /coverage
@@ -41,12 +45,25 @@ __screenshots__/
 
 # System files
 .DS_Store
-/Thumbs.db
+Thumbs.db
+
+# Environment / local secrets
+.env
+.env.*
+!.env.example
 
 # Release + generated branding outputs
-/release
+/release/
+
+# Custom installer shell — source is tracked; deps and synced payload are not
+/installer-shell/node_modules/
+/installer-shell/resources/payload/
+
+# Generated build assets (icons, NSIS BMPs, installer staging). Scripts under build/installer stay tracked.
+/build/icons/
+/build/installer/windows/assets/
+/build/installer/windows/staging/
+
 electron/splash/assets/
 electron/error/assets/
 public/brand/
-build/icons/
-build/installer/windows/assets/*.bmp

@@ -1,12 +1,20 @@
 import { TestBed } from '@angular/core/testing';
 import { describe, expect, it, beforeEach } from 'vitest';
 
+import { TxIconService } from '@app/shared/icons/tx-icon.service';
+
 import { TxVerticalSplitPaneComponent } from './tx-vertical-split-pane.component';
 
 describe('TxVerticalSplitPaneComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [TxVerticalSplitPaneComponent],
+      providers: [
+        {
+          provide: TxIconService,
+          useValue: { loadIconInner: () => Promise.resolve('<path d="M0 0"/>') },
+        },
+      ],
     }).compileComponents();
   });
 

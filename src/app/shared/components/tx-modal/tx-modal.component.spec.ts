@@ -31,11 +31,12 @@ describe('TxModalComponent', () => {
   });
 
   it('plays a close transition before removing the modal from the DOM', async () => {
-    vi.useFakeTimers();
-
     fixture.componentRef.setInput('open', true);
     fixture.detectChanges();
     await flushFrame();
+    await flushFrame();
+
+    vi.useFakeTimers();
 
     const root = document.body.querySelector('.tx-modal-root');
     expect(root?.classList.contains('tx-modal-root--shown')).toBe(true);

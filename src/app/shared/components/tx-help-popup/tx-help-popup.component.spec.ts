@@ -82,9 +82,9 @@ describe('TxHelpPopupComponent', () => {
     fixture.componentInstance['handleSearchChange']('mock server');
     fixture.detectChanges();
 
-    const labels = Array.from(
-      fixture.nativeElement.querySelectorAll('.tx-help__sidebar-item-label'),
-    ).map((node: Element) => node.textContent?.trim() ?? '');
+    const labels = (
+      Array.from(fixture.nativeElement.querySelectorAll('.tx-help__sidebar-item-label')) as Element[]
+    ).map((node) => node.textContent?.trim() ?? '');
     expect(labels.some((label) => label.toLowerCase().includes('mock'))).toBe(true);
     expect(labels.some((label) => label === 'Getting started')).toBe(false);
   });

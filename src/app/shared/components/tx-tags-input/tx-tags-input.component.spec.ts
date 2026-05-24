@@ -14,7 +14,7 @@ describe('TxTagsInputComponent', () => {
       providers: [
         {
           provide: TxIconService,
-          useValue: { load: vi.fn().mockResolvedValue('<svg></svg>') },
+          useValue: { loadIconInner: () => Promise.resolve('<svg></svg>') },
         },
       ],
     }).compileComponents();

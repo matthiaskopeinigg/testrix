@@ -38,6 +38,7 @@ describe('collection-context-menu', () => {
       'toggle-favourite',
       'rename',
       'duplicate',
+      'export-selection',
       'delete',
     ]);
   });

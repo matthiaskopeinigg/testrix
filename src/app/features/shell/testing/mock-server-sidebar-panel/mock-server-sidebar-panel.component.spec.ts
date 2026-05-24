@@ -2,11 +2,14 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { vi } from 'vitest';
 
 import { MockServerSidebarPanelComponent } from './mock-server-sidebar-panel.component';
+import { createDefaultSession, createDefaultSettings } from '@shared/config';
+
 import { ConfigService } from '@app/core/config/config.service';
 import { MockServerService } from '@app/core/testing/mock-server.service';
 import { TestingSessionService } from '@app/core/testing/testing-session.service';
 import { WorkspaceEditorService } from '@app/core/workspace/workspace-editor.service';
 import { WorkspaceSidebarPanelHeaderService } from '@app/core/workspace/workspace-sidebar-panel-header.service';
+import { TxIconService } from '@app/shared/icons/tx-icon.service';
 
 describe('MockServerSidebarPanelComponent', () => {
   let fixture: ComponentFixture<MockServerSidebarPanelComponent>;
@@ -39,12 +42,14 @@ describe('MockServerSidebarPanelComponent', () => {
             addFolder: vi.fn(),
             addEndpoint: vi.fn().mockReturnValue({ id: 'e1' }),
             clearMismatches: vi.fn(),
+            hydrate: vi.fn().mockResolvedValue(undefined),
           },
         },
         {
           provide: ConfigService,
           useValue: {
-            session: () => ({ workspace: { testing: { mockServer: {} } } }),
+            session: () => createDefaultSession(),
+            settings: () => createDefaultSettings(),
             sessionRevision: () => 0,
             patchSession: vi.fn().mockResolvedValue(undefined),
           },
@@ -64,6 +69,10 @@ describe('MockServerSidebarPanelComponent', () => {
         {
           provide: WorkspaceSidebarPanelHeaderService,
           useValue: { set: vi.fn(), clear: vi.fn() },
+        },
+        {
+          provide: TxIconService,
+          useValue: { loadIconInner: () => Promise.resolve('<path d="M0 0"/>') },
         },
       ],
     }).compileComponents();

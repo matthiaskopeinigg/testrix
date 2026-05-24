@@ -94,6 +94,6 @@ describe('TxKeyValueListComponent', () => {
     fixture.detectChanges();
 
     expect(fixture.nativeElement.querySelector('tx-suggest-input')).toBeTruthy();
-    expect(fixture.nativeElement.querySelector('tx-input')).toBeNull();
+    expect(fixture.nativeElement.querySelectorAll('tx-suggest-input')).toHaveLength(1);
   });
 });

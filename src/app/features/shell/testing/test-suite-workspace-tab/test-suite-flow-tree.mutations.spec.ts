@@ -21,6 +21,8 @@ describe('flowStepCanDrop', () => {
         position: 'before',
         source: stepNode('a'),
         target: stepNode('b'),
+        sourceParentId: null,
+        targetParentId: null,
       }),
     ).toBe(true);
   });
@@ -33,6 +35,8 @@ describe('flowStepCanDrop', () => {
         position: 'inside',
         source: stepNode('a'),
         target: stepNode('b'),
+        sourceParentId: null,
+        targetParentId: null,
       }),
     ).toBe(false);
   });

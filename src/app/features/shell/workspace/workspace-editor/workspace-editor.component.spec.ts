@@ -1,6 +1,6 @@
 import { Component, computed, input, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { WorkspaceEditorState, WorkspaceTab } from '@shared/config';
 import { createDefaultWorkspaceEditor } from '@shared/config';
@@ -121,6 +121,11 @@ describe('WorkspaceEditorComponent mount cache', () => {
     const cmp = fixture.componentInstance as WorkspaceEditorComponent;
     cmp['tabComponentsByKind'].set({ request: StubWorkspaceTabComponent });
     fixture.detectChanges();
+  });
+
+  afterEach(async () => {
+    await fixture.whenStable();
+    fixture.destroy();
   });
 
   it('pre-mounts the active tab from editor state', () => {

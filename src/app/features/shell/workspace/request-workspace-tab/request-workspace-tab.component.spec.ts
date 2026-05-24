@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { describe, expect, it, beforeEach, vi } from 'vitest';
+import { describe, expect, it, beforeEach, afterEach, vi } from 'vitest';
 
 import { createDefaultSession, createDefaultSettings } from '@shared/config';
 
@@ -58,6 +58,7 @@ describe('RequestWorkspaceTabComponent', () => {
             lastDiff: () => null,
             pinnedBaselineId: () => null,
             activeResponseTab: () => 'body',
+            buildVariableCatalog: () => [],
           },
         },
         {
@@ -93,6 +94,11 @@ describe('RequestWorkspaceTabComponent', () => {
     fixture.detectChanges();
     await fixture.whenStable();
     fixture.detectChanges();
+  });
+
+  afterEach(async () => {
+    await fixture.whenStable();
+    fixture.destroy();
   });
 
   it('bindRequest runs only when the tab is active', () => {

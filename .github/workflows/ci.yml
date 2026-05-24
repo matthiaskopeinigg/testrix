@@ -33,7 +33,12 @@ jobs:
         run: npm run build
 
       - name: Test
-        run: npm run test
+        run: |
+          set -o pipefail
+          npm run test 2>&1 | tee test-output.log
+          if grep -E "Tests +[1-9][0-9]* failed" test-output.log; then
+            exit 1
+          fi
 
   build-smoke:
     name: Build smoke (${{ matrix.os }})
