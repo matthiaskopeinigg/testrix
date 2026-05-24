@@ -1,17 +1,15 @@
 ﻿@if (isVisible()) {
   <div
-    class="tx-settings disable-select"
-    [class.tx-settings--shown]="isShown()"
+    class="tx-settings tx-overlay-dialog disable-select"
+    [class.tx-overlay-dialog--shown]="isShown()"
     [class.tx-settings--dialog-settled]="dialogMotionSettled()"
     [class.tx-settings--freeze-motion]="freezePopupMotion()"
     role="presentation"
     (click)="handleBackdropClick($event)"
   >
     <div
-      class="tx-settings__popup"
-      [class.tx-settings__popup--shown]="isShown()"
-      [class.tx-settings__popup--opening]="popupOpening()"
-      (animationend)="handlePopupAnimationEnd($event)"
+      class="tx-settings__popup tx-overlay-dialog__popup"
+      [class.tx-overlay-dialog__popup--shown]="isShown()"
       role="dialog"
       aria-modal="true"
       aria-labelledby="tx-settings-title"
@@ -19,7 +17,7 @@
     >
       <button
         type="button"
-        class="tx-settings__close-btn"
+        class="tx-overlay-dialog__close"
         aria-label="Close settings"
         (click)="handleClose()"
       >
@@ -28,22 +26,32 @@
 
       <div class="tx-settings__main">
         <aside class="tx-settings__sidebar" aria-label="Settings sections">
+          <header class="tx-settings__brand">
+            <span class="tx-settings__brand-mark" aria-hidden="true">
+              <tx-icon name="settings" [size]="18" />
+            </span>
+            <div class="tx-settings__brand-text">
+              <span id="tx-settings-title" class="tx-settings__brand-title">Settings</span>
+              <span class="tx-settings__brand-sub">Customize your workbench</span>
+            </div>
+          </header>
+
+          <div class="tx-settings__search">
+            <tx-input
+              controlId="tx-settings-search"
+              [ngModel]="searchQuery()"
+              (ngModelChange)="handleSearchChange($event)"
+              placeholder="Search settings…"
+              aria-label="Search settings"
+            />
+          </div>
+
           <div
             class="tx-settings__sidebar-body tx-entrance-stagger"
             [class.tx-entrance-stagger--play]="sidebarStaggerPlay()"
             [class.tx-entrance-stagger--settled]="sidebarStaggerSettled()"
           >
-            <header class="tx-settings__brand">
-              <span class="tx-settings__brand-mark" aria-hidden="true">
-                <tx-icon name="settings" [size]="18" />
-              </span>
-              <div class="tx-settings__brand-text">
-                <span id="tx-settings-title" class="tx-settings__brand-title">Settings</span>
-                <span class="tx-settings__brand-sub">Customize your workbench</span>
-              </div>
-            </header>
-
-            @for (group of sidebarSections; track group.title) {
+            @for (group of filteredSidebarGroups(); track group.title) {
               <div class="tx-settings__sidebar-group">
                 <div class="tx-settings__sidebar-group-title">{{ group.title }}</div>
                 @for (item of group.items; track item.id) {

@@ -4,8 +4,8 @@
   --tx-titlebar-ease: var(--tx-ease-out-expo, cubic-bezier(0.16, 1, 0.3, 1));
   --tx-titlebar-chip-bg: color-mix(in srgb, var(--tx-surface-2) 72%, var(--tx-chrome-surface, var(--tx-surface-1)));
   --tx-titlebar-chip-border: color-mix(in srgb, var(--tx-border-0) 62%, transparent);
-  --tx-titlebar-close-hover: #c42b1c;
-  --tx-titlebar-close-hover-active: #a52618;
+  --tx-titlebar-close-hover: #e81123;
+  --tx-titlebar-close-hover-active: #bf0711;
 
   display: block;
   position: relative;
@@ -287,6 +287,14 @@ html.tx-electron-app[data-platform='win32'] .tx-titlebar::after {
   &:active:not(:disabled) {
     background: var(--tx-titlebar-close-hover-active);
     color: #fff;
+  }
+}
+
+:host-context(
+  html.tx-electron-app[data-platform='win32']:not(.tx-electron-app--browser-parity):not(.tx-electron-app--edge-to-edge)
+) {
+  .tx-titlebar-btn--close {
+    border-top-right-radius: 0;
   }
 }
 

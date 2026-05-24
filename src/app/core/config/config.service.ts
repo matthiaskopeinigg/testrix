@@ -12,6 +12,7 @@ import {
 import type { AppearanceThemeId } from '@shared/theme';
 
 import { ElectronService } from '../electron/electron.service';
+import type { ElectronRendererBridge } from '../electron/electron-renderer.types';
 import { ErrorNotificationService } from '../errors/error-notification.service';
 import { ThemeService } from '../theme/theme.service';
 import { UiFontService } from '../theme/ui-font.service';
@@ -33,7 +34,11 @@ export class ConfigService {
   readonly sessionRevision = computed(() => this.sessionRevisionState());
 
   async hydrate(): Promise<void> {
-    const api = this.electron.bridge();
+    let api = this.electron.bridge();
+
+    if (!api) {
+      api = await this.waitForElectronBridge();
+    }
 
     if (!api) {
       this.bootstrapBrowserMocks();
@@ -51,6 +56,31 @@ export class ConfigService {
         this.applyAppearance(appearance);
       }
     }
+  }
+
+  /** Dev (`ng serve`) can paint Angular before preload exposes `window.testrix`; retry briefly. */
+  private async waitForElectronBridge(): Promise<ElectronRendererBridge | undefined> {
+    const existing = this.electron.bridge();
+    if (existing) {
+      return existing;
+    }
+
+    if (typeof window === 'undefined') {
+      return undefined;
+    }
+
+    const maxAttempts = 40;
+    for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+      await new Promise<void>((resolve) => {
+        requestAnimationFrame(() => resolve());
+      });
+      const bridge = this.electron.bridge();
+      if (bridge) {
+        return bridge;
+      }
+    }
+
+    return undefined;
   }
 
   /** Reloads session from disk after a workspace profile switch (settings unchanged). */

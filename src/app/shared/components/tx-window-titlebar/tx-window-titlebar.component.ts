@@ -2,13 +2,13 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 
 import { ElectronService } from '@app/core/electron/electron.service';
 import { ProfileService } from '@app/core/profile/profile.service';
+import { SettingsPopupService } from '@app/core/ui/settings-popup.service';
 
 import { TxBrandLogoComponent } from '../tx-brand-logo/tx-brand-logo.component';
 import { TxDropdownComponent } from '../tx-dropdown/tx-dropdown.component';
 import { TxIconComponent } from '../tx-icon/tx-icon.component';
 import { TxCookieManagerComponent } from '../tx-cookie-manager/tx-cookie-manager.component';
 import { TxProfileManagerModalComponent } from '../tx-profile-manager-modal/tx-profile-manager-modal.component';
-import { TxSettingsPopupComponent } from '../tx-settings-popup/tx-settings-popup.component';
 import { TxTooltipDirective } from '../tx-tooltip/tx-tooltip.directive';
 
 @Component({
@@ -20,7 +20,6 @@ import { TxTooltipDirective } from '../tx-tooltip/tx-tooltip.directive';
     TxIconComponent,
     TxCookieManagerComponent,
     TxProfileManagerModalComponent,
-    TxSettingsPopupComponent,
     TxTooltipDirective,
   ],
   templateUrl: './tx-window-titlebar.component.html',
@@ -30,8 +29,8 @@ import { TxTooltipDirective } from '../tx-tooltip/tx-tooltip.directive';
 export class TxWindowTitlebarComponent {
   private readonly electron = inject(ElectronService);
   private readonly profiles = inject(ProfileService);
+  private readonly settingsPopup = inject(SettingsPopupService);
 
-  readonly settingsOpen = signal(false);
   readonly cookiesOpen = signal(false);
   readonly profileManagerOpen = signal(false);
 
@@ -69,11 +68,7 @@ export class TxWindowTitlebarComponent {
   }
 
   protected handleOpenSettings(): void {
-    this.settingsOpen.set(true);
-  }
-
-  protected handleCloseSettings(): void {
-    this.settingsOpen.set(false);
+    this.settingsPopup.show();
   }
 
   protected handleMinimize(): void {

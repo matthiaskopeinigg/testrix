@@ -60,7 +60,7 @@ export interface ElectronRendererBridge {
   readonly devToolkit: boolean;
 
   /** Set when the main window uses the Angular dev server (`TESTRIX_SERVE_RENDERER=1`). */
-  /** macOS dev server only — Win32 dev uses a transparent rounded shell. */
+  /** Win32 always; macOS dev server — opaque window fill (native minimize animation on Win32). */
   readonly opaqueDevWindow: boolean;
 
   /** Saved theme id from disk — applied in `index.html` before Angular paints. */

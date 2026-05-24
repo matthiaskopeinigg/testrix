@@ -82,6 +82,7 @@ import { TxSettingsHttpRequestSectionComponent } from './sections/tx-settings-ht
 import { TxSettingsHttpRetriesSectionComponent } from './sections/tx-settings-http-retries-section.component';
 import { TxSettingsHttpTestingSectionComponent } from './sections/tx-settings-http-testing-section.component';
 import { TxSettingsDatabasesSectionComponent } from './sections/tx-settings-databases-section.component';
+import { settingsSectionMatchesQuery } from './settings-popup-search-index';
 
 export type SettingsPopupSection =
   | 'appearance'
@@ -135,8 +136,6 @@ export interface SettingsSidebarSection {
   readonly items: readonly SettingsSidebarItem[];
 }
 
-const THEME_PERSIST_DEBOUNCE_MS = 280;
-
 @Component({
   selector: 'tx-settings-popup',
   standalone: true,
@@ -169,6 +168,9 @@ const THEME_PERSIST_DEBOUNCE_MS = 280;
   templateUrl: './tx-settings-popup.component.html',
   styleUrl: './tx-settings-popup.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: {
+    class: 'tx-settings-popup-host',
+  },
 })
 export class TxSettingsPopupComponent {
   readonly open = input(false);
@@ -202,6 +204,7 @@ export class TxSettingsPopupComponent {
   readonly isVisible = signal(false);
   readonly isShown = signal(false);
   readonly isClosing = signal(false);
+  protected readonly searchQuery = signal('');
   /** Sidebar entrance: play only during first open, then lock with settled (no --play). */
   protected readonly sidebarStaggerPlay = signal(false);
   protected readonly sidebarStaggerSettled = signal(false);
@@ -209,8 +212,6 @@ export class TxSettingsPopupComponent {
   protected readonly freezePopupMotion = signal(false);
   /** After first open animation, disables dialog scale/fade transitions (section switches). */
   protected readonly dialogMotionSettled = signal(false);
-  /** One-shot open keyframe on the dialog card (removed after `animationend`). */
-  protected readonly popupOpening = signal(false);
   /** Active section whose content pane is playing entrance stagger (sidebar/popup stay static). */
   protected readonly contentStaggerPlay = signal<SettingsPopupSection | null>(null);
   /** Brief reset between `--play` off/on so CSS entrance animations restart on remounted panes. */
@@ -363,13 +364,24 @@ export class TxSettingsPopupComponent {
     },
   ];
 
+  protected readonly filteredSidebarGroups = computed((): readonly SettingsSidebarSection[] => {
+    const query = this.searchQuery().trim().toLowerCase();
+    if (!query) {
+      return this.sidebarSections;
+    }
+
+    return this.sidebarSections
+      .map((group) => ({
+        ...group,
+        items: group.items.filter((item) => this.sidebarItemMatchesQuery(group, item, query)),
+      }))
+      .filter((group) => group.items.length > 0);
+  });
+
   private closeTimer: ReturnType<typeof setTimeout> | null = null;
-  private dialogSettleTimer: ReturnType<typeof setTimeout> | null = null;
   private openTimer: ReturnType<typeof setTimeout> | null = null;
   private staggerSettleTimer: ReturnType<typeof setTimeout> | null = null;
   private contentStaggerTimer: ReturnType<typeof setTimeout> | null = null;
-  private themePersistTimer: ReturnType<typeof setTimeout> | null = null;
-  private themePersistTarget: AppearanceThemeId | null = null;
   private readonly themePreviewId = signal<AppearanceThemeId | null>(null);
 
   protected readonly contentScrollRef = viewChild<ElementRef<HTMLElement>>('contentScroll');
@@ -400,9 +412,7 @@ export class TxSettingsPopupComponent {
       this.cancelCloseTimer();
       this.cancelOpenTimer();
       this.cancelStaggerSettleTimer();
-      this.cancelDialogSettleTimer();
       this.cancelContentStaggerTimer();
-      this.cancelThemePersistTimer();
       this.updateBannerContext.setUpdatesPanelActive(false);
     });
 
@@ -417,6 +427,10 @@ export class TxSettingsPopupComponent {
     if (this.isVisible() && !this.isClosing()) {
       this.handleClose();
     }
+  }
+
+  protected handleSearchChange(value: string): void {
+    this.searchQuery.set(value);
   }
 
   protected selectSection(id: SettingsPopupSection): void {
@@ -510,17 +524,10 @@ export class TxSettingsPopupComponent {
     return this.activeSection() === id;
   }
 
-  protected handlePopupAnimationEnd(event: AnimationEvent): void {
-    if (event.target !== event.currentTarget || event.animationName !== 'tx-settings-popup-in') {
-      return;
-    }
-    this.markDialogMotionSettled();
-  }
-
   protected applyTheme(themeId: AppearanceThemeId): void {
     this.themePreviewId.set(themeId);
     this.themeService.loadTheme(themeId);
-    this.scheduleThemePersist(themeId);
+    void this.persistThemeSelection(themeId);
   }
 
   protected async applyAppearanceTypography(patch: Partial<AppearanceTypography>): Promise<void> {
@@ -562,7 +569,6 @@ export class TxSettingsPopupComponent {
   protected async resetAppearanceToDefaults(): Promise<void> {
     const appearance = createDefaultSettings().appearance;
     try {
-      this.cancelThemePersistTimer();
       this.themePreviewId.set(null);
       await this.config.patchSettings({ appearance });
       this.themeService.loadTheme(appearance.theme);
@@ -1042,7 +1048,7 @@ export class TxSettingsPopupComponent {
   }
 
   protected handleBackdropClick(event: MouseEvent): void {
-    if ((event.target as HTMLElement).classList.contains('tx-settings')) {
+    if (event.target === event.currentTarget) {
       this.handleClose();
     }
   }
@@ -1132,21 +1138,18 @@ export class TxSettingsPopupComponent {
       return;
     }
     this.cancelOpenTimer();
-    void this.flushThemePersist();
     this.themePreviewId.set(null);
     this.isClosing.set(true);
     this.isShown.set(false);
     this.sidebarStaggerPlay.set(false);
     this.sidebarStaggerSettled.set(false);
     this.dialogMotionSettled.set(false);
-    this.popupOpening.set(false);
     this.visitedSections.set(new Set());
     this.contentStaggerPlay.set(null);
     this.contentStaggerArming.set(false);
     this.freezePopupMotion.set(false);
     this.cancelStaggerSettleTimer();
     this.cancelContentStaggerTimer();
-    this.cancelDialogSettleTimer();
     this.cancelCloseTimer();
 
     const duration = this.uiPreferences.animationsEnabled() ? this.popupCloseMs() : 0;
@@ -1166,50 +1169,36 @@ export class TxSettingsPopupComponent {
   private scheduleOpenTransition(): void {
     this.cancelOpenTimer();
     this.isShown.set(false);
-
-    if (!this.uiPreferences.entranceStaggerEnabled()) {
-      this.isShown.set(true);
-      this.popupOpening.set(true);
-      this.lockSidebarEntrance();
-      this.scheduleDialogMotionSettledFallback();
-      return;
-    }
-
+    this.dialogMotionSettled.set(false);
+    this.searchQuery.set('');
     this.lockSidebarEntrance();
-    this.openTimer = setTimeout(() => {
-      this.openTimer = null;
+
+    requestAnimationFrame(() => {
       requestAnimationFrame(() => {
-        if (this.isVisible() && !this.isClosing()) {
-          this.isShown.set(true);
-          this.popupOpening.set(true);
-          this.scheduleDialogMotionSettledFallback();
-          this.scheduleSectionContentStagger(this.activeSection());
+        if (!this.isVisible() || this.isClosing()) {
+          return;
         }
+        this.isShown.set(true);
+        this.scheduleSectionContentStagger(this.activeSection());
+
+        const motionMs = this.popupCloseMs();
+        if (motionMs === 0) {
+          this.markDialogMotionSettled();
+          return;
+        }
+
+        this.openTimer = setTimeout(() => {
+          this.openTimer = null;
+          if (this.isVisible() && !this.isClosing()) {
+            this.markDialogMotionSettled();
+          }
+        }, motionMs);
       });
-    }, 0);
-  }
-
-  /** Fallback if `animationend` does not fire (reduced motion, old engines). */
-  private scheduleDialogMotionSettledFallback(): void {
-    this.cancelDialogSettleTimer();
-    const motionScale =
-      typeof document !== 'undefined'
-        ? Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--tx-motion-scale')) || 1
-        : 1;
-    const popupMs = Math.round(340 * motionScale);
-
-    this.dialogSettleTimer = setTimeout(() => {
-      this.dialogSettleTimer = null;
-      if (!this.isVisible() || this.isClosing()) {
-        return;
-      }
-      this.markDialogMotionSettled();
-    }, popupMs);
+    });
   }
 
   /** After open motion ends, lock shell transitions (section switches animate content only). */
   private markDialogMotionSettled(): void {
-    this.popupOpening.set(false);
     this.dialogMotionSettled.set(true);
   }
 
@@ -1266,16 +1255,7 @@ export class TxSettingsPopupComponent {
   }
 
   private scrollContentToTop(): void {
-    queueMicrotask(() => {
-      this.contentScrollRef()?.nativeElement.scrollTo({ top: 0 });
-    });
-  }
-
-  private cancelDialogSettleTimer(): void {
-    if (this.dialogSettleTimer !== null) {
-      clearTimeout(this.dialogSettleTimer);
-      this.dialogSettleTimer = null;
-    }
+    this.contentScrollRef()?.nativeElement.scrollTo({ top: 0 });
   }
 
   /** Sidebar entrance stagger — runs once per popup open, not on section change. */
@@ -1330,34 +1310,13 @@ export class TxSettingsPopupComponent {
     this.sidebarStaggerSettled.set(true);
   }
 
-  private scheduleThemePersist(themeId: AppearanceThemeId): void {
-    this.themePersistTarget = themeId;
-    this.cancelThemePersistTimer();
-    this.themePersistTimer = setTimeout(() => {
-      this.themePersistTimer = null;
-      void this.flushThemePersist();
-    }, THEME_PERSIST_DEBOUNCE_MS);
-  }
-
-  private cancelThemePersistTimer(): void {
-    if (this.themePersistTimer !== null) {
-      clearTimeout(this.themePersistTimer);
-      this.themePersistTimer = null;
-    }
-  }
-
-  private async flushThemePersist(): Promise<void> {
-    this.cancelThemePersistTimer();
-    const themeId = this.themePersistTarget;
-    this.themePersistTarget = null;
-    if (!themeId) {
-      return;
-    }
+  private async persistThemeSelection(themeId: AppearanceThemeId): Promise<void> {
     const persisted = this.settings()?.appearance.theme;
     if (persisted === themeId) {
       this.themePreviewId.set(null);
       return;
     }
+
     try {
       await this.config.patchSettings({ appearance: { theme: themeId } });
       this.themePreviewId.set(null);
@@ -1403,6 +1362,22 @@ export class TxSettingsPopupComponent {
       }
     }
     return undefined;
+  }
+
+  private sidebarItemMatchesQuery(
+    group: SettingsSidebarSection,
+    item: SettingsSidebarItem,
+    query: string,
+  ): boolean {
+    if (item.label.toLowerCase().includes(query) || item.id.toLowerCase().includes(query)) {
+      return true;
+    }
+
+    if (group.title.toLowerCase().includes(query)) {
+      return true;
+    }
+
+    return settingsSectionMatchesQuery(item.id, query);
   }
 
   private async patch(patch: SettingsPatch): Promise<void> {

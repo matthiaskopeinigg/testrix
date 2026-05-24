@@ -49,7 +49,7 @@ export interface ElectronAPI {
   readonly platform: NodeJS.Platform;
   /** `true` when started with `npm run dev` (`TESTRIX_DEV=1`). Absent/false for `npm start` and production. */
   readonly devToolkit: boolean;
-  /** `true` when the main window uses an opaque fill (macOS dev server only). Win32 dev uses a transparent shell. */
+  /** `true` when the main window uses an opaque fill (Win32 always; macOS dev server). */
   readonly opaqueDevWindow: boolean;
   /** Saved theme id from disk — applied in `index.html` before Angular paints. */
   readonly bootTheme?: string;

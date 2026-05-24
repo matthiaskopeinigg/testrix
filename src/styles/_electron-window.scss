@@ -42,6 +42,20 @@ html.tx-electron-app {
     }
   }
 
+  // Opaque Win32 window — square shell so caption-button hover fills the top-right corner.
+  &[data-platform='win32']:not(.tx-electron-app--browser-parity):not(.tx-electron-app--edge-to-edge) {
+    --tx-titlebar-corner-radius: 0;
+
+    .tx-shell {
+      border-radius: 0;
+    }
+
+    app-tx-window-titlebar .tx-titlebar {
+      border-top-left-radius: 0;
+      border-top-right-radius: 0;
+    }
+  }
+
   &.tx-electron-app--edge-to-edge {
     --tx-titlebar-corner-radius: 0;
 
@@ -166,7 +180,7 @@ html.tx-electron-app.tx-electron-app--native-dev-frame {
 /*
  * Win32 Electron: same document rules as a normal browser tab (no frameless shell).
  * Browser works; Electron failed because tx-electron-app used transparent html, overflow:hidden,
- * and -webkit-app-region — all absent in Chrome when you open localhost:4720 directly.
+ * and -webkit-app-region — all absent in Chrome when you open localhost directly.
  */
 html.tx-electron-app.tx-electron-app--browser-parity {
   background: var(--tx-surface-0) !important;

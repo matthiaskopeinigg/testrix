@@ -84,8 +84,6 @@
           type="button"
           class="tx-titlebar-btn tx-titlebar-btn--window"
           (click)="handleMinimize()"
-          txTooltip="Minimize"
-          txTooltipPosition="bottom"
           aria-label="Minimize window"
         >
           <tx-icon name="minimize" [size]="13" />
@@ -94,8 +92,6 @@
           type="button"
           class="tx-titlebar-btn tx-titlebar-btn--window"
           (click)="handleMaximizeToggle()"
-          txTooltip="Maximize"
-          txTooltipPosition="bottom"
           aria-label="Toggle maximize"
         >
           <tx-icon name="maximize" [size]="13" />
@@ -104,8 +100,6 @@
           type="button"
           class="tx-titlebar-btn tx-titlebar-btn--window tx-titlebar-btn--close"
           (click)="handleClose()"
-          txTooltip="Close"
-          txTooltipPosition="bottom"
           aria-label="Close window"
         >
           <tx-icon name="close" [size]="13" />
@@ -116,7 +110,5 @@
 </header>
 
 <tx-cookie-manager [open]="cookiesOpen()" (closed)="handleCloseCookies()" />
-
-<tx-settings-popup [open]="settingsOpen()" (closed)="handleCloseSettings()" />
 
 <tx-profile-manager-modal [open]="profileManagerOpen()" (closed)="handleCloseProfileManager()" />

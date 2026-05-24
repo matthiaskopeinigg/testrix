@@ -16,17 +16,29 @@ function transparentFramelessChrome(): BrowserWindowConstructorOptions {
   };
 }
 
+/** Opaque frameless shell — matches api-workbench Win32 chrome (DWM minimize animation). */
+function opaqueFramelessChrome(): BrowserWindowConstructorOptions {
+  return {
+    transparent: false,
+    backgroundColor: resolveBootWindowBackgroundColor(),
+    frame: false,
+    titleBarStyle: 'hidden',
+    // Default `thickFrame: true` — setting false removes Win32 minimize/maximize animations.
+    hasShadow: true,
+  };
+}
+
 /**
  * Frameless window with transparent corners and a rounded content shell in the renderer
  * (`html.tx-electron-app` + `.tx-shell` in `_electron-window.scss`).
  */
 export function mainWindowChromeOptions(): BrowserWindowConstructorOptions {
-  if (usesAngularDevServer()) {
-    // Win32: transparent + CSS clip — opaque/native rounding cannot show curved outer corners.
-    if (process.platform === 'win32') {
-      return transparentFramelessChrome();
-    }
+  if (process.platform === 'win32') {
+    // Transparent layered windows skip the OS minimize animation (instant hide).
+    return opaqueFramelessChrome();
+  }
 
+  if (usesAngularDevServer()) {
     const opaque: BrowserWindowConstructorOptions = {
       transparent: false,
       backgroundColor: resolveBootWindowBackgroundColor(),

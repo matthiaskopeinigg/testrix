@@ -1,46 +1,21 @@
-// Aligned with API Workbench settings modal (settings.component.scss).
+// Aligned with Help popup overlay shell (_tx-overlay-dialog.scss).
 
+@use '../tx-overlay-dialog';
 @use 'tx-settings-pane-blocks' as pane;
 
-.disable-select {
-  user-select: none;
-  -webkit-user-select: none;
-}
-
 .tx-settings {
-  --tx-settings-backdrop-duration: calc(0.28s * var(--tx-motion-scale, 1));
-  --tx-settings-popup-duration: calc(0.34s * var(--tx-motion-scale, 1));
-
-  position: fixed;
-  inset: 0;
-  z-index: var(--tx-z-settings-overlay, 1100);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: color-mix(in srgb, var(--tx-scrim, var(--tx-surface-0)) 48%, transparent);
-  backdrop-filter: blur(18px) saturate(1.1);
-  -webkit-backdrop-filter: blur(18px) saturate(1.1);
-  opacity: 0;
-  transition:
-    opacity var(--tx-settings-backdrop-duration) var(--tx-ease-out-expo, cubic-bezier(0.16, 1, 0.3, 1)),
-    backdrop-filter var(--tx-settings-backdrop-duration) var(--tx-ease-out-expo, cubic-bezier(0.16, 1, 0.3, 1));
-
-  &.tx-settings--shown {
-    opacity: 1;
-  }
-
   &.tx-settings--dialog-settled {
     transition: none;
   }
 
-  &.tx-settings--dialog-settled .tx-settings__popup {
+  &.tx-settings--dialog-settled .tx-overlay-dialog__popup {
     animation: none;
     opacity: 1;
     transform: none;
   }
 
   &.tx-settings--freeze-motion,
-  &.tx-settings--freeze-motion .tx-settings__popup {
+  &.tx-settings--freeze-motion .tx-overlay-dialog__popup {
     transition: none !important;
   }
 
@@ -58,61 +33,12 @@
   }
 }
 
-@keyframes tx-settings-popup-in {
-  from {
-    opacity: 0;
-    transform: translateY(18px) scale(0.94);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-.tx-settings__popup {
-  contain: layout paint;
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  width: min(960px, calc(100vw - 48px));
-  height: min(680px, calc(100vh - 64px));
-  border-radius: var(--tx-radius-lg, 16px);
-  background: color-mix(in srgb, var(--tx-surface-0) 78%, transparent);
-  backdrop-filter: blur(24px) saturate(1.12);
-  -webkit-backdrop-filter: blur(24px) saturate(1.12);
-  border: none;
-  box-shadow: 0 28px 64px -20px color-mix(in srgb, var(--tx-shadow-color) 38%, transparent);
-  overflow: hidden;
-  transform-origin: center center;
-  opacity: 1;
-  transform: none;
-
-  &:not(.tx-settings__popup--shown) {
-    opacity: 0;
-    transform: translateY(18px) scale(0.94);
-  }
-
-  &:not(.tx-settings__popup--opening) {
-    transition:
-      opacity var(--tx-settings-popup-duration) var(--tx-ease-out-expo, cubic-bezier(0.16, 1, 0.3, 1)),
-      transform var(--tx-settings-popup-duration) var(--tx-ease-out-expo, cubic-bezier(0.16, 1, 0.3, 1));
-  }
-
-  &.tx-settings__popup--opening {
-    animation: tx-settings-popup-in var(--tx-settings-popup-duration) var(--tx-spring, cubic-bezier(0.34, 1.56, 0.64, 1)) both;
-  }
-}
-
 .tx-settings__main {
   display: flex;
   flex: 1;
   min-height: 0;
-  gap: 0;
-  padding: 0;
   overflow: hidden;
   border-radius: inherit;
-  background: transparent;
 }
 
 .tx-settings__split {
@@ -123,93 +49,23 @@
   z-index: var(--tx-z-dropdown-panel, 200);
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .tx-settings {
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
-    background: color-mix(in srgb, var(--tx-scrim, var(--tx-surface-0)) 72%, transparent);
-  }
-
-  .tx-settings__popup {
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
-    background: var(--tx-surface-0);
-  }
-
-  .tx-settings,
-  .tx-settings__popup {
-    --tx-settings-backdrop-duration: 0.08s;
-    --tx-settings-popup-duration: 0.08s;
-  }
-
-  .tx-settings__popup.tx-settings__popup--shown {
-    animation: none;
-    opacity: 1;
-    transform: none;
-  }
-
-  .tx-settings.tx-settings--dialog-settled .tx-settings__popup {
-    animation: none;
-  }
-}
-
-.tx-settings__close-btn {
-  position: absolute;
-  top: 14px;
-  right: 14px;
-  z-index: 10;
-  display: grid;
-  place-items: center;
-  width: 32px;
-  height: 32px;
-  padding: 0;
-  border: none;
-  border-radius: var(--tx-radius-sm, 8px);
-  background: transparent;
-  color: color-mix(in srgb, var(--tx-text-0) 60%, transparent);
-  cursor: pointer;
-  transition:
-    background-color var(--tx-duration-fast, 120ms) ease,
-    color var(--tx-duration-fast, 120ms) ease,
-    transform 0.25s var(--tx-spring, ease);
-
-  &:hover {
-    background: color-mix(in srgb, var(--tx-text-0) 8%, transparent);
-    color: var(--tx-text-0);
-    transform: rotate(90deg);
-  }
-
-  &:active {
-    transform: rotate(90deg) scale(0.92);
-  }
-
-  &:focus-visible {
-    outline: none;
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--tx-focus-ring) 50%, transparent);
-  }
-}
-
 // —— Sidebar ——
 
 .tx-settings__sidebar {
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
-  width: 236px;
+  width: 260px;
   overflow: hidden;
   background: color-mix(in srgb, var(--tx-surface-2) 24%, transparent);
-  border-radius: 0;
-  box-shadow: none;
   contain: layout style paint;
-  isolation: isolate;
 }
 
 .tx-settings__brand {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 22px 20px 18px;
-  border-bottom: none;
+  padding: 22px 20px 14px;
 }
 
 .tx-settings__brand-mark {
@@ -225,7 +81,6 @@
     color-mix(in srgb, var(--tx-secondary) 35%, transparent),
     color-mix(in srgb, var(--tx-secondary) 15%, transparent)
   );
-  box-shadow: none;
 }
 
 .tx-settings__brand-text {
@@ -247,6 +102,10 @@
   color: color-mix(in srgb, var(--tx-text-1) 90%, transparent);
 }
 
+.tx-settings__search {
+  padding: 0 16px 12px;
+}
+
 .tx-settings__sidebar-body {
   display: flex;
   flex: 1;
@@ -257,7 +116,6 @@
   overflow-y: auto;
   contain: layout style;
 
-  /* Locked after first open: no stagger replay when changing settings sections */
   &.tx-entrance-stagger--settled:not(.tx-entrance-stagger--play) > * {
     opacity: 1;
     transform: none;
@@ -286,42 +144,25 @@
   align-items: center;
   gap: 10px;
   width: 100%;
-  padding: 10px 14px;
+  padding: 9px 14px;
   border: 0;
   border-radius: var(--tx-radius-md, 10px);
   background: transparent;
   color: var(--tx-text-0);
   font: inherit;
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   font-weight: 500;
   text-align: left;
   cursor: pointer;
-  opacity: 0.75;
+  opacity: 0.78;
   transition:
     background-color var(--tx-duration-fast, 120ms) ease,
     color var(--tx-duration-fast, 120ms) ease,
     opacity var(--tx-duration-fast, 120ms) ease;
 
-  .tx-settings__sidebar-item-icon {
-    display: grid;
-    flex-shrink: 0;
-    place-items: center;
-    opacity: 0.7;
-    transition: opacity var(--tx-duration-fast, 120ms) ease;
-  }
-
   &:hover {
     background: color-mix(in srgb, var(--tx-text-0) 8%, transparent);
     opacity: 1;
-    transform: translateX(3px);
-
-    .tx-settings__sidebar-item-icon {
-      opacity: 1;
-    }
-  }
-
-  &:active {
-    transform: scale(0.98);
   }
 
   &.is-active {
@@ -329,11 +170,6 @@
     color: var(--tx-secondary);
     opacity: 1;
     font-weight: 600;
-    transform: none;
-
-    .tx-settings__sidebar-item-icon {
-      opacity: 1;
-    }
 
     &::before {
       content: '';
@@ -349,6 +185,20 @@
   }
 }
 
+.tx-settings__sidebar-item-icon {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  opacity: 0.75;
+}
+
+.tx-settings__sidebar-item-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 // —— Content pane ——
 
 .tx-settings__content {
@@ -361,9 +211,13 @@
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
-  touch-action: pan-y;
   border-radius: 0;
   background: transparent;
+  pointer-events: auto;
+
+  .tx-settings__section-inner.tx-entrance-stagger > * {
+    pointer-events: auto;
+  }
 }
 
 .tx-settings__pane {
@@ -764,23 +618,13 @@
 }
 
 @media (max-width: 720px) {
-  .tx-settings__popup {
-    width: min(96vw, 520px);
-    height: min(90vh, 640px);
-  }
-
   .tx-settings__main {
     flex-direction: column;
-    padding: 6px;
-  }
-
-  .tx-settings__split {
-    display: none;
   }
 
   .tx-settings__sidebar {
     width: auto;
-    max-height: 40%;
+    max-height: 42%;
   }
 
   .tx-settings__content::before {

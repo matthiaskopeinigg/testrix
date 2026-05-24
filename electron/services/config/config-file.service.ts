@@ -173,26 +173,32 @@ export class ConfigFileService {
   }
 
   async writeSettings(data: SettingsFile): Promise<void> {
-    await this.atomicWriteJson(this.settingsPath(), data);
+    const filePath = this.settingsPath();
+    await this.runSerialized(filePath, async () => {
+      await this.atomicWriteJson(filePath, data);
+    });
   }
 
   async mergeSettingsPatch(patch: SettingsPatch): Promise<SettingsFile> {
-    const cur = await this.readSettings();
-    settingsPatchSchema.parse(patch);
-    const merged = deepMerge(
-      cur as unknown as Record<string, unknown>,
-      patch as unknown as Record<string, unknown>,
-    );
-    const updated = settingsFileSchema.parse({
-      ...merged,
-      meta: {
-        ...cur.meta,
-        updatedAt: new Date().toISOString(),
-      },
+    const filePath = this.settingsPath();
+    return this.runSerialized(filePath, async () => {
+      const cur = await this.readSettings();
+      settingsPatchSchema.parse(patch);
+      const merged = deepMerge(
+        cur as unknown as Record<string, unknown>,
+        patch as unknown as Record<string, unknown>,
+      );
+      const updated = settingsFileSchema.parse({
+        ...merged,
+        meta: {
+          ...cur.meta,
+          updatedAt: new Date().toISOString(),
+        },
+      });
+      await this.atomicWriteJson(filePath, updated);
+      setMainSettings(updated);
+      return updated;
     });
-    await this.writeSettings(updated);
-    setMainSettings(updated);
-    return updated;
   }
 
   async readSession(): Promise<SessionFile> {

@@ -52,7 +52,9 @@ const mergedVersions: VersionBundle = {
 const api: ElectronAPI = {
   platform: process.platform,
   devToolkit: process.env.TESTRIX_DEV === '1',
-  opaqueDevWindow: process.env.TESTRIX_SERVE_RENDERER === '1' && process.platform !== 'win32',
+  opaqueDevWindow:
+    process.platform === 'win32' ||
+    (process.env.TESTRIX_SERVE_RENDERER === '1' && process.platform === 'darwin'),
   /** Persisted appearance theme applied in `index.html` before Angular boot (via `additionalArguments`). */
   bootTheme,
   bootThemeMode,

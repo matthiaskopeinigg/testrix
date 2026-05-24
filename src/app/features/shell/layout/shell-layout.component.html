@@ -20,5 +20,6 @@
     @if (hasNotification()) {
       <tx-notification-host />
     }
+    <tx-settings-popup [open]="settingsPopup.open()" (closed)="handleCloseSettings()" />
   </div>
 </section>
