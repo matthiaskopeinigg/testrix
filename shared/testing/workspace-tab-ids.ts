@@ -1,4 +1,5 @@
 import type { WorkspaceTabKind } from '@shared/config';
+import { DEVELOPMENT_TOOL_IDS } from '@shared/config/development-tool.schema';
 
 export const MOCK_SERVER_HUB_TAB_ID = '__mock_server__' as const;
 
@@ -40,6 +41,9 @@ export function shouldStripWorkspaceTabOnRestore(kind: WorkspaceTabKind, resourc
   }
   if (kind === 'test-suite') {
     return !resourceId.startsWith('ts:');
+  }
+  if (kind === 'dev-tool') {
+    return !(DEVELOPMENT_TOOL_IDS as readonly string[]).includes(resourceId);
   }
   return false;
 }

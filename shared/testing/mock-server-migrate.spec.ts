@@ -1,9 +1,15 @@
 import { describe, expect, it } from 'vitest';
 
 import { migrateMockServerFile } from './mock-server-migrate';
-import { isMockServerEndpoint } from './mock-server.schema';
+import { createDefaultMockServerFile, isMockServerEndpoint } from './mock-server.schema';
 
 describe('migrateMockServerFile', () => {
+  it('creates defaults for empty v2 shell', () => {
+    const file = createDefaultMockServerFile();
+    expect(file.options.cors.enabled).toBe(false);
+    expect(file.options.cors.allowOrigin).toBe('*');
+  });
+
   it('passes through v2 files', () => {
     const file = migrateMockServerFile({
       schemaVersion: 2,
@@ -12,6 +18,16 @@ describe('migrateMockServerFile', () => {
     });
     expect(file.schemaVersion).toBe(2);
     expect(file.options.port).toBe('auto');
+    expect(file.options.cors.enabled).toBe(false);
+  });
+
+  it('fills missing cors on legacy v2 files', () => {
+    const file = migrateMockServerFile({
+      schemaVersion: 2,
+      options: { port: 'auto', host: '127.0.0.1' },
+      items: [],
+    });
+    expect(file.options.cors.allowOrigin).toBe('*');
   });
 
   it('migrates v1 flat endpoints to v2 tree', () => {

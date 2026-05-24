@@ -1,91 +1,139 @@
-<div class="request-panel ts-flow-step-panel">
-  <tx-form-field label="Request source" controlId="ts-req-source">
-    <tx-dropdown
-      controlId="ts-req-source"
-      [options]="requestSourceOptions"
-      [ngModel]="requestSource()"
-      (ngModelChange)="handleRequestSourceChange($event)"
-    />
-  </tx-form-field>
-
-  @if (requestSource() === 'manual') {
-    @if (needsManualUrl()) {
-      <tx-banner variant="warning" title="HTTP Request">
-        Specify a URL for this manual request.
-      </tx-banner>
-    }
-
-    <h2 class="request-panel__title">Request</h2>
-    <div class="ts-flow-step-panel__row-2">
-      <tx-form-field label="Method" controlId="ts-req-method">
+<div class="ts-flow-request-tab request-tab">
+  <div class="tx-workspace-tab__chrome">
+    <div class="ts-flow-request-tab__source-row">
+      <tx-form-field label="Request source" controlId="ts-req-source">
         <tx-dropdown
-          controlId="ts-req-method"
-          [options]="httpMethodOptions"
-          [ngModel]="cfg().method"
-          (ngModelChange)="patch({ method: $event })"
-        />
-      </tx-form-field>
-      <tx-form-field class="ts-flow-step-panel__grow" label="URL" controlId="ts-req-url">
-        <tx-variable-input
-          controlId="ts-req-url"
-          [catalog]="variableCatalog()"
-          [ngModel]="cfg().url"
-          (ngModelChange)="patch({ url: $event })"
-          placeholder="https://api.example.com/path"
+          controlId="ts-req-source"
+          [options]="requestSourceOptions"
+          [ngModel]="requestSource()"
+          (ngModelChange)="handleRequestSourceChange($event)"
         />
       </tx-form-field>
     </div>
 
-    <h2 class="request-panel__title">Headers</h2>
-    <tx-key-value-list
-      keyLabel="Header"
-      keyInput="http-headers"
-      valueLabel="Value"
-      addLabel="Add header"
-      valueInput="variables"
-      [rows]="headerRows()"
-      [variableCatalog]="variableCatalog()"
-      (rowsChange)="handleHeadersChange($event)"
-    />
+    @if (requestSource() === 'manual') {
+      @if (needsManualUrl()) {
+        <tx-banner variant="warning" title="HTTP Request">
+          Specify a URL for this manual request.
+        </tx-banner>
+      }
 
-    <h2 class="request-panel__title">Query params</h2>
-    <tx-key-value-list
-      keyLabel="Param"
-      valueLabel="Value"
-      addLabel="Add param"
-      valueInput="variables"
-      [rows]="queryRows()"
-      [variableCatalog]="variableCatalog()"
-      (rowsChange)="handleQueryChange($event)"
-    />
+      <div class="request-tab__bar">
+        <div class="request-tab__bar-cluster request-tab__bar-cluster--grow">
+          <tx-form-field class="ts-flow-request-tab__method-field" label="Method" controlId="ts-req-method">
+            <tx-dropdown
+              controlId="ts-req-method"
+              [options]="httpMethodOptions"
+              [ngModel]="cfg().method"
+              (ngModelChange)="patch({ method: $event })"
+            />
+          </tx-form-field>
+          <tx-form-field class="request-tab__url-field" label="URL" controlId="ts-req-url">
+            <tx-variable-input
+              controlId="ts-req-url"
+              [catalog]="variableCatalog()"
+              [ngModel]="cfg().url"
+              (ngModelChange)="patch({ url: $event })"
+              placeholder="https://api.example.com/path"
+            />
+          </tx-form-field>
+        </div>
+      </div>
 
-    <tx-form-field label="Body type" controlId="ts-req-body-type">
-      <tx-dropdown
-        controlId="ts-req-body-type"
-        [options]="bodyTypeOptions"
-        [ngModel]="cfg().bodyType"
-        (ngModelChange)="patch({ bodyType: $event })"
-      />
-    </tx-form-field>
-
-    <tx-form-field label="Body" controlId="ts-req-body">
-      <tx-textarea
-        controlId="ts-req-body"
-        [ngModel]="cfg().body"
-        (ngModelChange)="patch({ body: $event })"
-        [rows]="8"
-      />
-    </tx-form-field>
-  } @else {
-    @if (needsCollectionRequest()) {
-      <tx-banner variant="warning" title="HTTP Request">
-        Select a request from collections.
-      </tx-banner>
+      <div class="request-tab__sections-wrap">
+        <nav
+          class="request-tab__sections-bar workspace-tab-section-nav"
+          role="tablist"
+          aria-label="Request sections"
+          [txWorkspaceSectionNav]="activeSection()"
+        >
+          @for (item of navItems; track item.id) {
+            <button
+              type="button"
+              class="request-tab__section-tab"
+              role="tab"
+              [attr.aria-selected]="activeSection() === item.id"
+              [class.is-active]="activeSection() === item.id"
+              (click)="handleSectionSelect(item.id)"
+            >
+              <tx-icon [name]="item.icon" [size]="14" aria-hidden="true" />
+              <span>{{ item.label }}</span>
+            </button>
+          }
+        </nav>
+      </div>
     }
+  </div>
 
-    <app-ts-flow-collection-request-picker
-      [collectionRequestId]="cfg().collectionRequestId"
-      (collectionRequestIdChange)="patch({ collectionRequestId: $event })"
-    />
+  @if (requestSource() === 'manual') {
+    <div class="request-tab__pane tx-workspace-tab__pane">
+      @switch (activeSection()) {
+        @case ('params') {
+          <div class="tx-workspace-tab__section-shell">
+            <div class="request-panel">
+              <h2 class="request-panel__title">Query parameters</h2>
+              <tx-key-value-list
+                [compact]="true"
+                keyLabel="Key"
+                keyInput="query-params"
+                valueLabel="Value"
+                descriptionLabel="Description"
+                addLabel="Add query param"
+                valueInput="variables"
+                [showDescription]="true"
+                [maxRows]="64"
+                [rows]="queryRows()"
+                [variableCatalog]="variableCatalog()"
+                (rowsChange)="handleQueryChange($event)"
+              />
+            </div>
+          </div>
+        }
+        @case ('headers') {
+          <div class="tx-workspace-tab__section-shell">
+            <div class="request-panel">
+              <h2 class="request-panel__title">Request headers</h2>
+              <tx-key-value-list
+                [compact]="true"
+                keyLabel="Key"
+                keyInput="http-headers"
+                valueLabel="Value"
+                addLabel="Add header"
+                valueInput="variables"
+                [maxRows]="64"
+                [rows]="headerRows()"
+                [variableCatalog]="variableCatalog()"
+                (rowsChange)="handleHeadersChange($event)"
+              />
+            </div>
+          </div>
+        }
+        @case ('body') {
+          <div class="tx-workspace-tab__section-shell">
+            <div class="tx-entrance-stagger__block">
+              <app-request-tab-body-panel
+                [method]="cfg().method"
+                [body]="collectionBody()"
+                [variableCatalog]="variableCatalog()"
+                (bodyChange)="handleBodyChange($event)"
+              />
+            </div>
+          </div>
+        }
+      }
+    </div>
+  } @else {
+    <div class="request-tab__pane tx-workspace-tab__pane">
+      @if (needsCollectionRequest()) {
+        <tx-banner variant="warning" title="HTTP Request">
+          Select a request from collections.
+        </tx-banner>
+      }
+
+      <app-ts-flow-collection-request-picker
+        [collectionRequestId]="cfg().collectionRequestId"
+        (collectionRequestIdChange)="patch({ collectionRequestId: $event })"
+      />
+    </div>
   }
 </div>

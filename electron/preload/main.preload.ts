@@ -66,6 +66,7 @@ const api: ElectronAPI = {
   openExternal: (url) => ipcRenderer.invoke(AppChannels.openExternal, url),
   shell: {
     pickFile: (options) => ipcRenderer.invoke(ShellChannels.pickFile, options ?? {}),
+    saveFile: (options) => ipcRenderer.invoke(ShellChannels.saveFile, options),
   },
   config: {
     getConfigDir: () => ipcRenderer.invoke(ConfigChannels.getConfigDir),
@@ -115,6 +116,7 @@ const api: ElectronAPI = {
   database: {
     query: (payload) => ipcRenderer.invoke(DbChannels.query, payload),
     testConnection: (connection) => ipcRenderer.invoke(DbChannels.testConnection, connection),
+    getConnectionStatuses: () => ipcRenderer.invoke(DbChannels.getConnectionStatuses),
   },
   cookies: {
     getAll: () => ipcRenderer.invoke(CookieChannels.getAll),

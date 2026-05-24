@@ -1,3 +1,4 @@
+export * from './flow-request-body';
 export * from './flow-run-log';
 export * from './flow-step-clone';
 export * from './flow-step-capture';
@@ -29,7 +30,6 @@ export * from './regression-flow-diff';
 export * from './regression-step-diff';
 export * from './regression-capture-diff';
 export * from './regressions.schema';
-export * from './demo-public-api.fixture';
 export * from './mock-server.schema';
 export * from './mock-server-migrate';
 export * from './mock-server-match';

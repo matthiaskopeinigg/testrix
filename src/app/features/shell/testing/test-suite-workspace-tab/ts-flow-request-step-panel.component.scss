@@ -1,0 +1,102 @@
+@use '../../workspace/workspace-tab-chrome' as tab-chrome;
+@use '../../workspace/workspace-tab-motion';
+@use '../../workspace/request-workspace-tab/request-tab-panels';
+
+:host {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.ts-flow-request-tab {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  width: 100%;
+}
+
+.ts-flow-request-tab__source-row {
+  flex-shrink: 0;
+  max-width: 18rem;
+  padding: 0.45rem 12px 0.35rem;
+}
+
+.request-tab__bar {
+  @include tab-chrome.workspace-tab-toolbar-row;
+}
+
+.request-tab__bar-cluster {
+  @include tab-chrome.workspace-tab-bar-cluster;
+
+  &--grow {
+    @include tab-chrome.workspace-tab-bar-cluster-grow;
+  }
+}
+
+.ts-flow-request-tab__method-field {
+  flex: 0 0 auto;
+  width: 5.5rem;
+  min-width: 5.5rem;
+  max-width: 6rem;
+
+  @include tab-chrome.workspace-tab-toolbar-dropdown;
+
+  ::ng-deep .tx-dropdown-host {
+    min-width: 0;
+  }
+
+  ::ng-deep .tx-dropdown__trigger {
+    min-width: 0;
+    padding-inline: 0.5rem 0.4rem;
+  }
+
+  ::ng-deep .tx-dropdown__value {
+    font-weight: 700;
+    letter-spacing: 0.03em;
+  }
+}
+
+.request-tab__url-field {
+  flex: 1 1 auto;
+  min-width: 8rem;
+}
+
+.request-tab__sections-wrap {
+  @include tab-chrome.workspace-tab-sections-wrap;
+}
+
+.request-tab__sections-bar {
+  @include tab-chrome.workspace-tab-sections-bar;
+  width: 100%;
+}
+
+.request-tab__section-tab {
+  @include tab-chrome.workspace-tab-section-tab;
+}
+
+.request-tab__pane {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  padding: 14px 18px 18px;
+}
+
+:host ::ng-deep .tx-workspace-tab__section-shell:has(app-request-tab-body-panel) {
+  overflow: hidden;
+}
+
+:host ::ng-deep .tx-workspace-tab__section-shell > .tx-entrance-stagger__block:has(app-request-tab-body-panel) {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+}

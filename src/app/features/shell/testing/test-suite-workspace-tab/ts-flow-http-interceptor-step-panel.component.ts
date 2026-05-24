@@ -7,7 +7,6 @@ import type { z } from 'zod';
 
 import { TxBannerComponent } from '@app/shared/components/tx-banner/tx-banner.component';
 import { TxCodeEditorComponent } from '@app/shared/components/tx-code-editor/tx-code-editor.component';
-import { txCodeEditorLanguageLabel } from '@app/shared/components/tx-code-editor/tx-code-editor-language';
 import { TxDropdownComponent } from '@app/shared/components/tx-dropdown/tx-dropdown.component';
 import { TxFormFieldComponent } from '@app/shared/components/tx-form-field/tx-form-field.component';
 import { TxInputComponent } from '@app/shared/components/tx-input/tx-input.component';
@@ -15,7 +14,10 @@ import { TxKeyValueListComponent } from '@app/shared/components/tx-key-value-lis
 import { TxVariableInputComponent } from '@app/shared/components/tx-variable-input/tx-variable-input.component';
 import type { TxKeyValueRow } from '@app/shared/components/tx-key-value-list/tx-key-value-list.types';
 
-import { interceptorBodyEditorLanguage } from './flow-interceptor-body-language';
+import {
+  flowBodyEditorLanguage,
+  flowBodyEditorLanguageLabel,
+} from './flow-interceptor-body-language';
 import {
   FLOW_STEP_BODY_TYPE_OPTIONS,
   FLOW_STEP_HTTP_METHOD_OPTIONS,
@@ -59,11 +61,11 @@ export class TsFlowHttpInterceptorStepPanelComponent {
   protected readonly isModifyAction = computed(() => this.cfg().interceptAction !== 'block');
 
   protected readonly bodyEditorLanguage = computed(() =>
-    interceptorBodyEditorLanguage(this.cfg().replaceBodyType),
+    flowBodyEditorLanguage(this.cfg().replaceBodyType),
   );
 
   protected readonly bodyEditorLanguageLabel = computed(() =>
-    txCodeEditorLanguageLabel(this.bodyEditorLanguage()),
+    flowBodyEditorLanguageLabel(this.cfg().replaceBodyType),
   );
 
   protected readonly showBodyEditor = computed(() => {

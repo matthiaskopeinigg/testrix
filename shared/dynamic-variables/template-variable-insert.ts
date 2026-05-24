@@ -75,9 +75,6 @@ function normalizeBraceTemplateInsert(
   }
 
   const slice = value.slice(replaceStart, replaceEnd);
-  if (slice === '{{') {
-    return { insert: insert.slice(2), replaceStart, replaceEnd };
-  }
   if (slice.startsWith('{{') && slice.endsWith('}}')) {
     return { insert, replaceStart, replaceEnd };
   }

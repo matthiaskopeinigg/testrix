@@ -84,6 +84,12 @@ export interface ElectronRendererBridge {
     pickFile: (options?: {
       readonly filters?: readonly { readonly name: string; readonly extensions: readonly string[] }[];
     }) => Promise<{ readonly filePath: string; readonly fileName: string } | null>;
+    saveFile: (options: {
+      readonly content: string;
+      readonly defaultPath?: string;
+      readonly filters?: readonly { readonly name: string; readonly extensions: readonly string[] }[];
+      readonly encoding?: 'utf8' | 'base64';
+    }) => Promise<{ readonly filePath: string; readonly fileName: string } | null>;
   };
 
   config: {
@@ -153,7 +159,10 @@ export interface ElectronRendererBridge {
       readonly query: string;
       readonly timeoutMs?: number;
     }) => Promise<unknown>;
-    testConnection: (connection: DatabaseConnection) => Promise<unknown>;
+    testConnection: (connection: DatabaseConnection) => Promise<{ readonly ok: true }>;
+    getConnectionStatuses: () => Promise<
+      Record<string, import('@shared/database/connection-status.schema').DatabaseConnectionStatus>
+    >;
   };
 
   cookies: {

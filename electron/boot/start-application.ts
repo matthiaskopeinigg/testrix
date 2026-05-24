@@ -10,6 +10,7 @@ import {
   tryTestingRuntimeAutoStart,
 } from '../ipc/handlers/testing.handler';
 import { closeDatabaseConnections } from '../ipc/handlers/db.handler';
+import { warmDatabaseConnectionsOnBoot } from '../services/database/database-connection-status.service';
 import { resolveAndPrepareProfileLayout } from '../services/config/config-bootstrap.service';
 import { ConfigFileService } from '../services/config/config-file.service';
 import { ConfigPathService } from '../services/config/config-path.service';
@@ -60,8 +61,8 @@ function attachDefaultCsp(): void {
     const fontStyleSrc = "'self' 'unsafe-inline' https://fonts.googleapis.com";
     const fontSrc = "'self' https://fonts.gstatic.com data:";
     const csp = usesAngularDevServer()
-      ? `default-src 'self'; script-src 'self' 'unsafe-inline'; style-src ${fontStyleSrc}; font-src ${fontSrc}; img-src 'self' data: blob:; connect-src ${connectSrc}; worker-src 'self' blob:`
-      : `default-src 'self'; script-src 'self' 'unsafe-inline'; style-src ${fontStyleSrc}; font-src ${fontSrc}; img-src 'self' data: blob:`;
+      ? `default-src 'self'; script-src 'self' 'unsafe-inline'; style-src ${fontStyleSrc}; font-src ${fontSrc}; img-src 'self' data: blob:; connect-src ${connectSrc}; worker-src 'self' blob:; frame-src 'self'; child-src 'self'`
+      : `default-src 'self'; script-src 'self' 'unsafe-inline'; style-src ${fontStyleSrc}; font-src ${fontSrc}; img-src 'self' data: blob:; frame-src 'self'; child-src 'self'`;
     callback({
       responseHeaders: {
         ...existing,
@@ -141,6 +142,7 @@ export async function startApplication(getBootSplash?: () => BrowserWindow | nul
 
     await files.readSession();
     await files.readSettings();
+    warmDatabaseConnectionsOnBoot(getMainSettings().databases.connections);
 
     const sessionData = await files.readSession();
 

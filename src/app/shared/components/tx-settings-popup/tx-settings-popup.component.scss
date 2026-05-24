@@ -18,8 +18,8 @@
   align-items: center;
   justify-content: center;
   background: color-mix(in srgb, var(--tx-scrim, var(--tx-surface-0)) 48%, transparent);
-  backdrop-filter: blur(28px) saturate(1.14);
-  -webkit-backdrop-filter: blur(28px) saturate(1.14);
+  backdrop-filter: blur(18px) saturate(1.1);
+  -webkit-backdrop-filter: blur(18px) saturate(1.1);
   opacity: 0;
   transition:
     opacity var(--tx-settings-backdrop-duration) var(--tx-ease-out-expo, cubic-bezier(0.16, 1, 0.3, 1)),
@@ -78,10 +78,12 @@
   width: min(960px, calc(100vw - 48px));
   height: min(680px, calc(100vh - 64px));
   border-radius: var(--tx-radius-lg, 16px);
-  background: var(--tx-surface-0);
+  background: color-mix(in srgb, var(--tx-surface-0) 78%, transparent);
+  backdrop-filter: blur(24px) saturate(1.12);
+  -webkit-backdrop-filter: blur(24px) saturate(1.12);
   border: none;
-  box-shadow: 0 24px 80px color-mix(in srgb, var(--tx-shadow-color) 42%, transparent);
-  overflow: visible;
+  box-shadow: 0 28px 64px -20px color-mix(in srgb, var(--tx-shadow-color) 38%, transparent);
+  overflow: hidden;
   transform-origin: center center;
   opacity: 1;
   transform: none;
@@ -107,28 +109,14 @@
   flex: 1;
   min-height: 0;
   gap: 0;
-  padding: 8px;
+  padding: 0;
   overflow: hidden;
   border-radius: inherit;
-  background: color-mix(in srgb, var(--tx-surface-0) 88%, var(--tx-surface-1));
+  background: transparent;
 }
 
 .tx-settings__split {
-  flex-shrink: 0;
-  align-self: stretch;
-  width: 1px;
-  margin: 10px 0;
-  border-radius: 1px;
-  background: linear-gradient(
-    180deg,
-    transparent 0%,
-    color-mix(in srgb, var(--tx-border-0) 85%, transparent) 14%,
-    color-mix(in srgb, var(--tx-border-0) 85%, transparent) 86%,
-    transparent 100%
-  );
-  box-shadow:
-    1px 0 0 color-mix(in srgb, var(--tx-text-0) 6%, transparent),
-    -6px 0 20px -8px color-mix(in srgb, var(--tx-shadow-color) 28%, transparent);
+  display: none;
 }
 
 :host ::ng-deep .tx-dropdown__panel {
@@ -140,6 +128,12 @@
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
     background: color-mix(in srgb, var(--tx-scrim, var(--tx-surface-0)) 72%, transparent);
+  }
+
+  .tx-settings__popup {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background: var(--tx-surface-0);
   }
 
   .tx-settings,
@@ -203,9 +197,9 @@
   flex-shrink: 0;
   width: 236px;
   overflow: hidden;
-  background: color-mix(in srgb, var(--tx-surface-2) 55%, var(--tx-surface-0));
-  border-radius: var(--tx-radius-md, 10px);
-  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--tx-text-0) 5%, transparent);
+  background: color-mix(in srgb, var(--tx-surface-2) 24%, transparent);
+  border-radius: 0;
+  box-shadow: none;
   contain: layout style paint;
   isolation: isolate;
 }
@@ -215,7 +209,7 @@
   align-items: center;
   gap: 12px;
   padding: 22px 20px 18px;
-  border-bottom: 1px solid color-mix(in srgb, var(--tx-border-0) 40%, transparent);
+  border-bottom: none;
 }
 
 .tx-settings__brand-mark {
@@ -231,7 +225,7 @@
     color-mix(in srgb, var(--tx-secondary) 35%, transparent),
     color-mix(in srgb, var(--tx-secondary) 15%, transparent)
   );
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tx-secondary) 30%, transparent);
+  box-shadow: none;
 }
 
 .tx-settings__brand-text {
@@ -368,8 +362,8 @@
   overflow-y: auto;
   overscroll-behavior: contain;
   touch-action: pan-y;
-  border-radius: var(--tx-radius-md, 10px);
-  background: var(--tx-surface-1);
+  border-radius: 0;
+  background: transparent;
 }
 
 .tx-settings__pane {

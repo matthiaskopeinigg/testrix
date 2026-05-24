@@ -163,6 +163,18 @@ export const mockServerOptionsSchema = z.object({
 
 export type MockServerOptions = z.infer<typeof mockServerOptionsSchema>;
 
+/**
+ * Parses mock server options, filling nested defaults for partial or legacy files.
+ */
+export function parseMockServerOptions(raw: unknown = {}): MockServerOptions {
+  const input = typeof raw === 'object' && raw !== null ? raw : {};
+  const record = input as Record<string, unknown>;
+  return mockServerOptionsSchema.parse({
+    ...record,
+    cors: typeof record['cors'] === 'object' && record['cors'] !== null ? record['cors'] : {},
+  });
+}
+
 /** Runtime status returned by mock start/stop/status IPC. */
 export interface MockServerRuntimeStatus {
   readonly running: boolean;
@@ -256,7 +268,11 @@ export function createDefaultMockServerEndpoint(
  * Returns an empty mock server workspace file (v2).
  */
 export function createDefaultMockServerFile(): MockServerFile {
-  return mockServerFileSchema.parse({ schemaVersion: 2, options: {}, items: [] });
+  return mockServerFileSchema.parse({
+    schemaVersion: 2,
+    options: parseMockServerOptions({}),
+    items: [],
+  });
 }
 
 /**

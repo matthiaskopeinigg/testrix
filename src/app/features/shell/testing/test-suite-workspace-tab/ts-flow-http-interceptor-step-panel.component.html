@@ -59,6 +59,8 @@
       <h3 class="ts-flow-interceptor-panel__section-title" id="ts-interceptor-headers-heading">Header overrides</h3>
       <p class="ts-flow-interceptor-panel__section-hint">Add or replace headers on the matched request.</p>
       <tx-key-value-list
+        [compact]="true"
+        [showDescription]="false"
         keyLabel="Header"
         keyInput="http-headers"
         valueLabel="Value"
@@ -74,7 +76,10 @@
       <h3 class="ts-flow-interceptor-panel__section-title" id="ts-interceptor-query-heading">Query overrides</h3>
       <p class="ts-flow-interceptor-panel__section-hint">Add or replace query parameters on the matched URL.</p>
       <tx-key-value-list
+        [compact]="true"
+        [showDescription]="false"
         keyLabel="Param"
+        keyInput="query-params"
         valueLabel="Value"
         addLabel="Add param"
         valueInput="variables"
@@ -106,7 +111,10 @@
             [hideToolbarActions]="true"
             [showFormatAction]="true"
             [framed]="true"
-            [autoFormat]="true"
+            [autoFormat]="false"
+            [autoClose]="true"
+            [smartEditing]="true"
+            [autocomplete]="true"
             [variableCatalog]="variableCatalog()"
             [ngModel]="cfg().replacePostBody ?? ''"
             (ngModelChange)="patch({ replacePostBody: $event })"

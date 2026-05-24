@@ -66,7 +66,10 @@ const GQL_VARS_PLACEHOLDER = '{\n  "userId": "{{userId}}"\n}';
     TxToggleComponent,
   ],
   template: `
-    <div class="request-panel request-panel--fill">
+    <div
+      class="request-panel"
+      [class.request-panel--fill]="fillEditor()"
+    >
       @if (bodyDisabledHint()) {
         <tx-banner variant="info" [title]="bodyDisabledHint()!" />
       }
@@ -84,7 +87,7 @@ const GQL_VARS_PLACEHOLDER = '{\n  "userId": "{{userId}}"\n}';
 
       @switch (body().mode) {
         @case ('none') {
-          <p class="request-panel__empty">This request does not send a body.</p>
+          <p class="request-panel__empty">{{ noneBodyMessage() }}</p>
         }
         @case ('json') {
           @if (rawEditor(); as editor) {
@@ -307,7 +310,7 @@ const GQL_VARS_PLACEHOLDER = '{\n  "userId": "{{userId}}"\n}';
               [autoClose]="true"
               [smartEditing]="true"
               [variableCatalog]="variableCatalog()"
-              [placeholder]="graphqlQueryPlaceholder"
+              [placeholder]="graphqlQueryPlaceholder()"
               [showVariablePlaceholderHint]="showVariablePlaceholderHint()"
               [ngModel]="graphqlQuery()"
               (ngModelChange)="handleGraphqlPatch({ query: $event })"
@@ -329,7 +332,7 @@ const GQL_VARS_PLACEHOLDER = '{\n  "userId": "{{userId}}"\n}';
               [autoClose]="true"
               [smartEditing]="true"
               [variableCatalog]="variableCatalog()"
-              [placeholder]="graphqlVariablesPlaceholder"
+              [placeholder]="graphqlVariablesPlaceholder()"
               [showVariablePlaceholderHint]="showVariablePlaceholderHint()"
               [ngModel]="graphqlVariables()"
               (ngModelChange)="handleGraphqlPatch({ variables: $event })"
@@ -352,12 +355,17 @@ const GQL_VARS_PLACEHOLDER = '{\n  "userId": "{{userId}}"\n}';
   `,
   styleUrl: './request-tab-panels.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: {
+    '[class.request-tab-body-panel-host--compact]': '!fillEditor()',
+  },
 })
 export class RequestTabBodyPanelComponent {
   private readonly filePicker = inject(RequestFilePickerService);
 
   readonly body = input.required<CollectionRequestBody>();
   readonly method = input<string>('GET');
+  /** When false, body editors use a fixed height instead of filling the parent pane. */
+  readonly fillEditor = input(true);
   /** Request tabs use `request`; mock/interceptor response editors use `response`. */
   readonly bodyContext = input<'request' | 'response'>('request');
   readonly variableCatalog = input<readonly DynamicVariableCatalogItem[]>(DYNAMIC_VARIABLES);
@@ -365,8 +373,6 @@ export class RequestTabBodyPanelComponent {
   readonly bodyChange = output<CollectionRequestBody>();
   readonly environmentVariableClick = output<{ readonly key: string }>();
 
-  protected readonly graphqlQueryPlaceholder = BODY_EDITOR_PLACEHOLDERS.graphql ?? '';
-  protected readonly graphqlVariablesPlaceholder = GQL_VARS_PLACEHOLDER;
 
   protected readonly modeOptions = MODE_OPTIONS;
   protected readonly formTypeOptions: readonly TxDropdownOption[] = [
@@ -389,6 +395,12 @@ export class RequestTabBodyPanelComponent {
 
   protected readonly showVariablePlaceholderHint = computed(() => this.bodyContext() === 'request');
 
+  protected readonly noneBodyMessage = computed(() =>
+    this.bodyContext() === 'response'
+      ? 'No response body configured.'
+      : 'This request does not send a body.',
+  );
+
   protected readonly rawEditor = computed(() => {
     const mode = this.body().mode;
     if (mode === 'json' || mode === 'text' || mode === 'html' || mode === 'xml') {
@@ -398,11 +410,22 @@ export class RequestTabBodyPanelComponent {
   });
 
   protected rawBodyPlaceholder(): string {
+    if (this.bodyContext() === 'response') {
+      return '';
+    }
     const mode = this.body().mode;
     if (mode === 'json' || mode === 'text' || mode === 'html' || mode === 'xml') {
       return BODY_EDITOR_PLACEHOLDERS[mode] ?? '';
     }
     return '';
+  }
+
+  protected graphqlQueryPlaceholder(): string {
+    return this.bodyContext() === 'response' ? '' : (BODY_EDITOR_PLACEHOLDERS.graphql ?? '');
+  }
+
+  protected graphqlVariablesPlaceholder(): string {
+    return this.bodyContext() === 'response' ? '' : GQL_VARS_PLACEHOLDER;
   }
 
   protected rawContent(): string {
@@ -470,7 +493,10 @@ export class RequestTabBodyPanelComponent {
 
   protected graphqlVariables(): string {
     const b = this.body();
-    return b.mode === 'graphql' ? b.variables : '{\n}';
+    if (b.mode !== 'graphql') {
+      return this.bodyContext() === 'response' ? '' : '{\n}';
+    }
+    return b.variables;
   }
 
   protected graphqlOperationName(): string {
@@ -484,6 +510,7 @@ export class RequestTabBodyPanelComponent {
     if (current.mode === mode) {
       return;
     }
+    const isResponse = this.bodyContext() === 'response';
     switch (mode) {
       case 'none':
         this.bodyChange.emit({ mode: 'none' });
@@ -494,14 +521,25 @@ export class RequestTabBodyPanelComponent {
       case 'xml':
         this.bodyChange.emit({
           mode,
-          raw: 'raw' in current ? current.raw : mode === 'json' ? '{\n}' : '',
+          raw:
+            'raw' in current && current.mode === mode
+              ? current.raw
+              : isResponse
+                ? ''
+                : mode === 'json'
+                  ? '{\n}'
+                  : '',
         });
         break;
       case 'form-data':
         this.bodyChange.emit({
           mode: 'form-data',
           fields:
-            current.mode === 'form-data' ? current.fields : [createCollectionRequestFormField()],
+            current.mode === 'form-data'
+              ? current.fields
+              : isResponse
+                ? []
+                : [createCollectionRequestFormField()],
         });
         break;
       case 'x-www-form-urlencoded':
@@ -510,7 +548,9 @@ export class RequestTabBodyPanelComponent {
           fields:
             current.mode === 'x-www-form-urlencoded'
               ? current.fields
-              : [createHttpKeyValueRow()],
+              : isResponse
+                ? []
+                : [createHttpKeyValueRow()],
         });
         break;
       case 'binary':
@@ -520,8 +560,8 @@ export class RequestTabBodyPanelComponent {
       case 'graphql':
         this.bodyChange.emit({
           mode: 'graphql',
-          query: '',
-          variables: '{\n}',
+          query: current.mode === 'graphql' ? current.query : '',
+          variables: current.mode === 'graphql' ? current.variables : isResponse ? '' : '{\n}',
         });
         break;
     }

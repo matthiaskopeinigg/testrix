@@ -7,6 +7,7 @@ import mysql from 'mysql2/promise';
 import sqlMssql from 'mssql';
 
 import type { DatabaseConnection } from '../../../shared/config/database-settings.schema';
+import { tokenizeRedisQuery } from '../../../shared/database/tokenize-redis-query';
 import { logError, logInfo } from '../../errors/logger';
 
 export interface DatabaseQueryOptions {
@@ -404,7 +405,7 @@ export class DatabaseQueryService {
       });
       this.redisPool.set(poolId, client);
     }
-    const parts = query.trim().split(/\s+/);
+    const parts = tokenizeRedisQuery(query);
     const command = parts[0]?.toLowerCase();
     if (!command) {
       throw new Error('Redis command is required');

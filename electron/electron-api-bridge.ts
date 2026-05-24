@@ -8,6 +8,7 @@ import type {
   SessionFile,
   SettingsFile,
 } from '../shared/config';
+import type { DatabaseConnectionStatusMap } from '../shared/database/connection-status.schema';
 import type { IpcErrorPayload } from '../shared/errors';
 import type { UpdateChannel, UpdaterStatus } from '../shared/updater/updater-status.schema';
 import type { OutgoingHttpResponse } from '../shared/http/outgoing-request.schema';
@@ -66,6 +67,12 @@ export interface ElectronAPI {
   shell: {
     pickFile: (options?: {
       readonly filters?: readonly { readonly name: string; readonly extensions: readonly string[] }[];
+    }) => Promise<{ readonly filePath: string; readonly fileName: string } | null>;
+    saveFile: (options: {
+      readonly content: string;
+      readonly defaultPath?: string;
+      readonly filters?: readonly { readonly name: string; readonly extensions: readonly string[] }[];
+      readonly encoding?: 'utf8' | 'base64';
     }) => Promise<{ readonly filePath: string; readonly fileName: string } | null>;
   };
   config: {
@@ -130,7 +137,8 @@ export interface ElectronAPI {
       readonly query: string;
       readonly timeoutMs?: number;
     }) => Promise<unknown>;
-    testConnection: (connection: DatabaseConnection) => Promise<unknown>;
+    testConnection: (connection: DatabaseConnection) => Promise<{ readonly ok: true }>;
+    getConnectionStatuses: () => Promise<DatabaseConnectionStatusMap>;
   };
   cookies: {
     getAll: () => Promise<readonly StoredCookie[]>;

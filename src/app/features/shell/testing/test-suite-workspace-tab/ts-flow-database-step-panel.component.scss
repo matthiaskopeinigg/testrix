@@ -1,0 +1,23 @@
+.ts-flow-database-panel__query {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.ts-flow-database-panel__editor {
+  display: flex;
+  flex-direction: column;
+  min-height: 12rem;
+
+  ::ng-deep tx-code-editor,
+  ::ng-deep .tx-code-editor-host {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-height: 12rem;
+  }
+
+  ::ng-deep .tx-code-editor__field {
+    min-height: 10rem;
+  }
+}

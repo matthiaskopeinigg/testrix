@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { collectionRequestBodySchema } from '../config/collection-request-settings.schema';
 import { HTTP_METHOD_IDS } from '../config/http-settings.schema';
 
 const boundedText = (max: number) => z.string().max(max);
@@ -47,6 +48,8 @@ export const requestStepConfigSchema = z.object({
   bodyType: z
     .enum(['json', 'xml', 'text', 'graphql', 'form-data', 'urlencoded', 'binary', 'none'])
     .default('none'),
+  /** Collection-style body editor state (preferred over legacy body/bodyType). */
+  requestBody: collectionRequestBodySchema.optional(),
   binaryFilePath: z.string().optional(),
   binaryContentType: z.string().optional(),
   timeoutMs: z.union([z.number(), z.string()]).optional(),

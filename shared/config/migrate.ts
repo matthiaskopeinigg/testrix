@@ -538,6 +538,7 @@ export function migrateSession(data: unknown): SessionFile {
     typeof developmentRaw['tools'] === 'object' && developmentRaw['tools'] !== null
       ? (developmentRaw['tools'] as Record<string, unknown>)
       : {};
+  delete developmentToolsRaw['diagram'];
 
   const development = workspaceDevelopmentSchema.parse({
     tools: {

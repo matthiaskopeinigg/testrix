@@ -45,4 +45,14 @@ describe('highlightHtml', () => {
     expect(scss).toContain('token-attribute');
     expect(scss).toContain('$gap');
   });
+
+  it('highlights SQL and Redis query languages', () => {
+    const sql = highlightCodeEditorContent('SELECT * FROM users WHERE id = 1', 'sql');
+    expect(sql).toContain('token-keyword">SELECT</span>');
+    expect(sql).toContain('token-keyword">FROM</span>');
+
+    const redis = highlightCodeEditorContent('SET key "hello world"', 'redis');
+    expect(redis).toContain('token-keyword">SET</span>');
+    expect(redis).toContain('token-string');
+  });
 });

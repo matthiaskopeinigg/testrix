@@ -29,6 +29,9 @@ let restartTimer = null;
 /** Coalesce rapid rebuild signals only — restart runs as soon as the prior process exits. */
 const RESTART_DEBOUNCE_MS = 0;
 
+/** Win32 may keep cache file locks briefly after Electron exits. */
+const RESTART_EXIT_SETTLE_MS = process.platform === 'win32' ? 300 : 0;
+
 function startElectron() {
   child = spawn('npx', ['electron', '--enable-logging', '.', ...extraArgs], {
     cwd: repoRoot,
@@ -58,7 +61,13 @@ function scheduleRestart(reason) {
     // eslint-disable-next-line no-console
     console.log(`[electron] restarting after ${reason}`);
     child.removeAllListeners('exit');
-    child.once('exit', () => startElectron());
+    child.once('exit', () => {
+      if (RESTART_EXIT_SETTLE_MS > 0) {
+        setTimeout(startElectron, RESTART_EXIT_SETTLE_MS);
+      } else {
+        startElectron();
+      }
+    });
     child.kill();
   }, RESTART_DEBOUNCE_MS);
 }

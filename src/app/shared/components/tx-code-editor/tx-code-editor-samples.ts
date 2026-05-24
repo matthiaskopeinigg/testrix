@@ -52,4 +52,11 @@ export function greet(user: User): string {
     color: var(--tx-primary);
   }
 }`,
+  sql: `SELECT id, email
+FROM users
+WHERE active = true
+ORDER BY created_at DESC
+LIMIT 10;`,
+  redis: `SET testrix:demo:greeting "Hello from Testrix"
+GET testrix:demo:greeting`,
 };

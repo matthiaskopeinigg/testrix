@@ -28,6 +28,8 @@
 
   <h2 class="request-panel__title">Headers</h2>
   <tx-key-value-list
+    [compact]="true"
+    [showDescription]="false"
     keyLabel="Header"
     keyInput="http-headers"
     valueLabel="Value"
@@ -40,7 +42,10 @@
 
   <h2 class="request-panel__title">Query params</h2>
   <tx-key-value-list
+    [compact]="true"
+    [showDescription]="false"
     keyLabel="Param"
+    keyInput="query-params"
     valueLabel="Value"
     addLabel="Add param"
     valueInput="variables"

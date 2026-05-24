@@ -401,3 +401,49 @@
 .request-panel__tags-input {
   width: 100%;
 }
+
+// Embedded editors (flow steps) use a fixed height so content clears the run log bar.
+:host.request-tab-body-panel-host--compact {
+  flex: 0 1 auto;
+  height: auto;
+}
+
+:host.request-tab-body-panel-host--compact .request-panel {
+  flex: 0 1 auto;
+}
+
+:host.request-tab-body-panel-host--compact .request-panel__editor,
+:host.request-tab-body-panel-host--compact .request-panel__graphql {
+  flex: 0 1 auto;
+  min-height: 12rem;
+}
+
+:host.request-tab-body-panel-host--compact ::ng-deep .request-panel__editor > tx-code-editor,
+:host.request-tab-body-panel-host--compact ::ng-deep .request-panel__editor tx-code-editor,
+:host.request-tab-body-panel-host--compact ::ng-deep .request-panel__graphql-query tx-code-editor {
+  flex: 0 1 auto;
+  height: auto;
+  min-height: 12rem;
+  max-height: 20rem;
+}
+
+:host.request-tab-body-panel-host--compact ::ng-deep .request-panel__editor .tx-code-editor-host,
+:host.request-tab-body-panel-host--compact ::ng-deep .request-panel__graphql-query .tx-code-editor-host {
+  flex: 0 1 auto;
+  height: auto;
+  min-height: 12rem;
+  max-height: 20rem;
+}
+
+:host.request-tab-body-panel-host--compact ::ng-deep .request-panel__editor .tx-code-editor__field,
+:host.request-tab-body-panel-host--compact ::ng-deep .request-panel__graphql-query .tx-code-editor__field {
+  flex: 0 1 auto;
+  min-height: 10rem;
+  max-height: 18rem;
+}
+
+:host.request-tab-body-panel-host--compact ::ng-deep .request-panel__editor .tx-code-editor__input,
+:host.request-tab-body-panel-host--compact ::ng-deep .request-panel__editor .tx-code-editor__mirror,
+:host.request-tab-body-panel-host--compact ::ng-deep .request-panel__editor .tx-code-editor__gutter {
+  padding-bottom: 1rem;
+}

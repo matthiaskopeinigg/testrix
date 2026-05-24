@@ -2,6 +2,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  effect,
   inject,
   input,
   output,
@@ -15,13 +16,20 @@ import {
   type DatabaseConnection,
   type DatabaseType,
 } from '@shared/config';
+import type {
+  DatabaseConnectionStatus,
+  DatabaseConnectionStatusMap,
+} from '@shared/database/connection-status.schema';
+import { unwrapIpcInvokeError } from '@shared/errors';
 
 import { ElectronService } from '@app/core/electron/electron.service';
+import { TxBannerComponent } from '../../tx-banner/tx-banner.component';
 import { TxButtonComponent } from '../../tx-button/tx-button.component';
 import { TxDropdownComponent } from '../../tx-dropdown/tx-dropdown.component';
 import { TxFormFieldComponent } from '../../tx-form-field/tx-form-field.component';
 import { TxIconComponent } from '../../tx-icon/tx-icon.component';
 import { TxInputComponent } from '../../tx-input/tx-input.component';
+import { TxTagComponent } from '../../tx-tag/tx-tag.component';
 import { TxToggleComponent } from '../../tx-toggle/tx-toggle.component';
 
 const DATABASE_TYPE_OPTIONS: readonly { value: DatabaseType; label: string }[] = [
@@ -32,16 +40,20 @@ const DATABASE_TYPE_OPTIONS: readonly { value: DatabaseType; label: string }[] =
   { value: 'redis', label: 'Redis' },
 ];
 
+type TestOutcome = { readonly kind: 'success' | 'error'; readonly message: string };
+
 @Component({
   selector: 'tx-settings-databases-section',
   standalone: true,
   imports: [
     FormsModule,
+    TxBannerComponent,
     TxButtonComponent,
     TxDropdownComponent,
     TxFormFieldComponent,
     TxIconComponent,
     TxInputComponent,
+    TxTagComponent,
     TxToggleComponent,
   ],
   templateUrl: './tx-settings-databases-section.component.html',
@@ -63,9 +75,19 @@ export class TxSettingsDatabasesSectionComponent {
 
   protected readonly expandedIndex = signal<number | null>(null);
   protected readonly testingIndex = signal<number | null>(null);
-  protected readonly testMessage = signal<string | null>(null);
+  protected readonly testOutcomes = signal<Readonly<Record<string, TestOutcome>>>({});
+  protected readonly statusById = signal<DatabaseConnectionStatusMap>({});
 
   protected readonly hasConnections = computed(() => this.connections().length > 0);
+
+  constructor() {
+    effect(() => {
+      const count = this.connections().length;
+      if (count > 0) {
+        void this.refreshStatusesFromMain();
+      }
+    });
+  }
 
   protected typeLabel(type: DatabaseType | undefined): string {
     return DATABASE_TYPE_OPTIONS.find((entry) => entry.value === type)?.label ?? type ?? 'Unknown';
@@ -80,6 +102,50 @@ export class TxSettingsDatabasesSectionComponent {
     return `${host}${port}`;
   }
 
+  protected statusFor(conn: DatabaseConnection): DatabaseConnectionStatus | null {
+    return this.statusById()[conn.id] ?? null;
+  }
+
+  protected statusTagVariant(conn: DatabaseConnection): 'default' | 'success' | 'warning' | 'error' | 'info' {
+    const status = this.statusFor(conn);
+    switch (status?.state) {
+      case 'connected':
+        return 'success';
+      case 'error':
+        return 'error';
+      case 'checking':
+        return 'info';
+      default:
+        return 'default';
+    }
+  }
+
+  protected statusLabel(conn: DatabaseConnection): string {
+    const status = this.statusFor(conn);
+    switch (status?.state) {
+      case 'checking':
+        return 'Checking…';
+      case 'connected':
+        return 'Connected';
+      case 'error':
+        return 'Failed';
+      default:
+        return 'Not checked';
+    }
+  }
+
+  protected statusTitle(conn: DatabaseConnection): string | null {
+    const status = this.statusFor(conn);
+    if (status?.state === 'error' && status.message) {
+      return status.message;
+    }
+    return null;
+  }
+
+  protected testOutcomeFor(conn: DatabaseConnection): TestOutcome | null {
+    return this.testOutcomes()[conn.id] ?? null;
+  }
+
   protected handleAddConnection(): void {
     const next = [...this.connections(), createDefaultDatabaseConnection()];
     this.connectionsChange.emit(next);
@@ -87,8 +153,21 @@ export class TxSettingsDatabasesSectionComponent {
   }
 
   protected handleRemoveConnection(index: number): void {
+    const removed = this.connections()[index];
     const next = this.connections().filter((_, i) => i !== index);
     this.connectionsChange.emit(next);
+    if (removed) {
+      this.testOutcomes.update((map) => {
+        const copy = { ...map };
+        delete copy[removed.id];
+        return copy;
+      });
+      this.statusById.update((map) => {
+        const copy = { ...map };
+        delete copy[removed.id];
+        return copy;
+      });
+    }
     const expanded = this.expandedIndex();
     if (expanded === index) {
       this.expandedIndex.set(null);
@@ -104,6 +183,15 @@ export class TxSettingsDatabasesSectionComponent {
   protected handlePatchConnection(index: number, patch: Partial<DatabaseConnection>): void {
     const next = this.connections().map((conn, i) => (i === index ? { ...conn, ...patch } : conn));
     this.connectionsChange.emit(next);
+    if ('host' in patch || 'port' in patch || 'type' in patch || 'filePath' in patch) {
+      const conn = next[index];
+      if (conn) {
+        this.statusById.update((map) => ({
+          ...map,
+          [conn.id]: { state: 'unknown' },
+        }));
+      }
+    }
   }
 
   protected handleTypeChange(index: number, type: DatabaseType): void {
@@ -135,17 +223,44 @@ export class TxSettingsDatabasesSectionComponent {
     const conn = this.connections()[index];
     const bridge = this.electron.bridge();
     if (!conn || !bridge?.database) {
-      this.testMessage.set('Database testing is only available in the desktop app.');
+      this.testOutcomes.update((map) => ({
+        ...map,
+        [conn?.id ?? '']: {
+          kind: 'error',
+          message: 'Database testing is only available in the desktop app.',
+        },
+      }));
       return;
     }
     this.testingIndex.set(index);
-    this.testMessage.set(null);
+    this.testOutcomes.update((map) => {
+      const copy = { ...map };
+      delete copy[conn.id];
+      return copy;
+    });
+    this.statusById.update((map) => ({
+      ...map,
+      [conn.id]: { state: 'checking' },
+    }));
     try {
       await bridge.database.testConnection(conn);
-      this.testMessage.set('Connection successful.');
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Connection failed.';
-      this.testMessage.set(message);
+      this.testOutcomes.update((map) => ({
+        ...map,
+        [conn.id]: { kind: 'success', message: 'Connection successful.' },
+      }));
+      await this.refreshStatusesFromMain();
+    } catch (err: unknown) {
+      const ipc = unwrapIpcInvokeError(err);
+      const message =
+        ipc?.userMessage ?? (err instanceof Error ? err.message : 'Connection failed.');
+      this.testOutcomes.update((map) => ({
+        ...map,
+        [conn.id]: { kind: 'error', message },
+      }));
+      this.statusById.update((map) => ({
+        ...map,
+        [conn.id]: { state: 'error', message, checkedAt: new Date().toISOString() },
+      }));
     } finally {
       this.testingIndex.set(null);
     }
@@ -157,5 +272,18 @@ export class TxSettingsDatabasesSectionComponent {
 
   protected isTesting(index: number): boolean {
     return this.testingIndex() === index;
+  }
+
+  private async refreshStatusesFromMain(): Promise<void> {
+    const bridge = this.electron.bridge()?.database;
+    if (!bridge?.getConnectionStatuses) {
+      return;
+    }
+    try {
+      const statuses = await bridge.getConnectionStatuses();
+      this.statusById.set(statuses);
+    } catch {
+      // ignore — statuses are optional UI hints
+    }
   }
 }

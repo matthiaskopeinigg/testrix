@@ -2,11 +2,14 @@ import type { IpcMainInvokeEvent } from 'electron';
 import { z } from 'zod';
 
 import { databaseConnectionSchema } from '../../../shared/config/database-settings.schema';
+import { databaseConnectionStatusMapSchema } from '../../../shared/database/connection-status.schema';
+import { formatDatabaseConnectionError } from '../../../shared/database/format-database-connection-error';
 import { TestrixError, ErrorCodes } from '../../../shared/errors';
 import type { IpcMainBinder } from '../register-ipc';
 import { wrapInvokeHandler } from '../wrap-ipc-handler';
 import { DbChannels } from '../channels/db.channels';
 import { databaseQueryService } from '../../services/database/database-query.service';
+import { databaseConnectionStatusService } from '../../services/database/database-connection-status.service';
 
 const dbQueryPayloadSchema = z.object({
   connection: databaseConnectionSchema,
@@ -26,7 +29,15 @@ export function registerDbHandlers(ipc: IpcMainBinder): void {
         );
       }
       const { connection, query, timeoutMs } = parsed.data;
-      return await databaseQueryService.query(connection, query, { stepTimeoutMs: timeoutMs });
+      try {
+        return await databaseQueryService.query(connection, query, { stepTimeoutMs: timeoutMs });
+      } catch (error: unknown) {
+        throw new TestrixError(
+          ErrorCodes.DATABASE_CONNECTION_FAILED,
+          formatDatabaseConnectionError(error),
+          { cause: error },
+        );
+      }
     }),
   );
 
@@ -40,7 +51,15 @@ export function registerDbHandlers(ipc: IpcMainBinder): void {
           'Invalid database connection payload',
         );
       }
-      return await databaseQueryService.testConnection(parsed.data);
+      await databaseConnectionStatusService.testAndRecord(parsed.data);
+      return { ok: true as const };
+    }),
+  );
+
+  ipc.handle(
+    DbChannels.getConnectionStatuses,
+    wrapInvokeHandler(DbChannels.getConnectionStatuses, async () => {
+      return databaseConnectionStatusMapSchema.parse(databaseConnectionStatusService.getStatusMap());
     }),
   );
 }

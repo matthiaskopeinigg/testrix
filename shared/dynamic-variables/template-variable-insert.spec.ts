@@ -40,4 +40,13 @@ describe('template-variable-insert', () => {
     expect(next).toContain('"{{env1}}"');
     expect(next).not.toContain('{{{{');
   });
+
+  it('keeps opening braces when completing after typing {{ only', () => {
+    const value = '{\n  "whatever": {{';
+    const open = value.indexOf('{{');
+    const out = normalizeTemplateVariableInsert(value, open, open + 2, '{{hello}}', { json: true });
+    expect(out.insert).toBe('"{{hello}}"');
+    const next = value.slice(0, out.replaceStart) + out.insert + value.slice(out.replaceEnd);
+    expect(next).toBe('{\n  "whatever": "{{hello}}"');
+  });
 });

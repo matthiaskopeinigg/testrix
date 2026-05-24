@@ -2,7 +2,7 @@
   flex-shrink: 0;
   padding-bottom: 0.65rem;
   margin-bottom: 0.5rem;
-  border-bottom: 1px solid color-mix(in srgb, var(--tx-border-0) 55%, transparent);
+  border-bottom: none;
 }
 
 @mixin tx-settings-pane-block-card {
@@ -12,12 +12,10 @@
   gap: 1rem;
   padding: 1.25rem 1.45rem 1.3rem;
   margin-bottom: 0.7rem;
-  border: 1px solid color-mix(in srgb, var(--tx-border-0) 60%, transparent);
+  border: none;
   border-radius: var(--tx-radius-lg, 14px);
-  background: color-mix(in srgb, var(--tx-surface-2) 28%, var(--tx-surface-1));
-  box-shadow:
-    0 1px 0 color-mix(in srgb, var(--tx-text-0) 4%, transparent),
-    0 14px 36px -28px color-mix(in srgb, var(--tx-shadow-color) 40%, transparent);
+  background: color-mix(in srgb, var(--tx-surface-2) 16%, transparent);
+  box-shadow: none;
 
   > .tx-settings__section-heading {
     margin-bottom: 0;

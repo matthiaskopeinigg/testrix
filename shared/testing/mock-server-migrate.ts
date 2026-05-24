@@ -3,6 +3,7 @@ import {
   createDefaultMockRuleMatcher,
   mockServerFileSchema,
   mockServerFileV1Schema,
+  parseMockServerOptions,
   type MockServerEndpoint,
   type MockServerFile,
   type MockServerTreeItem,
@@ -12,14 +13,26 @@ import {
  * Migrates a mock server workspace file from v1 flat endpoints to v2 tree.
  */
 export function migrateMockServerFile(raw: unknown): MockServerFile {
-  const v2 = mockServerFileSchema.safeParse(raw);
-  if (v2.success) {
-    return v2.data;
+  if (typeof raw === 'object' && raw !== null) {
+    const record = raw as Record<string, unknown>;
+    if (record['schemaVersion'] === 2) {
+      const parsed = mockServerFileSchema.safeParse({
+        ...record,
+        options: parseMockServerOptions(record['options']),
+      });
+      if (parsed.success) {
+        return parsed.data;
+      }
+    }
   }
 
   const v1 = mockServerFileV1Schema.safeParse(raw);
   if (!v1.success) {
-    return mockServerFileSchema.parse({ schemaVersion: 2, items: [] });
+    return mockServerFileSchema.parse({
+      schemaVersion: 2,
+      options: parseMockServerOptions({}),
+      items: [],
+    });
   }
 
   const items: MockServerTreeItem[] = v1.data.endpoints.map((legacy) => {
@@ -58,7 +71,7 @@ export function migrateMockServerFile(raw: unknown): MockServerFile {
 
   return mockServerFileSchema.parse({
     schemaVersion: 2,
-    options: {
+    options: parseMockServerOptions({
       port,
       host: v1.data.options.host ?? '127.0.0.1',
       delayMs: 0,
@@ -66,7 +79,7 @@ export function migrateMockServerFile(raw: unknown): MockServerFile {
       captureToHistory: false,
       captureMismatchesToHistory: false,
       autoStartOnLaunch: false,
-    },
+    }),
     items,
   });
 }

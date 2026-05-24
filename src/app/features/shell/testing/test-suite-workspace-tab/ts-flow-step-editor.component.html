@@ -87,6 +87,7 @@
         @case ('DATABASE') {
           <app-ts-flow-database-step-panel
             [config]="s.config"
+            [variableCatalog]="variableCatalog()"
             (configChange)="patchConfig($event)"
           />
         }

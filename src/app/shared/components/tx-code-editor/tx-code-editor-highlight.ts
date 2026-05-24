@@ -192,6 +192,41 @@ export function highlightScss(html: string): string {
   return restoreTokens(s, varSlots, 'txscss');
 }
 
+/** SQL keyword and literal highlighting on escaped mirror HTML. */
+export function highlightSql(html: string): string {
+  const slots: string[] = [];
+  const push = (wrapped: string): string => stashToken(slots, wrapped, 'txsql');
+
+  let s = html;
+  s = s.replace(/--[^\n]*/g, (m) => push(`<span class="token-comment">${m}</span>`));
+  s = s.replace(/\/\*[\s\S]*?\*\//g, (m) => push(`<span class="token-comment">${m}</span>`));
+  s = s.replace(/"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'/g, (m) => push(`<span class="token-string">${m}</span>`));
+  s = s.replace(/\b(\d+(?:\.\d+)?)\b/g, (m) => push(`<span class="token-number">${m}</span>`));
+
+  const keywords =
+    'SELECT|FROM|WHERE|INSERT|INTO|VALUES|UPDATE|SET|DELETE|JOIN|LEFT|RIGHT|INNER|OUTER|ON|AND|OR|NOT|NULL|IS|IN|AS|ORDER|BY|GROUP|HAVING|LIMIT|OFFSET|DISTINCT|COUNT|CREATE|TABLE|DROP|ALTER|INDEX|PRIMARY|KEY|UNION|ALL|EXISTS|BETWEEN|LIKE|CASE|WHEN|THEN|ELSE|END|PRAGMA|BEGIN|COMMIT|ROLLBACK';
+  s = s.replace(new RegExp(`\\b(${keywords})\\b`, 'gi'), (m) => `<span class="token-keyword">${m}</span>`);
+
+  return restoreTokens(s, slots, 'txsql');
+}
+
+/** Redis command highlighting on escaped mirror HTML. */
+export function highlightRedis(html: string): string {
+  const slots: string[] = [];
+  const push = (wrapped: string): string => stashToken(slots, wrapped, 'txredis');
+
+  let s = html;
+  s = s.replace(/#.*$/gm, (m) => push(`<span class="token-comment">${m}</span>`));
+  s = s.replace(/"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'/g, (m) => push(`<span class="token-string">${m}</span>`));
+  s = s.replace(/\b(\d+(?:\.\d+)?)\b/g, (m) => push(`<span class="token-number">${m}</span>`));
+
+  const commands =
+    'GET|SET|DEL|EXISTS|EXPIRE|TTL|KEYS|SCAN|HGET|HSET|HDEL|HGETALL|HMGET|HMSET|LPUSH|RPUSH|LPOP|RPOP|LRANGE|LLEN|SADD|SMEMBERS|SREM|ZADD|ZRANGE|ZREM|INCR|DECR|APPEND|MGET|MSET|PING|INFO|FLUSHDB|FLUSHALL|AUTH|SELECT|SUBSCRIBE|PUBLISH';
+  s = s.replace(new RegExp(`\\b(${commands})\\b`, 'gi'), (m) => `<span class="token-keyword">${m}</span>`);
+
+  return restoreTokens(s, slots, 'txredis');
+}
+
 function stashTemplateVariableSlots(
   text: string,
   catalog: readonly DynamicVariableCatalogItem[],
@@ -336,6 +371,12 @@ export function highlightCodeEditorContent(
       break;
     case 'scss':
       html = highlightScss(html);
+      break;
+    case 'sql':
+      html = highlightSql(html);
+      break;
+    case 'redis':
+      html = highlightRedis(html);
       break;
     default:
       break;

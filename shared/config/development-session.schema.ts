@@ -15,7 +15,7 @@ export const uuidGeneratorToolStateSchema = z.object({
 
 export const codeEditorToolStateSchema = z.object({
   language: z
-    .enum(['json', 'xml', 'graphql', 'html', 'plaintext', 'js', 'ts', 'css', 'scss'])
+    .enum(['json', 'xml', 'graphql', 'html', 'plaintext', 'js', 'ts', 'css', 'scss', 'sql', 'redis'])
     .default('json'),
   content: boundedText(512_000).default(''),
 });

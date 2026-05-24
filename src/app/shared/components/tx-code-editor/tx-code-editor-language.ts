@@ -8,7 +8,9 @@ export type TxCodeEditorLanguage =
   | 'js'
   | 'ts'
   | 'css'
-  | 'scss';
+  | 'scss'
+  | 'sql'
+  | 'redis';
 
 export const TX_CODE_EDITOR_LANGUAGES: readonly TxCodeEditorLanguage[] = [
   'json',
@@ -20,6 +22,8 @@ export const TX_CODE_EDITOR_LANGUAGES: readonly TxCodeEditorLanguage[] = [
   'ts',
   'css',
   'scss',
+  'sql',
+  'redis',
 ];
 
 const LANGUAGE_LABELS: Readonly<Record<TxCodeEditorLanguage, string>> = {
@@ -32,6 +36,8 @@ const LANGUAGE_LABELS: Readonly<Record<TxCodeEditorLanguage, string>> = {
   ts: 'TS',
   css: 'CSS',
   scss: 'SCSS',
+  sql: 'SQL',
+  redis: 'Redis',
 };
 
 /** Toolbar badge text for a language. */

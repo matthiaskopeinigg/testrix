@@ -27,6 +27,8 @@ export const databaseConnectionSchema = z.object({
   connectTimeoutMs: z.number().int().optional(),
   commandTimeoutMs: z.number().int().optional(),
   busyTimeoutMs: z.number().int().optional(),
+  /** When true, Testrix probes this connection on app startup. */
+  connectOnBoot: z.boolean().default(false),
 });
 
 export type DatabaseConnection = z.infer<typeof databaseConnectionSchema>;

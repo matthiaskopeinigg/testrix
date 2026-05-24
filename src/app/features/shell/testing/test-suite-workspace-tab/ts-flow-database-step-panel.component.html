@@ -1,4 +1,4 @@
-<div class="request-panel ts-flow-step-panel">
+<div class="request-panel ts-flow-step-panel ts-flow-database-panel">
   <h2 class="request-panel__title">Database</h2>
 
   @if (!hasConnections()) {
@@ -17,15 +17,25 @@
     />
   </tx-form-field>
 
-  <tx-form-field label="Query" controlId="ts-db-query">
-    <tx-textarea
-      controlId="ts-db-query"
-      [ngModel]="cfg().query"
-      (ngModelChange)="patch({ query: $event })"
-      [rows]="8"
-      [placeholder]="queryPlaceholder"
-    />
-  </tx-form-field>
+  <div class="ts-flow-database-panel__query">
+    <tx-form-field label="Query" controlId="ts-db-query">
+      <div class="ts-flow-database-panel__editor">
+        <tx-code-editor
+          [language]="queryEditorLanguage()"
+          [languageBadgeLabel]="queryEditorLanguageLabel()"
+          title="Query"
+          [hideToolbarActions]="true"
+          [framed]="true"
+          [autocomplete]="true"
+          [extraCompletionItems]="queryEditorCompletions()"
+          [variableCatalog]="variableCatalog()"
+          [placeholder]="queryEditorPlaceholder()"
+          [ngModel]="cfg().query"
+          (ngModelChange)="patch({ query: $event })"
+        />
+      </div>
+    </tx-form-field>
+  </div>
 
   <tx-form-field label="Cache as variable" controlId="ts-db-cache">
     <tx-input
