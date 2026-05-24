@@ -1,0 +1,717 @@
+/*
+ * Uninstaller window styles. Intentionally mirrors `installer-shell/renderer/styles.css`
+ * so install and uninstall feel like the same family. Where the installer uses
+ * `.btn-primary` for its CTA, the uninstaller adds `.btn-danger` for the
+ * destructive action and a small `.info-row` / `.option-row` block to render
+ * the read-only install info and the "remove user data" toggle.
+ */
+
+:root {
+  color-scheme: dark;
+  --bg: #18181b;
+  --bg-elevated: #1e1e22;
+  --bg-soft: #232328;
+  --border: rgba(255, 255, 255, 0.07);
+  --border-strong: rgba(255, 255, 255, 0.12);
+  --text: #f3f3f3;
+  --text-muted: #cccccc;
+  --text-dim: #8d8d92;
+  --accent: #ff9d3b;
+  --accent-soft: rgba(255, 157, 59, 0.16);
+  --accent-hover: #ffb05c;
+  --accent-pressed: #e8892a;
+  --danger: #f14c4c;
+  --danger-soft: rgba(241, 76, 76, 0.14);
+  --danger-hover: #f76a6a;
+  --danger-pressed: #d23434;
+  --radius-window: 14px;
+  --radius-card: 10px;
+  --radius-sm: 8px;
+  --font: 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  --shadow-soft: 0 10px 32px rgba(0, 0, 0, 0.45);
+  --transition: 180ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+  background: transparent;
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 14px;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+  user-select: none;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+}
+
+.hidden {
+  display: none !important;
+}
+
+.installer {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background:
+    radial-gradient(120% 80% at 50% -10%, rgba(255, 157, 59, 0.08) 0%, transparent 55%),
+    linear-gradient(180deg, #1e1e22 0%, #161618 100%);
+  border-radius: var(--radius-window);
+  border: 1px solid var(--border-strong);
+  box-shadow: var(--shadow-soft);
+  overflow: hidden;
+  animation: window-fade-in 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes window-fade-in {
+  from { opacity: 0; transform: translateY(2px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.titlebar {
+  -webkit-app-region: drag;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  height: 36px;
+  padding-left: 14px;
+  padding-right: 4px;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.titlebar-title {
+  flex: 1;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+
+.titlebar-controls {
+  -webkit-app-region: no-drag;
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+
+.titlebar-btn {
+  width: 38px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: transparent;
+  color: var(--text-dim);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background var(--transition), color var(--transition);
+  padding: 0;
+}
+
+.titlebar-btn:hover {
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--text);
+}
+
+.titlebar-btn--close:hover {
+  background: #e81123;
+  color: #ffffff;
+}
+
+.titlebar-btn:focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.installer-body {
+  flex: 1;
+  padding: 8px 36px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  overflow: hidden;
+}
+
+.hero {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding-top: 4px;
+}
+
+.hero-logo-frame {
+  position: relative;
+  width: 86px;
+  height: 86px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hero-logo-frame::before {
+  content: '';
+  position: absolute;
+  inset: -22px;
+  background: radial-gradient(closest-side, var(--accent-soft) 0%, transparent 70%);
+  filter: blur(4px);
+  pointer-events: none;
+  animation: logo-glow 4.6s ease-in-out infinite;
+}
+
+.hero-logo {
+  position: relative;
+  width: 86px;
+  height: 86px;
+  object-fit: contain;
+  filter: drop-shadow(0 8px 22px rgba(255, 157, 59, 0.35))
+    drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+}
+
+@keyframes logo-glow {
+  0%, 100% { opacity: 0.85; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.04); }
+}
+
+.hero-title {
+  margin: 6px 0 0;
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  color: var(--text);
+}
+
+.hero-subtitle {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--text-dim);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hero-version {
+  color: var(--text-muted);
+  font-feature-settings: 'tnum' 1;
+}
+
+.hero-dot {
+  opacity: 0.5;
+}
+
+.install-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.setup-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.section-label {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-dim);
+}
+
+/* read-only summary rows for install info */
+
+.info-row {
+  display: grid;
+  grid-template-columns: 90px 1fr;
+  align-items: baseline;
+  gap: 12px;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-soft);
+  border: 1px solid var(--border);
+  font-size: 12.5px;
+}
+
+.info-row-key {
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 10.5px;
+  font-weight: 600;
+}
+
+.info-row-value {
+  color: var(--text-muted);
+}
+
+.info-row-value--path {
+  font-family: 'Cascadia Code', 'Consolas', 'SF Mono', Menlo, monospace;
+  font-size: 11.5px;
+  word-break: break-all;
+}
+
+/* options row (checkbox + body) */
+
+.option-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: var(--radius-card);
+  background: var(--bg-soft);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: background var(--transition), border-color var(--transition);
+}
+
+.option-row:hover {
+  border-color: var(--border-strong);
+}
+
+.option-row input {
+  margin-top: 3px;
+  accent-color: var(--danger);
+}
+
+.option-row:has(input:checked) {
+  background: var(--danger-soft);
+  border-color: var(--danger);
+}
+
+.option-row-body {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.option-row-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.option-row-sub {
+  font-size: 11.5px;
+  color: var(--text-dim);
+  line-height: 1.35;
+  word-break: break-all;
+}
+
+/* alerts */
+
+.alert {
+  border-radius: var(--radius-card);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.alert-error {
+  border: 1px solid rgba(241, 76, 76, 0.35);
+  background: var(--danger-soft);
+}
+
+.alert-title {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: #ffb4b4;
+  letter-spacing: 0.02em;
+}
+
+.message {
+  margin: 0;
+  font-size: 12.5px;
+}
+
+.message.error {
+  color: #ffb4b4;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  max-width: 100%;
+}
+
+/* progress */
+
+.progress-wrap {
+  display: none;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.progress-wrap.active {
+  display: flex;
+}
+
+.progress-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.progress-label {
+  color: var(--text-muted);
+}
+
+.progress-percent {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  font-feature-settings: 'tnum' 1;
+  color: var(--text-muted);
+}
+
+.progress-track {
+  position: relative;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+}
+
+.progress-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 0%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--danger) 0%, #ff7a1a 100%);
+  transition: width 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.progress-track.indeterminate .progress-fill {
+  width: 40%;
+  background: linear-gradient(90deg, transparent 0%, var(--danger) 50%, transparent 100%);
+  animation: progress-sweep 1.4s ease-in-out infinite;
+  transition: none;
+}
+
+@keyframes progress-sweep {
+  0% { transform: translateX(-110%); }
+  100% { transform: translateX(310%); }
+}
+
+/* done state */
+
+.panel-done {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 28px 16px 12px;
+  text-align: center;
+}
+
+.panel-done-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+
+.done-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.done-subtitle {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--text-dim);
+  max-width: 380px;
+  line-height: 1.45;
+}
+
+/* footer */
+
+.installer-footer {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 24px 18px;
+  border-top: 1px solid var(--border);
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.installer-info-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid var(--border-strong);
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: color var(--transition), border-color var(--transition);
+}
+
+.installer-info-btn:hover {
+  color: var(--text);
+  border-color: var(--text-dim);
+}
+
+.installer-info-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent);
+}
+
+.installer-footer-spacer {
+  flex: 1;
+}
+
+.btn {
+  border-radius: var(--radius-sm);
+  padding: 8px 18px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  border: 1px solid transparent;
+  min-width: 92px;
+  transition: background var(--transition), border-color var(--transition), color var(--transition);
+}
+
+.btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent);
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: #1a1a1a;
+  border-color: var(--accent);
+}
+
+.btn-primary:hover {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+}
+
+.btn-primary:active {
+  background: var(--accent-pressed);
+  border-color: var(--accent-pressed);
+}
+
+.btn-secondary {
+  background: transparent;
+  color: var(--text-muted);
+  border-color: var(--border-strong);
+}
+
+.btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+}
+
+.btn-danger {
+  background: var(--danger);
+  color: #1a1a1a;
+  border-color: var(--danger);
+}
+
+.btn-danger:hover {
+  background: var(--danger-hover);
+  border-color: var(--danger-hover);
+}
+
+.btn-danger:active {
+  background: var(--danger-pressed);
+  border-color: var(--danger-pressed);
+}
+
+.btn-danger:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--danger);
+}
+
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* help modal */
+
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.modal.hidden {
+  display: none !important;
+}
+
+.modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(3px);
+  animation: backdrop-fade 160ms ease-out;
+}
+
+.modal-card {
+  position: relative;
+  width: 100%;
+  max-width: 460px;
+  max-height: calc(100% - 32px);
+  background: linear-gradient(180deg, #232327 0%, #1a1a1d 100%);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-card);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.6);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: modal-rise 200ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes backdrop-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes modal-rise {
+  from { opacity: 0; transform: translateY(6px) scale(0.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: 0.01em;
+}
+
+.modal-close {
+  width: 28px;
+  height: 28px;
+  border: 0;
+  background: transparent;
+  color: var(--text-dim);
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background var(--transition), color var(--transition);
+}
+
+.modal-close:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
+}
+
+.modal-body {
+  padding: 16px 18px 18px;
+  font-size: 12.5px;
+  color: var(--text-muted);
+  line-height: 1.55;
+  overflow-y: auto;
+}
+
+.modal-body p {
+  margin: 0 0 10px;
+}
+
+.modal-body p:last-child {
+  margin-bottom: 0;
+}
+
+.modal-body strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.modal-body em {
+  font-style: normal;
+  color: var(--text);
+}
+
+.modal-section-title {
+  margin: 14px 0 6px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-dim);
+}
+
+.modal-list {
+  margin: 0 0 10px;
+  padding-left: 18px;
+}
+
+.modal-list li {
+  margin-bottom: 6px;
+}
+
+.modal-list--platforms li {
+  font-size: 12px;
+}
+
+.modal-list--platforms code {
+  font-family: var(--font);
+  background: rgba(255, 255, 255, 0.06);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 11.5px;
+}
+
+.ext-link {
+  color: var(--accent);
+  text-decoration: none;
+  border-bottom: 1px dotted color-mix(in srgb, var(--accent), transparent 50%);
+  transition: color var(--transition), border-color var(--transition);
+}
+
+.ext-link:hover {
+  color: var(--accent-hover);
+  border-bottom-color: var(--accent-hover);
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding: 12px 16px 14px;
+  border-top: 1px solid var(--border);
+  background: rgba(0, 0, 0, 0.18);
+}

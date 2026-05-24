@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; script-src 'self'" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="dark" />
+    <title>Testrix Uninstall</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="installer">
+      <header class="titlebar">
+        <span class="titlebar-title">Testrix Uninstall</span>
+        <div class="titlebar-controls">
+          <button type="button" class="titlebar-btn" id="btn-titlebar-min" aria-label="Minimize" title="Minimize">
+            <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path d="M1 5h8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" /></svg>
+          </button>
+          <button type="button" class="titlebar-btn titlebar-btn--close" id="btn-titlebar-close" aria-label="Close" title="Close">
+            <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path d="M1 1l8 8M9 1l-8 8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" /></svg>
+          </button>
+        </div>
+      </header>
+
+      <main class="installer-body">
+        <section class="hero" aria-labelledby="hero-title">
+          <div class="hero-logo-frame" aria-hidden="true">
+            <img class="hero-logo" src="./assets/logo.png" width="96" height="96" alt="" />
+          </div>
+          <h1 id="hero-title" class="hero-title">Uninstall Testrix</h1>
+          <p class="hero-subtitle">
+            <span id="meta-version" class="hero-version">—</span>
+            <span class="hero-dot" aria-hidden="true">·</span>
+            <span>Matthias Kopeinigg</span>
+          </p>
+        </section>
+
+        <div id="panel-uninstall" class="install-stack">
+          <div id="missing-warning" class="alert alert-error hidden" role="alert">
+            <p class="alert-title">Installation not found</p>
+            <p id="missing-msg" class="message error"></p>
+          </div>
+
+          <section class="setup-section" aria-labelledby="scope-section-label">
+            <p id="scope-section-label" class="section-label">Installation</p>
+            <div class="info-row">
+              <span class="info-row-key">Scope</span>
+              <span class="info-row-value" id="info-scope">—</span>
+            </div>
+            <div class="info-row">
+              <span class="info-row-key" id="info-path-key">Location</span>
+              <span class="info-row-value info-row-value--path" id="info-path">—</span>
+            </div>
+          </section>
+
+          <section class="setup-section">
+            <p class="section-label">Options</p>
+            <label class="option-row">
+              <input type="checkbox" id="chk-remove-data" />
+              <span class="option-row-body">
+                <span class="option-row-title">Also remove user settings and data</span>
+                <span class="option-row-sub" id="chk-remove-data-path">Deletes your local configuration folder.</span>
+              </span>
+            </label>
+          </section>
+
+          <div id="progress-wrap" class="progress-wrap" aria-live="polite">
+            <div class="progress-header">
+              <p id="progress-label" class="message progress-label">Preparing…</p>
+              <p id="progress-percent" class="progress-percent" aria-hidden="true">0%</p>
+            </div>
+            <div id="progress-track" class="progress-track indeterminate" role="progressbar" aria-valuemin="0" aria-valuemax="100">
+              <div id="progress-fill" class="progress-fill"></div>
+            </div>
+          </div>
+
+          <div id="uninstall-error-wrap" class="alert alert-error hidden" role="alert">
+            <p class="alert-title">Uninstall failed</p>
+            <p id="uninstall-error" class="message error"></p>
+          </div>
+        </div>
+
+        <div id="panel-done" class="panel-done hidden" role="status">
+          <div class="panel-done-icon" aria-hidden="true">
+            <svg width="32" height="32" viewBox="0 0 32 32"><path d="M9 16.5l5 5 9-11" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" /></svg>
+          </div>
+          <p class="done-title">Uninstall finished</p>
+          <p class="done-subtitle" id="done-subtitle">Removing remaining files in the background…</p>
+        </div>
+      </main>
+
+      <footer class="installer-footer">
+        <button type="button" class="installer-info-btn" id="btn-info" title="Uninstaller help" aria-label="Uninstaller help">
+          <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+            <circle cx="7" cy="7" r="6" fill="none" stroke="currentColor" stroke-width="1.2" />
+            <path d="M7 6v4M7 3.5v0.6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
+          </svg>
+        </button>
+        <div class="installer-footer-spacer"></div>
+        <button type="button" class="btn btn-secondary" id="btn-quit">Cancel</button>
+        <button type="button" class="btn btn-danger" id="btn-uninstall">Uninstall</button>
+        <button type="button" class="btn btn-primary hidden" id="btn-close">Close</button>
+      </footer>
+    </div>
+
+    <div id="help-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="help-modal-title">
+      <div class="modal-backdrop" id="help-modal-backdrop"></div>
+      <div class="modal-card" role="document">
+        <header class="modal-header">
+          <h2 id="help-modal-title">Uninstaller help</h2>
+          <button type="button" class="modal-close" id="btn-help-close" aria-label="Close help">
+            <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" /></svg>
+          </button>
+        </header>
+        <div class="modal-body">
+          <p id="help-intro">
+            This uninstaller removes Testrix from your computer. The application stays running until you click <strong>Uninstall</strong>, so you can cancel at any time before that.
+          </p>
+
+          <h3 class="modal-section-title">What gets removed</h3>
+          <ul class="modal-list" id="help-removes-list"></ul>
+
+          <h3 class="modal-section-title">User data</h3>
+          <p id="help-userdata">
+            Tick <strong>Also remove user settings and data</strong> to additionally delete your local configuration folder. Workspaces and request collections live there.
+          </p>
+
+          <h3 class="modal-section-title">Other platforms</h3>
+          <p>
+            Testrix also runs on macOS and Linux. If you uninstall on another OS, the matching steps are listed at the
+            <a href="#" class="ext-link" data-href="https://github.com/matthiaskopeinigg/testrix/releases">Releases page</a>:
+          </p>
+          <ul class="modal-list modal-list--platforms">
+            <li><strong>Windows</strong> — Settings → Apps → Installed apps, or run <code>uninstall.cmd</code> from the install folder.</li>
+            <li><strong>macOS</strong> — drag <em>Testrix.app</em> to the Trash, or run this uninstaller bundled inside the .app.</li>
+            <li><strong>Linux</strong> — <code>apt remove testrix</code> for <code>.deb</code>, or delete the AppImage and its <code>.desktop</code> entry.</li>
+          </ul>
+        </div>
+        <footer class="modal-footer">
+          <button type="button" class="btn btn-primary" id="btn-help-done">Got it</button>
+        </footer>
+      </div>
+    </div>
+
+    <script src="./app.js"></script>
+  </body>
+</html>

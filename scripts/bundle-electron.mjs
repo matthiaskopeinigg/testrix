@@ -59,3 +59,8 @@ cpSync(
   path.join(root, 'electron/preload/e2e-pick.preload.js'),
   path.join(distElectron, 'preload/e2e-pick.preload.js'),
 );
+
+const uninstallerSrc = path.join(root, 'electron/uninstaller');
+const uninstallerDest = path.join(distElectron, 'uninstaller');
+mkdirSync(uninstallerDest, { recursive: true });
+cpSync(uninstallerSrc, uninstallerDest, { recursive: true });

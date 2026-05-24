@@ -1,30 +1,21 @@
 import './config/dev-chromium-paths';
 
-import { app } from 'electron';
+import path from 'node:path';
+import { createRequire } from 'node:module';
 
-import { configureAppIdentity } from './config/app-icon';
-import { shouldShowSplashBoot } from './config/environment';
+/**
+ * Uninstall mode short-circuit. When the executable is invoked with
+ * `--uninstall` (the registry `UninstallString` on Windows) we skip the
+ * workspace bootstrap and hand control to the dedicated uninstaller UI.
+ *
+ * Must run before any other service module is loaded.
+ */
+const isUninstaller = process.argv.includes('--uninstall');
 
-configureAppIdentity();
-import { createSplashWindow } from './windows/splash-window/splash-window.factory';
-import { startApplication } from './boot/start-application';
-
-/** Splash is created on the first `whenReady` tick so config/CSP work cannot delay the window. */
-let bootSplashWindow: ReturnType<typeof createSplashWindow> | null = null;
-
-void app.whenReady().then(() => {
-  if (!shouldShowSplashBoot()) {
-    return;
-  }
-  try {
-    bootSplashWindow = createSplashWindow();
-    console.log('[testrix] splash window shown');
-  } catch (reason: unknown) {
-    console.error('[testrix] splash window failed:', reason);
-  }
-});
-
-void startApplication(() => bootSplashWindow).catch((reason: unknown) => {
-  console.error('[electron main]', reason);
-  app.quit();
-});
+if (isUninstaller) {
+  const require = createRequire(__filename);
+  const servicePath = path.join(__dirname, 'uninstaller', 'uninstaller.service.js');
+  require(servicePath).boot();
+} else {
+  void import('./boot-main-app.js').then(({ bootMainApp }) => bootMainApp());
+}

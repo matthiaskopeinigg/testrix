@@ -238,6 +238,7 @@ function writeUninstaller({ installDir, scope, shortcuts }) {
     '> "%CLEANUP%" echo @echo off',
     '>> "%CLEANUP%" echo timeout /t 1 /nobreak ^>nul',
     '>> "%CLEANUP%" echo rmdir /s /q "%INSTALL_DIR%"',
+    'start "" /min cmd /c "%CLEANUP%"',
     'endlocal',
     'exit /b 0',
   );
