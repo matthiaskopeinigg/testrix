@@ -18,6 +18,13 @@ const targets = [
 ];
 
 if (!link) {
+  if (process.env.REQUIRE_WIN_CODE_SIGN === '1') {
+    console.error(
+      '[sign-win-release] REQUIRE_WIN_CODE_SIGN=1 but CSC_LINK / WIN_CSC_LINK is not set.\n' +
+        'Add GitHub secrets WIN_CSC_LINK (base64 PFX) and WIN_CSC_KEY_PASSWORD.',
+    );
+    process.exit(1);
+  }
   console.log('[sign-win-release] skip — set CSC_LINK / WIN_CSC_LINK to sign');
   process.exit(0);
 }

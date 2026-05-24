@@ -60,6 +60,7 @@ jobs:
       - name: Build and sign Windows installer
         run: npm run electron:pack:release
         env:
+          REQUIRE_WIN_CODE_SIGN: '1'
           CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
           CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
 
