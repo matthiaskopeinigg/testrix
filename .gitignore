@@ -59,7 +59,7 @@ Thumbs.db
 /installer-shell/node_modules/
 /installer-shell/resources/payload/
 
-# Generated build assets (icons, NSIS BMPs, installer staging). Scripts under build/installer stay tracked.
+# Generated build assets (icons, NSIS BMPs). Scripts under build/installer stay tracked.
 /build/icons/
 /build/installer/windows/assets/
 /build/installer/windows/staging/

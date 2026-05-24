@@ -4,7 +4,7 @@
 const path = require('path');
 const fs = require('fs');
 
-const PRODUCT_NAME = 'Testrix Setup';
+const PRODUCT_NAME = 'Testrix-Setup';
 const COMPANY_NAME = 'Testrix contributors';
 const COPYRIGHT = 'Copyright \u00A9 2026 Testrix contributors';
 
