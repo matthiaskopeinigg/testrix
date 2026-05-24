@@ -1,0 +1,40 @@
+@if (visible()) {
+  <div
+    class="tx-profile-switch-overlay"
+    role="alertdialog"
+    aria-modal="true"
+    aria-labelledby="tx-profile-switch-title"
+    aria-describedby="tx-profile-switch-desc"
+    aria-busy="true"
+  >
+    <div class="tx-profile-switch-overlay__scrim" aria-hidden="true"></div>
+
+    <article class="tx-profile-switch-overlay__card">
+      <div class="tx-profile-switch-overlay__bg" aria-hidden="true">
+        <div class="tx-profile-switch-overlay__bg-grid"></div>
+        <div class="tx-profile-switch-overlay__bg-blob tx-profile-switch-overlay__bg-blob--a"></div>
+        <div class="tx-profile-switch-overlay__bg-blob tx-profile-switch-overlay__bg-blob--b"></div>
+      </div>
+
+      <div class="tx-profile-switch-overlay__accent" aria-hidden="true">
+        <span class="tx-profile-switch-overlay__accent-band"></span>
+      </div>
+
+      <div class="tx-profile-switch-overlay__content">
+        <div class="tx-profile-switch-overlay__icon-wrap" aria-hidden="true">
+          <tx-icon name="users" [size]="28" />
+        </div>
+
+        <tx-spinner size="md" [ariaLabel]="title()" />
+
+        <h1 id="tx-profile-switch-title" class="tx-profile-switch-overlay__title">
+          {{ title() }}
+        </h1>
+
+        <p id="tx-profile-switch-desc" class="tx-profile-switch-overlay__desc">
+          {{ description() }}
+        </p>
+      </div>
+    </article>
+  </div>
+}

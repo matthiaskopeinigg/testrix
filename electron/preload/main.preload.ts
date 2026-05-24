@@ -13,6 +13,7 @@ import { TestingChannels } from '../ipc/channels/testing.channels';
 import { E2eChannels } from '../ipc/channels/e2e.channels';
 import { WindowChannels } from '../ipc/channels/window.channels';
 import { DbChannels } from '../ipc/channels/db.channels';
+import { TeamChannels } from '../ipc/channels/team.channels';
 
 import type { UpdaterStatus } from '../../shared/updater/updater-status.schema';
 import type { FlowRunProgressEvent } from '../../shared/testing';
@@ -68,6 +69,9 @@ const api: ElectronAPI = {
   openExternal: (url) => ipcRenderer.invoke(AppChannels.openExternal, url),
   shell: {
     pickFile: (options) => ipcRenderer.invoke(ShellChannels.pickFile, options ?? {}),
+    pickFiles: (options) => ipcRenderer.invoke(ShellChannels.pickFiles, options ?? {}),
+    readTextFile: (filePath) => ipcRenderer.invoke(ShellChannels.readTextFile, filePath),
+    readImportFolder: (options) => ipcRenderer.invoke(ShellChannels.readImportFolder, options ?? {}),
     saveFile: (options) => ipcRenderer.invoke(ShellChannels.saveFile, options),
   },
   config: {
@@ -78,6 +82,7 @@ const api: ElectronAPI = {
     getSession: () => ipcRenderer.invoke(ConfigChannels.getSession),
     setSession: (patch) => ipcRenderer.invoke(ConfigChannels.setSession, patch),
     getFilePaths: () => ipcRenderer.invoke(ConfigChannels.getFilePaths),
+    getWorkspaceFileInventory: () => ipcRenderer.invoke(ConfigChannels.getWorkspaceFileInventory),
     openConfigDir: () => ipcRenderer.invoke(ConfigChannels.openConfigDir),
     pickDirectory: () => ipcRenderer.invoke(ConfigChannels.pickDirectory),
     exportSettings: () => ipcRenderer.invoke(ConfigChannels.exportSettings),
@@ -104,6 +109,8 @@ const api: ElectronAPI = {
     createProfile: (name) => ipcRenderer.invoke(ConfigChannels.createProfile, name),
     renameProfile: (payload) => ipcRenderer.invoke(ConfigChannels.renameProfile, payload),
     deleteProfile: (profileId) => ipcRenderer.invoke(ConfigChannels.deleteProfile, profileId),
+    linkProfileToDirectory: (payload) => ipcRenderer.invoke(ConfigChannels.linkProfileToDirectory, payload),
+    createLinkedProfile: (payload) => ipcRenderer.invoke(ConfigChannels.createLinkedProfile, payload),
   },
   logging: {
     getPaths: () => ipcRenderer.invoke(LoggingChannels.getPaths),
@@ -124,6 +131,7 @@ const api: ElectronAPI = {
     getAll: () => ipcRenderer.invoke(CookieChannels.getAll),
     delete: (cookie) => ipcRenderer.invoke(CookieChannels.delete, cookie),
     clearAll: () => ipcRenderer.invoke(CookieChannels.clearAll),
+    replaceFromSerialized: (payload) => ipcRenderer.invoke(CookieChannels.replaceFromSerialized, payload),
   },
   testing: {
     getTestSuites: () => ipcRenderer.invoke(TestingChannels.getTestSuites),
@@ -277,6 +285,67 @@ const api: ElectronAPI = {
       ipcRenderer.on(UpdaterChannels.status, handler);
       return () => {
         ipcRenderer.removeListener(UpdaterChannels.status, handler);
+      };
+    },
+  },
+  team: {
+    getStatus: () => ipcRenderer.invoke(TeamChannels.getStatus),
+    getConfig: () => ipcRenderer.invoke(TeamChannels.getConfig),
+    setConfig: (patch) => ipcRenderer.invoke(TeamChannels.setConfig, patch),
+    getGitSetup: () => ipcRenderer.invoke(TeamChannels.getGitSetup),
+    setRemote: (url, token) => ipcRenderer.invoke(TeamChannels.setRemote, { url, token: token ?? null }),
+    syncNow: () => ipcRenderer.invoke(TeamChannels.syncNow),
+    onFocus: () => ipcRenderer.invoke(TeamChannels.onFocus),
+    getHistory: (options) => ipcRenderer.invoke(TeamChannels.getHistory, options ?? {}),
+    getCommitDiff: (hash) => ipcRenderer.invoke(TeamChannels.getCommitDiff, hash),
+    getCommitDetail: (hash) => ipcRenderer.invoke(TeamChannels.getCommitDetail, hash),
+    listBranches: () => ipcRenderer.invoke(TeamChannels.listBranches),
+    createBranch: (name) => ipcRenderer.invoke(TeamChannels.createBranch, name),
+    switchBranch: (name) => ipcRenderer.invoke(TeamChannels.switchBranch, name),
+    deleteBranch: (name) => ipcRenderer.invoke(TeamChannels.deleteBranch, name),
+    resolveConflict: (resolution) => ipcRenderer.invoke(TeamChannels.resolveConflict, resolution),
+    linkWorkspace: () => ipcRenderer.invoke(TeamChannels.linkWorkspace),
+    disconnect: () => ipcRenderer.invoke(TeamChannels.disconnect),
+    fetchRemoteCatalog: (options?: import('@shared/collaboration').TeamFetchRemoteCatalogOptions) =>
+      ipcRenderer.invoke(TeamChannels.fetchRemoteCatalog, options),
+    importProfiles: (profileIds) => ipcRenderer.invoke(TeamChannels.importProfiles, profileIds),
+    publishLocalProfile: (profileId) => ipcRenderer.invoke(TeamChannels.publishLocalProfile, profileId),
+    createTeamProfile: (name) => ipcRenderer.invoke(TeamChannels.createTeamProfile, name),
+    unpublishProfile: (profileId) => ipcRenderer.invoke(TeamChannels.unpublishProfile, profileId),
+    onStatusChanged: (listener) => {
+      const handler = (_event: IpcRendererEvent, payload: unknown): void => {
+        listener(payload as import('../../shared/collaboration').TeamSyncStatus);
+      };
+      ipcRenderer.on(TeamChannels.statusChanged, handler);
+      return () => {
+        ipcRenderer.removeListener(TeamChannels.statusChanged, handler);
+      };
+    },
+    onOpenPanel: (listener) => {
+      const handler = (): void => {
+        listener();
+      };
+      ipcRenderer.on(TeamChannels.openPanel, handler);
+      return () => {
+        ipcRenderer.removeListener(TeamChannels.openPanel, handler);
+      };
+    },
+    onExternalFileChanged: (listener) => {
+      const handler = (_event: IpcRendererEvent, payload: unknown): void => {
+        listener(payload);
+      };
+      ipcRenderer.on(TeamChannels.externalFileChanged, handler);
+      return () => {
+        ipcRenderer.removeListener(TeamChannels.externalFileChanged, handler);
+      };
+    },
+    onProfilesMerged: (listener) => {
+      const handler = (_event: IpcRendererEvent, payload: unknown): void => {
+        listener(payload as { readonly addedProfileIds: readonly string[] });
+      };
+      ipcRenderer.on(TeamChannels.profilesMerged, handler);
+      return () => {
+        ipcRenderer.removeListener(TeamChannels.profilesMerged, handler);
       };
     },
   },

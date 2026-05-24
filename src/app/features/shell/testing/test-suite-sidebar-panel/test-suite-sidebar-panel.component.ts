@@ -14,9 +14,13 @@ import {
 import { isTestSuiteFlow, TEST_SUITE_MAX_FOLDER_DEPTH, testSuiteTabResourceId } from '@shared/testing';
 
 import { ConfigService } from '@app/core/config/config.service';
+import { ImportExportDialogService } from '@app/core/import-export/import-export-dialog.service';
+import { WorkspaceBundleService } from '@app/core/import-export/workspace-bundle.service';
 import { TestingSessionService } from '@app/core/testing/testing-session.service';
 import { TestSuiteService } from '@app/core/testing/test-suite.service';
 import { WorkspaceEditorService } from '@app/core/workspace/workspace-editor.service';
+import { TxNotificationService } from '@app/core/notifications/tx-notification.service';
+import { filterBundle } from '@shared/import-export';
 import {
   collectFolderAncestorIds,
   testingSidebarSelectionIds,
@@ -52,6 +56,7 @@ import {
 import { applyTestSuiteTreeView } from './test-suite-tree.view';
 import {
   collectTestSuiteFlowIdsForDeletion,
+  collectTestSuiteNodeIdsInSubtree,
   findTestSuiteNode,
   testSuiteFolderHasChildren,
   wouldExceedTestSuiteFolderDepth,
@@ -86,6 +91,9 @@ export class TestSuiteSidebarPanelComponent {
   private readonly configService = inject(ConfigService);
   private readonly testingSession = inject(TestingSessionService);
   private readonly testSuite = inject(TestSuiteService);
+  private readonly workspaceBundle = inject(WorkspaceBundleService);
+  private readonly importExportDialog = inject(ImportExportDialogService);
+  private readonly notifier = inject(TxNotificationService);
   private readonly workspaceEditor = inject(WorkspaceEditorService);
   private readonly cdr = inject(ChangeDetectorRef);
 
@@ -368,6 +376,25 @@ export class TestSuiteSidebarPanelComponent {
           this.openDeleteDialog(nodeId);
         }
         break;
+      case 'export-selection':
+        if (nodeId) {
+          void this.handleExportSelection(nodeId);
+        }
+        break;
+    }
+  }
+
+  private async handleExportSelection(nodeId: string): Promise<void> {
+    try {
+      const ids = new Set(collectTestSuiteNodeIdsInSubtree(this.nodes(), nodeId));
+      const bundle = await this.workspaceBundle.buildFromAppState();
+      const scoped = filterBundle(bundle, {
+        sections: new Set(['testSuites']),
+        testSuiteItems: ids,
+      });
+      this.importExportDialog.openExport(scoped);
+    } catch (e: unknown) {
+      this.notifier.showError(e instanceof Error ? e.message : 'Export failed.');
     }
   }
 

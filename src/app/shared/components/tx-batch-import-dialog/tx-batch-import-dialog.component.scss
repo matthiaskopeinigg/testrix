@@ -1,0 +1,30 @@
+.tx-batch-import {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tx-space-4);
+}
+
+.tx-batch-import__hint {
+  margin: 0;
+  color: var(--tx-text-muted);
+  font-size: var(--tx-font-size-sm);
+}
+
+.tx-batch-import__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--tx-font-size-sm);
+}
+
+.tx-batch-import__table th,
+.tx-batch-import__table td {
+  padding: var(--tx-space-2);
+  border-bottom: 1px solid var(--tx-border-subtle);
+  text-align: left;
+}
+
+.tx-batch-import__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--tx-space-2);
+}

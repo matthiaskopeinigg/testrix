@@ -102,6 +102,27 @@ export function collectTestSuiteFlowIdsForDeletion(
   return ids;
 }
 
+/** Collects ids of the target node and all descendants (for scoped export). */
+export function collectTestSuiteNodeIdsInSubtree(
+  nodes: readonly TestSuiteTreeNode[],
+  rootId: string,
+): readonly string[] {
+  const loc = findTestSuiteNode(nodes, rootId);
+  if (!loc) {
+    return [rootId];
+  }
+
+  const ids: string[] = [];
+  const walk = (node: TestSuiteTreeNode): void => {
+    ids.push(node.id);
+    for (const child of node.children ?? []) {
+      walk(child);
+    }
+  };
+  walk(loc.node);
+  return ids;
+}
+
 function cloneNodes(nodes: readonly TestSuiteTreeNode[]): TestSuiteTreeNode[] {
   return nodes.map((node) => ({
     ...node,

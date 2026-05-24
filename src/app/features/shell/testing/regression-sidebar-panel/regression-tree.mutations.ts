@@ -84,6 +84,27 @@ export function collectRegressionArtifactIdsForDeletion(
   return ids;
 }
 
+/** Collects ids of the target node and all descendants (for scoped export). */
+export function collectRegressionNodeIdsInSubtree(
+  nodes: readonly RegressionTreeNode[],
+  rootId: string,
+): readonly string[] {
+  const loc = findRegressionNode(nodes, rootId);
+  if (!loc) {
+    return [rootId];
+  }
+
+  const ids: string[] = [];
+  const walk = (node: RegressionTreeNode): void => {
+    ids.push(node.id);
+    for (const child of node.children ?? []) {
+      walk(child);
+    }
+  };
+  walk(loc.node);
+  return ids;
+}
+
 function cloneNodes(nodes: readonly RegressionTreeNode[]): RegressionTreeNode[] {
   return nodes.map((node) => ({
     ...node,

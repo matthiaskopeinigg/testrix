@@ -5,10 +5,18 @@ const metaSchema = z.object({
   updatedAt: z.string(),
 });
 
+export const profileKindSchema = z.enum(['local', 'team']);
+
+export type ProfileKind = z.infer<typeof profileKindSchema>;
+
 export const profileEntrySchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1).max(120),
   createdAt: z.string(),
+  profileKind: profileKindSchema.default('local'),
+  linkedDir: z.string().min(1).optional(),
+  /** @deprecated Use profileKind === 'team'. Kept for migration reads. */
+  teamEnabled: z.boolean().optional(),
 });
 
 export type ProfileEntry = z.infer<typeof profileEntrySchema>;

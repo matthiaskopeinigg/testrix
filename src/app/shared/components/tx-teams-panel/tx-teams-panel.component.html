@@ -1,0 +1,667 @@
+@if (isVisible()) {
+  <div
+    class="tx-teams-panel-backdrop"
+    [class.tx-teams-panel-backdrop--shown]="isShown()"
+    (click)="handleBackdropClick($event)"
+  >
+    <aside
+      class="tx-teams-panel"
+      [class.tx-teams-panel--shown]="isShown()"
+      role="dialog"
+      aria-label="Teams collaboration"
+      (click)="$event.stopPropagation()"
+    >
+      <header class="tx-teams-panel__header">
+        <div class="tx-teams-panel__brand">
+          <span class="tx-teams-panel__brand-mark" aria-hidden="true">
+            <tx-icon name="users" [size]="18" />
+          </span>
+          <div class="tx-teams-panel__brand-text">
+            <h2 class="tx-teams-panel__title">Teams</h2>
+            <p class="tx-teams-panel__subtitle">Collaborate via Git</p>
+          </div>
+        </div>
+        <div class="tx-teams-panel__header-actions">
+          <tx-tag [variant]="statusVariant()">{{ teamSync.statusLabel() }}</tx-tag>
+          <button type="button" class="tx-teams-panel__close" aria-label="Close teams panel" (click)="handleClose()">
+            <tx-icon name="close" [size]="16" />
+          </button>
+        </div>
+      </header>
+
+      <nav
+        class="tx-teams-panel__tabs"
+        role="tablist"
+        aria-label="Teams sections"
+        [style.--tx-teams-tab-count]="visibleSectionTabs().length"
+        [txWorkspaceSectionNav]="activeTab()"
+      >
+        @for (tab of visibleSectionTabs(); track tab.id) {
+          <button
+            type="button"
+            class="tx-teams-panel__tab"
+            role="tab"
+            [attr.aria-selected]="activeTab() === tab.id"
+            [class.is-active]="activeTab() === tab.id"
+            [attr.title]="tab.label"
+            (click)="handleTabSelect(tab.id)"
+          >
+            <span class="tx-teams-panel__tab-label">{{ tab.label }}</span>
+          </button>
+        }
+      </nav>
+
+      <div
+        #panelBody
+        class="tx-teams-panel__body tx-entrance-stagger tx-entrance-stagger--normal"
+        [class.tx-entrance-stagger--play]="contentStaggerPlay()"
+        [class.tx-entrance-stagger--settled]="contentStaggerSettled()"
+        [class.tx-teams-panel__body--history-detail]="activeTab() === 'history' && selectedCommitHash()"
+        [class.tx-teams-panel__body--connecting]="connectingGit()"
+      >
+        @if (connectingGit()) {
+          <div class="tx-teams-panel__connect-overlay" aria-live="polite" aria-busy="true">
+            <div class="tx-teams-panel__connect-card">
+              <tx-spinner size="md" />
+              <p class="tx-teams-panel__connect-title">Connecting to Git</p>
+              <ol class="tx-teams-panel__connect-steps">
+                @for (step of connectSteps; track step; let i = $index) {
+                  <li
+                    class="tx-teams-panel__connect-step"
+                    [class.tx-teams-panel__connect-step--active]="connectStep() === i + 1"
+                    [class.tx-teams-panel__connect-step--done]="connectStep() > i + 1"
+                  >
+                    {{ step }}
+                  </li>
+                }
+              </ol>
+            </div>
+          </div>
+        }
+        @if (status().status === 'conflict') {
+          <tx-banner variant="warning" title="Sync conflict">
+            Your local copy and the team repository both changed the same files.
+            @if (status().conflictedFiles.length > 0) {
+              <ul class="tx-teams-panel__conflict-files">
+                @for (file of status().conflictedFiles; track file) {
+                  <li><code>{{ file }}</code></li>
+                }
+              </ul>
+            }
+            <div class="tx-teams-panel__conflict-actions">
+              <tx-button variant="secondary" (pressed)="handleResolveConflict('ours')">Use local</tx-button>
+              <tx-button variant="secondary" (pressed)="handleResolveConflict('theirs')">Use remote</tx-button>
+              <tx-button variant="secondary" (pressed)="handleResolveConflict('abort')">Cancel sync</tx-button>
+            </div>
+          </tx-banner>
+        }
+
+        @if (status().lastError && status().status === 'failed') {
+          <tx-banner variant="error" [title]="status().lastError ?? 'Sync failed'" />
+        }
+
+        @if (activeTab() === 'overview') {
+          <section class="tx-teams-panel__section">
+            @if (showConnectWizard()) {
+              @if (connectWizardStep() === 'connect') {
+              <div class="tx-teams-panel__card tx-teams-panel__card--intro">
+                <span class="tx-teams-panel__card-label">Connect to your team</span>
+                <ol class="tx-teams-panel__sync-steps">
+                  <li>Connect once to a Git remote — one connection for this app.</li>
+                  <li>Choose which team profiles to import, or publish a local profile.</li>
+                  <li>Switch to a team profile to sync changes while you work.</li>
+                </ol>
+              </div>
+
+              @if (gitSetup().remoteUrl || gitSetup().canAccessRemote) {
+                <div class="tx-teams-panel__card tx-teams-panel__card--auth">
+                  <div class="tx-teams-panel__card-head">
+                    <span class="tx-teams-panel__card-label">Authentication</span>
+                    <tx-tag [variant]="authTagVariant()">{{ authLabel() }}</tx-tag>
+                  </div>
+                  @if (gitSetup().message) {
+                    <p class="tx-teams-panel__hint tx-teams-panel__hint--muted">{{ gitSetup().message }}</p>
+                  }
+                </div>
+              }
+
+              <div class="tx-teams-panel__card">
+                <tx-form-field label="Remote URL" controlId="tx-teams-remote-url">
+                  <tx-input
+                    id="tx-teams-remote-url"
+                    [ngModel]="remoteUrl()"
+                    (ngModelChange)="remoteUrl.set($event)"
+                    placeholder="git@github.com:org/repo.git"
+                  />
+                </tx-form-field>
+
+                @if (usesSshRemote()) {
+                  <p class="tx-teams-panel__hint tx-teams-panel__hint--muted">
+                    SSH remote — Testrix uses your system SSH keys and agent. No access token is required.
+                  </p>
+                } @else if (!showTokenField()) {
+                  <button type="button" class="tx-teams-panel__link-btn" (click)="handleToggleTokenField()">
+                    Use personal access token instead
+                  </button>
+                } @else {
+                  <tx-form-field label="Access token (optional)" controlId="tx-teams-remote-token">
+                    <tx-input
+                      id="tx-teams-remote-token"
+                      type="password"
+                      [ngModel]="remoteToken()"
+                      (ngModelChange)="remoteToken.set($event)"
+                      placeholder="Only if system Git credentials are unavailable"
+                    />
+                  </tx-form-field>
+                  @if (canConnectWithoutToken()) {
+                    <p class="tx-teams-panel__hint tx-teams-panel__hint--muted">
+                      System Git credentials detected — token is optional.
+                    </p>
+                  }
+                }
+
+                <tx-form-field label="Commit author name" controlId="tx-teams-author-name">
+                  <tx-input
+                    id="tx-teams-author-name"
+                    [ngModel]="authorName()"
+                    (ngModelChange)="authorName.set($event)"
+                  />
+                </tx-form-field>
+                <tx-form-field label="Commit author email" controlId="tx-teams-author-email">
+                  <tx-input
+                    id="tx-teams-author-email"
+                    [ngModel]="authorEmail()"
+                    (ngModelChange)="authorEmail.set($event)"
+                  />
+                </tx-form-field>
+
+                <tx-button
+                  variant="primary"
+                  [loading]="connectingGit()"
+                  [disabled]="loading() || connectingGit()"
+                  loadingLabel="Connecting…"
+                  (pressed)="handleConnectRemote()"
+                >
+                  Connect
+                </tx-button>
+              </div>
+              } @else if (connectWizardStep() === 'discover') {
+              <div class="tx-teams-panel__card tx-teams-panel__card--intro">
+                <span class="tx-teams-panel__card-label">Team profiles on remote</span>
+                <p class="tx-teams-panel__hint tx-teams-panel__hint--muted">
+                  Select profiles to import as team profiles on this machine.
+                </p>
+              </div>
+
+              @if (importableRemoteProfiles().length > 0) {
+                <div class="tx-teams-panel__card">
+                  @for (profile of importableRemoteProfiles(); track profile.id) {
+                    <div class="tx-teams-panel__profile-card">
+                      <tx-toggle
+                        [label]="profile.name"
+                        [ngModel]="isImportSelected(profile.id)"
+                        (ngModelChange)="handleToggleImportSelection(profile.id, $event)"
+                      />
+                      <p class="tx-teams-panel__hint tx-teams-panel__hint--muted">{{ profile.shareScopeLabel }}</p>
+                    </div>
+                  }
+                  <tx-button variant="primary" [loading]="loading()" (pressed)="handleImportSelectedProfiles()">
+                    Import selected
+                  </tx-button>
+                  <tx-button variant="secondary" (pressed)="handleSkipImportWizard()">Skip for now</tx-button>
+                </div>
+              } @else {
+                <tx-banner variant="info" title="No team profiles on remote yet">
+                  Create a new team profile or publish one of your local profiles to the team repository.
+                </tx-banner>
+                <div class="tx-teams-panel__card">
+                  <tx-form-field label="New team profile name" controlId="tx-teams-new-profile">
+                    <tx-input
+                      id="tx-teams-new-profile"
+                      [ngModel]="newTeamProfileName()"
+                      (ngModelChange)="newTeamProfileName.set($event)"
+                      placeholder="e.g. Shared API"
+                    />
+                  </tx-form-field>
+                  <tx-button variant="primary" [loading]="loading()" (pressed)="handleCreateTeamProfileFromWizard()">
+                    Create team profile
+                  </tx-button>
+                </div>
+                @if (publishableLocalProfiles().length > 0) {
+                  <div class="tx-teams-panel__card">
+                    <tx-form-field label="Publish local profile" controlId="tx-teams-publish-local">
+                      <tx-dropdown
+                        controlId="tx-teams-publish-local"
+                        [options]="publishableLocalProfiles().map((p) => ({ value: p.id, label: p.name }))"
+                        [ngModel]="publishLocalProfileId()"
+                        (ngModelChange)="publishLocalProfileId.set($event ?? '')"
+                        placeholder="Select local profile"
+                      />
+                    </tx-form-field>
+                    <tx-button variant="secondary" [loading]="loading()" (pressed)="handlePublishLocalProfile()">
+                      Publish to team
+                    </tx-button>
+                  </div>
+                }
+                <tx-button variant="secondary" (pressed)="handleSkipImportWizard()">Done</tx-button>
+              }
+              }
+            } @else {
+              @if (!teamSync.isActiveTeamProfile()) {
+                <tx-banner variant="info" title="Local profile active">
+                  Switch to a team profile in the titlebar to push and pull changes with Git.
+                </tx-banner>
+              }
+              <div class="tx-teams-panel__card tx-teams-panel__card--intro">
+                <span class="tx-teams-panel__card-label">Team workspace</span>
+                <p class="tx-teams-panel__hint tx-teams-panel__hint--muted">
+                  Git sync runs only while a team profile is active. Local profiles stay on this machine.
+                </p>
+              </div>
+
+              <div class="tx-teams-panel__card">
+                <span class="tx-teams-panel__card-label">Team repository folder</span>
+                <p class="tx-teams-panel__hint tx-teams-panel__hint--muted tx-teams-panel__profile-path">{{ teamRepoFolder() }}</p>
+                @if (profiles.teamProfiles().length > 0) {
+                  <p class="tx-teams-panel__hint tx-teams-panel__hint--muted">
+                    Team profiles on this machine:
+                    {{ syncingProfileLabels().join(', ') }}
+                  </p>
+                }
+              </div>
+
+              <div class="tx-teams-panel__card">
+                <span class="tx-teams-panel__card-label">Shared with team</span>
+                @if (sharedFilesForActiveProfile().length > 0) {
+                  <ul class="tx-teams-panel__file-list">
+                    @for (file of sharedFilesForActiveProfile(); track file) {
+                      <li><code>{{ file }}</code></li>
+                    }
+                  </ul>
+                } @else {
+                  <p class="tx-teams-panel__hint tx-teams-panel__hint--muted">Switch to a team profile to see shared files, or configure scope on the Team profiles tab.</p>
+                }
+                <p class="tx-teams-panel__hint tx-teams-panel__hint--muted">
+                  Always local only:
+                  @for (file of TEAM_ALWAYS_LOCAL_FILES; track file; let last = $last) {
+                    <code>{{ file }}</code>@if (!last) {<span>, </span>}
+                  }
+                </p>
+              </div>
+
+              <div class="tx-teams-panel__card">
+                <div class="tx-teams-panel__card-head">
+                  <span class="tx-teams-panel__card-label">Authentication</span>
+                  <tx-tag [variant]="authTagVariant()">{{ authLabel() }}</tx-tag>
+                </div>
+                @if (gitSetup().message) {
+                  <p class="tx-teams-panel__hint tx-teams-panel__hint--muted">{{ gitSetup().message }}</p>
+                }
+              </div>
+
+              <dl class="tx-teams-panel__meta">
+                <dt>Branch</dt>
+                <dd>{{ status().branch ?? '—' }}</dd>
+                <dt>Remote</dt>
+                <dd>{{ config()?.remoteUrl ?? '—' }}</dd>
+                <dt>Ahead / behind</dt>
+                <dd>{{ status().ahead }} / {{ status().behind }}</dd>
+                <dt>Last synced</dt>
+                <dd>{{ status().lastSyncedAt ?? 'Never' }}</dd>
+                <dt>Auto sync</dt>
+                <dd>{{ autoSyncSummary() }}</dd>
+              </dl>
+
+              @if (status().operation) {
+                <p class="tx-teams-panel__operation">
+                  <tx-spinner size="sm" /> {{ status().operation }}
+                </p>
+              }
+
+              <tx-button variant="primary" [disabled]="loading() || status().status === 'syncing'" (pressed)="handleSyncNow()">
+                Sync now
+              </tx-button>
+
+              <div class="tx-teams-panel__sync-actions">
+                @if (isSyncPaused()) {
+                  <tx-button variant="secondary" [loading]="loading()" [disabled]="loading()" (pressed)="handleResumeSync()">
+                    Resume sync
+                  </tx-button>
+                } @else {
+                  <tx-button
+                    variant="secondary"
+                    [disabled]="loading() || status().status === 'syncing'"
+                    (pressed)="handlePauseSync()"
+                  >
+                    Pause sync
+                  </tx-button>
+                }
+                <tx-button variant="danger" [disabled]="loading()" (pressed)="handleRemoveSync()">
+                  Remove sync
+                </tx-button>
+              </div>
+            }
+          </section>
+        }
+
+        @if (activeTab() === 'settings') {
+          <section class="tx-teams-panel__section">
+            @if (showSetup()) {
+              <tx-banner variant="info" title="Connect first">
+                Set up a remote on the Overview tab to enable automatic sync.
+              </tx-banner>
+            }
+
+            @if (config(); as c) {
+              <div class="tx-teams-panel__card tx-teams-panel__card--intro">
+                <span class="tx-teams-panel__card-label">Sync timing</span>
+                <p class="tx-teams-panel__hint tx-teams-panel__hint--muted">
+                  Control when Testrix runs the sync cycle. Connection and profile rules are configured on other tabs.
+                </p>
+              </div>
+
+              <div class="tx-teams-panel__card tx-teams-panel__toggles">
+                <tx-toggle
+                  label="Auto sync"
+                  [disabled]="showSetup()"
+                  [ngModel]="c.autoSync.enabled"
+                  (ngModelChange)="handleAutoSyncToggle('enabled', $event)"
+                />
+                <tx-toggle
+                  label="Commit on save"
+                  [disabled]="showSetup() || !c.autoSync.enabled"
+                  [ngModel]="c.autoSync.commitOnSave"
+                  (ngModelChange)="handleAutoSyncToggle('commitOnSave', $event)"
+                />
+                <tx-toggle
+                  label="Pull when app gets focus"
+                  [disabled]="showSetup() || !c.autoSync.enabled"
+                  [ngModel]="c.autoSync.pullOnFocus"
+                  (ngModelChange)="handleAutoSyncToggle('pullOnFocus', $event)"
+                />
+              </div>
+
+              <div class="tx-teams-panel__card" [class.tx-teams-panel__card--disabled]="showSetup() || !c.autoSync.enabled">
+                <span class="tx-teams-panel__card-label">Background sync</span>
+                <tx-form-field label="Pull interval" controlId="tx-teams-pull-interval">
+                  <tx-slider
+                    controlId="tx-teams-pull-interval"
+                    [min]="15"
+                    [max]="600"
+                    [step]="15"
+                    unit=" sec"
+                    [disabled]="showSetup() || !c.autoSync.enabled"
+                    [ngModel]="c.autoSync.pullIntervalSec"
+                    (ngModelChange)="handleAutoSyncNumber('pullIntervalSec', $event)"
+                  />
+                </tx-form-field>
+                <p class="tx-teams-panel__hint tx-teams-panel__hint--muted">
+                  Periodically pull remote changes while the app is open.
+                </p>
+
+                <tx-form-field label="Push retry delay" controlId="tx-teams-push-retry">
+                  <tx-slider
+                    controlId="tx-teams-push-retry"
+                    [min]="10"
+                    [max]="120"
+                    [step]="5"
+                    unit=" sec"
+                    [disabled]="showSetup() || !c.autoSync.enabled"
+                    [ngModel]="c.autoSync.pushRetrySec"
+                    (ngModelChange)="handleAutoSyncNumber('pushRetrySec', $event)"
+                  />
+                </tx-form-field>
+                <p class="tx-teams-panel__hint tx-teams-panel__hint--muted">
+                  Wait time before retrying after a network error.
+                </p>
+              </div>
+            }
+          </section>
+        }
+
+        @if (activeTab() === 'history') {
+          <section
+            class="tx-teams-panel__section tx-teams-panel__section--history"
+            [class.tx-teams-panel__section--history-detail]="selectedCommitHash()"
+          >
+            @if (selectedCommitHash()) {
+              <div class="tx-teams-panel__history-toolbar">
+                <tx-button variant="secondary" (pressed)="handleBackToHistoryList()">
+                  Back to history
+                </tx-button>
+              </div>
+
+              <tx-team-commit-diff
+                class="tx-teams-panel__history-detail"
+                [detail]="commitDetail()?.hash === selectedCommitHash() ? commitDetail() : null"
+                [loading]="loadingCommit()"
+                [currentAuthorEmail]="currentAuthorEmail()"
+              />
+            } @else {
+              <tx-toggle label="My changes only" [ngModel]="historyFilterMine()" (ngModelChange)="historyFilterMine.set($event)" />
+
+              <ul class="tx-teams-panel__history">
+                @for (entry of filteredHistory(); track entry.hash) {
+                  <li class="tx-teams-panel__history-item">
+                    <button
+                      type="button"
+                      class="tx-teams-panel__history-btn"
+                      (click)="handleSelectCommit(entry.hash)"
+                    >
+                      <tx-author-avatar
+                        [name]="entry.authorName"
+                        [email]="entry.authorEmail"
+                        size="sm"
+                      />
+
+                      <span class="tx-teams-panel__history-content">
+                        <span class="tx-teams-panel__history-top">
+                          <span class="tx-teams-panel__history-msg">{{ entry.message }}</span>
+                          <code class="tx-teams-panel__history-hash">{{ entry.shortHash }}</code>
+                        </span>
+
+                        <span class="tx-teams-panel__history-author-row">
+                          <span class="tx-teams-panel__history-author">{{ entry.authorName }}</span>
+                          @if (isCurrentAuthor(entry.authorEmail)) {
+                            <tx-tag variant="info" casing="normal">You</tx-tag>
+                          }
+                          <span class="tx-teams-panel__history-when">{{ formatHistoryWhen(entry.committedAt) }}</span>
+                        </span>
+
+                        <span class="tx-teams-panel__history-stats">
+                          @if (entry.additions > 0) {
+                            <span class="tx-teams-panel__stat tx-teams-panel__stat--add">+{{ entry.additions }}</span>
+                          }
+                          @if (entry.deletions > 0) {
+                            <span class="tx-teams-panel__stat tx-teams-panel__stat--del">−{{ entry.deletions }}</span>
+                          }
+                          <span class="tx-teams-panel__history-files">
+                            {{ entry.files.length }} file{{ entry.files.length === 1 ? '' : 's' }}
+                          </span>
+                        </span>
+                      </span>
+                    </button>
+                  </li>
+                }
+              </ul>
+
+              @if (history().hasMore) {
+                <tx-button variant="secondary" [disabled]="loadingMoreHistory()" (pressed)="handleLoadMoreHistory()">
+                  Load more
+                </tx-button>
+              }
+            }
+          </section>
+        }
+
+        @if (activeTab() === 'branches') {
+          <section class="tx-teams-panel__section">
+            <ul class="tx-teams-panel__branches">
+              @for (branch of branches(); track branch.name) {
+                <li class="tx-teams-panel__branch-row">
+                  <div class="tx-teams-panel__branch-meta">
+                    <span class="tx-teams-panel__branch-name">{{ branch.name }}</span>
+                    @if (branch.remote) {
+                      <span class="tx-teams-panel__branch-remote">on remote</span>
+                    }
+                  </div>
+                  <div class="tx-teams-panel__branch-actions">
+                    @if (branch.current) {
+                      <tx-tag variant="info">Current</tx-tag>
+                    } @else {
+                      <tx-button
+                        variant="secondary"
+                        [loading]="branchBusy()?.action === 'switch' && branchBusy()?.name === branch.name"
+                        [disabled]="branchBusy() !== null"
+                        (pressed)="handleSwitchBranch(branch.name)"
+                      >
+                        Switch
+                      </tx-button>
+                      @if (canDeleteBranch(branch)) {
+                        <tx-button
+                          variant="danger"
+                          [loading]="branchBusy()?.action === 'delete' && branchBusy()?.name === branch.name"
+                          [disabled]="branchBusy() !== null"
+                          (pressed)="handleDeleteBranch(branch.name)"
+                        >
+                          Delete
+                        </tx-button>
+                      }
+                    }
+                  </div>
+                </li>
+              }
+            </ul>
+            <div class="tx-teams-panel__card">
+              <tx-form-field label="New branch" controlId="tx-teams-new-branch">
+                <tx-input
+                  id="tx-teams-new-branch"
+                  [ngModel]="newBranchName()"
+                  (ngModelChange)="newBranchName.set($event)"
+                  placeholder="feature/my-work"
+                  (submitted)="handleCreateBranch()"
+                />
+              </tx-form-field>
+              <tx-button
+                variant="secondary"
+                [loading]="branchBusy()?.action === 'create'"
+                [disabled]="branchBusy() !== null || !newBranchName().trim()"
+                loadingLabel="Creating branch…"
+                (pressed)="handleCreateBranch()"
+              >
+                Create branch
+              </tx-button>
+            </div>
+          </section>
+        }
+
+        @if (activeTab() === 'team-profiles') {
+          <section class="tx-teams-panel__section">
+            <div class="tx-teams-panel__card tx-teams-panel__card--intro">
+              <span class="tx-teams-panel__card-label">Team profiles</span>
+              <p class="tx-teams-panel__hint">
+                Team profiles sync with Git while active. Configure what each profile pushes and pulls below.
+              </p>
+            </div>
+
+            @if (config(); as c) {
+              @if (profiles.teamProfiles().length === 0) {
+                <tx-banner variant="info" title="No team profiles yet">
+                  Import from remote on Overview, create a team profile, or publish a local profile from Manage profiles.
+                </tx-banner>
+              }
+
+              @for (profile of profiles.teamProfiles(); track profile.id) {
+                <div class="tx-teams-panel__profile-card">
+                  <div class="tx-teams-panel__profile-head">
+                    <span class="tx-teams-panel__profile-name">{{ profile.name }}</span>
+                    <tx-tag variant="success" casing="normal">Team</tx-tag>
+                    @if (profile.id === profiles.activeProfileId()) {
+                      <tx-tag variant="info">Active · syncing</tx-tag>
+                    }
+                    <button
+                      type="button"
+                      class="tx-teams-panel__profile-expand"
+                      [attr.aria-expanded]="isProfileExpanded(profile.id)"
+                      (click)="handleToggleProfileExpanded(profile.id)"
+                    >
+                      {{ isProfileExpanded(profile.id) ? 'Hide scope' : 'Sync scope…' }}
+                    </button>
+                  </div>
+                  <p class="tx-teams-panel__hint tx-teams-panel__hint--muted">
+                    {{ profileSyncSummary(profile.id) }}
+                  </p>
+
+                  @if (isProfileExpanded(profile.id)) {
+                    <div class="tx-teams-panel__profile-scope">
+                      <tx-toggle
+                        label="Custom share scope for this profile"
+                        [ngModel]="profileSyncEntry(profile.id)?.useCustomShareScope ?? false"
+                        (ngModelChange)="handleProfileCustomScopeChange(profile.id, $event)"
+                      />
+                      @if (profileSyncEntry(profile.id)?.useCustomShareScope) {
+                        <div class="tx-teams-panel__profile-scope-toggles">
+                          @for (item of TEAM_SHARE_CATALOG; track item.key) {
+                            <tx-toggle
+                              [label]="item.label"
+                              [ngModel]="profileShareScopeValue(profile.id, item.key)"
+                              (ngModelChange)="handleProfileShareScopeChange(profile.id, item.key, $event)"
+                            />
+                          }
+                        </div>
+                      }
+                    </div>
+                  }
+
+                  <tx-button variant="secondary" (pressed)="handleUnpublishProfile(profile.id)">
+                    Stop syncing (local only)
+                  </tx-button>
+                </div>
+              }
+
+              @if (importableRemoteProfiles().length > 0) {
+                <div class="tx-teams-panel__card">
+                  <span class="tx-teams-panel__card-label">Available on remote</span>
+                  @for (remote of importableRemoteProfiles(); track remote.id) {
+                    <div class="tx-teams-panel__profile-card">
+                      <span>{{ remote.name }}</span>
+                      <tx-button variant="secondary" [loading]="loading()" (pressed)="handleImportRemoteProfile(remote.id)">
+                        Import
+                      </tx-button>
+                    </div>
+                  }
+                </div>
+              }
+
+              <div class="tx-teams-panel__card">
+                <span class="tx-teams-panel__card-label">Default share scope</span>
+                <p class="tx-teams-panel__hint tx-teams-panel__hint--muted">
+                  Used for new team profiles unless they use a custom scope.
+                </p>
+                @for (group of shareCatalogGroups; track group) {
+                  <div class="tx-teams-panel__toggles">
+                    @for (item of shareEntriesForGroup(group); track item.key) {
+                      <div class="tx-teams-panel__share-row">
+                        <tx-toggle
+                          [label]="item.label"
+                          [ngModel]="c.shareScope[item.key]"
+                          (ngModelChange)="handleShareScopeChange(item.key, $event)"
+                        />
+                        <span class="tx-teams-panel__share-meta">{{ item.fileName }} · {{ item.description }}</span>
+                      </div>
+                    }
+                  </div>
+                }
+              </div>
+
+              <p class="tx-teams-panel__hint tx-teams-panel__hint--muted">
+                Session, history, and cookies are always kept local.
+              </p>
+            }
+          </section>
+        }
+
+      </div>
+    </aside>
+  </div>
+}

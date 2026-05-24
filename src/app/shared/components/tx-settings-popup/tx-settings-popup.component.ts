@@ -14,7 +14,13 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
+import type { WorkspaceFileInventoryEntry } from '@shared/config/workspace-file-inventory.schema';
+
 import { ConfigService } from '@app/core/config/config.service';
+import { FileDialogService } from '@app/core/platform/file-dialog.service';
+import { ImportExportDialogService } from '@app/core/import-export/import-export-dialog.service';
+import { ImportExportFlowService } from '@app/core/import-export/import-export-flow.service';
+import { WorkspaceBundleService } from '@app/core/import-export/workspace-bundle.service';
 import { ProfileService } from '@app/core/profile/profile.service';
 import { TxNotificationService } from '@app/core/notifications/tx-notification.service';
 import { UiPreferencesService } from '@app/core/ui/ui-preferences.service';
@@ -29,7 +35,6 @@ import { ThemeService } from '@app/core/theme/theme.service';
 import { UiFontService, type AppearanceTypography } from '@app/core/theme/ui-font.service';
 import {
   ANIMATION_SPEED_OPTIONS,
-  CURRENT_SETTINGS_SCHEMA_VERSION,
   COLLECTION_FOLDER_CLICK_BEHAVIOR_IDS,
   COLLECTION_SIBLING_SORT_IDS,
   collectionFolderClickBehaviorLabel,
@@ -109,7 +114,6 @@ type ConfirmAction =
   | 'clearLogs'
   | 'resetSettings'
   | 'resetSession'
-  | 'importSettings'
   | 'changeConfigDir'
   | 'deleteProfile'
   | 'discardDatabases';
@@ -181,6 +185,10 @@ export class TxSettingsPopupComponent {
   private readonly themeService = inject(ThemeService);
   private readonly uiFontService = inject(UiFontService);
   private readonly electron = inject(ElectronService);
+  private readonly fileDialog = inject(FileDialogService);
+  private readonly importExportFlow = inject(ImportExportFlowService);
+  private readonly importExportDialog = inject(ImportExportDialogService);
+  private readonly workspaceBundle = inject(WorkspaceBundleService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly uiPreferences = inject(UiPreferencesService);
   private readonly notifications = inject(TxNotificationService);
@@ -194,6 +202,7 @@ export class TxSettingsPopupComponent {
   protected readonly workspaceProfiles = this.profiles.profiles;
   protected readonly activeProfileId = this.profiles.activeProfileId;
   readonly configFilePaths = signal<ConfigFilePaths | null>(null);
+  readonly fileInventory = signal<readonly WorkspaceFileInventoryEntry[]>([]);
   readonly logPaths = signal<LogPaths | null>(null);
   readonly logTailPreview = signal('');
   readonly confirmOpen = signal(false);
@@ -316,7 +325,6 @@ export class TxSettingsPopupComponent {
     value: entry.id,
     label: entry.label,
   }));
-  protected readonly settingsSchemaVersion = CURRENT_SETTINGS_SCHEMA_VERSION;
 
   readonly hasElectronBridge = computed(() => this.electron.bridge() !== null);
 
@@ -839,46 +847,32 @@ export class TxSettingsPopupComponent {
     });
   }
 
-  protected requestImportSettings(json: string): void {
-    this.openConfirm({
-      action: 'importSettings',
-      title: 'Import settings',
-      message: 'Replace your current settings file with the selected JSON. Continue?',
-      confirmLabel: 'Import',
-      variant: 'danger',
-      payload: json,
-    });
-  }
-
-  protected handleImportFileSelected(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    const file = input.files?.[0];
-    input.value = '';
-    if (!file) {
+  protected async handleImportWorkspace(): Promise<void> {
+    if (!this.hasElectronBridge()) {
+      this.notifications.showError('Import is only available in the desktop app');
       return;
     }
-    const reader = new FileReader();
-    reader.onload = () => {
-      const text = typeof reader.result === 'string' ? reader.result : '';
-      if (text.trim().length > 0) {
-        this.requestImportSettings(text);
+    try {
+      const files = await this.fileDialog.pickFiles(['json', 'yaml', 'yml', 'har', 'ndjson', 'gelf', 'jsonl']);
+      if (!files?.length) {
+        return;
       }
-    };
-    reader.readAsText(file);
+      this.importExportFlow.openBatchReview(files);
+    } catch (e: unknown) {
+      this.notifications.showError(e instanceof Error ? e.message : 'Import failed.');
+    }
   }
 
-  protected async handleExportSettings(): Promise<void> {
-    const bridge = this.electron.bridge();
-    if (!bridge) {
+  protected async handleExportWorkspace(): Promise<void> {
+    if (!this.hasElectronBridge()) {
       this.notifications.showError('Export is only available in the desktop app');
       return;
     }
     try {
-      const json = await bridge.config.exportSettings();
-      await navigator.clipboard.writeText(json);
-      this.notifications.showSuccess('Settings JSON copied to clipboard');
-    } catch {
-      this.notifications.showError('Could not export settings');
+      const bundle = await this.workspaceBundle.buildFromAppState();
+      this.importExportDialog.openExport(bundle);
+    } catch (e: unknown) {
+      this.notifications.showError(e instanceof Error ? e.message : 'Export failed.');
     }
   }
 
@@ -1008,15 +1002,6 @@ export class TxSettingsPopupComponent {
             this.notifications.showSuccess('Session reset');
           }
           break;
-        case 'importSettings':
-          if (bridge && pending.payload) {
-            const next = await bridge.config.importSettings(pending.payload);
-            this.config.syncSettings(next);
-            this.themeService.loadTheme(next.appearance.theme);
-            this.uiFontService.loadAppearanceTypography(next.appearance);
-            this.notifications.showSuccess('Settings imported');
-          }
-          break;
         case 'changeConfigDir':
           if (bridge && pending.payload) {
             await bridge.config.setConfigDir(pending.payload);
@@ -1120,6 +1105,7 @@ export class TxSettingsPopupComponent {
   protected async handleReloadConfig(): Promise<void> {
     try {
       await Promise.all([this.config.hydrate(), this.profiles.hydrate()]);
+      await this.profiles.reloadWorkspaceFromDisk();
       await this.loadConfigDir();
       this.notifications.showSuccess('Configuration reloaded');
     } catch {
@@ -1475,6 +1461,7 @@ export class TxSettingsPopupComponent {
       try {
         await this.profiles.hydrate();
         this.configFilePaths.set(await bridge.config.getFilePaths());
+        this.fileInventory.set(await bridge.config.getWorkspaceFileInventory());
         await this.loadConfigDir();
       } catch {
         this.configFilePaths.set(null);

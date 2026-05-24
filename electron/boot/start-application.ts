@@ -24,6 +24,9 @@ import { resolveDevServerOrigin, waitForDevServerReady } from './wait-for-dev-se
 
 import { ErrorCodes, TestrixError } from '../../shared/errors';
 import { cookieJarStore } from '../services/http/cookie-jar.service';
+import { registerTeamFileNotify } from '../services/collaboration/team-file-notify';
+import { notifyTeamFileSaved, initTeamSyncFromBoot, refreshTeamSyncOnProfileSwitch } from '../ipc/handlers/team.handler';
+import { teamSyncEngine } from '../services/collaboration/team-sync-engine.service';
 
 /** Chromium net errors that are normal during `ng serve` boot/HMR — must not tear down splash. */
 function isIgnorableRendererLoadError(errorCode: number): boolean {
@@ -206,7 +209,14 @@ export async function startApplication(getBootSplash?: () => BrowserWindow | nul
         activeProfileDirRef = next;
         void cookieJarStore.loadForProfile(next);
       },
+      onProfileDirChanged: async () => {
+        await refreshTeamSyncOnProfileSwitch({
+          getProfilesState: () => profiles.getProfilesState(),
+        });
+      },
     });
+
+    registerTeamFileNotify(notifyTeamFileSaved);
 
     registerAllIpcHandlers(ipcMain, app, coordinator, {
       paths: pathsSvc,
@@ -221,7 +231,46 @@ export async function startApplication(getBootSplash?: () => BrowserWindow | nul
       setSharedConfigDirRef: (next) => {
         sharedConfigDirRef = next;
       },
-    });
+      getActiveProfileId: () => anchorRef.activeProfileId ?? null,
+      getTeamRepoDir: () => teamSyncEngine.getTeamRepoDir(),
+      initTeamSync: async () => {
+        const state = await profiles.getProfilesState();
+        await teamSyncEngine.initTeamSync({
+          sharedConfigDir: sharedConfigDirRef,
+          profilesRoot: state.profilesRoot,
+          profiles: state.profiles,
+        });
+      },
+      mergeTeamProfilesFromManifest: (teamRepoDir) => profiles.mergeTeamProfilesFromManifest(teamRepoDir),
+      importTeamProfiles: (teamRepoDir, profileIds) => profiles.importTeamProfiles(teamRepoDir, profileIds),
+      publishLocalProfile: (profileId) => profiles.publishLocalProfile(profileId),
+      createTeamProfile: (name) => profiles.createTeamProfile(name),
+      unpublishProfile: (profileId) => profiles.unpublishProfile(profileId),
+      migrateLegacyTeamProfileKinds: (ids) => profiles.migrateLegacyTeamProfileKinds(ids),
+    }, () => (mainWindow.isDestroyed() ? null : mainWindow));
+
+    void (async () => {
+      const state = await profiles.getProfilesState();
+      await initTeamSyncFromBoot({
+        getTeamRepoDir: () => teamSyncEngine.getTeamRepoDir(),
+        getMainWindow: () => (mainWindow.isDestroyed() ? null : mainWindow),
+        getActiveProfileId: () => anchorRef.activeProfileId ?? null,
+        getProfilesState: () => profiles.getProfilesState(),
+        mergeTeamProfilesFromManifest: (teamRepoDir) => profiles.mergeTeamProfilesFromManifest(teamRepoDir),
+        importTeamProfiles: (teamRepoDir, profileIds) => profiles.importTeamProfiles(teamRepoDir, profileIds),
+        publishLocalProfile: (profileId) => profiles.publishLocalProfile(profileId),
+        createTeamProfile: (name) => profiles.createTeamProfile(name),
+        unpublishProfile: (profileId) => profiles.unpublishProfile(profileId),
+        migrateLegacyTeamProfileKinds: (ids) => profiles.migrateLegacyTeamProfileKinds(ids),
+        initTeamSync: async () => {
+          await teamSyncEngine.initTeamSync({
+            sharedConfigDir: sharedConfigDirRef,
+            profilesRoot: state.profilesRoot,
+            profiles: state.profiles,
+          });
+        },
+      });
+    })();
 
     getUpdaterService().init({
       getMainWindow: () => (mainWindow.isDestroyed() ? null : mainWindow),

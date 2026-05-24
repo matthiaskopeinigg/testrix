@@ -1,7 +1,9 @@
-import { ChangeDetectionStrategy, Component, inject, input, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
 import { ProfileService } from '@app/core/profile/profile.service';
+import { TeamSyncService } from '@app/core/collaboration/team-sync.service';
+import { TeamsPanelService } from '@app/core/collaboration/teams-panel.service';
 import { TxNotificationService } from '@app/core/notifications/tx-notification.service';
 
 import { TxButtonComponent } from '../tx-button/tx-button.component';
@@ -35,11 +37,16 @@ export class TxProfileManagerModalComponent {
   readonly closed = output<void>();
 
   private readonly profiles = inject(ProfileService);
+  private readonly teamSync = inject(TeamSyncService);
+  private readonly teamsPanel = inject(TeamsPanelService);
   private readonly notifications = inject(TxNotificationService);
 
-  protected readonly workspaceProfiles = this.profiles.profiles;
+  protected readonly localProfiles = this.profiles.localProfiles;
+  protected readonly teamProfiles = this.profiles.teamProfiles;
   protected readonly activeProfileId = this.profiles.activeProfileId;
   protected readonly profileSwitching = this.profiles.switching;
+  protected readonly totalProfileCount = computed(() => this.profiles.profiles().length);
+  protected readonly isTeamConnected = computed(() => Boolean(this.teamSync.config()?.enabled));
 
   protected readonly newProfileModalOpen = signal(false);
   protected readonly newProfileName = signal('New profile');
@@ -78,7 +85,7 @@ export class TxProfileManagerModalComponent {
   }
 
   protected handleRenameProfile(profileId: string): void {
-    const entry = this.workspaceProfiles().find((profile) => profile.id === profileId);
+    const entry = this.profiles.profiles().find((profile) => profile.id === profileId);
     if (!entry) {
       return;
     }
@@ -105,7 +112,7 @@ export class TxProfileManagerModalComponent {
   }
 
   protected handleDeleteProfile(profileId: string): void {
-    const entry = this.workspaceProfiles().find((profile) => profile.id === profileId);
+    const entry = this.profiles.profiles().find((profile) => profile.id === profileId);
     if (!entry) {
       return;
     }
@@ -134,5 +141,27 @@ export class TxProfileManagerModalComponent {
     this.deleteTargetName.set('');
     await this.profiles.deleteProfile(profileId);
     this.notifications.showSuccess('Profile deleted');
+  }
+
+  protected handleOpenTeamsPanel(): void {
+    this.teamsPanel.show();
+  }
+
+  protected async handlePublishToTeam(profileId: string): Promise<void> {
+    try {
+      await this.teamSync.publishLocalProfile(profileId);
+      this.notifications.showSuccess('Profile published to team');
+    } catch {
+      this.notifications.showError('Could not publish profile — connect to a team remote first');
+    }
+  }
+
+  protected async handleUnpublishProfile(profileId: string): Promise<void> {
+    try {
+      await this.teamSync.unpublishProfile(profileId);
+      this.notifications.showSuccess('Profile is now local only');
+    } catch {
+      this.notifications.showError('Could not unpublish profile');
+    }
   }
 }

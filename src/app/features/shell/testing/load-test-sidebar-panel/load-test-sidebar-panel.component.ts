@@ -12,9 +12,13 @@ import {
 } from '@angular/core';
 
 import { ConfigService } from '@app/core/config/config.service';
+import { ImportExportDialogService } from '@app/core/import-export/import-export-dialog.service';
+import { WorkspaceBundleService } from '@app/core/import-export/workspace-bundle.service';
 import { LoadTestService } from '@app/core/testing/load-test.service';
 import { TestingSessionService } from '@app/core/testing/testing-session.service';
 import { WorkspaceEditorService } from '@app/core/workspace/workspace-editor.service';
+import { TxNotificationService } from '@app/core/notifications/tx-notification.service';
+import { filterBundle } from '@shared/import-export';
 import {
   buildEmptyLoadTestContextMenu,
   buildLoadTestNodeContextMenu,
@@ -33,6 +37,7 @@ import { applyLoadTestTreeView } from '@app/features/shell/testing/load-test-sid
 import {
   collectLoadTestArtifactIdsForDeletion,
   collectLoadTestFolderIdsFromNodes,
+  collectLoadTestNodeIdsInSubtree,
   findLoadTestNode,
   isLoadTestArtifactNode,
   isLoadTestFolderNode,
@@ -85,6 +90,9 @@ export class LoadTestSidebarPanelComponent {
   private readonly configService = inject(ConfigService);
   private readonly testingSession = inject(TestingSessionService);
   private readonly loadTest = inject(LoadTestService);
+  private readonly workspaceBundle = inject(WorkspaceBundleService);
+  private readonly importExportDialog = inject(ImportExportDialogService);
+  private readonly notifier = inject(TxNotificationService);
   private readonly workspaceEditor = inject(WorkspaceEditorService);
   private readonly cdr = inject(ChangeDetectorRef);
 
@@ -348,6 +356,25 @@ export class LoadTestSidebarPanelComponent {
           this.setFolderExpanded(nodeId, true);
         }
         break;
+      case 'export-selection':
+        if (nodeId) {
+          void this.handleExportSelection(nodeId);
+        }
+        break;
+    }
+  }
+
+  private async handleExportSelection(nodeId: string): Promise<void> {
+    try {
+      const ids = new Set(collectLoadTestNodeIdsInSubtree(this.nodes(), nodeId));
+      const bundle = await this.workspaceBundle.buildFromAppState();
+      const scoped = filterBundle(bundle, {
+        sections: new Set(['loadTests']),
+        loadTests: ids,
+      });
+      this.importExportDialog.openExport(scoped);
+    } catch (e: unknown) {
+      this.notifier.showError(e instanceof Error ? e.message : 'Export failed.');
     }
   }
 

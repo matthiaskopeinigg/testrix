@@ -143,10 +143,19 @@ html.tx-electron-app .tx-titlebar {
   }
 }
 
-.tx-titlebar__profile-icon {
+.tx-titlebar__profile-icon,
+.tx-titlebar__profile-spinner {
   flex-shrink: 0;
+}
+
+.tx-titlebar__profile-icon {
   color: color-mix(in srgb, var(--tx-text-1) 85%, var(--tx-text-0));
   opacity: 0.85;
+}
+
+.tx-titlebar__profile-spinner {
+  width: 15px;
+  height: 15px;
 }
 
 .tx-titlebar__profile-dropdown {
@@ -306,6 +315,68 @@ html.tx-electron-app[data-platform='win32'] .tx-titlebar::after {
 html.tx-electron-app .tx-titlebar {
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
+}
+
+.tx-titlebar-btn--teams {
+  position: relative;
+}
+
+.tx-titlebar-btn__status-dot {
+  position: absolute;
+  right: 7px;
+  bottom: 9px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--tx-text-2);
+  border: 1px solid var(--tx-chrome-surface, var(--tx-surface-1));
+}
+
+.tx-titlebar-btn--teams-synced .tx-titlebar-btn__status-dot {
+  background: var(--tx-success, #22c55e);
+}
+
+.tx-titlebar-btn--teams-syncing .tx-titlebar-btn__status-dot {
+  background: var(--tx-primary);
+  animation: tx-teams-pulse 1s ease-in-out infinite;
+}
+
+.tx-titlebar-btn--teams-offline .tx-titlebar-btn__status-dot {
+  background: var(--tx-text-2);
+}
+
+.tx-titlebar-btn--teams-failed .tx-titlebar-btn__status-dot,
+.tx-titlebar-btn--teams-conflict .tx-titlebar-btn__status-dot {
+  background: var(--tx-danger, #ef4444);
+}
+
+.tx-titlebar-btn--teams-dirty .tx-titlebar-btn__status-dot {
+  background: var(--tx-warning, #f59e0b);
+}
+
+.tx-titlebar-btn--teams-idle .tx-titlebar-btn__status-dot {
+  background: color-mix(in srgb, var(--tx-primary) 72%, var(--tx-text-2));
+}
+
+.tx-titlebar-btn--teams-paused .tx-titlebar-btn__status-dot {
+  background: var(--tx-warning, #f59e0b);
+}
+
+.tx-titlebar-btn--teams-not-configured .tx-titlebar-btn__status-dot {
+  opacity: 0.45;
+  background: var(--tx-text-3, var(--tx-text-2));
+}
+
+@keyframes tx-teams-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.55;
+    transform: scale(0.85);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

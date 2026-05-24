@@ -860,24 +860,28 @@
                         (ngModelChange)="patchDataConfigToggle('autoReloadOnExternalChange', $event)"
                       />
                     </div>
-                    <p class="tx-settings__tab-description">External file watching is coming soon.</p>
+                    <p class="tx-settings__tab-description">External changes from teammates are detected automatically when team sync is enabled.</p>
+                  </div>
+
+                  <div class="tx-entrance-stagger__block">
+                    <h3 class="tx-settings__section-heading">Import &amp; export</h3>
+                    <div class="tx-settings__action-row">
+                      <tx-button variant="secondary" [disabled]="!hasElectronBridge()" (pressed)="handleImportWorkspace()">
+                        Import…
+                      </tx-button>
+                      <tx-button variant="secondary" [disabled]="!hasElectronBridge()" (pressed)="handleExportWorkspace()">
+                        Export…
+                      </tx-button>
+                    </div>
+                    <p class="tx-settings__tab-description">
+                      Import auto-detects Testrix bundles, Postman, OpenAPI, HAR, Insomnia, Graylog, and native config files.
+                      Export lets you choose exactly what to include.
+                    </p>
                   </div>
 
                   <div class="tx-entrance-stagger__block">
                     <h3 class="tx-settings__section-heading">Backup &amp; reset</h3>
                     <div class="tx-settings__action-row">
-                      <tx-button variant="secondary" [disabled]="!hasElectronBridge()" (pressed)="handleExportSettings()">
-                        Export settings
-                      </tx-button>
-                      <label class="tx-settings__file-input">
-                        <input
-                          type="file"
-                          accept="application/json,.json"
-                          [disabled]="!hasElectronBridge()"
-                          (change)="handleImportFileSelected($event)"
-                        />
-                        <tx-button variant="secondary" [disabled]="!hasElectronBridge()">Import settingsâ€¦</tx-button>
-                      </label>
                       <tx-button variant="secondary" [disabled]="!hasElectronBridge()" (pressed)="requestResetSettings()">
                         Reset settings
                       </tx-button>
@@ -888,13 +892,33 @@
                   </div>
 
                   <div class="tx-entrance-stagger__block">
-                    <h3 class="tx-settings__section-heading">Metadata</h3>
-                    <dl class="tx-settings__meta">
-                      <dt>Schema version</dt>
-                      <dd>{{ settingsSchemaVersion }}</dd>
-                      <dt>Last updated</dt>
-                      <dd>{{ s.meta.updatedAt }}</dd>
-                    </dl>
+                    <h3 class="tx-settings__section-heading">Config files</h3>
+                    @if (fileInventory().length > 0) {
+                      <table class="tx-settings__inventory">
+                        <thead>
+                          <tr>
+                            <th scope="col">File</th>
+                            <th scope="col">Scope</th>
+                            <th scope="col">Version</th>
+                            <th scope="col">Current</th>
+                            <th scope="col">Updated</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          @for (row of fileInventory(); track row.fileName + row.scope) {
+                            <tr [class.tx-settings__inventory-row--missing]="!row.exists">
+                              <td>{{ row.fileName }}</td>
+                              <td>{{ row.scope }}</td>
+                              <td>{{ row.exists ? (row.schemaVersion ?? '—') : 'missing' }}</td>
+                              <td>{{ row.currentVersion ?? '—' }}</td>
+                              <td>{{ row.updatedAt ?? '—' }}</td>
+                            </tr>
+                          }
+                        </tbody>
+                      </table>
+                    } @else {
+                      <p class="tx-settings__tab-description">Open this section in the desktop app to load file metadata.</p>
+                    }
                   </div>
                   </div>
                 </section>

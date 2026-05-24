@@ -87,6 +87,27 @@ export function collectLoadTestArtifactIdsForDeletion(
   return ids;
 }
 
+/** Collects ids of the target node and all descendants (for scoped export). */
+export function collectLoadTestNodeIdsInSubtree(
+  nodes: readonly LoadTestTreeNode[],
+  rootId: string,
+): readonly string[] {
+  const loc = findLoadTestNode(nodes, rootId);
+  if (!loc) {
+    return [rootId];
+  }
+
+  const ids: string[] = [];
+  const walk = (node: LoadTestTreeNode): void => {
+    ids.push(node.id);
+    for (const child of node.children ?? []) {
+      walk(child);
+    }
+  };
+  walk(loc.node);
+  return ids;
+}
+
 function cloneNodes(nodes: readonly LoadTestTreeNode[]): LoadTestTreeNode[] {
   return nodes.map((node) => ({
     ...node,

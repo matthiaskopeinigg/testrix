@@ -43,6 +43,10 @@ export const HELP_WIKI_SECTION_IDS = [
   'dev-openapi',
   // History
   'history',
+  // Teams
+  'teams-overview',
+  'teams-branches',
+  'teams-share-scope',
   // Settings reference
   'settings-appearance',
   'settings-ui',

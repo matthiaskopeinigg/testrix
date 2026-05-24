@@ -22,7 +22,11 @@ import {
 } from '@shared/config';
 
 import { CollectionsService } from '@app/core/collections/collections.service';
+import { ImportExportDialogService } from '@app/core/import-export/import-export-dialog.service';
+import { WorkspaceBundleService } from '@app/core/import-export/workspace-bundle.service';
+import { filterBundle } from '@shared/import-export';
 import { ConfigService } from '@app/core/config/config.service';
+import { ElectronService } from '@app/core/electron/electron.service';
 import { WorkspaceEditorService } from '@app/core/workspace/workspace-editor.service';
 import { TxNotificationService } from '@app/core/notifications/tx-notification.service';
 import { TxContextMenuComponent } from '@app/shared/components/tx-context-menu/tx-context-menu.component';
@@ -100,6 +104,9 @@ function countCollectionTreeNodes(nodes: readonly CollectionTreeNode[]): number 
 export class CollectionsSidebarPanelComponent {
   private readonly configService = inject(ConfigService);
   private readonly collectionsService = inject(CollectionsService);
+  private readonly workspaceBundle = inject(WorkspaceBundleService);
+  private readonly importExportDialog = inject(ImportExportDialogService);
+  private readonly electron = inject(ElectronService);
   private readonly notifier = inject(TxNotificationService);
   private readonly workspaceEditor = inject(WorkspaceEditorService);
   private readonly cdr = inject(ChangeDetectorRef);
@@ -480,6 +487,28 @@ export class CollectionsSidebarPanelComponent {
           this.setFolderExpanded(nodeId, true);
         }
         break;
+      case 'export-selection':
+        if (nodeId) {
+          void this.handleExportSelection(nodeId);
+        }
+        break;
+    }
+  }
+
+  private async handleExportSelection(nodeId: string | undefined): Promise<void> {
+    if (!nodeId) {
+      return;
+    }
+    try {
+      const ids = new Set(collectCollectionNodeIdsForDeletion(this.nodes(), nodeId));
+      const bundle = await this.workspaceBundle.buildFromAppState();
+      const scoped = filterBundle(bundle, {
+        sections: new Set(['collections']),
+        collectionItems: ids,
+      });
+      this.importExportDialog.openExport(scoped);
+    } catch (e: unknown) {
+      this.notifier.showError(e instanceof Error ? e.message : 'Export failed.');
     }
   }
 

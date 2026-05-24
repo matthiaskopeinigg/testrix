@@ -1,6 +1,8 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 
 import type { ProfileEntry, ProfilesState } from '@shared/config';
+import { isTeamProfile } from '@shared/config';
+import { listLocalProfiles, listTeamProfiles } from '@shared/collaboration';
 
 import { CollectionsService } from '../collections/collections.service';
 import { ConfigService } from '../config/config.service';
@@ -40,11 +42,15 @@ export class ProfileService {
   private readonly activeProfileIdState = signal<string | null>(null);
   private readonly activeProfileDirState = signal<string | null>(null);
   private readonly switchingState = signal(false);
+  private readonly switchingTitleState = signal<string | null>(null);
+  private readonly switchingDescriptionState = signal<string | null>(null);
 
   readonly profiles = computed(() => this.profilesState());
   readonly activeProfileId = computed(() => this.activeProfileIdState());
   readonly activeProfileDir = computed(() => this.activeProfileDirState());
   readonly switching = computed(() => this.switchingState());
+  readonly switchingTitle = computed(() => this.switchingTitleState());
+  readonly switchingDescription = computed(() => this.switchingDescriptionState());
 
   readonly activeProfile = computed((): ProfileEntry | null => {
     const id = this.activeProfileIdState();
@@ -54,12 +60,36 @@ export class ProfileService {
     return this.profilesState().find((p) => p.id === id) ?? null;
   });
 
-  readonly profileDropdownOptions = computed(() =>
-    this.profilesState().map((p) => ({
-      value: p.id,
-      label: p.name,
-    })),
-  );
+  readonly localProfiles = computed(() => listLocalProfiles(this.profilesState()));
+  readonly teamProfiles = computed(() => listTeamProfiles(this.profilesState()));
+
+  readonly isActiveTeamProfile = computed(() => {
+    const active = this.activeProfile();
+    return active ? isTeamProfile(active) : false;
+  });
+
+  readonly profileDropdownOptions = computed(() => {
+    const local = this.localProfiles();
+    const team = this.teamProfiles();
+    const options: { value: string; label: string; disabled?: boolean; icon?: 'user' | 'users' }[] = [];
+
+    if (local.length > 0) {
+      options.push({ value: '__header_local__', label: 'Local profiles', disabled: true });
+      for (const profile of local) {
+        options.push({ value: profile.id, label: profile.name, icon: 'user' });
+      }
+    }
+    if (team.length > 0) {
+      options.push({ value: '__header_team__', label: 'Team profiles', disabled: true });
+      for (const profile of team) {
+        options.push({ value: profile.id, label: profile.name, icon: 'users' });
+      }
+    }
+    if (options.length === 0) {
+      return this.profilesState().map((p) => ({ value: p.id, label: p.name }));
+    }
+    return options;
+  });
 
   async hydrate(): Promise<void> {
     const api = this.electron.bridge();
@@ -85,7 +115,7 @@ export class ProfileService {
       return;
     }
 
-    this.switchingState.set(true);
+    this.beginProfileSwitch(`Switching to ${this.profileLabel(profileId)}`, 'Saving changes and loading workspace…');
     try {
       await this.flushWorkspaceWrites();
       const state = await api.config.setActiveProfile(profileId);
@@ -94,7 +124,7 @@ export class ProfileService {
     } catch (error: unknown) {
       this.notifier.reportUnknown(error);
     } finally {
-      this.switchingState.set(false);
+      this.endProfileSwitch();
     }
   }
 
@@ -109,7 +139,7 @@ export class ProfileService {
       return;
     }
 
-    this.switchingState.set(true);
+    this.beginProfileSwitch(`Creating ${trimmed}`, 'Setting up the new profile workspace…');
     try {
       await this.flushWorkspaceWrites();
       const state = await api.config.createProfile(trimmed);
@@ -118,7 +148,7 @@ export class ProfileService {
     } catch (error: unknown) {
       this.notifier.reportUnknown(error);
     } finally {
-      this.switchingState.set(false);
+      this.endProfileSwitch();
     }
   }
 
@@ -148,10 +178,32 @@ export class ProfileService {
     }
   }
 
+  /** Reloads all profile-scoped data from disk (e.g. after team sync pull). */
+  async reloadWorkspaceFromDisk(): Promise<void> {
+    await this.flushWorkspaceWrites();
+    await this.rehydrateWorkspace();
+  }
+
   private applyProfilesState(state: ProfilesState): void {
     this.profilesState.set([...state.profiles]);
     this.activeProfileIdState.set(state.activeProfileId);
     this.activeProfileDirState.set(state.activeProfileDir);
+  }
+
+  private profileLabel(profileId: string): string {
+    return this.profilesState().find((profile) => profile.id === profileId)?.name ?? 'profile';
+  }
+
+  private beginProfileSwitch(title: string, description: string): void {
+    this.switchingTitleState.set(title);
+    this.switchingDescriptionState.set(description);
+    this.switchingState.set(true);
+  }
+
+  private endProfileSwitch(): void {
+    this.switchingState.set(false);
+    this.switchingTitleState.set(null);
+    this.switchingDescriptionState.set(null);
   }
 
   private async rehydrateWorkspace(): Promise<void> {

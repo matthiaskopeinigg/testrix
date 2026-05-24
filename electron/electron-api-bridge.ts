@@ -24,6 +24,15 @@ import type {
   RegressionsFile,
   TestSuitesFile,
 } from '../shared/testing';
+import type {
+  TeamBranchEntry,
+  TeamCommitDetail,
+  TeamGitSetupContext,
+  TeamHistoryPage,
+  TeamSyncStatus,
+  TeamWorkspaceConfig,
+} from '../shared/collaboration';
+import type { WorkspaceFileInventoryEntry } from '../shared/config/workspace-file-inventory.schema';
 
 export interface ConfigFilePaths {
   readonly configDir: string;
@@ -68,6 +77,16 @@ export interface ElectronAPI {
     pickFile: (options?: {
       readonly filters?: readonly { readonly name: string; readonly extensions: readonly string[] }[];
     }) => Promise<{ readonly filePath: string; readonly fileName: string } | null>;
+    pickFiles: (options?: {
+      readonly extensions?: readonly string[];
+    }) => Promise<{ readonly files: readonly { readonly filePath: string; readonly fileName: string; readonly content: string }[] } | null>;
+    readTextFile: (filePath: string) => Promise<{ readonly filePath: string; readonly fileName: string; readonly content: string } | null>;
+    readImportFolder: (options?: {
+      readonly extensions?: readonly string[];
+      readonly maxFiles?: number;
+      readonly recursive?: boolean;
+      readonly maxDepth?: number;
+    }) => Promise<{ readonly files: readonly { readonly filePath: string; readonly fileName: string; readonly content: string }[] } | null>;
     saveFile: (options: {
       readonly content: string;
       readonly defaultPath?: string;
@@ -83,6 +102,7 @@ export interface ElectronAPI {
     getSession: () => Promise<SessionFile>;
     setSession: (patch: unknown) => Promise<SessionFile>;
     getFilePaths: () => Promise<ConfigFilePaths>;
+    getWorkspaceFileInventory: () => Promise<readonly WorkspaceFileInventoryEntry[]>;
     openConfigDir: () => Promise<void>;
     pickDirectory: () => Promise<string | null>;
     exportSettings: () => Promise<string>;
@@ -101,6 +121,8 @@ export interface ElectronAPI {
     createProfile: (name: string) => Promise<ProfilesState>;
     renameProfile: (payload: { readonly id: string; readonly name: string }) => Promise<ProfilesState>;
     deleteProfile: (profileId: string) => Promise<ProfilesState>;
+    linkProfileToDirectory: (payload: { readonly profileId: string; readonly dirPath: string }) => Promise<ProfilesState>;
+    createLinkedProfile: (payload: { readonly name: string; readonly dirPath: string }) => Promise<ProfilesState>;
   };
   logging: {
     getPaths: () => Promise<LogPaths>;
@@ -144,6 +166,7 @@ export interface ElectronAPI {
     getAll: () => Promise<readonly StoredCookie[]>;
     delete: (cookie: { readonly domain: string; readonly path: string; readonly key: string }) => Promise<void>;
     clearAll: () => Promise<void>;
+    replaceFromSerialized: (payload: unknown) => Promise<void>;
   };
   testing: {
     getTestSuites: () => Promise<TestSuitesFile>;
@@ -220,6 +243,36 @@ export interface ElectronAPI {
     e2ePickElement: (
       payload: import('@shared/testing').E2ePickElementPayload,
     ) => Promise<import('@shared/testing').E2ePickElementResult>;
+  };
+  team: {
+    getStatus: () => Promise<TeamSyncStatus>;
+    getConfig: () => Promise<TeamWorkspaceConfig>;
+    setConfig: (patch: Partial<TeamWorkspaceConfig>) => Promise<TeamWorkspaceConfig>;
+    getGitSetup: () => Promise<TeamGitSetupContext>;
+    setRemote: (url: string, token?: string | null) => Promise<TeamSyncStatus>;
+    syncNow: () => Promise<TeamSyncStatus>;
+    onFocus: () => Promise<TeamSyncStatus>;
+    getHistory: (options?: { readonly limit?: number; readonly skip?: number }) => Promise<TeamHistoryPage>;
+    getCommitDiff: (hash: string) => Promise<string>;
+    getCommitDetail: (hash: string) => Promise<TeamCommitDetail>;
+    listBranches: () => Promise<readonly TeamBranchEntry[]>;
+    createBranch: (name: string) => Promise<readonly TeamBranchEntry[]>;
+    switchBranch: (name: string) => Promise<readonly TeamBranchEntry[]>;
+    deleteBranch: (name: string) => Promise<readonly TeamBranchEntry[]>;
+    resolveConflict: (resolution: 'ours' | 'theirs' | 'abort') => Promise<TeamSyncStatus>;
+    linkWorkspace: () => Promise<TeamSyncStatus>;
+    disconnect: () => Promise<TeamSyncStatus>;
+    fetchRemoteCatalog: (
+      options?: import('@shared/collaboration').TeamFetchRemoteCatalogOptions,
+    ) => Promise<import('@shared/collaboration').TeamFetchRemoteCatalogResult>;
+    importProfiles: (profileIds: readonly string[]) => Promise<import('@shared/collaboration').TeamImportProfilesResult>;
+    publishLocalProfile: (profileId: string) => Promise<import('@shared/collaboration').TeamPublishProfileResult>;
+    createTeamProfile: (name: string) => Promise<import('@shared/collaboration').TeamCreateProfileResult>;
+    unpublishProfile: (profileId: string) => Promise<import('@shared/collaboration').TeamPublishProfileResult>;
+    onStatusChanged: (listener: (status: TeamSyncStatus) => void) => () => void;
+    onOpenPanel: (listener: () => void) => () => void;
+    onExternalFileChanged: (listener: (payload: unknown) => void) => () => void;
+    onProfilesMerged: (listener: (payload: { readonly addedProfileIds: readonly string[] }) => void) => () => void;
   };
 }
 

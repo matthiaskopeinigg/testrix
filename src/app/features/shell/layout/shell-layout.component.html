@@ -13,6 +13,14 @@
     <tx-update-install-overlay [visible]="true" />
   }
 
+  @if (showProfileSwitchOverlay()) {
+    <tx-profile-switch-overlay
+      [visible]="true"
+      [title]="profileSwitchTitle()"
+      [description]="profileSwitchDescription()"
+    />
+  }
+
   <div class="tx-shell__stage">
     <main class="tx-shell__body" #shellMain>
       <router-outlet />
@@ -21,5 +29,9 @@
       <tx-notification-host />
     }
     <tx-settings-popup [open]="settingsPopup.open()" (closed)="handleCloseSettings()" />
+    <tx-help-popup [open]="helpPopup.open()" (closed)="handleCloseHelp()" />
+    <tx-teams-panel [open]="teamsPanel.open()" (closed)="handleCloseTeamsPanel()" />
+    <tx-import-export-dialog />
+    <tx-batch-import-dialog />
   </div>
 </section>

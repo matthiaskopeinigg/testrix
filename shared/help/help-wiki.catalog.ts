@@ -1,5 +1,6 @@
 import { HELP_WIKI_GROUPS } from './help-wiki.groups';
 import { helpWikiCatalogSchema, type HelpWikiCatalog, type HelpWikiSection } from './help-wiki.schema';
+import { HELP_WIKI_COLLABORATION_SECTIONS } from './help-wiki.content/collaboration.content';
 import { HELP_WIKI_COLLECTIONS_SECTIONS } from './help-wiki.content/collections.content';
 import { HELP_WIKI_DEVELOPMENT_SECTIONS } from './help-wiki.content/development.content';
 import { HELP_WIKI_ENVIRONMENTS_SECTIONS } from './help-wiki.content/environments.content';
@@ -16,6 +17,7 @@ export const HELP_WIKI_SECTIONS: readonly HelpWikiSection[] = [
   ...HELP_WIKI_TESTING_SECTIONS,
   ...HELP_WIKI_DEVELOPMENT_SECTIONS,
   ...HELP_WIKI_HISTORY_SECTIONS,
+  ...HELP_WIKI_COLLABORATION_SECTIONS,
   ...HELP_WIKI_SETTINGS_SECTIONS,
   ...HELP_WIKI_REFERENCE_SECTIONS,
 ];

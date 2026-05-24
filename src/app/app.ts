@@ -2,6 +2,8 @@ import { Component, OnInit, inject } from '@angular/core';
 
 import { RouterOutlet } from '@angular/router';
 
+import { TxGlobalImportDropComponent } from '@app/shared/components/tx-global-import-drop/tx-global-import-drop.component';
+
 import { ConfigService } from './core/config/config.service';
 import { CollectionsService } from './core/collections/collections.service';
 import { EnvironmentsService } from './core/environments/environments.service';
@@ -14,6 +16,8 @@ import { RegressionService } from './core/testing/regression.service';
 import { TestSuiteService } from './core/testing/test-suite.service';
 import { TestingSessionService } from './core/testing/testing-session.service';
 import { ProfileService } from './core/profile/profile.service';
+import { TeamSyncService } from './core/collaboration/team-sync.service';
+import { TeamsPanelService } from './core/collaboration/teams-panel.service';
 import { WorkspaceSidebarSessionService } from './core/workspace/workspace-sidebar-session.service';
 
 import { WindowChromeDocumentService } from './core/electron/window-chrome-document.service';
@@ -22,7 +26,7 @@ import { UiPreferencesService } from './core/ui/ui-preferences.service';
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet],
+  imports: [RouterOutlet, TxGlobalImportDropComponent],
   templateUrl: './app.html',
   styleUrl: './app.scss',
 })
@@ -33,6 +37,8 @@ export class App implements OnInit {
   private readonly environments = inject(EnvironmentsService);
   private readonly history = inject(HistoryService);
   private readonly profiles = inject(ProfileService);
+  private readonly teamSync = inject(TeamSyncService);
+  private readonly teamsPanel = inject(TeamsPanelService);
   private readonly testSuite = inject(TestSuiteService);
   private readonly loadTest = inject(LoadTestService);
   private readonly regression = inject(RegressionService);
@@ -68,8 +74,7 @@ export class App implements OnInit {
       this.mockServer.hydrate(),
       this.capture.hydrate(),
       this.interceptor.hydrate(),
+      this.teamSync.hydrate(),
     ]);
   }
-
-
 }

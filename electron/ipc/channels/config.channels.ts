@@ -24,6 +24,9 @@ export const ConfigChannels = {
   createProfile: 'config:createProfile',
   renameProfile: 'config:renameProfile',
   deleteProfile: 'config:deleteProfile',
+  linkProfileToDirectory: 'config:linkProfileToDirectory',
+  createLinkedProfile: 'config:createLinkedProfile',
+  getWorkspaceFileInventory: 'config:getWorkspaceFileInventory',
 } as const;
 
 export type ConfigChannel = (typeof ConfigChannels)[keyof typeof ConfigChannels];

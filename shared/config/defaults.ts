@@ -192,12 +192,23 @@ export function createDefaultProfilesManifest(profileId: string, name = 'Default
 }
 
 /** Creates a manifest entry for a new profile. */
-export function createProfileEntry(id: string, name: string, createdAt?: string): ProfileEntry {
+export function createProfileEntry(
+  id: string,
+  name: string,
+  createdAt?: string,
+  profileKind: ProfileEntry['profileKind'] = 'local',
+): ProfileEntry {
   return {
     id,
     name,
     createdAt: createdAt ?? nowIso(),
+    profileKind,
   };
+}
+
+/** Creates a team profile manifest entry. */
+export function createTeamProfileEntry(id: string, name: string, createdAt?: string): ProfileEntry {
+  return createProfileEntry(id, name, createdAt, 'team');
 }
 
 export function createDefaultSession(): SessionFile {

@@ -13,10 +13,14 @@ import {
 
 import { ConfigService } from '@app/core/config/config.service';
 import { ElectronService } from '@app/core/electron/electron.service';
+import { ImportExportDialogService } from '@app/core/import-export/import-export-dialog.service';
+import { WorkspaceBundleService } from '@app/core/import-export/workspace-bundle.service';
 import { RegressionRunRequestService } from '@app/core/testing/regression-run-request.service';
 import { RegressionService } from '@app/core/testing/regression.service';
 import { TestingSessionService } from '@app/core/testing/testing-session.service';
 import { WorkspaceEditorService } from '@app/core/workspace/workspace-editor.service';
+import { TxNotificationService } from '@app/core/notifications/tx-notification.service';
+import { filterBundle } from '@shared/import-export';
 import {
   buildEmptyRegressionContextMenu,
   buildRegressionNodeContextMenu,
@@ -35,6 +39,7 @@ import {
 import { applyRegressionTreeView } from '@app/features/shell/testing/regression-sidebar-panel/regression-tree.view';
 import {
   collectRegressionFolderIdsFromNodes,
+  collectRegressionNodeIdsInSubtree,
   findRegressionNode,
   isRegressionArtifactNode,
   isRegressionFolderNode,
@@ -97,6 +102,9 @@ export class RegressionSidebarPanelComponent {
   private readonly regression = inject(RegressionService);
   private readonly runRequest = inject(RegressionRunRequestService);
   private readonly electron = inject(ElectronService);
+  private readonly workspaceBundle = inject(WorkspaceBundleService);
+  private readonly importExportDialog = inject(ImportExportDialogService);
+  private readonly notifier = inject(TxNotificationService);
   private readonly workspaceEditor = inject(WorkspaceEditorService);
   private readonly cdr = inject(ChangeDetectorRef);
 
@@ -400,11 +408,25 @@ export class RegressionSidebarPanelComponent {
           this.setFolderExpanded(nodeId, true);
         }
         break;
-      case 'export-json':
+      case 'export-selection':
         if (nodeId) {
-          this.exportArtifactJson(nodeId);
+          void this.handleExportSelection(nodeId);
         }
         break;
+    }
+  }
+
+  private async handleExportSelection(nodeId: string): Promise<void> {
+    try {
+      const ids = new Set(collectRegressionNodeIdsInSubtree(this.nodes(), nodeId));
+      const bundle = await this.workspaceBundle.buildFromAppState();
+      const scoped = filterBundle(bundle, {
+        sections: new Set(['regressions']),
+        regressions: ids,
+      });
+      this.importExportDialog.openExport(scoped);
+    } catch (e: unknown) {
+      this.notifier.showError(e instanceof Error ? e.message : 'Export failed.');
     }
   }
 
@@ -587,14 +609,6 @@ export class RegressionSidebarPanelComponent {
         tags: [...(node.tags ?? []), status === 'passed' ? '✓ passed' : status === 'failed' ? '✗ failed' : status],
       };
     });
-  }
-
-  private exportArtifactJson(nodeId: string): void {
-    const json = this.regression.exportArtifactJson(nodeId);
-    if (!json) {
-      return;
-    }
-    void navigator.clipboard?.writeText(json);
   }
 
   private toggleFolderExpanded(folderId: string): void {

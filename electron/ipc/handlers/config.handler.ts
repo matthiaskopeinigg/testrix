@@ -18,7 +18,19 @@ import {
   collectionsFileSchema,
   environmentsFileSchema,
   historyFileSchema,
+  readWorkspaceFileMeta,
+  WORKSPACE_FILE_DESCRIPTORS,
 } from '../../../shared/config';
+import {
+  CAPTURE_FILE_NAME,
+  COOKIE_JAR_FILE_NAME,
+  INTERCEPTOR_FILE_NAME,
+  LOAD_TESTS_FILE_NAME,
+  MOCK_SERVER_FILE_NAME,
+  PATHS_ANCHOR_FILE_NAME,
+  REGRESSIONS_FILE_NAME,
+  TEST_SUITES_FILE_NAME,
+} from '../../../shared/config/constants';
 
 import { ErrorCodes, TestrixError } from '../../../shared/errors';
 
@@ -27,6 +39,7 @@ import type { ConfigPathService } from '../../services/config/config-path.servic
 import type { ProfileConfigService } from '../../services/config/profile-config.service';
 import { setMainSettings } from '../../services/settings-runtime';
 import { ConfigChannels } from '../channels/config.channels';
+import { refreshTeamSyncWatchers } from './team.handler';
 import { wrapInvokeHandler } from '../wrap-ipc-handler';
 import type { IpcMainBinder } from '../register-ipc';
 
@@ -39,6 +52,20 @@ export interface ConfigHandlerDeps {
   readonly setConfigDirRef: (dir: string) => void;
   readonly getSharedConfigDir: () => string;
   readonly setSharedConfigDirRef: (dir: string) => void;
+  readonly getActiveProfileId: () => string | null;
+  readonly getTeamRepoDir: () => string | null;
+  readonly initTeamSync: () => Promise<void>;
+  readonly mergeTeamProfilesFromManifest: (
+    teamRepoDir: string,
+  ) => Promise<{ readonly addedProfileIds: readonly string[] }>;
+  readonly importTeamProfiles: (
+    teamRepoDir: string,
+    profileIds: readonly string[],
+  ) => Promise<{ readonly importedProfileIds: readonly string[] }>;
+  readonly publishLocalProfile: (profileId: string) => Promise<ProfilesState>;
+  readonly createTeamProfile: (name: string) => Promise<{ readonly state: ProfilesState; readonly profileId: string }>;
+  readonly unpublishProfile: (profileId: string) => Promise<ProfilesState>;
+  readonly migrateLegacyTeamProfileKinds: (teamProfileIds: readonly string[]) => Promise<ProfilesState>;
 }
 
 export function registerConfigHandlers(ipc: IpcMainBinder, deps: ConfigHandlerDeps): void {
@@ -190,6 +217,36 @@ export function registerConfigHandlers(ipc: IpcMainBinder, deps: ConfigHandlerDe
   );
 
   ipc.handle(
+    ConfigChannels.linkProfileToDirectory,
+    wrapInvokeHandler(ConfigChannels.linkProfileToDirectory, async (_e, payload: unknown) => {
+      if (!payload || typeof payload !== 'object') {
+        throw new TestrixError(ErrorCodes.CONFIG_VALIDATION_FAILED, 'Invalid link payload.');
+      }
+      const { profileId, dirPath } = payload as { profileId?: unknown; dirPath?: unknown };
+      if (typeof profileId !== 'string' || typeof dirPath !== 'string') {
+        throw new TestrixError(ErrorCodes.CONFIG_VALIDATION_FAILED, 'Invalid link payload.');
+      }
+      const state = await deps.profiles.linkProfileToDirectory(profileId, dirPath);
+      await refreshTeamSyncWatchers({ getProfilesState: () => deps.profiles.getProfilesState() });
+      return state;
+    }),
+  );
+
+  ipc.handle(
+    ConfigChannels.createLinkedProfile,
+    wrapInvokeHandler(ConfigChannels.createLinkedProfile, async (_e, payload: unknown) => {
+      if (!payload || typeof payload !== 'object') {
+        throw new TestrixError(ErrorCodes.CONFIG_VALIDATION_FAILED, 'Invalid create linked profile payload.');
+      }
+      const { name, dirPath } = payload as { name?: unknown; dirPath?: unknown };
+      if (typeof name !== 'string' || typeof dirPath !== 'string') {
+        throw new TestrixError(ErrorCodes.CONFIG_VALIDATION_FAILED, 'Invalid create linked profile payload.');
+      }
+      return deps.profiles.createLinkedProfile(name, dirPath);
+    }),
+  );
+
+  ipc.handle(
     ConfigChannels.getFilePaths,
     wrapInvokeHandler(ConfigChannels.getFilePaths, async () => {
       const configDir = deps.getConfigDir();
@@ -207,6 +264,46 @@ export function registerConfigHandlers(ipc: IpcMainBinder, deps: ConfigHandlerDe
         profilesManifestPath: deps.paths.profilesManifestPath(),
         profilesRoot: anchor?.profilesRoot ?? '',
       };
+    }),
+  );
+
+  ipc.handle(
+    ConfigChannels.getWorkspaceFileInventory,
+    wrapInvokeHandler(ConfigChannels.getWorkspaceFileInventory, async () => {
+      const configDir = deps.getConfigDir();
+      const sharedConfigDir = deps.getSharedConfigDir();
+      const readFile = async (filePath: string) => fs.readFile(filePath, 'utf8');
+
+      const globalRoots: Record<string, string> = {
+        [PATHS_ANCHOR_FILE_NAME]: deps.paths.anchorFilePath(),
+        [PROFILES_FILE_NAME]: deps.paths.profilesManifestPath(),
+        [SETTINGS_FILE_NAME]: path.join(sharedConfigDir, SETTINGS_FILE_NAME),
+      };
+
+      const profileRoots: Record<string, string> = {
+        [SESSION_FILE_NAME]: path.join(configDir, SESSION_FILE_NAME),
+        [COLLECTIONS_FILE_NAME]: path.join(configDir, COLLECTIONS_FILE_NAME),
+        [ENVIRONMENTS_FILE_NAME]: path.join(configDir, ENVIRONMENTS_FILE_NAME),
+        [HISTORY_FILE_NAME]: path.join(configDir, HISTORY_FILE_NAME),
+        [COOKIE_JAR_FILE_NAME]: path.join(configDir, COOKIE_JAR_FILE_NAME),
+        [TEST_SUITES_FILE_NAME]: path.join(configDir, TEST_SUITES_FILE_NAME),
+        [LOAD_TESTS_FILE_NAME]: path.join(configDir, LOAD_TESTS_FILE_NAME),
+        [REGRESSIONS_FILE_NAME]: path.join(configDir, REGRESSIONS_FILE_NAME),
+        [MOCK_SERVER_FILE_NAME]: path.join(configDir, MOCK_SERVER_FILE_NAME),
+        [CAPTURE_FILE_NAME]: path.join(configDir, CAPTURE_FILE_NAME),
+        [INTERCEPTOR_FILE_NAME]: path.join(configDir, INTERCEPTOR_FILE_NAME),
+      };
+
+      const entries = await Promise.all(
+        WORKSPACE_FILE_DESCRIPTORS.map((descriptor) => {
+          const absolutePath =
+            descriptor.scope === 'global'
+              ? (globalRoots[descriptor.fileName] ?? path.join(sharedConfigDir, descriptor.fileName))
+              : (profileRoots[descriptor.fileName] ?? path.join(configDir, descriptor.fileName));
+          return readWorkspaceFileMeta(readFile, { absolutePath, descriptor });
+        }),
+      );
+      return entries;
     }),
   );
 

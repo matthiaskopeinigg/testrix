@@ -325,3 +325,24 @@ export function collectEnvironmentFolderIds(nodes: readonly EnvironmentTreeNode[
   walk(nodes);
   return ids;
 }
+
+/** Collects ids of the target node and all descendants (for scoped export). */
+export function collectEnvironmentScopeNodeIdsInSubtree(
+  nodes: readonly EnvironmentTreeNode[],
+  rootId: string,
+): readonly string[] {
+  const loc = findEnvironmentNode(nodes, rootId);
+  if (!loc) {
+    return [rootId];
+  }
+
+  const ids: string[] = [];
+  const walkNode = (node: EnvironmentTreeNode): void => {
+    ids.push(node.id);
+    for (const child of node.children ?? []) {
+      walkNode(child);
+    }
+  };
+  walkNode(loc.node);
+  return ids;
+}

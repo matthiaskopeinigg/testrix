@@ -311,10 +311,11 @@ export class EnvironmentsService {
 
   /** Persists any debounced environment changes before profile switch. */
   async flushPending(): Promise<void> {
-    if (this.saveTimer !== null) {
-      clearTimeout(this.saveTimer);
-      this.saveTimer = null;
+    if (this.saveTimer === null) {
+      return;
     }
+    clearTimeout(this.saveTimer);
+    this.saveTimer = null;
     await this.flushSave();
   }
 

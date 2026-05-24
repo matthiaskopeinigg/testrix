@@ -9,7 +9,8 @@ export type LoadTestContextMenuAction =
   | 'rename'
   | 'delete'
   | 'duplicate'
-  | 'expand';
+  | 'expand'
+  | 'export-selection';
 
 /** Menu for right-click on empty sidebar / tree area (root-level create). */
 export function buildEmptyLoadTestContextMenu(): TxContextMenuItem[] {
@@ -42,6 +43,8 @@ export function buildLoadTestNodeContextMenu(
         { id: 'expand', label: 'Expand', icon: 'chevronDown' },
       );
     }
+    items.splice(items.length - 1, 0, { id: 'export-selection', label: 'Export selection…', icon: 'copy' });
+    items.splice(items.length - 1, 0, { id: 'sep-export', label: '', separator: true });
     return items;
   }
 
@@ -49,6 +52,8 @@ export function buildLoadTestNodeContextMenu(
     { id: 'open', label: 'Open', icon: 'folderOpen' },
     { id: 'rename', label: 'Rename', icon: 'edit' },
     { id: 'duplicate', label: 'Duplicate', icon: 'copy' },
+    { id: 'export-selection', label: 'Export selection…', icon: 'copy' },
+    { id: 'sep-1', label: '', separator: true },
     { id: 'delete', label: 'Delete', icon: 'trash', danger: true },
   ];
 }

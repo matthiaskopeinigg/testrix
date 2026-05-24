@@ -13,6 +13,8 @@ export function buildEnvironmentListRowContextMenu(): TxContextMenuItem[] {
     { id: 'rename', label: 'Rename', icon: 'edit' },
     { id: 'clone', label: 'Clone', icon: 'copy' },
     { id: 'sep-1', label: '', separator: true },
+    { id: 'export-selection', label: 'Export selection…', icon: 'copy' },
+    { id: 'sep-2', label: '', separator: true },
     { id: 'delete', label: 'Delete', icon: 'trash', danger: true },
   ];
 }
@@ -38,6 +40,8 @@ export function buildEnvironmentFolderContextMenu(): TxContextMenuItem[] {
     { id: 'sep-1', label: '', separator: true },
     { id: 'rename', label: 'Rename', icon: 'edit' },
     { id: 'edit-description', label: 'Edit description…', icon: 'fileText' },
+    { id: 'export-selection', label: 'Export selection…', icon: 'copy' },
+    { id: 'sep-2', label: '', separator: true },
     { id: 'delete', label: 'Delete', icon: 'trash', danger: true },
   ];
 }
@@ -47,6 +51,8 @@ export function buildEnvironmentVariableContextMenu(): TxContextMenuItem[] {
   return [
     { id: 'rename', label: 'Rename', icon: 'edit' },
     { id: 'duplicate', label: 'Duplicate', icon: 'copy' },
+    { id: 'export-selection', label: 'Export selection…', icon: 'copy' },
+    { id: 'sep-1', label: '', separator: true },
     { id: 'delete', label: 'Delete', icon: 'trash', danger: true },
   ];
 }

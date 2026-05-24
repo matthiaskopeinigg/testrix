@@ -1,0 +1,14 @@
+@if (active) {
+  <div class="tx-global-import-drop" aria-hidden="true">
+    <div class="tx-global-import-drop__frame">
+      <h2 class="tx-global-import-drop__title">Drag here</h2>
+      <p class="tx-global-import-drop__hint">
+        Testrix bundle, Postman, OpenAPI, HAR, Insomnia, Graylog, or native config JSON
+      </p>
+    </div>
+  </div>
+}
+
+@if (errorMessage) {
+  <div class="tx-global-import-drop__toast" role="alert">{{ errorMessage }}</div>
+}

@@ -12,6 +12,7 @@ import {
 import { ActivatedRoute, RouterLink } from '@angular/router';
 
 import { ConfigService } from '@app/core/config/config.service';
+import { HelpPopupService } from '@app/core/ui/help-popup.service';
 import { UiPreferencesService } from '@app/core/ui/ui-preferences.service';
 import { ElectronService } from '@app/core/electron/electron.service';
 import { TxAutofocusDirective } from '@app/shared/directives/tx-autofocus.directive';
@@ -19,7 +20,6 @@ import { TxBrandLogoComponent } from '@app/shared/components/tx-brand-logo/tx-br
 import { TxButtonComponent } from '@app/shared/components/tx-button/tx-button.component';
 import { TxFormFieldComponent } from '@app/shared/components/tx-form-field/tx-form-field.component';
 import { TxModalComponent } from '@app/shared/components/tx-modal/tx-modal.component';
-import { TxHelpPopupComponent } from '@app/shared/components/tx-help-popup/tx-help-popup.component';
 import { TxSidebarComponent } from '@app/shared/components/tx-sidebar/tx-sidebar.component';
 import {
   WORKSPACE_SIDEBAR_MAIN_ITEMS,
@@ -54,7 +54,6 @@ interface WelcomeToast {
     TxBrandLogoComponent,
     TxButtonComponent,
     TxModalComponent,
-    TxHelpPopupComponent,
     TxFormFieldComponent,
     TxAutofocusDirective,
     TxSidebarComponent,
@@ -69,13 +68,13 @@ export class HomeComponent {
   protected readonly workspaceEditor = inject(WorkspaceEditorService);
 
   private readonly config = inject(ConfigService);
+  private readonly helpPopup = inject(HelpPopupService);
   private readonly uiPreferences = inject(UiPreferencesService);
   private readonly electron = inject(ElectronService);
   private readonly route = inject(ActivatedRoute);
   private readonly sidebarSession = inject(WorkspaceSidebarSessionService);
 
   protected readonly modalOpen = signal(false);
-  protected readonly wikiOpen = signal(false);
   protected readonly toast = signal<WelcomeToast | null>(null);
 
   protected readonly activeSidebarId = computed(
@@ -199,13 +198,9 @@ export class HomeComponent {
     this.modalOpen.set(false);
   }
 
-  protected handleCloseWiki(): void {
-    this.wikiOpen.set(false);
-  }
-
   protected handleSidebarSelect(id: string): void {
     if (id === 'help') {
-      this.wikiOpen.set(true);
+      this.helpPopup.show();
     }
   }
 

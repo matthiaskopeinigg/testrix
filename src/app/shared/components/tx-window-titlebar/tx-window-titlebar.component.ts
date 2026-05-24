@@ -3,12 +3,15 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { ElectronService } from '@app/core/electron/electron.service';
 import { ProfileService } from '@app/core/profile/profile.service';
 import { SettingsPopupService } from '@app/core/ui/settings-popup.service';
+import { TeamSyncService } from '@app/core/collaboration/team-sync.service';
+import { TeamsPanelService } from '@app/core/collaboration/teams-panel.service';
 
 import { TxBrandLogoComponent } from '../tx-brand-logo/tx-brand-logo.component';
 import { TxDropdownComponent } from '../tx-dropdown/tx-dropdown.component';
 import { TxIconComponent } from '../tx-icon/tx-icon.component';
 import { TxCookieManagerComponent } from '../tx-cookie-manager/tx-cookie-manager.component';
 import { TxProfileManagerModalComponent } from '../tx-profile-manager-modal/tx-profile-manager-modal.component';
+import { TxSpinnerComponent } from '../tx-spinner/tx-spinner.component';
 import { TxTooltipDirective } from '../tx-tooltip/tx-tooltip.directive';
 
 @Component({
@@ -20,6 +23,7 @@ import { TxTooltipDirective } from '../tx-tooltip/tx-tooltip.directive';
     TxIconComponent,
     TxCookieManagerComponent,
     TxProfileManagerModalComponent,
+    TxSpinnerComponent,
     TxTooltipDirective,
   ],
   templateUrl: './tx-window-titlebar.component.html',
@@ -30,6 +34,8 @@ export class TxWindowTitlebarComponent {
   private readonly electron = inject(ElectronService);
   private readonly profiles = inject(ProfileService);
   private readonly settingsPopup = inject(SettingsPopupService);
+  private readonly teamSync = inject(TeamSyncService);
+  private readonly teamsPanel = inject(TeamsPanelService);
 
   readonly cookiesOpen = signal(false);
   readonly profileManagerOpen = signal(false);
@@ -58,6 +64,20 @@ export class TxWindowTitlebarComponent {
   protected readonly profileOptions = this.profiles.profileDropdownOptions;
   protected readonly activeProfileId = this.profiles.activeProfileId;
   protected readonly profileSwitching = this.profiles.switching;
+  protected readonly profileSwitchingTitle = computed(
+    () => this.profiles.switchingTitle() ?? 'Switching profile',
+  );
+  protected readonly teamStatus = this.teamSync.status;
+  protected readonly teamIndicatorStatus = this.teamSync.indicatorStatus;
+  protected readonly teamStatusLabel = this.teamSync.statusLabel;
+
+  protected handleOpenTeams(): void {
+    this.teamsPanel.toggle();
+  }
+
+  protected teamAriaLabel(): string {
+    return `Teams: ${this.teamStatusLabel()}`;
+  }
 
   protected handleOpenCookies(): void {
     this.cookiesOpen.set(true);
@@ -183,7 +203,7 @@ export class TxWindowTitlebarComponent {
   }
 
   protected handleProfileChange(profileId: string | null): void {
-    if (!profileId || this.profileSwitching()) {
+    if (!profileId || profileId.startsWith('__header_') || this.profileSwitching()) {
       return;
     }
     void this.profiles.switchProfile(profileId);

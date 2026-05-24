@@ -83,6 +83,12 @@ export class CookieJarStore {
     this.scheduleSave();
   }
 
+  /** Replaces the in-memory jar from a `CookieJar.serialize()` payload. */
+  async replaceFromSerialized(serialized: unknown): Promise<void> {
+    this.jar = await CookieJar.deserialize(serialized as string | object);
+    this.scheduleSave();
+  }
+
   private scheduleSave(): void {
     this.saveChain = this.saveChain
       .then(() => this.persist())

@@ -66,6 +66,7 @@ import {
 
 import { ErrorCodes, TestrixError } from '../../../shared/errors';
 
+import { notifyTeamConfigFileSaved, TEAM_SYNC_FILE_NAMES } from '../collaboration/team-file-notify';
 import { getMainSettings, setMainSettings } from '../settings-runtime';
 
 const ATOMIC_WRITE_MAX_ATTEMPTS = process.platform === 'win32' ? 8 : 3;
@@ -79,7 +80,7 @@ function delay(ms: number): Promise<void> {
 
 function isRetriableWriteError(error: unknown): boolean {
   const code = (error as NodeJS.ErrnoException)?.code;
-  return code === 'EPERM' || code === 'EACCES' || code === 'EBUSY';
+  return code === 'EPERM' || code === 'EACCES' || code === 'EBUSY' || code === 'ENOENT';
 }
 
 export class ConfigFileService {
@@ -269,6 +270,7 @@ export class ConfigFileService {
       },
     });
     await this.writeCollections(updated);
+    notifyTeamConfigFileSaved(this.getActiveProfileDir(), TEAM_SYNC_FILE_NAMES.collections);
     return updated;
   }
 
@@ -295,6 +297,7 @@ export class ConfigFileService {
       },
     });
     await this.writeEnvironments(updated);
+    notifyTeamConfigFileSaved(this.getActiveProfileDir(), TEAM_SYNC_FILE_NAMES.environments);
     return updated;
   }
 
@@ -331,6 +334,7 @@ export class ConfigFileService {
   async saveTestSuites(data: TestSuitesFile): Promise<TestSuitesFile> {
     const updated = testSuitesFileSchema.parse(data);
     await this.atomicWriteJson(this.testSuitesPath(), updated);
+    notifyTeamConfigFileSaved(this.getActiveProfileDir(), TEAM_SYNC_FILE_NAMES.testSuites);
     return updated;
   }
 
@@ -341,6 +345,7 @@ export class ConfigFileService {
   async saveLoadTests(data: LoadTestsFile): Promise<LoadTestsFile> {
     const updated = loadTestsFileSchema.parse(data);
     await this.atomicWriteJson(this.loadTestsPath(), updated);
+    notifyTeamConfigFileSaved(this.getActiveProfileDir(), TEAM_SYNC_FILE_NAMES.loadTests);
     return updated;
   }
 
@@ -357,6 +362,7 @@ export class ConfigFileService {
   async saveRegressions(data: RegressionsFile): Promise<RegressionsFile> {
     const updated = regressionsFileSchema.parse(data);
     await this.atomicWriteJson(this.regressionsPath(), updated);
+    notifyTeamConfigFileSaved(this.getActiveProfileDir(), TEAM_SYNC_FILE_NAMES.regressions);
     return updated;
   }
 
@@ -376,6 +382,7 @@ export class ConfigFileService {
   async saveMockServer(data: MockServerFile): Promise<MockServerFile> {
     const updated = mockServerFileSchema.parse(data);
     await this.atomicWriteJson(this.mockServerPath(), updated);
+    notifyTeamConfigFileSaved(this.getActiveProfileDir(), TEAM_SYNC_FILE_NAMES.mockServer);
     return updated;
   }
 
@@ -503,35 +510,26 @@ export class ConfigFileService {
 
   private async atomicWriteJson(filePath: string, data: unknown): Promise<void> {
     const { backupBeforeWrite, prettyPrintJson } = getMainSettings().dataConfig;
-    await fs.mkdir(path.dirname(filePath), { recursive: true });
-
-    if (backupBeforeWrite) {
-      try {
-        await fs.access(filePath);
-        await fs.copyFile(filePath, `${filePath}.bak`);
-      } catch {
-        /* no prior file */
-      }
-    }
-
-    const tmp = `${filePath}.tmp`;
     const body = prettyPrintJson
       ? `${JSON.stringify(data, null, 2)}\n`
       : `${JSON.stringify(data)}\n`;
 
     for (let attempt = 0; attempt < ATOMIC_WRITE_MAX_ATTEMPTS; attempt++) {
+      const tmp = `${filePath}.tmp`;
       try {
-        await fs.writeFile(tmp, body, { encoding: 'utf8', flag: 'w' });
-        if (process.platform === 'win32') {
+        await fs.mkdir(path.dirname(filePath), { recursive: true });
+
+        if (backupBeforeWrite) {
           try {
-            await fs.unlink(filePath);
-          } catch (error: unknown) {
-            if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
-              throw error;
-            }
+            await fs.access(filePath);
+            await fs.copyFile(filePath, `${filePath}.bak`);
+          } catch {
+            /* no prior file */
           }
         }
-        await fs.rename(tmp, filePath);
+
+        await fs.writeFile(tmp, body, { encoding: 'utf8', flag: 'w' });
+        await this.commitAtomicReplace(tmp, filePath);
         return;
       } catch (error: unknown) {
         try {
@@ -545,5 +543,31 @@ export class ConfigFileService {
         await delay(ATOMIC_WRITE_RETRY_BASE_MS * (attempt + 1));
       }
     }
+  }
+
+  private async commitAtomicReplace(tmp: string, filePath: string): Promise<void> {
+    if (process.platform === 'win32') {
+      try {
+        await fs.unlink(filePath);
+      } catch (error: unknown) {
+        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+          throw error;
+        }
+      }
+    }
+
+    try {
+      await fs.rename(tmp, filePath);
+      return;
+    } catch (error: unknown) {
+      const code = (error as NodeJS.ErrnoException)?.code;
+      if (process.platform !== 'win32' || code !== 'ENOENT') {
+        throw error;
+      }
+    }
+
+    await fs.mkdir(path.dirname(filePath), { recursive: true });
+    await fs.copyFile(tmp, filePath);
+    await fs.unlink(tmp);
   }
 }

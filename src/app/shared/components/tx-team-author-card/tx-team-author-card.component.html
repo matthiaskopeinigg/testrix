@@ -1,0 +1,22 @@
+<div class="tx-team-author-card" [class.tx-team-author-card--compact]="compact()">
+  <tx-author-avatar [name]="name()" [email]="email()" [size]="compact() ? 'sm' : 'lg'" />
+
+  <div class="tx-team-author-card__body">
+    <div class="tx-team-author-card__name-row">
+      <span class="tx-team-author-card__name">{{ name() || 'Unknown author' }}</span>
+      @if (isYou()) {
+        <tx-tag variant="info" casing="normal">You</tx-tag>
+      }
+    </div>
+
+    @if (email()) {
+      <span class="tx-team-author-card__email">{{ email() }}</span>
+    }
+
+    @if (committedAt()) {
+      <span class="tx-team-author-card__when" [attr.title]="fullWhen()">
+        {{ relativeWhen() }}
+      </span>
+    }
+  </div>
+</div>

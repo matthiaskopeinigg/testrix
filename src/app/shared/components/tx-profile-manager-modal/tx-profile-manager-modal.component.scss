@@ -5,6 +5,34 @@
   color: color-mix(in srgb, var(--tx-text-1) 90%, transparent);
 }
 
+.tx-profile-manager__section {
+  margin-bottom: 1.25rem;
+}
+
+.tx-profile-manager__section-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.65rem;
+}
+
+.tx-profile-manager__section-title {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--tx-text-1) 85%, transparent);
+}
+
+.tx-profile-manager__empty {
+  margin: 0;
+  font-size: 0.875rem;
+  color: color-mix(in srgb, var(--tx-text-1) 80%, transparent);
+}
+
 .tx-profile-manager__toolbar {
   display: flex;
   justify-content: flex-start;

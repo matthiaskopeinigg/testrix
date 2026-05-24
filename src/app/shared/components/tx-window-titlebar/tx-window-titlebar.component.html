@@ -27,12 +27,20 @@
         <span class="tx-titlebar__sep" aria-hidden="true"></span>
       }
       <div class="tx-titlebar__profile" aria-label="Workspace profile">
-        <tx-icon
-          class="tx-titlebar__profile-icon"
-          name="users"
-          [size]="15"
-          aria-hidden="true"
-        />
+        @if (profileSwitching()) {
+          <tx-spinner
+            class="tx-titlebar__profile-spinner"
+            size="sm"
+            [ariaLabel]="profileSwitchingTitle()"
+          />
+        } @else {
+          <tx-icon
+            class="tx-titlebar__profile-icon"
+            name="users"
+            [size]="15"
+            aria-hidden="true"
+          />
+        }
         <tx-dropdown
           class="tx-titlebar__profile-dropdown"
           [options]="profileOptions()"
@@ -45,7 +53,7 @@
           ariaLabel="Workspace profile"
           placeholder="Profile"
           placement="bottom-start"
-          hint="Collections, tabs, and history are per profile. Theme and settings stay shared."
+          hint="Team profiles sync with Git while active. Local profiles stay on this machine."
           hintPosition="bottom"
         />
       </div>
@@ -66,6 +74,26 @@
       (click)="handleOpenCookies()"
     >
       <tx-icon name="box" [size]="16" />
+    </button>
+    <button
+      type="button"
+      class="tx-titlebar-btn tx-titlebar-btn--chrome tx-titlebar-btn--teams"
+      [class.tx-titlebar-btn--teams-synced]="teamIndicatorStatus() === 'synced'"
+      [class.tx-titlebar-btn--teams-syncing]="teamIndicatorStatus() === 'syncing'"
+      [class.tx-titlebar-btn--teams-offline]="teamIndicatorStatus() === 'offline'"
+      [class.tx-titlebar-btn--teams-failed]="teamIndicatorStatus() === 'failed'"
+      [class.tx-titlebar-btn--teams-conflict]="teamIndicatorStatus() === 'conflict'"
+      [class.tx-titlebar-btn--teams-dirty]="teamIndicatorStatus() === 'dirty'"
+      [class.tx-titlebar-btn--teams-idle]="teamIndicatorStatus() === 'idle'"
+      [class.tx-titlebar-btn--teams-paused]="teamIndicatorStatus() === 'paused'"
+      [class.tx-titlebar-btn--teams-not-configured]="teamIndicatorStatus() === 'not-configured'"
+      [txTooltip]="teamAriaLabel()"
+      txTooltipPosition="bottom"
+      [attr.aria-label]="teamAriaLabel()"
+      (click)="handleOpenTeams()"
+    >
+      <tx-icon name="users" [size]="16" />
+      <span class="tx-titlebar-btn__status-dot" aria-hidden="true"></span>
     </button>
     <button
       type="button"

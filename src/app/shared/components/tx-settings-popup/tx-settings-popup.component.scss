@@ -617,6 +617,28 @@
   }
 }
 
+.tx-settings__inventory {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8125rem;
+
+  th,
+  td {
+    padding: 0.45rem 0.6rem;
+    border-bottom: 1px solid color-mix(in srgb, var(--tx-border-0) 70%, transparent);
+    text-align: left;
+  }
+
+  th {
+    font-weight: 600;
+    color: color-mix(in srgb, var(--tx-text-1) 90%, transparent);
+  }
+}
+
+.tx-settings__inventory-row--missing td {
+  color: color-mix(in srgb, var(--tx-text-1) 55%, transparent);
+}
+
 @media (max-width: 720px) {
   .tx-settings__main {
     flex-direction: column;

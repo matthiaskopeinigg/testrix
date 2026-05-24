@@ -13,7 +13,7 @@ export type RegressionContextMenuAction =
   | 'archive'
   | 'restore'
   | 'run'
-  | 'export-json';
+  | 'export-selection';
 
 /** Menu for right-click on empty sidebar / tree area (root-level create). */
 export function buildEmptyRegressionContextMenu(): TxContextMenuItem[] {
@@ -50,6 +50,8 @@ export function buildRegressionNodeContextMenu(
         { id: 'expand', label: 'Expand', icon: 'chevronDown' },
       );
     }
+    items.splice(items.length - 1, 0, { id: 'export-selection', label: 'Export selection…', icon: 'copy' });
+    items.splice(items.length - 1, 0, { id: 'sep-export', label: '', separator: true });
     return items;
   }
 
@@ -58,7 +60,7 @@ export function buildRegressionNodeContextMenu(
     { id: 'run', label: 'Run regression', icon: 'play' },
     { id: 'rename', label: 'Rename', icon: 'edit' },
     { id: 'duplicate', label: 'Duplicate', icon: 'copy' },
-    { id: 'export-json', label: 'Export JSON', icon: 'download' },
+    { id: 'export-selection', label: 'Export selection…', icon: 'copy' },
     archived
       ? { id: 'restore', label: 'Restore', icon: 'refresh' }
       : { id: 'archive', label: 'Archive', icon: 'box' },

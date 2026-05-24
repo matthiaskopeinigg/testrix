@@ -1,0 +1,42 @@
+@if (open()) {
+  <tx-modal
+    [open]="open()"
+    title="Import files"
+    ariaLabel="Import files"
+    layer="stacked"
+    cardSize="wide"
+    (closed)="handleClose()"
+  >
+    <div class="tx-batch-import">
+      <p class="tx-batch-import__hint">Review detected formats and choose which files to import.</p>
+      <table class="tx-batch-import__table">
+        <thead>
+          <tr>
+            <th scope="col"></th>
+            <th scope="col">File</th>
+            <th scope="col">Format</th>
+            <th scope="col">Title</th>
+            <th scope="col">Schema</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of rows(); track row.path) {
+            <tr>
+              <td>
+                <input type="checkbox" [checked]="row.selected" (change)="handleToggle(row)" />
+              </td>
+              <td>{{ row.basename }}</td>
+              <td>{{ formatLabel(row) }}</td>
+              <td>{{ row.title }}</td>
+              <td>{{ row.schemaVersion ?? '—' }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+      <footer class="tx-batch-import__actions">
+        <tx-button variant="secondary" (pressed)="handleClose()">Cancel</tx-button>
+        <tx-button variant="primary" (pressed)="handleContinue()">Continue…</tx-button>
+      </footer>
+    </div>
+  </tx-modal>
+}

@@ -1,4 +1,6 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, inject, signal } from '@angular/core';
+
+import { ShellOverlayCoordinatorService } from './shell-overlay-coordinator.service';
 
 /**
  * Global open state for the settings overlay.
@@ -6,15 +8,23 @@ import { Injectable, signal } from '@angular/core';
  */
 @Injectable({ providedIn: 'root' })
 export class SettingsPopupService {
-  readonly open = signal(false);
+  private readonly coordinator = inject(ShellOverlayCoordinatorService);
+  private readonly openState = signal(false);
 
-  /** Opens the settings overlay. */
+  readonly open = this.openState.asReadonly();
+
+  constructor() {
+    this.coordinator.register('settings', () => this.hide());
+  }
+
+  /** Opens the settings overlay and closes other shell overlays. */
   show(): void {
-    this.open.set(true);
+    this.coordinator.closeOthers('settings');
+    this.openState.set(true);
   }
 
   /** Closes the settings overlay. */
   hide(): void {
-    this.open.set(false);
+    this.openState.set(false);
   }
 }

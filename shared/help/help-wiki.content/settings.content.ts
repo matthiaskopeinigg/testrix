@@ -236,7 +236,7 @@ export const HELP_WIKI_SETTINGS_SECTIONS: readonly HelpWikiSection[] = [
     blocks: [
       {
         type: 'paragraph',
-        text: 'Create/rename/delete profiles, change config root directory, import/export settings, and reset session data.',
+        text: 'Create/rename/delete profiles, change config root directory, import/export workspace data (with format auto-detect and selection), view per-file schema versions, and reset session data.',
       },
     ],
   }),

@@ -14,6 +14,10 @@ import {
 
 import { ConfigService } from '@app/core/config/config.service';
 import { EnvironmentsService } from '@app/core/environments/environments.service';
+import { ImportExportDialogService } from '@app/core/import-export/import-export-dialog.service';
+import { WorkspaceBundleService } from '@app/core/import-export/workspace-bundle.service';
+import { TxNotificationService } from '@app/core/notifications/tx-notification.service';
+import { filterBundle } from '@shared/import-export';
 import { TxContextMenuComponent } from '@app/shared/components/tx-context-menu/tx-context-menu.component';
 import type { TxContextMenuItem } from '@app/shared/components/tx-context-menu/tx-context-menu.types';
 import { TxIconComponent } from '@app/shared/components/tx-icon/tx-icon.component';
@@ -48,7 +52,7 @@ import {
   buildEnvironmentSortMenuItems,
 } from './environment-sidebar-menus';
 import { getEnvironmentScopeNodes } from './environment-profile.utils';
-import { collectEnvironmentFolderIds, findEnvironmentNode } from './environment-tree.mutations';
+import { collectEnvironmentFolderIds, collectEnvironmentScopeNodeIdsInSubtree, findEnvironmentNode } from './environment-tree.mutations';
 import { applyEnvironmentTreeView } from './environment-tree.view';
 import type { EnvironmentTreeKind, EnvironmentTreeNode, EnvironmentTreeNodeMeta } from './environment-tree.types';
 
@@ -72,6 +76,9 @@ const SESSION_EXPAND_DEBOUNCE_MS = 300;
 export class EnvironmentTreePanelComponent {
   private readonly configService = inject(ConfigService);
   private readonly environmentsService = inject(EnvironmentsService);
+  private readonly workspaceBundle = inject(WorkspaceBundleService);
+  private readonly importExportDialog = inject(ImportExportDialogService);
+  private readonly notifier = inject(TxNotificationService);
   private readonly cdr = inject(ChangeDetectorRef);
 
   private readonly tree = viewChild(TxTreeComponent);
@@ -444,6 +451,27 @@ export class EnvironmentTreePanelComponent {
           }
         }
         break;
+      case 'export-selection':
+        if (nodeId) {
+          void this.handleExportSelection(nodeId);
+        }
+        break;
+    }
+  }
+
+  private async handleExportSelection(nodeId: string): Promise<void> {
+    try {
+      const envId = this.environmentId();
+      const ids = new Set(collectEnvironmentScopeNodeIdsInSubtree(this.scopeNodes(), nodeId));
+      const bundle = await this.workspaceBundle.buildFromAppState();
+      const scoped = filterBundle(bundle, {
+        sections: new Set(['environments']),
+        environments: new Set([envId]),
+        environmentItems: ids,
+      });
+      this.importExportDialog.openExport(scoped);
+    } catch (e: unknown) {
+      this.notifier.showError(e instanceof Error ? e.message : 'Export failed.');
     }
   }
 

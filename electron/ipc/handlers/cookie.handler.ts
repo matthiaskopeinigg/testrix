@@ -38,4 +38,11 @@ export function registerCookieHandlers(ipc: IpcMainBinder): void {
       await cookieJarStore.clearAll();
     }),
   );
+
+  ipc.handle(
+    CookieChannels.replaceFromSerialized,
+    wrapInvokeHandler(CookieChannels.replaceFromSerialized, async (_e, raw: unknown) => {
+      await cookieJarStore.replaceFromSerialized(raw);
+    }),
+  );
 }

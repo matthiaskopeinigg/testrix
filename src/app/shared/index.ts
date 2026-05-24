@@ -10,6 +10,7 @@ export * from './components/tx-banner/tx-banner.component';
 
 export * from './components/tx-update-banner/tx-update-banner.component';
 export * from './components/tx-update-install-overlay/tx-update-install-overlay.component';
+export * from './components/tx-profile-switch-overlay/tx-profile-switch-overlay.component';
 
 export * from './components/tx-notification/tx-notification.component';
 export type { TxNotificationPayload, TxNotificationTone } from './components/tx-notification/tx-notification.types';
@@ -144,6 +145,9 @@ export * from './components/tx-profile-manager-modal/tx-profile-manager-modal.co
 export * from './components/tx-run-timeline/tx-run-timeline.component';
 
 export * from './components/tx-diff-view/tx-diff-view.component';
+
+export * from './components/tx-author-avatar/tx-author-avatar.component';
+export * from './components/tx-team-author-card/tx-team-author-card.component';
 
 export * from './components/tx-sidebar/tx-sidebar.component';
 export * from './components/tx-sidebar/tx-sidebar-panel-content.directive';

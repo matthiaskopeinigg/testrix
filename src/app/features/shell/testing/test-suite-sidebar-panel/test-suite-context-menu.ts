@@ -28,5 +28,7 @@ export function buildTestSuiteNodeContextMenu(
   }
 
   items.push({ id: 'delete', label: 'Delete', icon: 'trash', danger: true });
+  items.splice(items.length - 1, 0, { id: 'export-selection', label: 'Export selection…', icon: 'copy' });
+  items.splice(items.length - 1, 0, { id: 'sep-export', label: '', separator: true });
   return items;
 }

@@ -12,7 +12,8 @@ export type CollectionContextMenuAction =
   | 'edit-description'
   | 'delete'
   | 'duplicate'
-  | 'expand';
+  | 'expand'
+  | 'export-selection';
 
 /** Menu for right-click on empty sidebar / tree area (root-level create). */
 export function buildEmptyCollectionContextMenu(): TxContextMenuItem[] {
@@ -54,6 +55,10 @@ export function buildCollectionNodeContextMenu(
         { id: 'expand', label: 'Expand', icon: 'chevronDown' },
       );
     }
+    items.push(
+      { id: 'sep-export', label: '', separator: true },
+      { id: 'export-selection', label: 'Export selection…', icon: 'copy' },
+    );
     return items;
   }
 
@@ -62,6 +67,7 @@ export function buildCollectionNodeContextMenu(
     favouriteMenuItem(favourite),
     { id: 'rename', label: 'Rename', icon: 'edit' },
     { id: 'duplicate', label: 'Duplicate', icon: 'copy' },
+    { id: 'export-selection', label: 'Export selection…', icon: 'copy' },
     { id: 'delete', label: 'Delete', icon: 'trash', danger: true },
   ];
 }

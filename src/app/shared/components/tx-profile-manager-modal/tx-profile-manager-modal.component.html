@@ -6,37 +6,67 @@
   (closed)="handleClose()"
 >
   <p class="tx-profile-manager__intro">
-    Each profile keeps its own collections, environments, session, and history. Theme and app settings
-    stay shared.
+    Local profiles stay on this machine. Team profiles sync with Git while they are active.
   </p>
 
-  <div class="tx-profile-manager__toolbar">
-    <tx-button variant="add" [disabled]="profileSwitching()" (pressed)="handleAddProfile()">
-      <tx-icon name="plus" [size]="14" aria-hidden="true" />
-      Add profile
-    </tx-button>
-  </div>
+  <section class="tx-profile-manager__section">
+    <div class="tx-profile-manager__section-head">
+      <h3 class="tx-profile-manager__section-title">Local profiles</h3>
+      <tx-button variant="add" [disabled]="profileSwitching()" (pressed)="handleAddProfile()">
+        <tx-icon name="plus" [size]="14" aria-hidden="true" />
+        Add local profile
+      </tx-button>
+    </div>
 
-  <ul class="tx-profile-manager__list">
-    @for (profile of workspaceProfiles(); track profile.id) {
-      <li class="tx-profile-manager__row">
-        <span class="tx-profile-manager__name">{{ profile.name }}</span>
-        @if (profile.id === activeProfileId()) {
-          <tx-tag variant="info" [casing]="'normal'">Active</tx-tag>
+    <ul class="tx-profile-manager__list">
+      @for (profile of localProfiles(); track profile.id) {
+        <li class="tx-profile-manager__row">
+          <span class="tx-profile-manager__name">{{ profile.name }}</span>
+          <tx-tag variant="default" [casing]="'normal'">Local</tx-tag>
+          @if (profile.id === activeProfileId()) {
+            <tx-tag variant="info" [casing]="'normal'">Active</tx-tag>
+          }
+          <div class="tx-profile-manager__actions">
+            @if (isTeamConnected()) {
+              <tx-button variant="secondary" (pressed)="handlePublishToTeam(profile.id)">Publish to team…</tx-button>
+            }
+            <tx-button variant="secondary" (pressed)="handleRenameProfile(profile.id)">Rename</tx-button>
+            <tx-button
+              variant="secondary"
+              [disabled]="profile.id === activeProfileId() || totalProfileCount() <= 1"
+              (pressed)="handleDeleteProfile(profile.id)"
+            >
+              Delete
+            </tx-button>
+          </div>
+        </li>
+      }
+    </ul>
+  </section>
+
+  <section class="tx-profile-manager__section">
+    <h3 class="tx-profile-manager__section-title">Team profiles</h3>
+    @if (teamProfiles().length === 0) {
+      <p class="tx-profile-manager__empty">No team profiles yet. Connect in Teams and import or publish a profile.</p>
+    } @else {
+      <ul class="tx-profile-manager__list">
+        @for (profile of teamProfiles(); track profile.id) {
+          <li class="tx-profile-manager__row">
+            <span class="tx-profile-manager__name">{{ profile.name }}</span>
+            <tx-tag variant="success" [casing]="'normal'">Team</tx-tag>
+            @if (profile.id === activeProfileId()) {
+              <tx-tag variant="info" [casing]="'normal'">Active</tx-tag>
+            }
+            <div class="tx-profile-manager__actions">
+              <tx-button variant="secondary" (pressed)="handleOpenTeamsPanel()">Configure sync…</tx-button>
+              <tx-button variant="secondary" (pressed)="handleRenameProfile(profile.id)">Rename</tx-button>
+              <tx-button variant="secondary" (pressed)="handleUnpublishProfile(profile.id)">Stop syncing</tx-button>
+            </div>
+          </li>
         }
-        <div class="tx-profile-manager__actions">
-          <tx-button variant="secondary" (pressed)="handleRenameProfile(profile.id)">Rename</tx-button>
-          <tx-button
-            variant="secondary"
-            [disabled]="profile.id === activeProfileId() || workspaceProfiles().length <= 1"
-            (pressed)="handleDeleteProfile(profile.id)"
-          >
-            Delete
-          </tx-button>
-        </div>
-      </li>
+      </ul>
     }
-  </ul>
+  </section>
 </tx-modal>
 
 <tx-modal
@@ -96,11 +126,10 @@
 
 <tx-confirm-dialog
   [open]="deleteConfirmOpen()"
-  title="Delete profile"
-  [message]="'Delete profile “' + deleteTargetName() + '”? This removes its workspace data folder.'"
-  confirmLabel="Delete profile"
-  variant="danger"
+  title="Delete profile?"
+  [message]="'Delete “' + deleteTargetName() + '”? This removes its workspace data from this machine.'"
+  confirmLabel="Delete"
+  confirmVariant="danger"
   (confirmed)="handleConfirmDeleteProfile()"
   (cancelled)="handleCloseDeleteConfirm()"
-  (closed)="handleCloseDeleteConfirm()"
 />

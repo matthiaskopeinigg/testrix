@@ -11,7 +11,11 @@ import {
 
 import { ConfigService } from '@app/core/config/config.service';
 import { EnvironmentsService } from '@app/core/environments/environments.service';
+import { ImportExportDialogService } from '@app/core/import-export/import-export-dialog.service';
+import { WorkspaceBundleService } from '@app/core/import-export/workspace-bundle.service';
 import { WorkspaceEditorService } from '@app/core/workspace/workspace-editor.service';
+import { TxNotificationService } from '@app/core/notifications/tx-notification.service';
+import { filterBundle } from '@shared/import-export';
 import { TxContextMenuComponent } from '@app/shared/components/tx-context-menu/tx-context-menu.component';
 import type { TxContextMenuItem } from '@app/shared/components/tx-context-menu/tx-context-menu.types';
 import { TxConfirmDialogComponent } from '@app/shared/components/tx-confirm-dialog/tx-confirm-dialog.component';
@@ -68,6 +72,9 @@ const SEARCH_DEBOUNCE_MS = 100;
 export class EnvironmentsSidebarPanelComponent {
   private readonly configService = inject(ConfigService);
   private readonly environmentsService = inject(EnvironmentsService);
+  private readonly workspaceBundle = inject(WorkspaceBundleService);
+  private readonly importExportDialog = inject(ImportExportDialogService);
+  private readonly notifier = inject(TxNotificationService);
   private readonly workspaceEditor = inject(WorkspaceEditorService);
 
   readonly searchPlaceholder = input('Search environments…');
@@ -289,6 +296,24 @@ export class EnvironmentsSidebarPanelComponent {
           this.openDeleteDialog(profileId);
         }
         break;
+      case 'export-selection':
+        if (profileId) {
+          void this.handleExportSelection(profileId);
+        }
+        break;
+    }
+  }
+
+  private async handleExportSelection(profileId: string): Promise<void> {
+    try {
+      const bundle = await this.workspaceBundle.buildFromAppState();
+      const scoped = filterBundle(bundle, {
+        sections: new Set(['environments']),
+        environments: new Set([profileId]),
+      });
+      this.importExportDialog.openExport(scoped);
+    } catch (e: unknown) {
+      this.notifier.showError(e instanceof Error ? e.message : 'Export failed.');
     }
   }
 

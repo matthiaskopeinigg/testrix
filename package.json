@@ -41,6 +41,7 @@
     "@angular/router": "^21.2.0",
     "bcryptjs": "^3.0.3",
     "better-sqlite3": "^12.10.0",
+    "chokidar": "^5.0.0",
     "cron-parser": "^5.5.0",
     "cronstrue": "^3.14.0",
     "diff": "^7.0.0",
