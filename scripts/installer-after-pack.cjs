@@ -1,10 +1,14 @@
 /**
  * electron-builder afterPack hook for the installer shell (Windows VersionInfo + icon).
+ *
+ * Runs on the unpacked Electron app in `win-unpacked` **before** electron-builder seals
+ * the NSIS portable wrapper. Never rcedit the final `Testrix-Setup.exe` portable —
+ * that breaks NSIS integrity checks at launch.
  */
 const path = require('path');
 const fs = require('fs');
 
-const PRODUCT_NAME = 'Testrix-Setup';
+const PRODUCT_NAME = 'Testrix Setup';
 const COMPANY_NAME = 'Testrix contributors';
 const COPYRIGHT = 'Copyright \u00A9 2026 Testrix contributors';
 
