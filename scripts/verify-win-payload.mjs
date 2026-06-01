@@ -4,6 +4,7 @@
  */
 import { existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { resolveWinUnpackedDir } from './win-payload-build-path.mjs';
 
@@ -52,4 +53,6 @@ function main() {
   process.exit(1);
 }
 
-main();
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  main();
+}
