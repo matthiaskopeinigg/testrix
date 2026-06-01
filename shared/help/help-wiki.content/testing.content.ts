@@ -43,7 +43,8 @@ export const HELP_WIKI_TESTING_SECTIONS: readonly HelpWikiSection[] = [
         type: 'list',
         items: [
           'Create folders and flows from the Test Suite sidebar.',
-          'Open a flow tab to edit steps, variables, and settings.',
+          'Flow tabs use Overview (metadata, settings) and Steps (step tree, editor, run log) sections.',
+          'Section layout (Sidebar vs Tabs) is under Settings → Test Suite → Editor layout.',
           'Run the flow to execute steps sequentially with pass/fail status.',
         ],
       },
@@ -83,7 +84,7 @@ export const HELP_WIKI_TESTING_SECTIONS: readonly HelpWikiSection[] = [
     blocks: [
       {
         type: 'paragraph',
-        text: 'Define load test artifacts with targets (collection request or manual URL), concurrency/duration profiles, and run to collect latency and throughput metrics.',
+        text: 'Define load test artifacts with targets (collection request or manual URL), concurrency/duration profiles, and run to collect latency and throughput metrics. Workspace tabs support section navigation; layout is under Settings → Load Test.',
       },
       {
         type: 'list',
@@ -104,7 +105,7 @@ export const HELP_WIKI_TESTING_SECTIONS: readonly HelpWikiSection[] = [
     blocks: [
       {
         type: 'paragraph',
-        text: 'Regression artifacts capture expected behavior across flows or captures. Re-run to compare results and review step-level diffs.',
+        text: 'Regression artifacts capture expected behavior across flows or captures. Re-run to compare results and review step-level diffs. Workspace tabs use section navigation; layout is under Settings → Regression.',
       },
     ],
   }),
@@ -127,6 +128,7 @@ export const HELP_WIKI_TESTING_SECTIONS: readonly HelpWikiSection[] = [
           'Configure port, host, delay, and CORS in sidebar options.',
           'Optional capture of hits and unmatched requests to History.',
           'Start/stop from the sidebar; auto-start on launch in options.',
+          'Endpoint tabs use section navigation; layout is under Settings → Mock Server.',
         ],
       },
     ],
@@ -141,7 +143,7 @@ export const HELP_WIKI_TESTING_SECTIONS: readonly HelpWikiSection[] = [
     blocks: [
       {
         type: 'paragraph',
-        text: 'Capture opens an embedded browser session and logs HTTP traffic. Filter the log and open entries as new collection requests.',
+        text: 'Capture opens an embedded browser session and logs HTTP traffic. Session tabs have Overview (summary, start URL) and Traffic sections. Layout is under Settings → Capture. Filter the log and open entries as new collection requests.',
       },
     ],
   }),
@@ -155,7 +157,7 @@ export const HELP_WIKI_TESTING_SECTIONS: readonly HelpWikiSection[] = [
     blocks: [
       {
         type: 'paragraph',
-        text: 'Define rules that match outbound URLs and proxy, block, or return mock responses. Enable the interceptor runtime from the sidebar to apply rules to Testrix HTTP traffic.',
+        text: 'Define rules that match outbound URLs and proxy, block, or return mock responses. Rule tabs use Overview, Match, and Action sections. Layout is under Settings → Interceptor. Enable the interceptor runtime from the sidebar to apply rules to Testrix HTTP traffic.',
       },
     ],
   }),

@@ -22,32 +22,61 @@
 
 .int-tab__bar {
   @include tab-chrome.workspace-tab-toolbar-row;
-  border-bottom: 0;
 }
 
 .int-tab__bar-cluster {
   @include tab-chrome.workspace-tab-bar-cluster;
-  flex: 1 1 auto;
-  min-width: 0;
-  align-items: flex-end;
+
+  &--grow {
+    @include tab-chrome.workspace-tab-bar-cluster-grow;
+  }
+
+  &--trailing {
+    @include tab-chrome.workspace-tab-bar-cluster-trailing;
+  }
+}
+
+.int-tab__protocol-chip {
+  @include tab-chrome.workspace-tab-title-chip;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex: 0 0 auto;
+  align-self: flex-end;
+  margin-bottom: 1px;
+  padding-inline: 0.55rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--tx-text-1);
 }
 
 .int-tab__name-field {
-  flex: 0 1 11rem;
-  min-width: 6rem;
-  max-width: 14rem;
-}
-
-.int-tab__match-field {
-  flex: 1 1 12rem;
+  flex: 1 1 auto;
   min-width: 8rem;
+  max-width: 24rem;
 }
 
 .int-tab__enabled-toggle {
   flex: 0 0 auto;
-  margin-left: auto;
   align-self: flex-end;
   margin-bottom: 1px;
+}
+
+.int-tab--sidebar .int-tab__workspace {
+  flex-direction: row;
+}
+
+.int-tab__sections-wrap {
+  @include tab-chrome.workspace-tab-sections-wrap;
+}
+
+.int-tab__sections-bar {
+  @include tab-chrome.workspace-tab-sections-bar;
+}
+
+.int-tab__section-tab {
+  @include tab-chrome.workspace-tab-section-tab;
 }
 
 .int-tab__workspace {
@@ -57,21 +86,51 @@
   min-width: 0;
 }
 
+.int-tab__nav {
+  @include tab-chrome.workspace-tab-section-sidebar-nav;
+}
+
+.int-tab__nav-item {
+  @include tab-chrome.workspace-tab-section-sidebar-nav-item;
+}
+
+.int-tab__nav-icon {
+  display: flex;
+  flex-shrink: 0;
+}
+
+.int-tab__divider {
+  @include tab-chrome.workspace-tab-section-sidebar-divider;
+}
+
 .int-tab__pane {
   display: flex;
   flex: 1 1 auto;
   flex-direction: column;
   min-width: 0;
   min-height: 0;
-  overflow: hidden;
-  padding: 8px 12px 12px;
+  overflow: auto;
+  padding: 14px 18px 18px;
 }
 
+.int-tab__action-shell,
 .int-tab__content {
   display: flex;
   flex: 1 1 auto;
   flex-direction: column;
   min-height: 0;
   min-width: 0;
+}
+
+.int-tab__content {
   overflow: hidden;
+}
+
+.request-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+  flex: 1 1 auto;
+  max-width: 56rem;
 }

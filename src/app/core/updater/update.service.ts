@@ -57,7 +57,7 @@ export class UpdateService {
     const ignored = this.config.settings()?.updates.ignoredOfferVersion ?? null;
     const offered = status.info?.version ?? null;
 
-    if (!isDevSimulation && ignored && offered && ignored === offered) {
+    if (ignored && offered && ignored === offered) {
       return false;
     }
 
@@ -90,8 +90,15 @@ export class UpdateService {
   async checkNow(): Promise<void> {
     const bridge = this.electron.bridge()?.updater;
     if (!bridge) {
+      this.statusState.set({
+        state: 'disabled',
+        info: null,
+        message: 'Updates apply to the installed desktop app.',
+      });
       return;
     }
+
+    this.statusState.set({ state: 'checking', info: null });
     const status = await bridge.check();
     this.statusState.set(status);
   }
@@ -176,6 +183,7 @@ export class UpdateService {
     this.downloadAndInstallPending = false;
     this.clearDevSimulation();
     await this.config.patchSettings({ updates: { ignoredOfferVersion: version } });
+    this.statusState.set(IDLE_STATUS);
   }
 
   /** Dev toolkit only — drives the global update banner without touching electron-updater. */

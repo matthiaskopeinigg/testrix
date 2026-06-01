@@ -11,6 +11,7 @@ export * from './components/tx-banner/tx-banner.component';
 export * from './components/tx-update-banner/tx-update-banner.component';
 export * from './components/tx-update-install-overlay/tx-update-install-overlay.component';
 export * from './components/tx-profile-switch-overlay/tx-profile-switch-overlay.component';
+export * from './components/tx-layout-onboarding-overlay/tx-layout-onboarding-overlay.component';
 
 export * from './components/tx-notification/tx-notification.component';
 export type { TxNotificationPayload, TxNotificationTone } from './components/tx-notification/tx-notification.types';
@@ -166,6 +167,8 @@ export {
 export * from './components/tx-settings-popup/tx-settings-popup.component';
 
 export * from './components/tx-help-popup/tx-help-popup.component';
+
+export * from './components/tx-command-palette/tx-command-palette.component';
 
 export * from './components/tx-window-titlebar/tx-window-titlebar.component';
 

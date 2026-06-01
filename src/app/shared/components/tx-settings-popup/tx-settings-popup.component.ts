@@ -60,6 +60,7 @@ import {
 
 import type { UpdateChannel } from '@shared/updater/updater-status.schema';
 
+import { TxBannerComponent } from '../tx-banner/tx-banner.component';
 import { TxBrandLogoComponent } from '../tx-brand-logo/tx-brand-logo.component';
 import { TxButtonComponent } from '../tx-button/tx-button.component';
 import { TxConfirmDialogComponent } from '../tx-confirm-dialog/tx-confirm-dialog.component';
@@ -96,6 +97,11 @@ export type SettingsPopupSection =
   | 'collections'
   | 'environments'
   | 'testSuite'
+  | 'regression'
+  | 'loadTest'
+  | 'mockServer'
+  | 'capture'
+  | 'interceptor'
   | 'general'
   | 'logging'
   | 'databases'
@@ -107,7 +113,6 @@ export type SettingsPopupSection =
   | 'httpCertificates'
   | 'httpDns'
   | 'httpProxy'
-  | 'privacy'
   | 'about';
 
 type ConfirmAction =
@@ -145,6 +150,7 @@ export interface SettingsSidebarSection {
   standalone: true,
   imports: [
     FormsModule,
+    TxBannerComponent,
     TxBrandLogoComponent,
     TxButtonComponent,
     TxConfirmDialogComponent,
@@ -256,6 +262,32 @@ export class TxSettingsPopupComponent {
   protected readonly updateStatus = this.updateService.status;
   protected readonly releasesPageUrl = UPDATER_DOWNLOAD_RELEASES_PAGE_URL;
 
+  protected readonly appVersionLabel = computed(() => {
+    const app = this.bridgeMeta()?.app;
+    return app ? `Version ${app}` : 'Version (dev)';
+  });
+
+  protected readonly showUpdateStatusBanner = computed(() => {
+    const state = this.updateStatus().state;
+    return (
+      state === 'error' ||
+      state === 'available' ||
+      state === 'downloading' ||
+      state === 'downloaded'
+    );
+  });
+
+  protected readonly updateStatusBannerVariant = computed((): 'info' | 'success' | 'error' => {
+    const state = this.updateStatus().state;
+    if (state === 'error') {
+      return 'error';
+    }
+    if (state === 'downloaded') {
+      return 'success';
+    }
+    return 'info';
+  });
+
   protected readonly updateStatusMessage = computed(() => {
     const status = this.updateStatus();
     switch (status.state) {
@@ -342,6 +374,11 @@ export class TxSettingsPopupComponent {
         { id: 'collections', label: 'Collections', icon: 'folder' },
         { id: 'environments', label: 'Environments', icon: 'globe' },
         { id: 'testSuite', label: 'Test Suite', icon: 'testing' },
+        { id: 'regression', label: 'Regression', icon: 'gitBranch' },
+        { id: 'loadTest', label: 'Load Test', icon: 'zap' },
+        { id: 'mockServer', label: 'Mock Server', icon: 'cloud' },
+        { id: 'capture', label: 'Capture', icon: 'record' },
+        { id: 'interceptor', label: 'Interceptor', icon: 'interceptor' },
         { id: 'general', label: 'General', icon: 'folder' },
       ],
     },
@@ -363,7 +400,6 @@ export class TxSettingsPopupComponent {
         { id: 'logging', label: 'Logging', icon: 'terminal' },
         { id: 'databases', label: 'Databases', icon: 'database' },
         { id: 'dataConfig', label: 'Data & Config', icon: 'folder' },
-        { id: 'privacy', label: 'Privacy', icon: 'shield' },
       ],
     },
     {
@@ -607,6 +643,10 @@ export class TxSettingsPopupComponent {
     await this.patch({ editor: { keyboard: patch } });
   }
 
+  protected async patchAppKeyboardBindings(bindings: Record<string, string>): Promise<void> {
+    await this.patch({ keyboard: { bindings } });
+  }
+
   protected async patchAnimationSpeed(speed: SettingsFile['ui']['animationSpeed']): Promise<void> {
     const previous = this.uiPreferences.animationSpeed();
     const crossesNone = previous === 'none' || speed === 'none';
@@ -632,10 +672,6 @@ export class TxSettingsPopupComponent {
     this.lockSidebarEntrance();
   }
 
-  protected async patchPrivacyToggle(value: boolean): Promise<void> {
-    await this.patch({ privacy: { telemetryEnabled: value } });
-  }
-
   protected async patchUpdatesToggle(value: boolean): Promise<void> {
     await this.patch({ updates: { checkOnStartup: value } });
   }
@@ -646,6 +682,10 @@ export class TxSettingsPopupComponent {
 
   protected handleCheckForUpdates(): void {
     void this.updateService.checkNow();
+  }
+
+  protected handleDownloadAndInstallUpdate(): void {
+    void this.updateService.downloadAndInstall();
   }
 
   protected handleInstallUpdate(): void {
@@ -758,6 +798,42 @@ export class TxSettingsPopupComponent {
     value: SettingsFile['testSuite']['siblingSort'],
   ): Promise<void> {
     await this.patch({ testSuite: { siblingSort: value } });
+  }
+
+  protected async patchTestSuiteEditorLayout(
+    value: SettingsFile['testSuite']['editorLayout'],
+  ): Promise<void> {
+    await this.patch({ testSuite: { editorLayout: value } });
+  }
+
+  protected async patchRegressionEditorLayout(
+    value: SettingsFile['regression']['editorLayout'],
+  ): Promise<void> {
+    await this.patch({ regression: { editorLayout: value } });
+  }
+
+  protected async patchLoadTestEditorLayout(
+    value: SettingsFile['loadTest']['editorLayout'],
+  ): Promise<void> {
+    await this.patch({ loadTest: { editorLayout: value } });
+  }
+
+  protected async patchMockServerEditorLayout(
+    value: SettingsFile['mockServer']['editorLayout'],
+  ): Promise<void> {
+    await this.patch({ mockServer: { editorLayout: value } });
+  }
+
+  protected async patchCaptureEditorLayout(
+    value: SettingsFile['capture']['editorLayout'],
+  ): Promise<void> {
+    await this.patch({ capture: { editorLayout: value } });
+  }
+
+  protected async patchInterceptorEditorLayout(
+    value: SettingsFile['interceptor']['editorLayout'],
+  ): Promise<void> {
+    await this.patch({ interceptor: { editorLayout: value } });
   }
 
   protected async patchHttpRequest(patch: Partial<SettingsFile['http']['request']>): Promise<void> {
@@ -1393,10 +1469,6 @@ export class TxSettingsPopupComponent {
       return 'General settings saved';
     }
 
-    if (patch.privacy != null) {
-      return 'Privacy settings saved';
-    }
-
     if (patch.updates != null) {
       return 'Update settings saved';
     }
@@ -1415,6 +1487,26 @@ export class TxSettingsPopupComponent {
 
     if (patch.testSuite != null) {
       return 'Test Suite settings saved';
+    }
+
+    if (patch.regression != null) {
+      return 'Regression settings saved';
+    }
+
+    if (patch.loadTest != null) {
+      return 'Load Test settings saved';
+    }
+
+    if (patch.mockServer != null) {
+      return 'Mock Server settings saved';
+    }
+
+    if (patch.capture != null) {
+      return 'Capture settings saved';
+    }
+
+    if (patch.interceptor != null) {
+      return 'Interceptor settings saved';
     }
 
     if (patch.dataConfig != null) {

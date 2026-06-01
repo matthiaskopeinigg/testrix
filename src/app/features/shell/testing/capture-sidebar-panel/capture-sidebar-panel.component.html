@@ -14,7 +14,8 @@
       class="workspace-panel-shell__icon-btn"
       [class.is-pressed]="filterToolbarActive()"
       aria-label="Filter capture sessions"
-      title="Filter capture sessions"
+      txTooltip="Filter capture sessions"
+      txTooltipPosition="bottom"
       [attr.aria-expanded]="filterMenuOpen()"
       (click)="handleFilterToolbarClick($event)"
     >
@@ -25,7 +26,8 @@
       class="workspace-panel-shell__icon-btn"
       [class.is-pressed]="sortToolbarActive()"
       aria-label="Sort capture sessions"
-      title="Sort capture sessions"
+      txTooltip="Sort capture sessions"
+      txTooltipPosition="bottom"
       [attr.aria-expanded]="sortMenuOpen()"
       (click)="handleSortToolbarClick($event)"
     >

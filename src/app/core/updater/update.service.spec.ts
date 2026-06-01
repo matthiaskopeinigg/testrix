@@ -230,4 +230,40 @@ describe('UpdateService', () => {
 
     vi.useRealTimers();
   });
+
+  it('dismiss hides dev simulation banner and persists ignored version', async () => {
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [
+        UpdateService,
+        UpdateBannerContextService,
+        {
+          provide: TxNotificationService,
+          useValue: { showSuccess: vi.fn(), showError: vi.fn() },
+        },
+        ConfigService,
+        {
+          provide: ElectronService,
+          useValue: {
+            hasBridge: () => false,
+            isDevToolkit: () => true,
+            bridge: () => undefined,
+          },
+        },
+      ],
+    });
+
+    const simService = TestBed.inject(UpdateService);
+    const simConfig = TestBed.inject(ConfigService);
+    simConfig.syncSettings(createDefaultSettings());
+
+    await simService.simulateUpdateAvailable();
+    expect(simService.showUpdateBanner()).toBe(true);
+
+    await simService.ignoreCurrentOffer();
+
+    expect(simService.showUpdateBanner()).toBe(false);
+    expect(simService.status().state).toBe('idle');
+    expect(simConfig.settings()?.updates.ignoredOfferVersion).toBe('0.99.0-sim');
+  });
 });

@@ -241,7 +241,8 @@
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  padding: 14px clamp(18px, 3vw, 32px) 36px clamp(18px, 2.5vw, 32px);
+  // Right padding clears `.tx-overlay-dialog__close` (14px inset + 32px control).
+  padding: 14px clamp(48px, calc(18px + 2rem), 56px) 36px clamp(18px, 2.5vw, 32px);
   overflow: visible;
 }
 
@@ -580,6 +581,15 @@
   text-align: center;
   gap: 0.5rem;
   padding-bottom: 0.25rem;
+}
+
+.tx-settings__about-version {
+  margin: 0;
+  font-size: 1.0625rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--tx-text-0);
+  letter-spacing: 0.01em;
 }
 
 .tx-settings__file-input {

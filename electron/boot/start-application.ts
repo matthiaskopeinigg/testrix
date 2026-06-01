@@ -20,6 +20,7 @@ import { getMainSettings } from '../services/settings-runtime';
 import { getUpdaterService } from '../services/updater/updater.service';
 import { createMainWindow, loadMainWindowContent, usesWin32DirectShow } from '../windows/main-window/main-window.factory';
 import { createSplashWindow } from '../windows/splash-window/splash-window.factory';
+import { registerBrowserProtocolHandler } from '../config/browser-protocol';
 import { resolveDevServerOrigin, waitForDevServerReady } from './wait-for-dev-server';
 
 import { ErrorCodes, TestrixError } from '../../shared/errors';
@@ -47,25 +48,22 @@ function attachDefaultCsp(): void {
     const existing = details.responseHeaders ?? {};
 
     const urlLower = details.url.toLowerCase();
-    if (
-      urlLower.startsWith('file://') ||
-      urlLower.startsWith('devtools://') ||
-      urlLower.startsWith('chrome-extension://')
-    ) {
+    if (urlLower.startsWith('devtools://') || urlLower.startsWith('chrome-extension://')) {
       callback({ responseHeaders: existing });
       return;
     }
 
+    const testrixSrc = 'testrix:';
     const githubConnect =
       "https://api.github.com https://*.githubusercontent.com https://github.com";
     const connectSrc = usesAngularDevServer()
       ? `${buildDevConnectSrc(resolveDevServerOrigin())} ${githubConnect}`.trim()
-      : `'self' ${githubConnect}`;
+      : `'self' ${testrixSrc} blob: ${githubConnect}`;
     const fontStyleSrc = "'self' 'unsafe-inline' https://fonts.googleapis.com";
     const fontSrc = "'self' https://fonts.gstatic.com data:";
     const csp = usesAngularDevServer()
       ? `default-src 'self'; script-src 'self' 'unsafe-inline'; style-src ${fontStyleSrc}; font-src ${fontSrc}; img-src 'self' data: blob:; connect-src ${connectSrc}; worker-src 'self' blob:; frame-src 'self'; child-src 'self'`
-      : `default-src 'self'; script-src 'self' 'unsafe-inline'; style-src ${fontStyleSrc}; font-src ${fontSrc}; img-src 'self' data: blob:; frame-src 'self'; child-src 'self'`;
+      : `default-src 'self' ${testrixSrc}; script-src 'self' 'unsafe-inline'; style-src ${fontStyleSrc}; font-src ${fontSrc}; img-src 'self' ${testrixSrc} data: blob:; connect-src ${connectSrc}; frame-src 'self'; child-src 'self'`;
     callback({
       responseHeaders: {
         ...existing,
@@ -115,6 +113,8 @@ export async function startApplication(getBootSplash?: () => BrowserWindow | nul
   });
 
   await app.whenReady();
+
+  registerBrowserProtocolHandler();
 
   const splashWindow = resolveBootSplash(getBootSplash);
 
@@ -241,8 +241,10 @@ export async function startApplication(getBootSplash?: () => BrowserWindow | nul
           profiles: state.profiles,
         });
       },
-      mergeTeamProfilesFromManifest: (teamRepoDir) => profiles.mergeTeamProfilesFromManifest(teamRepoDir),
-      importTeamProfiles: (teamRepoDir, profileIds) => profiles.importTeamProfiles(teamRepoDir, profileIds),
+      mergeTeamProfilesFromManifest: (teamRepoDir, repoDataDir) =>
+        profiles.mergeTeamProfilesFromManifest(teamRepoDir, repoDataDir),
+      importTeamProfiles: (teamRepoDir, profileIds, repoDataDir) =>
+        profiles.importTeamProfiles(teamRepoDir, profileIds, repoDataDir),
       publishLocalProfile: (profileId) => profiles.publishLocalProfile(profileId),
       createTeamProfile: (name) => profiles.createTeamProfile(name),
       unpublishProfile: (profileId) => profiles.unpublishProfile(profileId),
@@ -256,8 +258,10 @@ export async function startApplication(getBootSplash?: () => BrowserWindow | nul
         getMainWindow: () => (mainWindow.isDestroyed() ? null : mainWindow),
         getActiveProfileId: () => anchorRef.activeProfileId ?? null,
         getProfilesState: () => profiles.getProfilesState(),
-        mergeTeamProfilesFromManifest: (teamRepoDir) => profiles.mergeTeamProfilesFromManifest(teamRepoDir),
-        importTeamProfiles: (teamRepoDir, profileIds) => profiles.importTeamProfiles(teamRepoDir, profileIds),
+        mergeTeamProfilesFromManifest: (teamRepoDir, repoDataDir) =>
+          profiles.mergeTeamProfilesFromManifest(teamRepoDir, repoDataDir),
+        importTeamProfiles: (teamRepoDir, profileIds, repoDataDir) =>
+          profiles.importTeamProfiles(teamRepoDir, profileIds, repoDataDir),
         publishLocalProfile: (profileId) => profiles.publishLocalProfile(profileId),
         createTeamProfile: (name) => profiles.createTeamProfile(name),
         unpublishProfile: (profileId) => profiles.unpublishProfile(profileId),

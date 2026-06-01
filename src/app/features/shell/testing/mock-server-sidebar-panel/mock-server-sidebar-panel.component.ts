@@ -26,6 +26,7 @@ import type { TxContextMenuItem } from '@app/shared/components/tx-context-menu/t
 import { TxConfirmDialogComponent } from '@app/shared/components/tx-confirm-dialog/tx-confirm-dialog.component';
 import { TxFormFieldComponent } from '@app/shared/components/tx-form-field/tx-form-field.component';
 import { TxIconComponent } from '@app/shared/components/tx-icon/tx-icon.component';
+import { TxTooltipDirective } from '@app/shared/components/tx-tooltip/tx-tooltip.directive';
 import { TxInputComponent } from '@app/shared/components/tx-input/tx-input.component';
 import { TxToggleComponent } from '@app/shared/components/tx-toggle/tx-toggle.component';
 import { mergeTxTreeConfig } from '@app/shared/components/tx-tree/tx-tree.config';
@@ -80,6 +81,7 @@ const SESSION_DEBOUNCE_MS = 300;
     TxInputComponent,
     TxToggleComponent,
     TxIconComponent,
+    TxTooltipDirective,
   ],
   templateUrl: './mock-server-sidebar-panel.component.html',
   styleUrl: './mock-server-sidebar-panel.component.scss',

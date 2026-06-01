@@ -26,6 +26,7 @@ import {
 } from '@shared/testing';
 
 import { ConfigService } from '@app/core/config/config.service';
+import { resolveTabEditorLayout } from '@app/core/config/workspace-tab-editor-layout';
 import { MockServerService } from '@app/core/testing/mock-server.service';
 import { newTestingId } from '@app/core/testing/testing-id';
 import { UiPreferencesService } from '@app/core/ui/ui-preferences.service';
@@ -104,9 +105,8 @@ export class MockServerWorkspaceTabComponent {
   protected readonly methodOptions = METHOD_OPTIONS;
   protected readonly activeSection = signal<MockServerTabSectionId>('overview');
 
-  protected readonly editorLayout = computed(
-    (): WorkspaceEditorLayoutId =>
-      this.configService.settings()?.collections.editorLayout ?? 'sidebar',
+  protected readonly editorLayout = computed((): WorkspaceEditorLayoutId =>
+    resolveTabEditorLayout(this.configService.settings(), 'mockServer'),
   );
 
   protected readonly useSidebarLayout = computed(() => this.editorLayout() === 'sidebar');

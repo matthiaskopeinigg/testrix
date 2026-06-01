@@ -19,6 +19,7 @@ import { ProfileService } from './core/profile/profile.service';
 import { TeamSyncService } from './core/collaboration/team-sync.service';
 import { TeamsPanelService } from './core/collaboration/teams-panel.service';
 import { WorkspaceSidebarSessionService } from './core/workspace/workspace-sidebar-session.service';
+import { CommandSeedsService } from './core/commands/command-seeds.service';
 
 import { WindowChromeDocumentService } from './core/electron/window-chrome-document.service';
 import { UiPreferencesService } from './core/ui/ui-preferences.service';
@@ -47,6 +48,7 @@ export class App implements OnInit {
   private readonly interceptor = inject(InterceptorWorkspaceStore);
   private readonly testingSession = inject(TestingSessionService);
   private readonly sidebarSession = inject(WorkspaceSidebarSessionService);
+  private readonly commandSeeds = inject(CommandSeedsService);
 
 
   /** Registers `data-*` UI preference hooks on `document.documentElement`. */
@@ -67,6 +69,7 @@ export class App implements OnInit {
     ]);
     this.testingSession.load();
     this.sidebarSession.load();
+    this.commandSeeds.register();
     void Promise.all([
       this.testSuite.hydrate(),
       this.loadTest.hydrate(),

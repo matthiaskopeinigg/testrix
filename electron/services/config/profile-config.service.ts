@@ -19,7 +19,8 @@ import {
   type ProfilesState,
 } from '../../../shared/config';
 import {
-  TEAM_PROFILES_MANIFEST_FILE_NAME,
+  resolveLegacyTeamProfilesManifestPath,
+  resolveTeamProfilesManifestPath,
   teamProfilesManifestSchema,
   type TeamProfilesManifest,
 } from '../../../shared/collaboration';
@@ -272,13 +273,18 @@ export class ProfileConfigService {
   async importTeamProfiles(
     teamRepoDir: string,
     profileIds: readonly string[],
+    repoDataDir = '',
   ): Promise<{ readonly importedProfileIds: readonly string[] }> {
-    const manifestPath = path.join(teamRepoDir, TEAM_PROFILES_MANIFEST_FILE_NAME);
+    const manifestPath = resolveTeamProfilesManifestPath(teamRepoDir, repoDataDir);
     let raw: string;
     try {
       raw = await fs.readFile(manifestPath, 'utf8');
     } catch {
-      return { importedProfileIds: [] };
+      try {
+        raw = await fs.readFile(resolveLegacyTeamProfilesManifestPath(teamRepoDir), 'utf8');
+      } catch {
+        return { importedProfileIds: [] };
+      }
     }
 
     const parsed = teamProfilesManifestSchema.safeParse(JSON.parse(raw));
@@ -404,13 +410,19 @@ export class ProfileConfigService {
   /**
    * @deprecated Use importTeamProfiles for explicit imports.
    */
-  async mergeTeamProfilesFromManifest(teamRepoDir: string): Promise<{ readonly addedProfileIds: readonly string[] }> {
-    const manifestPath = path.join(teamRepoDir, TEAM_PROFILES_MANIFEST_FILE_NAME);
+  async mergeTeamProfilesFromManifest(
+    teamRepoDir: string,
+    repoDataDir = '',
+  ): Promise<{ readonly addedProfileIds: readonly string[] }> {
     let raw: string;
     try {
-      raw = await fs.readFile(manifestPath, 'utf8');
+      raw = await fs.readFile(resolveTeamProfilesManifestPath(teamRepoDir, repoDataDir), 'utf8');
     } catch {
-      return { addedProfileIds: [] };
+      try {
+        raw = await fs.readFile(resolveLegacyTeamProfilesManifestPath(teamRepoDir), 'utf8');
+      } catch {
+        return { addedProfileIds: [] };
+      }
     }
 
     const parsed = teamProfilesManifestSchema.safeParse(JSON.parse(raw));

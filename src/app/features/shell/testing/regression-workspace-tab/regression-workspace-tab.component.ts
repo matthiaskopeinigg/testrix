@@ -32,6 +32,7 @@ import {
 } from '@shared/testing';
 
 import { ConfigService } from '@app/core/config/config.service';
+import { resolveTabEditorLayout } from '@app/core/config/workspace-tab-editor-layout';
 import { EnvironmentsService } from '@app/core/environments/environments.service';
 import { TestingSessionService } from '@app/core/testing/testing-session.service';
 import { ElectronService } from '@app/core/electron/electron.service';
@@ -153,9 +154,8 @@ export class RegressionWorkspaceTabComponent {
 
   protected readonly missing = computed(() => !this.artifact());
 
-  protected readonly editorLayout = computed(
-    (): WorkspaceEditorLayoutId =>
-      this.configService.settings()?.collections.editorLayout ?? 'sidebar',
+  protected readonly editorLayout = computed((): WorkspaceEditorLayoutId =>
+    resolveTabEditorLayout(this.configService.settings(), 'regression'),
   );
 
   protected readonly useSidebarLayout = computed(() => this.editorLayout() === 'sidebar');

@@ -11,7 +11,12 @@
     </div>
   </section>
 } @else if (item(); as session) {
-  <section class="cap-tab tx-workspace-tab" [attr.aria-label]="title()">
+  <section
+    class="cap-tab tx-workspace-tab"
+    [class.cap-tab--titlebar]="useTitlebarLayout()"
+    [class.cap-tab--sidebar]="useSidebarLayout()"
+    [attr.aria-label]="title()"
+  >
     <div
       class="tx-workspace-tab__chrome tx-entrance-stagger"
       [class.tx-entrance-stagger--play]="tabMotion.loadStaggerPlay()"
@@ -56,35 +61,108 @@
           </tx-button>
         </div>
       </div>
+
+      @if (useTitlebarLayout()) {
+        <div class="tx-entrance-stagger__block cap-tab__sections-wrap">
+          <nav
+            class="cap-tab__sections-bar"
+            role="tablist"
+            aria-label="Capture sections"
+            [txWorkspaceSectionNav]="activeSection()"
+          >
+            @for (item of navItems; track item.id) {
+              <button
+                type="button"
+                class="cap-tab__section-tab"
+                role="tab"
+                [attr.aria-selected]="activeSection() === item.id"
+                [class.is-active]="activeSection() === item.id"
+                (click)="handleSectionSelect(item.id)"
+              >
+                <tx-icon [name]="$any(item.icon)" [size]="14" aria-hidden="true" />
+                <span>{{ item.label }}</span>
+              </button>
+            }
+          </nav>
+        </div>
+      }
     </div>
 
     <div class="cap-tab__workspace">
-      <div
-        class="cap-tab__pane tx-workspace-tab__pane tx-entrance-stagger"
-        [class.tx-entrance-stagger--play]="tabMotion.loadStaggerPlay()"
-        [class.tx-entrance-stagger--settled]="tabMotion.loadStaggerSettled()"
-      >
-        <div class="tx-entrance-stagger__block cap-tab__content">
-          @if (!captureSupported()) {
-            <tx-banner variant="warning" title="Desktop only">
-              Capture requires the Testrix desktop app. Start capture opens a separate browser window with the start URL.
-            </tx-banner>
+      @if (useSidebarLayout()) {
+        <nav
+          class="cap-tab__nav"
+          role="tablist"
+          aria-label="Capture sections"
+          [txWorkspaceSectionNav]="activeSection()"
+        >
+          @for (item of navItems; track item.id) {
+            <button
+              type="button"
+              class="cap-tab__nav-item"
+              role="tab"
+              [attr.aria-selected]="activeSection() === item.id"
+              [class.is-active]="activeSection() === item.id"
+              (click)="handleSectionSelect(item.id)"
+            >
+              <span class="cap-tab__nav-icon">
+                <tx-icon [name]="$any(item.icon)" [size]="14" aria-hidden="true" />
+              </span>
+              <span>{{ item.label }}</span>
+            </button>
           }
+        </nav>
+        <div class="cap-tab__divider" aria-hidden="true"></div>
+      }
 
-          <app-cap-tab-traffic-panel
-            [entries]="sessionEntries()"
-            [running]="sessionRecording()"
-            [filterQuery]="trafficFilter()"
-            [filterScope]="trafficFilterScope()"
-            [resourceCategory]="trafficResourceCategory()"
-            (filterQueryChange)="handleFilterQueryChange($event)"
-            (filterScopeChange)="handleFilterScopeChange($event)"
-            (resourceCategoryChange)="handleResourceCategoryChange($event)"
-            (clearHistory)="handleClearHistory()"
-            (createCollectionRequest)="handleCreateCollectionRequest($event)"
-            (createFlowFromCapture)="handleCreateFlowFromCapture($event)"
-          />
-        </div>
+      <div class="cap-tab__pane tx-workspace-tab__pane">
+        @switch (activeSection()) {
+          @case ('overview') {
+            <div
+              class="tx-workspace-tab__section-shell tx-entrance-stagger"
+              [class.tx-entrance-stagger--play]="isSectionContentAnimating('overview')"
+              [class.tx-entrance-stagger--settled]="isSectionContentSettled('overview')"
+            >
+              <div class="tx-entrance-stagger__block">
+                @if (!captureSupported()) {
+                  <tx-banner variant="warning" title="Desktop only">
+                    Capture requires the Testrix desktop app. Start capture opens a separate browser window with the start URL.
+                  </tx-banner>
+                }
+                <app-cap-tab-overview-panel
+                  [session]="session"
+                  [entryCount]="sessionEntries().length"
+                  [recording]="sessionRecording()"
+                  [captureSupported]="captureSupported()"
+                  (sectionSelect)="handleSectionSelect($event)"
+                />
+              </div>
+            </div>
+          }
+          @case ('traffic') {
+            <div
+              class="tx-workspace-tab__section-shell tx-entrance-stagger cap-tab__traffic-shell"
+              [class.tx-entrance-stagger--play]="isSectionContentAnimating('traffic')"
+              [class.tx-entrance-stagger--settled]="isSectionContentSettled('traffic')"
+            >
+              <div class="tx-entrance-stagger__block cap-tab__content">
+                <app-cap-tab-traffic-panel
+                  [entries]="sessionEntries()"
+                  [running]="sessionRecording()"
+                  [filterQuery]="trafficFilter()"
+                  [filterScope]="trafficFilterScope()"
+                  [resourceCategory]="trafficResourceCategory()"
+                  (filterQueryChange)="handleFilterQueryChange($event)"
+                  (filterScopeChange)="handleFilterScopeChange($event)"
+                  (resourceCategoryChange)="handleResourceCategoryChange($event)"
+                  (clearHistory)="handleClearHistory()"
+                  (createCollectionRequest)="handleCreateCollectionRequest($event)"
+                  (createFlowFromCapture)="handleCreateFlowFromCapture($event)"
+                />
+              </div>
+            </div>
+          }
+        }
       </div>
     </div>
   </section>

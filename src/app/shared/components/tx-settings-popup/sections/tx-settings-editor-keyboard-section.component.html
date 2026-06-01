@@ -2,13 +2,82 @@
   <div class="tx-entrance-stagger__block">
     <h2 class="tx-settings__tab-title">Keyboard</h2>
     <p class="tx-settings__tab-description">
-      Code editor shortcuts for scripts, JSON bodies, and other editors. Bindings follow VS Code; the modifier is
-      <kbd>Ctrl</kbd> on Windows/Linux and <kbd>⌘</kbd> on macOS.
+      App shortcuts and code editor behavior. Chords use key codes (e.g. <code>Mod+KeyK</code>).
+      <strong>Mod</strong> is <kbd>Ctrl</kbd> on Windows/Linux and <kbd>⌘</kbd> on macOS.
     </p>
   </div>
 
   <div class="tx-entrance-stagger__block">
-    <h3 class="tx-settings__section-heading">Behavior</h3>
+    <h3 class="tx-settings__section-heading">App shortcuts</h3>
+    <p class="tx-settings-editor-kbd__hint">
+      Click <strong>Change</strong>, press the new keys, or <strong>Esc</strong> to cancel. Conflicts are blocked.
+    </p>
+
+    @if (bindingError(); as error) {
+      <tx-banner variant="error" [title]="error" class="tx-settings-editor-kbd__banner" />
+    }
+
+    @if (bindCaptureActionId(); as captureId) {
+      <tx-banner
+        variant="info"
+        [title]="'Recording shortcut — press a chord or Esc to cancel.'"
+        class="tx-settings-editor-kbd__banner"
+      />
+    }
+
+    <div class="tx-settings-editor-kbd__actions">
+      <tx-button
+        variant="secondary"
+        [disabled]="bindCaptureActionId() !== null"
+        (pressed)="handleResetAllBindings()"
+      >
+        Reset all to defaults
+      </tx-button>
+    </div>
+
+    <table class="tx-settings-editor-kbd__table tx-settings-editor-kbd__table--app">
+      <thead>
+        <tr>
+          <th scope="col">Action</th>
+          <th scope="col">Category</th>
+          <th scope="col">Shortcut</th>
+          <th scope="col"><span class="tx-settings-editor-kbd__sr-only">Actions</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (row of appShortcutRows(); track row.id) {
+          <tr [class.tx-settings-editor-kbd__row--capturing]="isCapturing(row.id)">
+            <td>{{ row.label }}</td>
+            <td>{{ row.category }}</td>
+            <td>
+              <span class="tx-settings-editor-kbd__keys">{{ formatAppChord(row.chord) }}</span>
+            </td>
+            <td class="tx-settings-editor-kbd__row-actions">
+              <tx-button
+                variant="secondary"
+                size="default"
+                [disabled]="bindCaptureActionId() !== null"
+                (pressed)="handleStartCapture(row.id)"
+              >
+                Change
+              </tx-button>
+              <tx-button
+                variant="secondary"
+                size="default"
+                [disabled]="bindCaptureActionId() !== null"
+                (pressed)="handleResetBinding(row.id)"
+              >
+                Reset
+              </tx-button>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+
+  <div class="tx-entrance-stagger__block">
+    <h3 class="tx-settings__section-heading">Editor behavior</h3>
     <div class="tx-settings__toggle-stack">
       <tx-toggle
         label="Enable keyboard shortcuts"
@@ -64,7 +133,7 @@
   </div>
 
   <div class="tx-entrance-stagger__block">
-    <h3 class="tx-settings__section-heading">Shortcut reference</h3>
+    <h3 class="tx-settings__section-heading">Code editor shortcut reference</h3>
     @for (group of shortcutGroups(); track group.category) {
       <div class="tx-settings-editor-kbd__group">
         <h4 class="tx-settings-editor-kbd__group-title">{{ group.title }}</h4>

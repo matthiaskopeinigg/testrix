@@ -14,7 +14,8 @@
       class="workspace-panel-shell__icon-btn"
       [class.is-pressed]="filterToolbarActive()"
       aria-label="Filter test suite"
-      title="Filter test suite"
+      txTooltip="Filter test suite"
+      txTooltipPosition="bottom"
       [attr.aria-expanded]="filterMenuOpen()"
       (click)="handleFilterToolbarClick($event)"
     >
@@ -25,7 +26,8 @@
       class="workspace-panel-shell__icon-btn"
       [class.is-pressed]="sortToolbarActive()"
       aria-label="Sort test suite"
-      title="Sort test suite"
+      txTooltip="Sort test suite"
+      txTooltipPosition="bottom"
       [attr.aria-expanded]="sortMenuOpen()"
       (click)="handleSortToolbarClick($event)"
     >

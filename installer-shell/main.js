@@ -16,50 +16,416 @@ const common = require('./platforms/common');
 const platform = require(`./platforms/${process.platform === 'darwin' ? 'mac' : process.platform === 'linux' ? 'linux' : 'windows'}`);
 
 /*
- * Disable a few features that the installer never uses. This trims ~200-400 ms
- * off Electron's startup on cold launches because Chromium skips initialising
- * the GPU sandbox / process model bits we'd never use anyway.
+ * Trim unused Chromium features. Keep GPU enabled — transparent splash windows
+ * and CSS/SVG spinner animations break when hardware acceleration is disabled.
  */
 app.commandLine.appendSwitch('disable-features', 'Translate,OptimizationGuideModelDownloading');
-app.commandLine.appendSwitch('disable-gpu');
-app.commandLine.appendSwitch('disable-software-rasterizer');
-app.disableHardwareAcceleration();
+
+// #region agent log
+/** @param {string} location @param {string} message @param {Record<string, unknown>} data @param {string} hypothesisId */
+function agentDebugLog(location, message, data, hypothesisId) {
+  const payload = {
+    sessionId: 'e8295c',
+    location,
+    message,
+    data,
+    hypothesisId,
+    timestamp: Date.now(),
+    runId: 'post-fix',
+    packaged: app.isPackaged,
+  };
+  fetch('http://127.0.0.1:7736/ingest/d5806da4-cf16-47c7-b1e3-a0241cdfcf92', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'e8295c' },
+    body: JSON.stringify(payload),
+  }).catch(() => {});
+  if (app.isPackaged) {
+    try {
+      fs.appendFileSync(
+        path.join(app.getPath('temp'), 'testrix-installer-debug-e8295c.log'),
+        `${JSON.stringify(payload)}\n`,
+      );
+    } catch (_) {
+      /* ignore */
+    }
+  }
+}
+// #endregion
 
 const APP_ID = 'dev.testrix.app';
 const REG_SUBKEY = `Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\${APP_ID}`;
 const MAIN_EXE = 'Testrix.exe';
 const UNINSTALL_CMD = 'uninstall.cmd';
 const META_FILE = '.install-meta.json';
+const PAYLOAD_ARCHIVE = 'payload.zip';
+const APPENDED_PAYLOAD_MAGIC = Buffer.from('TESTRIXPK');
+const APPENDED_PAYLOAD_FOOTER_BYTES = 8 + 8 + APPENDED_PAYLOAD_MAGIC.length;
+
+/**
+ * @param {Buffer} footerBuf
+ * @param {number} footerPos
+ * @param {number} fileSize
+ * @returns {{ payloadOffset: number, payloadSize: number } | null}
+ */
+function parseFooterBuffer(footerBuf, footerPos, fileSize) {
+  if (!footerBuf.subarray(16, 16 + APPENDED_PAYLOAD_MAGIC.length).equals(APPENDED_PAYLOAD_MAGIC)) {
+    return null;
+  }
+
+  const payloadOffset = Number(footerBuf.readBigUInt64LE(0));
+  const payloadSize = Number(footerBuf.readBigUInt64LE(8));
+  const footerEnd = footerPos + APPENDED_PAYLOAD_FOOTER_BYTES;
+
+  if (
+    !Number.isFinite(payloadOffset) ||
+    !Number.isFinite(payloadSize) ||
+    payloadOffset < 0 ||
+    payloadSize <= 0 ||
+    payloadOffset + payloadSize !== footerPos ||
+    footerEnd > fileSize
+  ) {
+    return null;
+  }
+
+  return { payloadOffset, payloadSize };
+}
+
+/**
+ * Reads appended payload metadata from a thin portable installer exe.
+ *
+ * @param {string} exePath
+ * @returns {{ payloadOffset: number, payloadSize: number } | null}
+ */
+function readAppendedPayloadMeta(exePath) {
+  if (!originalFs.existsSync(exePath)) {
+    return null;
+  }
+
+  const fileSize = originalFs.statSync(exePath).size;
+  if (fileSize < APPENDED_PAYLOAD_FOOTER_BYTES) {
+    return null;
+  }
+
+  const fd = originalFs.openSync(exePath, 'r');
+
+  try {
+    const footerBuf = Buffer.alloc(APPENDED_PAYLOAD_FOOTER_BYTES);
+    const footerAtEof = fileSize - APPENDED_PAYLOAD_FOOTER_BYTES;
+
+    originalFs.readSync(fd, footerBuf, 0, APPENDED_PAYLOAD_FOOTER_BYTES, footerAtEof);
+    const exact = parseFooterBuffer(footerBuf, footerAtEof, fileSize);
+    if (exact) {
+      return exact;
+    }
+
+    const probeSize = Math.min(fileSize, 256 * 1024);
+    const tail = Buffer.alloc(probeSize);
+    originalFs.readSync(fd, tail, 0, probeSize, fileSize - probeSize);
+
+    for (let i = tail.length - APPENDED_PAYLOAD_MAGIC.length; i >= 0; i -= 1) {
+      if (!tail.subarray(i, i + APPENDED_PAYLOAD_MAGIC.length).equals(APPENDED_PAYLOAD_MAGIC)) {
+        continue;
+      }
+
+      const footerPos = fileSize - probeSize + i - 16;
+      if (footerPos < 0) {
+        continue;
+      }
+
+      originalFs.readSync(fd, footerBuf, 0, APPENDED_PAYLOAD_FOOTER_BYTES, footerPos);
+      const meta = parseFooterBuffer(footerBuf, footerPos, fileSize);
+      if (meta) {
+        return meta;
+      }
+    }
+
+    return null;
+  } finally {
+    originalFs.closeSync(fd);
+  }
+}
+
+/**
+ * Writes the appended payload slice beside the portable exe to a temp zip path.
+ *
+ * @param {string} sourceExe
+ * @returns {string | null}
+ */
+function materializeAppendedPayloadArchive(sourceExe) {
+  const meta = readAppendedPayloadMeta(sourceExe);
+  if (!meta) {
+    return null;
+  }
+
+  const tempZip = path.join(os.tmpdir(), 'TestrixSetup', pkgVersion(), PAYLOAD_ARCHIVE);
+  if (originalFs.existsSync(tempZip)) {
+    const existing = originalFs.statSync(tempZip);
+    if (existing.size === meta.payloadSize) {
+      return tempZip;
+    }
+    originalFs.rmSync(tempZip, { force: true });
+  }
+
+  originalFs.mkdirSync(path.dirname(tempZip), { recursive: true });
+
+  const fd = originalFs.openSync(sourceExe, 'r');
+  try {
+    const payload = Buffer.alloc(meta.payloadSize);
+    originalFs.readSync(fd, payload, 0, meta.payloadSize, meta.payloadOffset);
+    originalFs.writeFileSync(tempZip, payload);
+  } finally {
+    originalFs.closeSync(fd);
+  }
+
+  return tempZip;
+}
+
+/**
+ * Path to the single-file installer the user launched (portable exe, AppImage, or mac binary).
+ *
+ * @returns {string | null}
+ */
+function resolveInstallerHostPath() {
+  if (process.env.TX_INSTALLER_HOST) {
+    return path.resolve(process.env.TX_INSTALLER_HOST);
+  }
+
+  const candidates = [];
+  if (process.env.PORTABLE_EXECUTABLE_FILE) {
+    candidates.push(process.env.PORTABLE_EXECUTABLE_FILE);
+  }
+  if (process.env.PORTABLE_EXECUTABLE_DIR) {
+    candidates.push(path.join(process.env.PORTABLE_EXECUTABLE_DIR, `${path.basename(process.execPath)}`));
+  }
+  if (process.env.APPIMAGE) {
+    candidates.push(process.env.APPIMAGE);
+  }
+  if (process.platform === 'darwin' && app.isPackaged) {
+    candidates.push(process.execPath);
+  }
+
+  for (const candidate of candidates) {
+    if (candidate && readAppendedPayloadMeta(candidate)) {
+      return candidate;
+    }
+  }
+
+  return null;
+}
 
 /**
  * Resolves application files to install.
+ *
+ * Single-file installers append `payload.zip` after the host binary (installed on demand).
+ * Dev runs can point at an unpacked payload via `TX_PAYLOAD_ROOT`.
  */
 function payloadDir() {
   if (process.env.TX_PAYLOAD_ROOT) {
     return path.resolve(process.env.TX_PAYLOAD_ROOT);
   }
 
-  const candidates = [];
-
-  if (app.isPackaged) {
-    candidates.push(path.join(process.resourcesPath, 'payload'));
-  }
-
-  candidates.push(path.join(path.dirname(process.execPath), 'payload'));
+  const appDir = app.isPackaged ? path.dirname(process.execPath) : __dirname;
+  const candidates = [
+    path.join(process.resourcesPath, 'payload'),
+    path.join(appDir, 'payload'),
+    path.join(__dirname, 'resources', 'payload'),
+  ];
 
   if (process.env.PORTABLE_EXECUTABLE_DIR) {
-    candidates.push(path.join(process.env.PORTABLE_EXECUTABLE_DIR, 'payload'));
+    candidates.unshift(path.join(process.env.PORTABLE_EXECUTABLE_DIR, 'payload'));
   }
 
-  candidates.push(path.join(__dirname, 'resources', 'payload'));
-
   for (const dir of candidates) {
-    if (originalFs.existsSync(path.join(dir, MAIN_EXE))) {
+    if (platform.payloadExists(dir)) {
       return dir;
     }
   }
 
-  return candidates[candidates.length - 1];
+  return path.join(os.tmpdir(), 'TestrixSetup', pkgVersion(), 'payload');
+}
+
+/**
+ * Resolves a compressed payload archive when present (legacy/dev sidecar).
+ *
+ * @returns {string | null}
+ */
+function payloadArchivePath() {
+  if (process.env.TX_PAYLOAD_ARCHIVE) {
+    const forced = path.resolve(process.env.TX_PAYLOAD_ARCHIVE);
+    return originalFs.existsSync(forced) ? forced : null;
+  }
+
+  const appDir = app.isPackaged ? path.dirname(process.execPath) : __dirname;
+  const candidates = [
+    path.join(process.resourcesPath, PAYLOAD_ARCHIVE),
+    path.join(appDir, PAYLOAD_ARCHIVE),
+    path.join(__dirname, 'resources', PAYLOAD_ARCHIVE),
+  ];
+
+  if (process.env.PORTABLE_EXECUTABLE_DIR) {
+    candidates.unshift(path.join(process.env.PORTABLE_EXECUTABLE_DIR, PAYLOAD_ARCHIVE));
+  }
+
+  for (const candidate of candidates) {
+    if (originalFs.existsSync(candidate)) return candidate;
+  }
+
+  return null;
+}
+
+/**
+ * Extracts `payload.zip` into `destDir` using the Windows built-in tar helper.
+ *
+ * @param {string} archivePath
+ * @param {string} destDir
+ * @param {(progress: { phase: string, percent: number | null }) => void} onProgress
+ */
+async function extractPayloadArchive(archivePath, destDir, onProgress) {
+  onProgress({ phase: 'extracting', percent: null });
+  originalFs.mkdirSync(destDir, { recursive: true });
+
+  await new Promise((resolve, reject) => {
+    const tarArgs = ['-xf', archivePath, '-C', destDir];
+    const child = spawn('tar', tarArgs, { windowsHide: process.platform === 'win32' });
+    child.on('error', reject);
+    child.on('close', (code) => {
+      if (code === 0) resolve();
+      else reject(new Error(`payload extract failed (tar exit ${code})`));
+    });
+  });
+
+  if (!platform.payloadExists(destDir)) {
+    throw new Error('Payload archive did not contain a valid application bundle.');
+  }
+
+  onProgress({ phase: 'extracting', percent: 1 });
+}
+
+/**
+ * Returns whether an installable payload is present without extracting archives.
+ *
+ * @returns {{ ok: boolean, source: 'dir' | 'archive' | null, archivePath?: string, archiveKind?: 'file' | 'appended', payloadDir: string, message?: string }}
+ */
+function checkPayloadAvailable() {
+  const dir = payloadDir();
+  if (platform.payloadExists(dir)) {
+    return { ok: true, source: 'dir', payloadDir: dir };
+  }
+
+  const hostPath = resolveInstallerHostPath();
+  if (hostPath && readAppendedPayloadMeta(hostPath)) {
+    return {
+      ok: true,
+      source: 'archive',
+      archivePath: hostPath,
+      archiveKind: 'appended',
+      payloadDir: dir,
+    };
+  }
+
+  const archive = payloadArchivePath();
+  if (archive) {
+    return {
+      ok: true,
+      source: 'archive',
+      archivePath: archive,
+      archiveKind: 'file',
+      payloadDir: dir,
+    };
+  }
+
+  return {
+    ok: false,
+    source: null,
+    payloadDir: dir,
+    message: resolvePayloadMissingMessage(),
+  };
+}
+
+/**
+ * @returns {string}
+ */
+function resolvePayloadMissingMessage() {
+  const host = process.env.PORTABLE_EXECUTABLE_FILE || process.env.APPIMAGE || null;
+  if (app.isPackaged && host && !readAppendedPayloadMeta(host)) {
+    return (
+      'Application payload missing from this installer file. Use release/Testrix Setup.exe ' +
+      '(run npm run electron:build:win to rebuild), not the thin setup-shell-build artifact.'
+    );
+  }
+  return (
+    'Application payload missing. Re-download the installer or run sync-installer-payload after building the main app.'
+  );
+}
+
+/**
+ * Extracts a payload archive into `destDir` with administrator elevation.
+ *
+ * @param {string} archivePath
+ * @param {string} destDir
+ * @returns {boolean}
+ */
+function elevateExtractArchive(archivePath, destDir) {
+  const bat = path.join(app.getPath('temp'), `aw-extract-${Date.now()}.bat`);
+  const lines = [
+    '@echo off',
+    `if exist "${cmdQuote(destDir)}" rmdir /s /q "${cmdQuote(destDir)}"`,
+    `mkdir "${cmdQuote(destDir)}"`,
+    `tar -xf "${cmdQuote(archivePath)}" -C "${cmdQuote(destDir)}"`,
+    'if errorlevel 1 exit /b 1',
+    'exit /b 0',
+  ];
+  fs.writeFileSync(bat, lines.join('\r\n'), 'utf8');
+  spawnSync('powershell', [
+    '-NoProfile',
+    '-Command',
+    `Start-Process -FilePath '${bat.replace(/'/g, "''")}' -Verb RunAs -Wait`,
+  ]);
+  try {
+    fs.unlinkSync(bat);
+  } catch (_) {}
+  return platform.payloadExists(destDir);
+}
+
+/**
+ * Installs payload from an archive directly into the destination directory.
+ *
+ * @param {string} archivePath
+ * @param {string} destDir
+ * @param {'user' | 'machine'} scope
+ * @param {(progress: { phase: string, percent: number | null, current?: string }) => void} onProgress
+ */
+async function installPayloadFromArchive(archivePath, destDir, scope, onProgress) {
+  onProgress({ phase: 'extracting', percent: null });
+
+  if (scope === 'machine' && process.platform === 'win32') {
+    if (!elevateExtractArchive(archivePath, destDir)) {
+      throw new Error('Elevated extraction failed or was cancelled.');
+    }
+    onProgress({ phase: 'extracting', percent: 1 });
+    return;
+  }
+
+  const extractDir =
+    scope === 'machine'
+      ? path.join(os.tmpdir(), 'TestrixSetup', pkgVersion(), 'payload-staging')
+      : destDir;
+
+  try {
+    originalFs.rmSync(extractDir, { recursive: true, force: true });
+  } catch (_) {}
+
+  await extractPayloadArchive(archivePath, extractDir, onProgress);
+
+  if (scope === 'machine') {
+    onProgress({ phase: 'copying', percent: null });
+    await platform.installApp({
+      src: extractDir,
+      dest: destDir,
+      scope,
+      onProgress,
+    });
+  }
 }
 
 function defaultInstallDir(scope) {
@@ -568,14 +934,34 @@ function createWindow() {
       spellcheck: false,
     },
   });
+
   win.once('ready-to-show', () => {
-    if (!win.isDestroyed()) win.show();
+    if (!win.isDestroyed()) {
+      win.show();
+      win.focus();
+    }
   });
+
   void win.loadFile(path.join(__dirname, 'renderer', 'index.html'));
   return win;
 }
 
 let mainWindow = null;
+
+/**
+ * @param {{ phase: string, percent: number | null }} payload
+ */
+function payloadInfoResponse(available) {
+  const appDir = app.isPackaged ? path.dirname(process.execPath) : __dirname;
+  return {
+    ok: available.ok,
+    message: available.message || null,
+    payloadDir: available.payloadDir,
+    source: available.source,
+    version: pkgVersion(),
+    appDir,
+  };
+}
 
 if (process.argv.includes('--uninstall')) {
   app.whenReady().then(() => {
@@ -620,37 +1006,23 @@ ipcMain.handle('setup:getDefaultPaths', (_e, scope) => {
   };
 });
 
-ipcMain.handle('setup:getPayloadInfo', () => {
-  const src = payloadDir();
-  const appDir = app.isPackaged ? path.dirname(process.execPath) : __dirname;
-  const exists = platform.payloadExists(src);
-  if (!exists) {
-    return {
-      ok: false,
-      message:
-        'Application payload missing. Run sync-installer-payload after building the main app.',
-      payloadDir: src,
-      version: pkgVersion(),
-      appDir,
-    };
-  }
-  return {
-    ok: true,
-    payloadDir: src,
-    version: pkgVersion(),
-    appDir,
-  };
-});
+ipcMain.handle('setup:preparePayload', async () => payloadInfoResponse(checkPayloadAvailable()));
+
+ipcMain.handle('setup:getPayloadInfo', async () => payloadInfoResponse(checkPayloadAvailable()));
 
 ipcMain.handle('setup:install', async (event, opts) => {
   const scope = opts?.scope === 'machine' ? 'machine' : 'user';
-  const src = payloadDir();
-  if (!platform.payloadExists(src)) {
+  const available = checkPayloadAvailable();
+
+  if (!available.ok) {
     return {
       ok: false,
-      message: 'Application payload missing. Run sync-installer-payload after building the main app.',
+      message:
+        available.message ||
+        'Application payload missing. Re-download the installer or run sync-installer-payload after building the main app.',
     };
   }
+
   const dest =
     String(opts?.installDir || '').trim() || platform.defaultInstallDir(scope);
 
@@ -660,14 +1032,36 @@ ipcMain.handle('setup:install', async (event, opts) => {
   };
 
   try {
-    sendProgress({ phase: 'preparing', percent: 0 });
-    sendProgress({ phase: 'copying', percent: scope === 'machine' ? null : 0 });
-    await platform.installApp({
-      src,
-      dest,
-      scope,
-      onProgress: sendProgress,
-    });
+    if (available.source === 'archive') {
+      let archivePath = available.archivePath;
+      if (available.archiveKind === 'appended') {
+        archivePath = materializeAppendedPayloadArchive(available.archivePath);
+        if (!archivePath) {
+          return { ok: false, message: 'Failed to read embedded application payload.' };
+        }
+      }
+      await installPayloadFromArchive(archivePath, dest, scope, sendProgress);
+    } else {
+      const src = available.payloadDir;
+      if (!platform.payloadExists(src)) {
+        return {
+          ok: false,
+          message:
+            available.message ||
+            'Application payload missing. Re-download the installer or run sync-installer-payload after building the main app.',
+        };
+      }
+
+      sendProgress({ phase: 'preparing', percent: 0 });
+      sendProgress({ phase: 'copying', percent: scope === 'machine' ? null : 0 });
+      await platform.installApp({
+        src,
+        dest,
+        scope,
+        onProgress: sendProgress,
+      });
+    }
+
     sendProgress({ phase: 'finalizing', percent: 1 });
 
     const registration = platform.registerApp({ installDir: dest, scope });
@@ -698,7 +1092,7 @@ ipcMain.handle('setup:install', async (event, opts) => {
 
 ipcMain.handle('setup:uninstall', () => platform.runUninstall());
 
-ipcMain.handle('setup:launchApp', (_e, exePath) => {
+ipcMain.handle('setup:launchApp', async (_e, exePath) => {
   const p = String(exePath || '').trim();
   if (!p || !path.isAbsolute(p) || !fs.existsSync(p)) {
     return { ok: false, message: 'Executable not found.' };
@@ -707,11 +1101,27 @@ ipcMain.handle('setup:launchApp', (_e, exePath) => {
   if (!platform.isValidLaunchTarget(resolved)) {
     return { ok: false, message: 'Invalid launch target.' };
   }
+
+  const installDir = path.dirname(resolved);
+  if (!fs.existsSync(path.join(installDir, 'icudtl.dat'))) {
+    return {
+      ok: false,
+      message:
+        'Installation is incomplete (missing Electron runtime files such as icudtl.dat). Uninstall and reinstall using a freshly built Testrix Setup.exe.',
+    };
+  }
+
   try {
+    const openError = await shell.openPath(resolved);
+    if (!openError) {
+      return { ok: true };
+    }
+
     const child = spawn(resolved, [], {
       detached: true,
       stdio: 'ignore',
       windowsHide: false,
+      cwd: installDir,
     });
     child.unref();
     return { ok: true };

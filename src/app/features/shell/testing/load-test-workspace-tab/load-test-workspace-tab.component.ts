@@ -38,6 +38,7 @@ import {
 
 import { CollectionsService } from '@app/core/collections/collections.service';
 import { ConfigService } from '@app/core/config/config.service';
+import { resolveTabEditorLayout } from '@app/core/config/workspace-tab-editor-layout';
 import { TestingSessionService } from '@app/core/testing/testing-session.service';
 import { ElectronService } from '@app/core/electron/electron.service';
 import { ErrorNotificationService } from '@app/core/errors/error-notification.service';
@@ -150,9 +151,8 @@ export class LoadTestWorkspaceTabComponent {
 
   protected readonly missing = computed(() => !this.artifact());
 
-  protected readonly editorLayout = computed(
-    (): WorkspaceEditorLayoutId =>
-      this.configService.settings()?.collections.editorLayout ?? 'sidebar',
+  protected readonly editorLayout = computed((): WorkspaceEditorLayoutId =>
+    resolveTabEditorLayout(this.configService.settings(), 'loadTest'),
   );
 
   protected readonly useSidebarLayout = computed(() => this.editorLayout() === 'sidebar');

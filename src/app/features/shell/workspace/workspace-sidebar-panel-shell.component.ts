@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { TxDividerComponent } from '@app/shared/components/tx-divider/tx-divider.component';
 import { TxIconComponent } from '@app/shared/components/tx-icon/tx-icon.component';
 import { TxInputComponent } from '@app/shared/components/tx-input/tx-input.component';
+import { TxTooltipDirective } from '@app/shared/components/tx-tooltip/tx-tooltip.directive';
 import { TxSidebarToolbarDirective } from '@app/shared/components/tx-sidebar/tx-sidebar-panel-content.directive';
 
 
@@ -19,6 +20,7 @@ import { TxSidebarToolbarDirective } from '@app/shared/components/tx-sidebar/tx-
     TxDividerComponent,
     TxInputComponent,
     TxIconComponent,
+    TxTooltipDirective,
     TxSidebarToolbarDirective,
   ],
   templateUrl: './workspace-sidebar-panel-shell.component.html',

@@ -23,10 +23,14 @@ export interface TeamHandlerDeps {
   readonly getMainWindow: () => BrowserWindow | null;
   readonly getActiveProfileId: () => string | null;
   readonly getProfilesState: () => Promise<ProfilesState>;
-  readonly mergeTeamProfilesFromManifest: (teamRepoDir: string) => Promise<{ readonly addedProfileIds: readonly string[] }>;
+  readonly mergeTeamProfilesFromManifest: (
+    teamRepoDir: string,
+    repoDataDir: string,
+  ) => Promise<{ readonly addedProfileIds: readonly string[] }>;
   readonly importTeamProfiles: (
     teamRepoDir: string,
     profileIds: readonly string[],
+    repoDataDir: string,
   ) => Promise<{ readonly importedProfileIds: readonly string[] }>;
   readonly publishLocalProfile: (profileId: string) => Promise<ProfilesState>;
   readonly createTeamProfile: (name: string) => Promise<{ readonly state: ProfilesState; readonly profileId: string }>;
@@ -310,6 +314,11 @@ export function registerTeamHandlers(ipc: IpcMainBinder, deps: TeamHandlerDeps):
   );
 
   ipc.handle(
+    TeamChannels.listRepoDirectories,
+    wrapInvokeHandler(TeamChannels.listRepoDirectories, async () => teamSyncEngine.listRepoDirectories()),
+  );
+
+  ipc.handle(
     TeamChannels.linkWorkspace,
     wrapInvokeHandler(TeamChannels.linkWorkspace, async () => {
       await deps.initTeamSync();
@@ -320,7 +329,11 @@ export function registerTeamHandlers(ipc: IpcMainBinder, deps: TeamHandlerDeps):
 
   ipc.handle(
     TeamChannels.disconnect,
-    wrapInvokeHandler(TeamChannels.disconnect, async () => teamSyncEngine.disconnectSync()),
+    wrapInvokeHandler(TeamChannels.disconnect, async () => {
+      const status = await teamSyncEngine.disconnectSync();
+      await refreshTeamSyncWatchers(deps);
+      return status;
+    }),
   );
 }
 

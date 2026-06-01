@@ -1,5 +1,6 @@
 import { Injectable, inject, signal } from '@angular/core';
 
+import { LayoutOnboardingService } from './layout-onboarding.service';
 import { ShellOverlayCoordinatorService } from './shell-overlay-coordinator.service';
 
 /**
@@ -9,6 +10,7 @@ import { ShellOverlayCoordinatorService } from './shell-overlay-coordinator.serv
 @Injectable({ providedIn: 'root' })
 export class HelpPopupService {
   private readonly coordinator = inject(ShellOverlayCoordinatorService);
+  private readonly layoutOnboarding = inject(LayoutOnboardingService);
   private readonly openState = signal(false);
 
   readonly open = this.openState.asReadonly();
@@ -19,6 +21,9 @@ export class HelpPopupService {
 
   /** Opens the help overlay and closes other shell overlays. */
   show(): void {
+    if (this.layoutOnboarding.isActive()) {
+      return;
+    }
     this.coordinator.closeOthers('help');
     this.openState.set(true);
   }

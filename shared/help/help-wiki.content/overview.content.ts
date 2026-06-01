@@ -21,16 +21,18 @@ export const HELP_WIKI_OVERVIEW_SECTIONS: readonly HelpWikiSection[] = [
       {
         type: 'list',
         items: [
+          'On first launch after install, choose a color theme, then Sidebar or Tabs for how workspace sections are arranged (both are configurable later in Settings).',
           'Pick a profile from the title bar menu (or create one in Settings → Data & Config).',
           'Open Collections in the sidebar, expand a folder, and select a request.',
           'Edit URL, headers, and body, then click Send to run the request.',
+          'Press Ctrl+K (Cmd+K on macOS) to open the command palette — search commands and quick-open workspace items.',
           'Open Settings with the gear icon in the title bar or Ctrl+, (Cmd+, on macOS).',
         ],
       },
       {
         type: 'tip',
         title: 'Welcome screen',
-        text: 'When no workspace tabs are open, the welcome screen shows shortcuts for debug tools, config reload, and runtime info.',
+        text: 'When no workspace tabs are open, the welcome screen offers shortcuts to create collections, add requests, import data, open environments, and read the help guide.',
       },
     ],
   }),
@@ -49,15 +51,16 @@ export const HELP_WIKI_OVERVIEW_SECTIONS: readonly HelpWikiSection[] = [
       {
         type: 'list',
         items: [
-          'Click a tab to focus it; use the close control or middle-click to close.',
+          'Click a tab to focus it; use the close control, Ctrl+W (Cmd+W), or middle-click to close.',
           'Pin tabs to keep them at the front of the tab bar.',
           'Drag tabs to reorder; drop on split zones to open a side-by-side editor pane.',
-          'Recent resources are tracked so you can reopen items quickly.',
+          'Ctrl+Tab / Ctrl+Shift+Tab cycle tabs in the focused pane (rebindable in Settings → Keyboard).',
+          'Recent resources are tracked so you can reopen items quickly from the command palette (Ctrl+K).',
         ],
       },
       {
         type: 'note',
-        text: 'Editor layout (sidebar vs stacked sections) for collection requests is configured in Settings → Collections.',
+        text: 'Editor layout (Sidebar section list vs Tabs under the editor bar) is configured per tab type in Settings — Collections, Test Suite, Regression, Load Test, Mock Server, Capture, and Interceptor each have their own Editor layout option.',
       },
     ],
   }),
@@ -106,7 +109,7 @@ export const HELP_WIKI_OVERVIEW_SECTIONS: readonly HelpWikiSection[] = [
         type: 'list',
         items: [
           'Per profile: collections, environments, test suites, load tests, regressions, mock server, capture, interceptor, session/history.',
-          'Shared: settings.json (appearance, HTTP defaults, logging, databases list).',
+          'Shared: settings.json (appearance, HTTP defaults, logging, databases list, keyboard bindings).',
           'Config root defaults to Documents/Testrix on Windows/macOS; see Reference → Local-first & paths.',
         ],
       },

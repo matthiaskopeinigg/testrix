@@ -12,9 +12,12 @@
   position: fixed;
   inset: 0;
   z-index: var(--tx-z-settings-overlay, 1100);
+  box-sizing: border-box;
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 24px;
+  overflow-y: auto;
   background: color-mix(in srgb, var(--tx-scrim, var(--tx-surface-0)) 48%, transparent);
   backdrop-filter: blur(18px) saturate(1.1);
   -webkit-backdrop-filter: blur(18px) saturate(1.1);
@@ -45,8 +48,11 @@
   position: relative;
   display: flex;
   flex-direction: column;
+  flex-shrink: 0;
   width: min(960px, calc(100vw - 48px));
-  height: min(680px, calc(100vh - 64px));
+  height: min(680px, 100%);
+  max-height: min(680px, calc(100dvh - 48px));
+  margin: auto 0;
   border-radius: var(--tx-radius-lg, 16px);
   background: color-mix(in srgb, var(--tx-surface-0) 78%, transparent);
   backdrop-filter: blur(24px) saturate(1.12);
@@ -121,8 +127,13 @@
 }
 
 @media (max-width: 720px) {
+  .tx-overlay-dialog {
+    padding: 20px 16px;
+  }
+
   .tx-overlay-dialog__popup {
     width: min(96vw, 520px);
-    height: min(90vh, 640px);
+    height: min(90%, 640px);
+    max-height: min(640px, calc(100dvh - 40px));
   }
 }

@@ -71,6 +71,8 @@ export interface ElectronAPI {
     readonly electron: string;
     readonly chrome: string;
   };
+  /** Absolute URL for files under the Angular browser bundle (`public/` → `resources/browser/`). */
+  resolveStaticAssetUrl: (relativeFromPublic: string) => string;
   notifyReady: () => Promise<void>;
   openExternal: (url: string) => Promise<void>;
   shell: {
@@ -262,6 +264,7 @@ export interface ElectronAPI {
     resolveConflict: (resolution: 'ours' | 'theirs' | 'abort') => Promise<TeamSyncStatus>;
     linkWorkspace: () => Promise<TeamSyncStatus>;
     disconnect: () => Promise<TeamSyncStatus>;
+    listRepoDirectories: () => Promise<readonly string[]>;
     fetchRemoteCatalog: (
       options?: import('@shared/collaboration').TeamFetchRemoteCatalogOptions,
     ) => Promise<import('@shared/collaboration').TeamFetchRemoteCatalogResult>;

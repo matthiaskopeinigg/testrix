@@ -2,7 +2,6 @@ import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 
 import {
-  TEAM_PROFILES_MANIFEST_FILE_NAME,
   TEAM_WORKSPACE_FILE_NAME,
   enrichTeamWorkspaceConfig,
   resolveShareScopeFileNames,
@@ -113,12 +112,12 @@ async function importLegacyProfileData(
     }
 
     const shareFiles = resolveShareScopeFileNames(config.shareScope);
-    const destDir = resolveTeamRepoProfileDir(teamRepoDir, profile.id);
+    const destDir = resolveTeamRepoProfileDir(teamRepoDir, profile.id, config.repoDataDir);
     await fs.mkdir(destDir, { recursive: true });
 
     for (const fileName of shareFiles) {
       const sourcePath = path.join(profileDir, fileName);
-      const destPath = resolveTeamRepoFilePath(teamRepoDir, profile.id, fileName);
+      const destPath = resolveTeamRepoFilePath(teamRepoDir, profile.id, fileName, config.repoDataDir);
       try {
         await fs.copyFile(sourcePath, destPath);
       } catch {
@@ -162,9 +161,4 @@ async function removeLegacyTeamConfigFiles(input: TeamSyncMigrationInput): Promi
 /** Absolute path to the global team settings file. */
 export function resolveGlobalTeamConfigPath(sharedConfigDir: string): string {
   return path.join(sharedConfigDir, TEAM_WORKSPACE_FILE_NAME);
-}
-
-/** Absolute path to the team profiles manifest inside the Git repo. */
-export function resolveTeamProfilesManifestPath(teamRepoDir: string): string {
-  return path.join(teamRepoDir, TEAM_PROFILES_MANIFEST_FILE_NAME);
 }

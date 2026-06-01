@@ -3,15 +3,17 @@
  * installer-shell visual language from api-workbench (dark elevated panels + warm accent).
  */
 
-import { Jimp } from 'jimp';
 import sharp from 'sharp';
-import { mkdir, readFile } from 'node:fs/promises';
+import { cpSync } from 'node:fs';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = join(__dirname, '..');
-const logoSvgPath = join(root, 'public', 'brand', 'logo.svg');
+const appSplashDir = join(root, 'electron', 'splash');
+const installerSplashDir = join(root, 'installer-shell', 'renderer', 'splash');
+const logoSvgPath = join(appSplashDir, 'assets', 'logo.svg');
 const outDir = join(root, 'build', 'installer', 'windows', 'assets');
 
 const SIDEBAR_W = 164;
@@ -22,10 +24,64 @@ const HEADER_H = 57;
 const INSTALL_ACCENT = '#ff9d3b';
 const UNINSTALL_ACCENT = '#f97316';
 
+/**
+ * BMP 24-bit (Windows 3.x), bottom-up raster — required by electron-builder portable splash.
+ *
+ * @param {Buffer} rgbTopDown length `width * height * 3`, RGB, top row first
+ * @param {number} width
+ * @param {number} height
+ * @returns {Buffer}
+ */
+function bmp24(rgbTopDown, width, height) {
+  const rowStride = Math.floor((width * 3 + 3) / 4) * 4;
+  const imageSize = rowStride * height;
+  const raster = Buffer.alloc(imageSize);
+
+  let out = 0;
+  for (let y = height - 1; y >= 0; y -= 1) {
+    let inRow = y * width * 3;
+
+    for (let x = 0; x < width; x += 1) {
+      const i = inRow + x * 3;
+      raster[out++] = rgbTopDown[i + 2];
+      raster[out++] = rgbTopDown[i + 1];
+      raster[out++] = rgbTopDown[i];
+    }
+
+    const pad = rowStride - width * 3;
+    for (let p = 0; p < pad; p += 1) {
+      raster[out++] = 0;
+    }
+  }
+
+  const header = Buffer.alloc(54);
+  header.write('BM', 0);
+  header.writeUInt32LE(54 + imageSize, 2);
+  header.writeUInt32LE(0, 6);
+  header.writeUInt32LE(54, 10);
+  header.writeUInt32LE(40, 14);
+  header.writeInt32LE(width, 18);
+  header.writeInt32LE(height, 22);
+  header.writeUInt16LE(1, 26);
+  header.writeUInt16LE(24, 28);
+  header.writeUInt32LE(0, 30);
+  header.writeUInt32LE(imageSize, 34);
+  header.writeUInt32LE(2835, 38);
+  header.writeUInt32LE(2835, 42);
+  header.writeUInt32LE(0, 46);
+  header.writeUInt32LE(0, 50);
+
+  return Buffer.concat([header, raster]);
+}
+
 /** @param {Buffer} pngBuffer @param {string} outPath */
 async function writeBmp(pngBuffer, outPath) {
-  const img = await Jimp.read(pngBuffer);
-  await img.write(outPath);
+  const { data, info } = await sharp(pngBuffer)
+    .flatten({ background: { r: 22, g: 22, b: 24 } })
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+
+  await writeFile(outPath, bmp24(data, info.width, info.height));
 }
 
 async function buildSidebar(options) {
@@ -127,7 +183,13 @@ async function buildInstallerHeader() {
     .toBuffer();
 }
 
+/** Copies `electron/splash/` into the installer renderer (single source of truth). */
+function syncInstallerSplashFromApp() {
+  cpSync(appSplashDir, installerSplashDir, { recursive: true, force: true });
+}
+
 async function main() {
+  syncInstallerSplashFromApp();
   await mkdir(outDir, { recursive: true });
 
   const installerSidebar = await buildSidebar({
@@ -147,6 +209,7 @@ async function main() {
   const headerPng = await buildInstallerHeader();
   await writeBmp(headerPng, join(outDir, 'installer-header.bmp'));
 
+  console.log('[installer:windows-assets] synced app splash to installer-shell/renderer/splash');
   console.log('[installer:windows-assets] wrote NSIS BMP assets to', outDir);
 }
 

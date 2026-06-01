@@ -22,11 +22,11 @@ export const HELP_WIKI_SETTINGS_SECTIONS: readonly HelpWikiSection[] = [
     label: 'User Interface',
     icon: 'sliders',
     title: 'Settings — User Interface',
-    description: 'Tooltips, sidebar, and workspace chrome.',
+    description: 'Motion and chrome preferences.',
     blocks: [
       {
         type: 'paragraph',
-        text: 'Control icon tooltips, sidebar panel close-on-outside-click, entrance stagger animations, and related UI preferences.',
+        text: 'Control global animation speed, icon tooltips, and translucent titlebar chrome. Startup and sidebar close behavior live under Settings → General.',
       },
     ],
   }),
@@ -36,11 +36,11 @@ export const HELP_WIKI_SETTINGS_SECTIONS: readonly HelpWikiSection[] = [
     label: 'Keyboard',
     icon: 'code',
     title: 'Settings — Keyboard',
-    description: 'Editor shortcuts and autocomplete toggles.',
+    description: 'App shortcuts, editor behavior, and reference.',
     blocks: [
       {
         type: 'paragraph',
-        text: 'Enable or disable editor keyboard shortcuts, autocomplete sources (JSON snippets, pm.* API, template variables), and smart editing behaviors.',
+        text: 'Rebind app shortcuts (command palette, Settings, tab close/cycle, Teams panel) in the App shortcuts table. Toggle editor autocomplete, smart editing, and related behaviors below. The editor shortcut reference lists VS Code-style bindings inside code fields (not rebindable in this release).',
       },
     ],
   }),
@@ -50,11 +50,11 @@ export const HELP_WIKI_SETTINGS_SECTIONS: readonly HelpWikiSection[] = [
     label: 'Collections',
     icon: 'folder',
     title: 'Settings — Collections',
-    description: 'Tree behavior and editor layout.',
+    description: 'Tree behavior and collection tab layout.',
     blocks: [
       {
         type: 'paragraph',
-        text: 'Configure folder click behavior, sibling sort order, HTTP method display in the tree, and request tab layout (sidebar vs stacked).',
+        text: 'Configure folder click behavior, sibling sort order, HTTP method display in the tree, and Editor layout for collection workspace tabs only (HTTP requests, folders, WebSockets). Choose Sidebar (section list in a left panel) or Tabs (sections under the editor bar).',
       },
     ],
   }),
@@ -78,11 +78,81 @@ export const HELP_WIKI_SETTINGS_SECTIONS: readonly HelpWikiSection[] = [
     label: 'Test Suite',
     icon: 'testing',
     title: 'Settings — Test Suite',
-    description: 'Test suite sidebar and run defaults.',
+    description: 'Test suite sidebar, layout, and flow tabs.',
     blocks: [
       {
         type: 'paragraph',
-        text: 'Defaults for test suite tree sorting, tags, and flow run behavior.',
+        text: 'Tree sorting, tags, and descriptions for the test suite sidebar. Editor layout controls how flow tabs show Overview vs Steps sections (sidebar list or tabs under the bar).',
+      },
+    ],
+  }),
+  wikiSection({
+    id: 'settings-regression',
+    groupId: 'settings',
+    label: 'Regression',
+    icon: 'testing',
+    title: 'Settings — Regression',
+    description: 'Regression workspace tab layout.',
+    blocks: [
+      {
+        type: 'paragraph',
+        text: 'Editor layout for regression workspace tabs (overview, flows, runs, and related sections). Sidebar or Tabs under the editor bar.',
+      },
+    ],
+  }),
+  wikiSection({
+    id: 'settings-load-test',
+    groupId: 'settings',
+    label: 'Load Test',
+    icon: 'zap',
+    title: 'Settings — Load Test',
+    description: 'Load test workspace tab layout.',
+    blocks: [
+      {
+        type: 'paragraph',
+        text: 'Editor layout for load test workspace tabs. Sidebar or Tabs under the editor bar.',
+      },
+    ],
+  }),
+  wikiSection({
+    id: 'settings-mock-server',
+    groupId: 'settings',
+    label: 'Mock Server',
+    icon: 'cloud',
+    title: 'Settings — Mock Server',
+    description: 'Mock server endpoint tab layout.',
+    blocks: [
+      {
+        type: 'paragraph',
+        text: 'Editor layout for mock server endpoint tabs (overview, matchers, response, advanced). Sidebar or Tabs under the editor bar.',
+      },
+    ],
+  }),
+  wikiSection({
+    id: 'settings-capture',
+    groupId: 'settings',
+    label: 'Capture',
+    icon: 'monitor',
+    title: 'Settings — Capture',
+    description: 'Capture session tab layout.',
+    blocks: [
+      {
+        type: 'paragraph',
+        text: 'Editor layout for capture session tabs (Overview and Traffic sections). Sidebar or Tabs under the editor bar.',
+      },
+    ],
+  }),
+  wikiSection({
+    id: 'settings-interceptor',
+    groupId: 'settings',
+    label: 'Interceptor',
+    icon: 'shield',
+    title: 'Settings — Interceptor',
+    description: 'Interceptor rule tab layout.',
+    blocks: [
+      {
+        type: 'paragraph',
+        text: 'Editor layout for interceptor rule tabs (Overview, Match, and Action sections). Sidebar or Tabs under the editor bar.',
       },
     ],
   }),
@@ -92,11 +162,11 @@ export const HELP_WIKI_SETTINGS_SECTIONS: readonly HelpWikiSection[] = [
     label: 'General',
     icon: 'folder',
     title: 'Settings — General',
-    description: 'App-wide general preferences.',
+    description: 'Startup and workbench behavior.',
     blocks: [
       {
         type: 'paragraph',
-        text: 'Miscellaneous application options not covered by other settings groups.',
+        text: 'Startup options (open last project on launch, restore last sidebar panel) and workbench behavior (close sidebar panel when clicking outside).',
       },
     ],
   }),
@@ -241,20 +311,6 @@ export const HELP_WIKI_SETTINGS_SECTIONS: readonly HelpWikiSection[] = [
     ],
   }),
   wikiSection({
-    id: 'settings-privacy',
-    groupId: 'settings',
-    label: 'Privacy',
-    icon: 'shield',
-    title: 'Settings — Privacy',
-    description: 'Telemetry and privacy-related options.',
-    blocks: [
-      {
-        type: 'paragraph',
-        text: 'Control privacy-related preferences for the desktop application.',
-      },
-    ],
-  }),
-  wikiSection({
     id: 'settings-about',
     groupId: 'settings',
     label: 'About',
@@ -264,7 +320,7 @@ export const HELP_WIKI_SETTINGS_SECTIONS: readonly HelpWikiSection[] = [
     blocks: [
       {
         type: 'paragraph',
-        text: 'View app version, Electron/Chromium versions, check for updates, and open release notes.',
+        text: 'View the app version prominently in the hero, check for updates (with visible checking/available/error/disabled feedback), and inspect Electron/Chromium runtime details.',
       },
     ],
   }),

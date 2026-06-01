@@ -24,6 +24,8 @@ import {
   MOCK_SERVER_SIDEBAR_FILTER_IDS,
 } from './mock-server-sidebar';
 import { mockServerTabsByIdSchema } from './mock-server-tab-ui.schema';
+import { captureTabsByIdSchema } from './capture-tab-ui.schema';
+import { interceptorTabsByIdSchema } from './interceptor-tab-ui.schema';
 
 export const TESTING_ACTIVE_VIEW_IDS = ['menu', 'test-suite', 'load-test', 'regression'] as const;
 export type TestingActiveViewId = (typeof TESTING_ACTIVE_VIEW_IDS)[number];
@@ -90,7 +92,9 @@ export const workspaceTestingSchema = z.object({
   mockServer: mockServerSidebarPrefsSchema,
   mockServerTabsById: mockServerTabsByIdSchema.default({}),
   capture: captureSidebarPrefsSchema,
+  captureTabsById: captureTabsByIdSchema.default({}),
   interceptor: interceptorSidebarPrefsSchema,
+  interceptorTabsById: interceptorTabsByIdSchema.default({}),
 });
 
 export type WorkspaceTestingState = z.infer<typeof workspaceTestingSchema>;
@@ -130,6 +134,8 @@ export function mergeWorkspaceTesting(
     mockServer: { ...base.mockServer, ...patch.mockServer },
     mockServerTabsById: { ...base.mockServerTabsById, ...patch.mockServerTabsById },
     capture: { ...base.capture, ...patch.capture },
+    captureTabsById: { ...base.captureTabsById, ...patch.captureTabsById },
     interceptor: { ...base.interceptor, ...patch.interceptor },
+    interceptorTabsById: { ...base.interceptorTabsById, ...patch.interceptorTabsById },
   });
 }

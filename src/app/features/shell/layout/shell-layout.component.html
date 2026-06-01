@@ -21,6 +21,13 @@
     />
   }
 
+  @if (layoutOnboarding.active()) {
+    <tx-layout-onboarding-overlay
+      [visible]="true"
+      (onboardingCompleted)="handleOnboardingCompleted($event)"
+    />
+  }
+
   <div class="tx-shell__stage">
     <main class="tx-shell__body" #shellMain>
       <router-outlet />
@@ -31,6 +38,7 @@
     <tx-settings-popup [open]="settingsPopup.open()" (closed)="handleCloseSettings()" />
     <tx-help-popup [open]="helpPopup.open()" (closed)="handleCloseHelp()" />
     <tx-teams-panel [open]="teamsPanel.open()" (closed)="handleCloseTeamsPanel()" />
+    <tx-command-palette [open]="commandPalette.open()" (closed)="handleCloseCommandPalette()" />
     <tx-import-export-dialog />
     <tx-batch-import-dialog />
   </div>

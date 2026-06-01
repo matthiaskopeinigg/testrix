@@ -2,7 +2,7 @@ import { NgComponentOutlet } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
-  HostListener,
+  DestroyRef,
   TemplateRef,
   effect,
   inject,
@@ -23,6 +23,7 @@ import type { TxTabBarItem } from '@app/shared/components/tx-tab/tx-tab.types';
 import { TxWorkspaceTabSkeletonComponent } from '@app/shared/components/tx-workspace-tab-skeleton/tx-workspace-tab-skeleton.component';
 import type { TxWorkspaceTabSkeletonVariant } from '@app/shared/components/tx-workspace-tab-skeleton/tx-workspace-tab-skeleton.component';
 import { WorkspaceEditorService } from '@app/core/workspace/workspace-editor.service';
+import { KeyboardShortcutsService } from '@app/core/keyboard/keyboard-shortcuts.service';
 
 import { WorkspaceEditorPaneDropComponent } from '../workspace-editor-pane-drop/workspace-editor-pane-drop.component';
 import { RequestWorkspaceTabComponent } from '../request-workspace-tab/request-workspace-tab.component';
@@ -56,21 +57,6 @@ import {
 /** Inactive tabs kept in the DOM for instant re-activation (bounded LRU). */
 const MAX_WARM_TABS = 3;
 
-/** Skips workbench shortcuts while typing in inputs (e.g. code editor). */
-function isTextInputTarget(target: EventTarget | null): boolean {
-  if (!(target instanceof HTMLElement)) {
-    return false;
-  }
-  const tag = target.tagName;
-  if (tag === 'TEXTAREA' || tag === 'INPUT' || tag === 'SELECT') {
-    return true;
-  }
-  if (target.isContentEditable) {
-    return true;
-  }
-  return !!target.closest('textarea, input, select, [contenteditable="true"]');
-}
-
 type TabContextTarget = { readonly type: 'tab'; readonly groupId: string; readonly tabId: string };
 type BarContextTarget = { readonly type: 'bar'; readonly groupId: string };
 type EmptyContextTarget = { readonly type: 'empty'; readonly groupId: string };
@@ -94,6 +80,8 @@ type EmptyContextTarget = { readonly type: 'empty'; readonly groupId: string };
 })
 export class WorkspaceEditorComponent {
   protected readonly editor = inject(WorkspaceEditorService);
+  private readonly keyboardShortcuts = inject(KeyboardShortcutsService);
+  private readonly destroyRef = inject(DestroyRef);
 
   protected readonly leafTemplate =
     viewChild.required<TemplateRef<{ $implicit: TxSplitPaneLeafContext }>>('paneLeaf');
@@ -123,6 +111,25 @@ export class WorkspaceEditorComponent {
     this.tabComponentsByKind.set({ request: RequestWorkspaceTabComponent });
     preloadWorkspaceTabKinds('folder');
     prefetchRequestTabSections('overview');
+
+    const unregisterShortcuts = [
+      this.keyboardShortcuts.register('global.closeTab', () => {
+        const editorState = this.editor.editor();
+        const group = editorState.groups[editorState.focusedGroupId];
+        const activeId = group?.activeTabId;
+        if (activeId) {
+          this.evictTabMount(editorState.focusedGroupId, activeId);
+        }
+        this.editor.closeActiveTab();
+      }),
+      this.keyboardShortcuts.register('global.cycleTabForward', () => {
+        this.editor.cycleTabInFocusedGroup(false);
+      }),
+      this.keyboardShortcuts.register('global.cycleTabBackward', () => {
+        this.editor.cycleTabInFocusedGroup(true);
+      }),
+    ];
+    this.destroyRef.onDestroy(() => unregisterShortcuts.forEach((unregister) => unregister()));
 
     effect(() => {
       const mounted = this.mountedTabs();
@@ -581,34 +588,6 @@ export class WorkspaceEditorComponent {
       case 'merge-single':
         this.editor.mergeToSinglePane();
         break;
-    }
-  }
-
-  @HostListener('document:keydown', ['$event'])
-  protected handleKeydown(event: KeyboardEvent): void {
-    if (!event.ctrlKey && !event.metaKey) {
-      return;
-    }
-
-    if (isTextInputTarget(event.target)) {
-      return;
-    }
-
-    if (event.key === 'w') {
-      event.preventDefault();
-      const editor = this.editor.editor();
-      const group = editor.groups[editor.focusedGroupId];
-      const activeId = group?.activeTabId;
-      if (activeId) {
-        this.evictTabMount(editor.focusedGroupId, activeId);
-      }
-      this.editor.closeActiveTab();
-      return;
-    }
-
-    if (event.key === 'Tab') {
-      event.preventDefault();
-      this.editor.cycleTabInFocusedGroup(event.shiftKey);
     }
   }
 }

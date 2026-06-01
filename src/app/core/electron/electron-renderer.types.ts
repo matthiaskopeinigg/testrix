@@ -77,6 +77,9 @@ export interface ElectronRendererBridge {
   readonly bootThemeMode?: 'light' | 'dark';
   readonly bootThemeBg?: string;
 
+  /** Absolute URL for files under the Angular browser bundle (`public/` → `resources/browser/`). */
+  resolveStaticAssetUrl(relativeFromPublic: string): string;
+
   /** Reserved; frameless custom titlebar is used on all platforms. */
   readonly nativeDevFrame: boolean;
 
@@ -286,6 +289,7 @@ export interface ElectronRendererBridge {
     resolveConflict: (resolution: 'ours' | 'theirs' | 'abort') => Promise<TeamSyncStatus>;
     linkWorkspace: () => Promise<TeamSyncStatus>;
     disconnect: () => Promise<TeamSyncStatus>;
+    listRepoDirectories: () => Promise<readonly string[]>;
     fetchRemoteCatalog: (
       options?: import('@shared/collaboration').TeamFetchRemoteCatalogOptions,
     ) => Promise<import('@shared/collaboration').TeamFetchRemoteCatalogResult>;

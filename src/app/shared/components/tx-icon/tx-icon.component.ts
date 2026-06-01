@@ -51,11 +51,18 @@ export class TxIconComponent {
       const iconName = this.name();
       this.innerMarkup.set(null);
 
-      void this.iconService.loadIconInner(iconName).then((inner) => {
-        if (this.name() === iconName) {
-          this.innerMarkup.set(inner);
-        }
-      });
+      void this.iconService.loadIconInner(iconName).then(
+        (inner) => {
+          if (this.name() === iconName) {
+            this.innerMarkup.set(inner);
+          }
+        },
+        () => {
+          if (this.name() === iconName) {
+            this.innerMarkup.set(null);
+          }
+        },
+      );
     });
   }
 }

@@ -30,6 +30,8 @@ import {
   resolveEffectiveShareScope,
   summarizeShareScope,
   teamShareCatalogForGroup,
+  formatRepoDataDirLabel,
+  tryNormalizeRepoDataDir,
 } from '@shared/collaboration';
 import { isTeamProfile } from '@shared/config';
 import { TEAM_ALWAYS_EXCLUDED_FILES } from '@shared/collaboration/share-scope-files';
@@ -45,10 +47,12 @@ import { TxAuthorAvatarComponent } from '../tx-author-avatar/tx-author-avatar.co
 import { TxBannerComponent } from '../tx-banner/tx-banner.component';
 import { TxButtonComponent } from '../tx-button/tx-button.component';
 import { TxDropdownComponent } from '../tx-dropdown/tx-dropdown.component';
+import { TxConfirmDialogComponent } from '../tx-confirm-dialog/tx-confirm-dialog.component';
 import { TxFormFieldComponent } from '../tx-form-field/tx-form-field.component';
 import { TxIconComponent } from '../tx-icon/tx-icon.component';
 import { TxInputComponent } from '../tx-input/tx-input.component';
 import { TxSliderComponent } from '../tx-slider/tx-slider.component';
+import { TxModalComponent } from '../tx-modal/tx-modal.component';
 import { TxSpinnerComponent } from '../tx-spinner/tx-spinner.component';
 import { TxTagComponent } from '../tx-tag/tx-tag.component';
 import { TxTeamCommitDiffComponent } from '../tx-team-commit-diff/tx-team-commit-diff.component';
@@ -74,9 +78,11 @@ const TEAMS_SECTION_TABS: readonly { readonly id: TeamsTab; readonly label: stri
     TxBannerComponent,
     TxButtonComponent,
     TxDropdownComponent,
+    TxConfirmDialogComponent,
     TxFormFieldComponent,
     TxIconComponent,
     TxInputComponent,
+    TxModalComponent,
     TxSliderComponent,
     TxSpinnerComponent,
     TxTagComponent,
@@ -126,6 +132,14 @@ export class TxTeamsPanelComponent {
   protected readonly branchBusy = signal<{ readonly name: string; readonly action: 'create' | 'switch' | 'delete' } | null>(
     null,
   );
+  protected readonly connectRepoDataDirOpen = signal(false);
+  protected readonly repoDirectoryOptions = signal<readonly string[]>([]);
+  protected readonly extraRepoDataDirOptions = signal<readonly string[]>([]);
+  protected readonly pendingRepoDataDir = signal('');
+  protected readonly newRepoDataDirInput = signal('');
+  protected readonly newRepoDataDirError = signal('');
+  protected readonly loadingRepoDirectories = signal(false);
+  protected readonly disconnectConfirmOpen = signal(false);
 
   protected readonly status = this.teamSync.status;
   protected readonly config = this.teamSync.config;
@@ -166,6 +180,23 @@ export class TxTeamsPanelComponent {
   protected readonly showConnectWizard = computed(
     () => this.showSetup() && this.connectWizardStep() !== 'done',
   );
+
+  protected readonly canDisconnectFromGit = computed(() => {
+    const config = this.config();
+    const setup = this.gitSetup();
+    return Boolean(
+      config?.enabled ||
+        config?.remoteUrl ||
+        setup.gitRemoteUrl ||
+        setup.remoteUrl,
+    );
+  });
+
+  protected readonly disconnectRemoteLabel = computed(() => {
+    const config = this.config();
+    const setup = this.gitSetup();
+    return config?.remoteUrl ?? setup.gitRemoteUrl ?? setup.remoteUrl ?? 'Git remote';
+  });
 
   protected readonly importableRemoteProfiles = computed(
     () => this.remoteCatalog()?.profiles.filter((profile) => !profile.imported) ?? [],
@@ -242,6 +273,24 @@ export class TxTeamsPanelComponent {
   );
 
   protected readonly teamRepoFolder = computed(() => this.config()?.teamRepoDir ?? 'Team workspace folder');
+
+  protected readonly repoDataDirLabel = computed(() =>
+    formatRepoDataDirLabel(this.config()?.repoDataDir),
+  );
+
+  protected readonly selectedRepoDataDirLabel = computed(() =>
+    formatRepoDataDirLabel(this.pendingRepoDataDir()),
+  );
+
+  protected readonly visibleRepoDirectoryOptions = computed(() => {
+    const merged = [...this.repoDirectoryOptions()];
+    for (const dir of this.extraRepoDataDirOptions()) {
+      if (!merged.includes(dir)) {
+        merged.push(dir);
+      }
+    }
+    return merged.sort((a, b) => a.localeCompare(b));
+  });
 
   protected readonly profileSyncSummaries = computed(() => {
     const config = this.config();
@@ -375,6 +424,53 @@ export class TxTeamsPanelComponent {
       return;
     }
 
+    await this.runConnectRemotePhase1();
+  }
+
+  protected handleCancelRepoDataDirModal(): void {
+    this.connectRepoDataDirOpen.set(false);
+  }
+
+  protected handleSelectRepoDataDir(dir: string): void {
+    this.newRepoDataDirError.set('');
+    this.pendingRepoDataDir.set(dir);
+  }
+
+  protected handleApplyNewRepoDataDir(): void {
+    const result = tryNormalizeRepoDataDir(this.newRepoDataDirInput());
+    if (!result.ok) {
+      this.newRepoDataDirError.set(result.error);
+      return;
+    }
+
+    this.newRepoDataDirError.set('');
+    this.pendingRepoDataDir.set(result.value);
+    if (!this.repoDirectoryOptions().includes(result.value)) {
+      this.extraRepoDataDirOptions.update((dirs) =>
+        dirs.includes(result.value) ? dirs : [...dirs, result.value],
+      );
+    }
+  }
+
+  protected async handleConfirmRepoDataDirAndConnect(): Promise<void> {
+    const pendingInput = this.newRepoDataDirInput().trim();
+    if (pendingInput.length > 0 && pendingInput !== this.pendingRepoDataDir()) {
+      const result = tryNormalizeRepoDataDir(pendingInput);
+      if (!result.ok) {
+        this.newRepoDataDirError.set(result.error);
+        return;
+      }
+      this.pendingRepoDataDir.set(result.value);
+    }
+
+    this.connectRepoDataDirOpen.set(false);
+    await this.runConnectRemotePhase2(this.pendingRepoDataDir());
+  }
+
+  private async runConnectRemotePhase1(): Promise<void> {
+    const url = this.remoteUrl().trim();
+    const token = this.remoteToken().trim();
+
     this.loading.set(true);
     this.connectingGit.set(true);
     this.connectStep.set(0);
@@ -385,7 +481,31 @@ export class TxTeamsPanelComponent {
       });
       this.connectStep.set(2);
       await this.teamSync.setRemote(url, token || null);
-      this.connectStep.set(3);
+      this.loadingRepoDirectories.set(true);
+      const directories = await this.teamSync.listRepoDirectories();
+      this.repoDirectoryOptions.set(directories);
+      this.extraRepoDataDirOptions.set([]);
+      this.newRepoDataDirInput.set('');
+      this.newRepoDataDirError.set('');
+      const defaultDir = directories.includes('profiles') ? 'profiles' : (directories[0] ?? '');
+      this.pendingRepoDataDir.set(defaultDir);
+      this.connectRepoDataDirOpen.set(true);
+    } catch {
+      this.notifications.showError('Could not connect remote — check URL and credentials');
+    } finally {
+      this.connectingGit.set(false);
+      this.connectStep.set(0);
+      this.loading.set(false);
+      this.loadingRepoDirectories.set(false);
+    }
+  }
+
+  private async runConnectRemotePhase2(repoDataDir: string): Promise<void> {
+    this.loading.set(true);
+    this.connectingGit.set(true);
+    this.connectStep.set(3);
+    try {
+      await this.teamSync.saveConfig({ repoDataDir });
       await this.delay(320);
       const result = await this.teamSync.fetchRemoteCatalog({ importMissing: true });
       const remaining = result.profiles.filter((profile) => !profile.imported);
@@ -410,7 +530,7 @@ export class TxTeamsPanelComponent {
         }
       }
     } catch {
-      this.notifications.showError('Could not connect remote — check URL and credentials');
+      this.notifications.showError('Could not finish connecting — check repository folder and try again');
     } finally {
       this.connectingGit.set(false);
       this.connectStep.set(0);
@@ -446,17 +566,27 @@ export class TxTeamsPanelComponent {
     }
   }
 
-  protected async handleRemoveSync(): Promise<void> {
+  protected handleRequestDisconnect(): void {
+    this.disconnectConfirmOpen.set(true);
+  }
+
+  protected handleCancelDisconnect(): void {
+    this.disconnectConfirmOpen.set(false);
+  }
+
+  protected async handleConfirmDisconnect(): Promise<void> {
+    this.disconnectConfirmOpen.set(false);
     this.loading.set(true);
     try {
       await this.teamSync.disconnect();
       this.remoteUrl.set('');
       this.remoteToken.set('');
+      this.connectWizardStep.set('connect');
       this.activeTab.set('overview');
       await this.applyGitSetupToForm();
-      this.notifications.showSuccess('Team sync removed');
+      this.notifications.showSuccess('Disconnected from Git repository');
     } catch {
-      this.notifications.showError('Could not remove sync');
+      this.notifications.showError('Could not disconnect from Git remote');
     } finally {
       this.loading.set(false);
     }
@@ -891,10 +1021,16 @@ export class TxTeamsPanelComponent {
     const setup = this.gitSetup();
     const config = this.config();
 
-    if (setup.remoteUrl) {
-      this.remoteUrl.set(setup.remoteUrl);
+    if (config?.enabled) {
+      if (setup.remoteUrl) {
+        this.remoteUrl.set(setup.remoteUrl);
+      } else if (config.remoteUrl) {
+        this.remoteUrl.set(config.remoteUrl);
+      }
     } else if (config?.remoteUrl) {
       this.remoteUrl.set(config.remoteUrl);
+    } else {
+      this.remoteUrl.set('');
     }
 
     if (setup.identity.name) {

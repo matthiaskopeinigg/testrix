@@ -220,6 +220,14 @@ export class TeamSyncService {
     return status;
   }
 
+  async listRepoDirectories(): Promise<readonly string[]> {
+    const bridge = this.electron.bridge();
+    if (!bridge?.team) {
+      return [];
+    }
+    return bridge.team.listRepoDirectories();
+  }
+
   async fetchRemoteCatalog(options?: TeamFetchRemoteCatalogOptions): Promise<TeamFetchRemoteCatalogResult> {
     const bridge = this.electron.bridge();
     const empty: TeamFetchRemoteCatalogResult = {
@@ -436,6 +444,7 @@ export class TeamSyncService {
     this.historyState.set({ entries: [], hasMore: false });
     this.branchesState.set([]);
     this.commitDetailState.set(null);
+    this.remoteCatalogState.set(null);
     void this.loadGitSetup();
     return status;
   }

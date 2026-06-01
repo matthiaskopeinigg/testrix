@@ -21,6 +21,7 @@ export const HELP_WIKI_COLLECTIONS_SECTIONS: readonly HelpWikiSection[] = [
           'Filter and sort menus refine visible items (method, kind, tags).',
           'Right-click for context actions: new folder/request, duplicate, delete, export.',
           'Double-click or use folder click behavior (Settings → Collections) to open tabs.',
+          'Use Ctrl+K (Cmd+K) to quick-open collection items from the command palette.',
         ],
       },
     ],
@@ -36,6 +37,10 @@ export const HELP_WIKI_COLLECTIONS_SECTIONS: readonly HelpWikiSection[] = [
       {
         type: 'paragraph',
         text: 'Each HTTP request tab combines method, URL, section panels, and a response viewer. Click Send to execute; results appear below with status, timing, headers, and body.',
+      },
+      {
+        type: 'note',
+        text: 'Request, folder, and WebSocket tabs use Settings → Collections → Editor layout (Sidebar vs Tabs). Other workspace tab types have their own layout settings.',
       },
       {
         type: 'list',

@@ -146,7 +146,8 @@
       class="workspace-panel-shell__icon-btn"
       [class.is-pressed]="filterToolbarActive()"
       aria-label="Filter mock endpoints"
-      title="Filter"
+      txTooltip="Filter mock endpoints"
+      txTooltipPosition="bottom"
       [attr.aria-expanded]="filterMenuOpen()"
       (click)="handleFilterToolbarClick($event)"
     >
@@ -157,7 +158,8 @@
       class="workspace-panel-shell__icon-btn"
       [class.is-pressed]="sortToolbarActive()"
       aria-label="Sort mock endpoints"
-      title="Sort"
+      txTooltip="Sort mock endpoints"
+      txTooltipPosition="bottom"
       [attr.aria-expanded]="sortMenuOpen()"
       (click)="handleSortToolbarClick($event)"
     >

@@ -11,7 +11,7 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
-import { resolveTestSuiteTabUi, type WorkspaceEditorLayoutId } from '@shared/config';
+import { resolveTestSuiteTabUi, type TestSuiteFlowSectionId, type WorkspaceEditorLayoutId } from '@shared/config';
 import {
   buildInitialFlowRunStatuses,
   findFirstFailedFlowStepId,
@@ -23,10 +23,13 @@ import type { TestSuiteFlowNode, TestSuiteFlowStep, TestSuiteStepStatus, TestSui
 import { parseTestSuiteTabResourceId } from '@shared/testing';
 
 import { ConfigService } from '@app/core/config/config.service';
+import { resolveTabEditorLayout } from '@app/core/config/workspace-tab-editor-layout';
 import { ElectronService } from '@app/core/electron/electron.service';
 import { EnvironmentsService } from '@app/core/environments/environments.service';
 import { ErrorNotificationService } from '@app/core/errors/error-notification.service';
 import { WorkspaceTabMotionController } from '@app/core/ui/workspace-tab-motion';
+import { testSuiteTabSectionBlockCount } from '@app/core/ui/workspace-tab-section-stagger';
+import { WorkspaceSectionNavSliderDirective } from '../../workspace/workspace-section-nav-slider.directive';
 import { UiPreferencesService } from '@app/core/ui/ui-preferences.service';
 import { TestSuiteService } from '@app/core/testing/test-suite.service';
 import { TestingSessionService } from '@app/core/testing/testing-session.service';
@@ -81,6 +84,17 @@ const PANEL_SIZE_SAVE_DEBOUNCE_MS = 300;
 const DEFAULT_STEPS_PANEL_WIDTH_PX = 288;
 const DEFAULT_RESULTS_PANEL_HEIGHT_PX = 280;
 
+interface TsFlowNavItem {
+  readonly id: TestSuiteFlowSectionId;
+  readonly label: string;
+  readonly icon: string;
+}
+
+const FLOW_NAV_ITEMS: readonly TsFlowNavItem[] = [
+  { id: 'overview', label: 'Overview', icon: 'info' },
+  { id: 'steps', label: 'Steps', icon: 'list' },
+];
+
 @Component({
   selector: 'app-test-suite-workspace-tab',
   standalone: true,
@@ -106,6 +120,7 @@ const DEFAULT_RESULTS_PANEL_HEIGHT_PX = 280;
     TsFlowSettingsPanelComponent,
     TsFlowRunPanelComponent,
     TsAddFlowStepModalComponent,
+    WorkspaceSectionNavSliderDirective,
   ],
   templateUrl: './test-suite-workspace-tab.component.html',
   styleUrl: './test-suite-workspace-tab.component.scss',
@@ -131,6 +146,8 @@ export class TestSuiteWorkspaceTabComponent {
   readonly resourceId = input.required<string>();
   readonly active = input(false);
 
+  protected readonly navItems = FLOW_NAV_ITEMS;
+  protected readonly activeFlowSection = signal<TestSuiteFlowSectionId>('steps');
   protected readonly stepFailureDismissed = signal(false);
 
   protected readonly selectedStepId = signal<string | null>(null);
@@ -157,9 +174,8 @@ export class TestSuiteWorkspaceTabComponent {
 
   protected readonly parsed = computed(() => parseTestSuiteTabResourceId(this.resourceId()));
 
-  protected readonly editorLayout = computed(
-    (): WorkspaceEditorLayoutId =>
-      this.configService.settings()?.collections.editorLayout ?? 'sidebar',
+  protected readonly editorLayout = computed((): WorkspaceEditorLayoutId =>
+    resolveTabEditorLayout(this.configService.settings(), 'testSuite'),
   );
 
   protected readonly useSidebarLayout = computed(() => this.editorLayout() === 'sidebar');
@@ -299,6 +315,7 @@ export class TestSuiteWorkspaceTabComponent {
           return;
         }
         const ui = resolveTestSuiteTabUi(session.workspace.testing.testSuiteTabsById, resourceId);
+        this.activeFlowSection.set(ui.activeFlowSection);
         this.selectedStepId.set(ui.selectedStepId);
         this.addStepModalOpen.set(ui.addStepModalOpen);
         this.stepsPanelWidth.set(ui.stepsPanelWidthPx ?? DEFAULT_STEPS_PANEL_WIDTH_PX);
@@ -348,6 +365,25 @@ export class TestSuiteWorkspaceTabComponent {
         clearTimeout(this.panelSizeSaveTimer);
       }
     });
+  }
+
+  protected isSectionContentAnimating(sectionId: TestSuiteFlowSectionId): boolean {
+    return this.tabMotion.isSectionContentAnimating(sectionId);
+  }
+
+  protected isSectionContentSettled(sectionId: TestSuiteFlowSectionId): boolean {
+    return this.tabMotion.isSectionContentSettled(sectionId);
+  }
+
+  protected handleFlowSectionSelect(section: TestSuiteFlowSectionId): void {
+    if (section === this.activeFlowSection()) {
+      return;
+    }
+    this.activeFlowSection.set(section);
+    this.tabMotion.onSectionChange(section, {
+      contentBlockCount: testSuiteTabSectionBlockCount(section),
+    });
+    void this.persistTabUi({ activeFlowSection: section });
   }
 
   protected handleFlowNameChange(name: string): void {
@@ -720,6 +756,7 @@ export class TestSuiteWorkspaceTabComponent {
           testSuiteTabsById: {
             [resourceId]: {
               ...current,
+              activeFlowSection: this.activeFlowSection(),
               selectedStepId: this.selectedStepId(),
               addStepModalOpen: this.addStepModalOpen(),
               stepsPanelWidthPx: this.stepsPanelWidth(),
@@ -745,8 +782,12 @@ export class TestSuiteWorkspaceTabComponent {
     }, PANEL_SIZE_SAVE_DEBOUNCE_MS);
   }
 
-  /** Toolbar rows + steps/editor/run panels for entrance stagger settle timing. */
+  /** Toolbar rows + optional titlebar nav for entrance stagger settle timing. */
   private loadEntranceChildCount(): number {
-    return 5;
+    let count = 1;
+    if (this.parsed()?.kind === 'flow' && this.useTitlebarLayout()) {
+      count += 1;
+    }
+    return count;
   }
 }

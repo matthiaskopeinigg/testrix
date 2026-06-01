@@ -58,6 +58,7 @@ Thumbs.db
 # Custom installer shell — source is tracked; deps and synced payload are not
 /installer-shell/node_modules/
 /installer-shell/resources/payload/
+/installer-shell/resources/payload.zip
 
 # Generated build assets (icons, NSIS BMPs). Scripts under build/installer stay tracked.
 /build/icons/

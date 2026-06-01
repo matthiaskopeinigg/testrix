@@ -71,6 +71,39 @@
   min-width: 0;
 }
 
+.cap-tab--sidebar .cap-tab__workspace {
+  flex-direction: row;
+}
+
+.cap-tab__sections-wrap {
+  @include tab-chrome.workspace-tab-sections-wrap;
+}
+
+.cap-tab__sections-bar {
+  @include tab-chrome.workspace-tab-sections-bar;
+}
+
+.cap-tab__section-tab {
+  @include tab-chrome.workspace-tab-section-tab;
+}
+
+.cap-tab__nav {
+  @include tab-chrome.workspace-tab-section-sidebar-nav;
+}
+
+.cap-tab__nav-item {
+  @include tab-chrome.workspace-tab-section-sidebar-nav-item;
+}
+
+.cap-tab__nav-icon {
+  display: flex;
+  flex-shrink: 0;
+}
+
+.cap-tab__divider {
+  @include tab-chrome.workspace-tab-section-sidebar-divider;
+}
+
 .cap-tab__pane {
   display: flex;
   flex: 1 1 auto;
@@ -81,11 +114,16 @@
   padding: 12px 16px 16px;
 }
 
+.cap-tab__traffic-shell,
 .cap-tab__content {
   display: flex;
   flex: 1 1 auto;
   flex-direction: column;
-  gap: 0.75rem;
   min-height: 0;
   min-width: 0;
+  overflow: hidden;
+}
+
+.cap-tab__content {
+  gap: 0.75rem;
 }

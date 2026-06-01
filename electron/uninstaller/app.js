@@ -18,7 +18,7 @@ const HELP_COPY = {
       'The matching <em>Apps &amp; Features</em> uninstall entry.',
     ],
     userdata:
-      'Optional: deletes <code>%APPDATA%\\Testrix</code>, which holds profiles, workspaces, and request collections.',
+      'Optional: deletes Testrix data folders — settings JSON, profiles, collections, environments, test suites, history, and team Git workspaces (including custom config or team repo locations).',
   },
   mac: {
     intro:
@@ -28,7 +28,7 @@ const HELP_COPY = {
       'Any dock or login-item references managed by the installer.',
     ],
     userdata:
-      'Optional: deletes <code>~/Library/Application Support/Testrix</code>, which holds profiles and request collections.',
+      'Optional: deletes Testrix data folders — settings JSON, profiles, collections, environments, test suites, history, and team Git workspaces.',
   },
   linux: {
     intro:
@@ -38,7 +38,7 @@ const HELP_COPY = {
       'The matching <code>.desktop</code> entry under <code>~/.local/share/applications</code>.',
     ],
     userdata:
-      'Optional: deletes <code>~/.config/Testrix</code>, which holds profiles and request collections.',
+      'Optional: deletes Testrix data folders — settings JSON, profiles, collections, environments, test suites, history, and team Git workspaces.',
   },
 };
 
@@ -130,6 +130,26 @@ function formatScope(scope) {
   return scope;
 }
 
+function formatDataDeletionSummary(info) {
+  const targets = info?.dataDeletionTargets?.length
+    ? info.dataDeletionTargets
+    : info?.userDataPath
+      ? [info.userDataPath]
+      : [];
+
+  if (targets.length === 0) {
+    return 'Deletes Testrix settings, profiles, collections, test suites, and team Git data.';
+  }
+
+  const primary = info.userDataPath || targets[0];
+  const extraCount = targets.filter((target) => target !== primary).length;
+  if (extraCount > 0) {
+    return `Deletes ${primary} plus ${extraCount} linked folder${extraCount === 1 ? '' : 's'} (profiles, collections, test suites, team Git data, settings JSON).`;
+  }
+
+  return `Deletes ${primary} including profiles, collections, test suites, team Git data, and settings JSON.`;
+}
+
 /**
  * Pretty-renders the install info into the read-only summary rows. When info
  * is unavailable (e.g. running the uninstaller from outside an install dir)
@@ -141,7 +161,9 @@ function renderInstallInfo(info) {
     $('info-scope').textContent = '—';
     $('info-path').textContent = '—';
     $('chk-remove-data-path').textContent =
-      info?.userDataPath || 'Deletes your local configuration folder.';
+      info?.userDataPath
+        ? formatDataDeletionSummary(info)
+        : 'Deletes Testrix settings, profiles, collections, test suites, and team Git data.';
     setMissingWarning(info?.message || 'Cannot determine the install location.');
     $('btn-uninstall').disabled = true;
     return;
@@ -150,8 +172,8 @@ function renderInstallInfo(info) {
   $('info-scope').textContent = formatScope(info.scope);
   $('info-path').textContent = info.installDir || '—';
   if (info.version) $('meta-version').textContent = `Version ${info.version}`;
-  if (info.userDataPath) {
-    $('chk-remove-data-path').textContent = `Deletes ${info.userDataPath}.`;
+  if (info.userDataPath || info.dataDeletionTargets?.length) {
+    $('chk-remove-data-path').textContent = formatDataDeletionSummary(info);
   }
 }
 

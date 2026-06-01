@@ -65,6 +65,16 @@ export function interceptorRuleTabSectionBlockCount(_section: string): number {
   return 1;
 }
 
+/** Block counts for test-suite flow workspace tab section shells. */
+export function testSuiteTabSectionBlockCount(section: string): number {
+  switch (section) {
+    case 'overview':
+      return 2;
+    default:
+      return 1;
+  }
+}
+
 export function regressionTabSectionBlockCount(section: string): number {
   switch (section) {
     case 'flows':

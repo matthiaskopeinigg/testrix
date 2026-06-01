@@ -130,10 +130,10 @@ describe('TestSuiteWorkspaceTabComponent', () => {
     expect(fixture.componentInstance['addStepModalOpen']()).toBe(true);
   });
 
-  it('renders flow toolbar and steps workspace', () => {
+  it('renders flow toolbar, section nav, and steps workspace', () => {
     expect(fixture.nativeElement.querySelector('.ts-flow-tab__toolbar')).toBeTruthy();
+    expect(fixture.nativeElement.querySelector('.ts-flow-tab__nav')).toBeTruthy();
     expect(fixture.nativeElement.querySelector('tx-horizontal-split-pane')).toBeTruthy();
-    expect(fixture.nativeElement.querySelector('.ts-flow-tab__nav')).toBeFalsy();
   });
 
   it('selects step from run panel', () => {

@@ -12,6 +12,8 @@
       class="workspace-panel-shell__icon-btn"
       [class.is-pressed]="filterToolbarActive()"
       aria-label="Filter environments"
+      txTooltip="Filter environments"
+      txTooltipPosition="bottom"
       [attr.aria-expanded]="filterMenuOpen()"
       (click)="handleFilterToolbarClick($event)"
     >
@@ -22,6 +24,8 @@
       class="workspace-panel-shell__icon-btn"
       [class.is-pressed]="sortToolbarActive()"
       aria-label="Sort environments"
+      txTooltip="Sort environments"
+      txTooltipPosition="bottom"
       [attr.aria-expanded]="sortMenuOpen()"
       (click)="handleSortToolbarClick($event)"
     >

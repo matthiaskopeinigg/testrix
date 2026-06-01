@@ -47,7 +47,7 @@ const state = {
 
 function setBusy(busy) {
   state.busy = busy;
-  $('btn-install').disabled = busy;
+  $('btn-install').disabled = busy || !state.payloadOk;
   $('btn-quit').disabled = busy;
   $('btn-close').disabled = busy;
   document.querySelectorAll('input[name="scope"]').forEach((el) => {
@@ -136,16 +136,19 @@ async function refreshPaths() {
 }
 
 async function validatePayload() {
+  setPayloadWarning('');
   const res = await window.setupApi.getPayloadInfo();
   state.payloadInfo = res;
   if (!res.ok) {
     state.payloadOk = false;
     setPayloadWarning(res.message || 'Payload is missing or invalid.');
+    setBusy(state.busy);
     return;
   }
   state.payloadOk = true;
   setPayloadWarning('');
   if (res.version) $('meta-version').textContent = `Version ${res.version}`;
+  setBusy(state.busy);
 }
 
 /* ────────────────────────────────────────────────────────── help modal */
@@ -194,6 +197,26 @@ function wireExternalLinks() {
 /* ─────────────────────────────────────────────────────────── init */
 
 async function init() {
+  // #region agent log
+  fetch('http://127.0.0.1:7736/ingest/d5806da4-cf16-47c7-b1e3-a0241cdfcf92', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'e8295c' },
+    body: JSON.stringify({
+      sessionId: 'e8295c',
+      location: 'installer-shell/app.js:init',
+      message: 'installer renderer init',
+      data: {
+        surface: 'installer-main-window',
+        spinnerCount: document.querySelectorAll('.tx-splash-spinner').length,
+        bodyBg: getComputedStyle(document.body).backgroundColor,
+      },
+      hypothesisId: 'H1',
+      timestamp: Date.now(),
+      runId: 'post-fix',
+    }),
+  }).catch(() => {});
+  // #endregion
+
   $('btn-titlebar-min').addEventListener('click', () => window.setupApi.minimize());
   $('btn-titlebar-close').addEventListener('click', () => window.setupApi.quit());
 
@@ -213,28 +236,27 @@ async function init() {
     window.setupApi.getVersion(),
     window.setupApi.getPlatform(),
   ]);
-  if (ver) $('meta-version').textContent = `Version ${ver}`;
+  if (ver) {
+    $('meta-version').textContent = `Version ${ver}`;
+  }
   renderHelpContent(platform);
 
-  await validatePayload();
-  await refreshPaths();
-
-  document.querySelectorAll('input[name="scope"]').forEach((el) => {
-    el.addEventListener('change', refreshPaths);
-  });
-
-  $('btn-quit').addEventListener('click', () => window.setupApi.quit());
-
-  /*
-   * Listen for live progress from the install handler. Stays subscribed for the
-   * whole renderer lifetime — the handler is a no-op when no install is in
-   * flight.
-   */
   window.setupApi.onProgress(({ phase, percent }) => {
     if (phase === 'preparing') {
       setProgressIndeterminate(false);
       setProgressPercent(0);
       setProgressLabel('Preparing…');
+      return;
+    }
+    if (phase === 'extracting') {
+      if (percent == null) {
+        setProgressIndeterminate(true);
+        setProgressLabel('Extracting application files…');
+      } else {
+        setProgressIndeterminate(false);
+        setProgressPercent(percent);
+        setProgressLabel('Extracting application files…');
+      }
       return;
     }
     if (phase === 'copying') {
@@ -261,52 +283,72 @@ async function init() {
     }
   });
 
-  $('btn-install').addEventListener('click', async () => {
-    if (state.busy) return;
-    if (!state.payloadOk) {
-      setInstallError('Cannot install: payload is missing or invalid.');
-      return;
-    }
-    setInstallError('');
-    setBusy(true);
-    resetProgress();
-    showProgress(true);
+  document.querySelectorAll('input[name="scope"]').forEach((el) => {
+    el.addEventListener('change', refreshPaths);
+  });
 
-    const scope = getScope();
-    const installDir = $('install-dir').value.trim();
-    const launchWhenReady = $('chk-launch').checked;
-    const res = await window.setupApi.install({ scope, installDir, launchWhenReady });
+  $('btn-quit').addEventListener('click', () => window.setupApi.quit());
 
-    setBusy(false);
+  void refreshPaths();
+  void (async () => {
+    await validatePayload();
+    await refreshPaths();
+  })();
 
-    if (!res.ok) {
+  $('btn-install').addEventListener('click', () => {
+    void handleInstallClick().catch((e) => {
+      setBusy(false);
       showProgress(false);
-      setInstallError(res);
-      return;
-    }
-
-    /*
-     * When the user opted into "Launch when ready", fire the app and quit the
-     * installer immediately — there's nothing left for them to confirm. The
-     * done panel only shows when launch is unchecked, so the user can read the
-     * success message and close manually.
-     */
-    if (launchWhenReady && res.mainExePath) {
-      await window.setupApi.launchApp(res.mainExePath);
-      await window.setupApi.quit();
-      return;
-    }
-
-    showProgress(false);
-    $('panel-install').classList.add('hidden');
-    $('panel-done').classList.remove('hidden');
-    $('btn-install').classList.add('hidden');
-    $('btn-quit').classList.add('hidden');
-    $('launch-wrap').classList.add('hidden');
-    $('btn-close').classList.remove('hidden');
+      setInstallError(e && e.message ? e.message : String(e));
+    });
   });
 
   $('btn-close').addEventListener('click', () => window.setupApi.quit());
+}
+
+async function handleInstallClick() {
+  if (state.busy) return;
+  if (!state.payloadOk) {
+    setInstallError('Cannot install: payload is missing or invalid.');
+    return;
+  }
+  setInstallError('');
+  setBusy(true);
+  resetProgress();
+  showProgress(true);
+
+  const scope = getScope();
+  const installDir = $('install-dir').value.trim();
+  const launchWhenReady = $('chk-launch').checked;
+  const res = await window.setupApi.install({ scope, installDir, launchWhenReady });
+
+  setBusy(false);
+
+  if (!res.ok) {
+    showProgress(false);
+    setInstallError(res);
+    return;
+  }
+
+  /*
+   * When the user opted into "Launch when ready", fire the app and quit the
+   * installer immediately — there's nothing left for them to confirm. The
+   * done panel only shows when launch is unchecked, so the user can read the
+   * success message and close manually.
+   */
+  if (launchWhenReady && res.mainExePath) {
+    await window.setupApi.launchApp(res.mainExePath);
+    await window.setupApi.quit();
+    return;
+  }
+
+  showProgress(false);
+  $('panel-install').classList.add('hidden');
+  $('panel-done').classList.remove('hidden');
+  $('btn-install').classList.add('hidden');
+  $('btn-quit').classList.add('hidden');
+  $('launch-wrap').classList.add('hidden');
+  $('btn-close').classList.remove('hidden');
 }
 
 init().catch((e) => {

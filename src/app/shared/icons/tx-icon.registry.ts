@@ -1,16 +1,23 @@
 /**
  * Stroke icons for Testrix UI (24×24 viewBox, `currentColor`).
- * Canonical artwork: `assets/icons/*.svg` (served at `/icons/`).
+ * Canonical artwork: `assets/icons/*.svg` (served at `icons/`).
  */
+
+import { publicAssetUrl } from '../assets/public-asset-url';
 
 /** Converts registry keys (`maximizeRestore`) to SVG file stems (`maximize-restore`). */
 export function txIconFileStem(name: string): string {
   return name.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
 }
 
-/** Public URL for a registry icon (Angular copies `assets/icons` → `/icons/`). */
+/** Relative path under `public/` for a registry icon. */
+export function txIconRelativePath(name: TxIconName): string {
+  return `icons/${txIconFileStem(name)}.svg`;
+}
+
+/** Public URL for a registry icon (Angular copies `assets/icons` → `icons/`). */
 export function txIconAssetUrl(name: TxIconName): string {
-  return `/icons/${txIconFileStem(name)}.svg`;
+  return publicAssetUrl(txIconRelativePath(name));
 }
 
 export const TX_ICON_NAMES = [

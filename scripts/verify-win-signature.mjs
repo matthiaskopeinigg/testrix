@@ -3,15 +3,12 @@
  */
 import { execFileSync } from 'node:child_process';
 import { existsSync, readdirSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { join } from 'node:path';
 
-const root = join(dirname(fileURLToPath(import.meta.url)), '..');
+import { resolveShippedWindowsInstaller } from './installer-release-paths.mjs';
+import { resolvePackagedTestrixExe } from './win-payload-build-path.mjs';
 
-const targets = [
-  join(root, 'release', 'Testrix-Setup.exe'),
-  join(root, 'release', 'win-unpacked', 'Testrix.exe'),
-];
+const targets = [resolveShippedWindowsInstaller(), resolvePackagedTestrixExe()];
 
 function resolveSigntool() {
   const pf86 = process.env['ProgramFiles(x86)'] || 'C:\\Program Files (x86)';

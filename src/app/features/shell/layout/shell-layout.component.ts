@@ -5,17 +5,23 @@ import {
   HostListener,
   afterNextRender,
   computed,
+  DestroyRef,
   inject,
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import { filter, map, startWith } from 'rxjs';
 
+import type { OnboardingCompletePayload } from '../../../shared/components/tx-layout-onboarding-overlay/tx-layout-onboarding-overlay.component';
+
 import { ProfileService } from '@app/core/profile/profile.service';
 import { AppReadyService } from '@app/core/electron/app-ready.service';
+import { KeyboardShortcutsService } from '@app/core/keyboard/keyboard-shortcuts.service';
+import { LayoutOnboardingService } from '@app/core/ui/layout-onboarding.service';
 import { TxNotificationService } from '@app/core/notifications/tx-notification.service';
 import { SettingsPopupService } from '@app/core/ui/settings-popup.service';
 import { HelpPopupService } from '@app/core/ui/help-popup.service';
+import { CommandPaletteService } from '@app/core/ui/command-palette.service';
 import { TeamsPanelService } from '@app/core/collaboration/teams-panel.service';
 import { TeamSyncService } from '@app/core/collaboration/team-sync.service';
 import { UpdateService } from '@app/core/updater/update.service';
@@ -26,7 +32,9 @@ import { TxNotificationHostComponent } from '../../../shared/components/tx-notif
 import { TxSettingsPopupComponent } from '../../../shared/components/tx-settings-popup/tx-settings-popup.component';
 import { TxHelpPopupComponent } from '../../../shared/components/tx-help-popup/tx-help-popup.component';
 import { TxTeamsPanelComponent } from '../../../shared/components/tx-teams-panel/tx-teams-panel.component';
+import { TxCommandPaletteComponent } from '../../../shared/components/tx-command-palette/tx-command-palette.component';
 import { TxProfileSwitchOverlayComponent } from '../../../shared/components/tx-profile-switch-overlay/tx-profile-switch-overlay.component';
+import { TxLayoutOnboardingOverlayComponent } from '../../../shared/components/tx-layout-onboarding-overlay/tx-layout-onboarding-overlay.component';
 import { TxUpdateInstallOverlayComponent } from '../../../shared/components/tx-update-install-overlay/tx-update-install-overlay.component';
 import { TxUpdateBannerComponent } from '../../../shared/components/tx-update-banner/tx-update-banner.component';
 import { TxWindowTitlebarComponent } from '../../../shared/components/tx-window-titlebar/tx-window-titlebar.component';
@@ -42,10 +50,12 @@ import { TxBatchImportDialogComponent } from '../../../shared/components/tx-batc
     TxUpdateBannerComponent,
     TxUpdateInstallOverlayComponent,
     TxProfileSwitchOverlayComponent,
+    TxLayoutOnboardingOverlayComponent,
     TxNotificationHostComponent,
     TxSettingsPopupComponent,
     TxHelpPopupComponent,
     TxTeamsPanelComponent,
+    TxCommandPaletteComponent,
     TxImportExportDialogComponent,
     TxBatchImportDialogComponent,
   ],
@@ -54,16 +64,20 @@ import { TxBatchImportDialogComponent } from '../../../shared/components/tx-batc
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ShellLayoutComponent implements AfterViewInit {
+  private readonly destroyRef = inject(DestroyRef);
   private readonly router = inject(Router);
   private readonly electron = inject(ElectronService);
   private readonly appReady = inject(AppReadyService);
   private readonly notifications = inject(TxNotificationService);
+  private readonly keyboardShortcuts = inject(KeyboardShortcutsService);
   protected readonly updates = inject(UpdateService);
   protected readonly settingsPopup = inject(SettingsPopupService);
   protected readonly helpPopup = inject(HelpPopupService);
+  protected readonly commandPalette = inject(CommandPaletteService);
   protected readonly teamsPanel = inject(TeamsPanelService);
   private readonly teamSync = inject(TeamSyncService);
   protected readonly profiles = inject(ProfileService);
+  protected readonly layoutOnboarding = inject(LayoutOnboardingService);
 
   protected readonly hasNotification = computed(() => this.notifications.active() !== null);
 
@@ -81,6 +95,19 @@ export class ShellLayoutComponent implements AfterViewInit {
     afterNextRender(() => {
       void this.appReady.completeBootstrapHandoff({ fromShell: true });
     });
+
+    const unregisterShortcuts = [
+      this.keyboardShortcuts.register('global.commandPaletteToggle', () => {
+        this.commandPalette.toggle();
+      }),
+      this.keyboardShortcuts.register('global.settingsOpen', () => {
+        this.settingsPopup.show();
+      }),
+      this.keyboardShortcuts.register('global.teamsPanelToggle', () => {
+        this.teamsPanel.toggle();
+      }),
+    ];
+    this.destroyRef.onDestroy(() => unregisterShortcuts.forEach((unregister) => unregister()));
   }
 
   protected readonly showUpdateBanner = computed(
@@ -113,20 +140,8 @@ export class ShellLayoutComponent implements AfterViewInit {
     queueMicrotask(() => window.focus());
   }
 
-  @HostListener('document:keydown', ['$event'])
-  protected handleDocumentKeydown(event: KeyboardEvent): void {
-    if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key.toLowerCase() === 't') {
-      event.preventDefault();
-      this.teamsPanel.toggle();
-      return;
-    }
-
-    if (!isSettingsShortcut(event) || isEditableTarget(event.target)) {
-      return;
-    }
-
-    event.preventDefault();
-    this.settingsPopup.show();
+  protected handleOnboardingCompleted(payload: OnboardingCompletePayload): void {
+    void this.layoutOnboarding.applyOnboarding(payload.theme, payload.layout);
   }
 
   protected handleCloseSettings(): void {
@@ -141,16 +156,12 @@ export class ShellLayoutComponent implements AfterViewInit {
     this.teamsPanel.hide();
   }
 
+  protected handleCloseCommandPalette(): void {
+    this.commandPalette.hide();
+  }
+
   @HostListener('window:focus')
   protected handleWindowFocus(): void {
     void this.teamSync.onAppFocus();
   }
-}
-
-function isSettingsShortcut(event: KeyboardEvent): boolean {
-  return (event.ctrlKey || event.metaKey) && event.key === ',';
-}
-
-function isEditableTarget(target: EventTarget | null): boolean {
-  return target instanceof Element && !!target.closest('textarea, input, select, [contenteditable="true"]');
 }

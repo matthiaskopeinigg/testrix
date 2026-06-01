@@ -21,6 +21,10 @@ const REG_SUBKEY = `Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\${A
 const MAIN_EXE = 'Testrix.exe';
 const META_FILE = '.install-meta.json';
 const PRODUCT = 'Testrix';
+const PATHS_ANCHOR_FILE = 'paths.json';
+const PROFILES_MANIFEST_FILE = 'profiles.json';
+const TEAM_WORKSPACE_FILE = 'testrix.team.json';
+const TEAM_WORKSPACE_DIR_NAME = 'team-workspace';
 /*
  * Electron uses `productName` from package.json for the userData folder.
  * Testrix ships with productName "Testrix", so user data lives under that key.
@@ -115,6 +119,131 @@ function defaultUserDataPath() {
   return path.join(os.homedir(), '.config', USER_DATA_DIR_NAME);
 }
 
+function normalizeDeletionPath(value) {
+  if (typeof value !== 'string') {
+    return null;
+  }
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return null;
+  }
+  const normalized = path.normalize(trimmed);
+  if (!path.isAbsolute(normalized)) {
+    return null;
+  }
+  return normalized;
+}
+
+/**
+ * Blocks drive roots and well-known parent folders so we never rm -rf a home
+ * directory or Documents by accident. Targets only come from Testrix anchors.
+ */
+function isSafeDeletionTarget(target) {
+  const normalized = normalizeDeletionPath(target);
+  if (!normalized) {
+    return false;
+  }
+
+  const blocked = new Set(
+    [
+      os.homedir(),
+      process.env.USERPROFILE,
+      process.env.APPDATA,
+      process.env.LOCALAPPDATA,
+      process.env.HOME,
+      path.join(os.homedir(), 'Documents'),
+      path.join(os.homedir(), 'Library'),
+      path.join(os.homedir(), '.config'),
+    ]
+      .filter(Boolean)
+      .map((entry) => normalizeDeletionPath(entry))
+      .filter(Boolean)
+      .map((entry) => entry.toLowerCase()),
+  );
+
+  if (blocked.has(normalized.toLowerCase())) {
+    return false;
+  }
+
+  const segments = normalized.split(path.sep).filter(Boolean);
+  if (process.platform === 'win32') {
+    return segments.length >= 3;
+  }
+  return segments.length >= 2;
+}
+
+function addDeletionTarget(targets, candidate) {
+  const normalized = normalizeDeletionPath(candidate);
+  if (!normalized || !isSafeDeletionTarget(normalized)) {
+    return;
+  }
+  targets.add(normalized);
+}
+
+function readJsonFile(filePath) {
+  try {
+    return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Resolves every on-disk folder Testrix may have written: Electron userData,
+ * custom config roots from paths.json, profile workspaces, linked profile dirs,
+ * and team Git workspaces from testrix.team.json.
+ */
+function collectDataDeletionTargets(userDataPath) {
+  const targets = new Set();
+  addDeletionTarget(targets, userDataPath);
+
+  const anchor = readJsonFile(path.join(userDataPath, PATHS_ANCHOR_FILE));
+  const sharedConfigDirs = [];
+
+  if (anchor && typeof anchor === 'object') {
+    if (anchor.schemaVersion === 1 && typeof anchor.configDir === 'string') {
+      addDeletionTarget(targets, anchor.configDir);
+      sharedConfigDirs.push(anchor.configDir);
+    }
+    if (anchor.schemaVersion === 2) {
+      if (typeof anchor.sharedConfigDir === 'string') {
+        addDeletionTarget(targets, anchor.sharedConfigDir);
+        sharedConfigDirs.push(anchor.sharedConfigDir);
+      }
+      if (typeof anchor.profilesRoot === 'string') {
+        addDeletionTarget(targets, anchor.profilesRoot);
+      }
+    }
+  }
+
+  const profilesManifest = readJsonFile(path.join(userDataPath, PROFILES_MANIFEST_FILE));
+  if (profilesManifest && Array.isArray(profilesManifest.profiles)) {
+    for (const profile of profilesManifest.profiles) {
+      if (profile && typeof profile.linkedDir === 'string') {
+        addDeletionTarget(targets, profile.linkedDir);
+      }
+    }
+  }
+
+  for (const sharedConfigDir of sharedConfigDirs) {
+    const normalizedShared = normalizeDeletionPath(sharedConfigDir);
+    if (!normalizedShared) {
+      continue;
+    }
+
+    addDeletionTarget(targets, path.join(normalizedShared, TEAM_WORKSPACE_DIR_NAME));
+
+    const teamConfig = readJsonFile(path.join(normalizedShared, TEAM_WORKSPACE_FILE));
+    if (teamConfig && typeof teamConfig.teamRepoDir === 'string') {
+      addDeletionTarget(targets, teamConfig.teamRepoDir);
+    }
+  }
+
+  return [...targets].sort(
+    (a, b) => b.split(path.sep).filter(Boolean).length - a.split(path.sep).filter(Boolean).length,
+  );
+}
+
 function readMetaFromInstallDir(installDir) {
   try {
     const raw = fs.readFileSync(path.join(installDir, META_FILE), 'utf8');
@@ -138,6 +267,7 @@ function readMetaFromInstallDir(installDir) {
 function discoverInstall() {
   const exePath = process.execPath;
   const userDataPath = defaultUserDataPath();
+  const dataDeletionTargets = collectDataDeletionTargets(userDataPath);
 
   // Walk up looking for `.install-meta.json`. macOS apps have the meta one
   // level above `Contents/MacOS`, so an upward scan is the cleanest match.
@@ -153,6 +283,7 @@ function discoverInstall() {
         shortcuts: Array.isArray(meta.shortcuts) ? meta.shortcuts : [],
         uninstallScript: meta.uninstallScript || null,
         userDataPath,
+        dataDeletionTargets,
       };
     }
     const parent = path.dirname(dir);
@@ -175,6 +306,7 @@ function discoverInstall() {
         shortcuts: [],
         uninstallScript: null,
         userDataPath,
+        dataDeletionTargets,
       };
     }
   }
@@ -197,6 +329,7 @@ function discoverInstall() {
           shortcuts: Array.isArray(meta?.shortcuts) ? meta.shortcuts : [],
           uninstallScript: meta?.uninstallScript || null,
           userDataPath,
+          dataDeletionTargets,
         };
       }
     } catch (_) {
@@ -214,6 +347,7 @@ function discoverInstall() {
     shortcuts: [],
     uninstallScript: null,
     userDataPath,
+    dataDeletionTargets,
   };
 }
 
@@ -240,7 +374,7 @@ function makeTempPath(ext) {
  *
  * @returns {string} path to the temp .cmd
  */
-function buildWindowsCleanupScript({ installDir, scope, shortcuts, removeUserData, userDataPath }) {
+function buildWindowsCleanupScript({ installDir, scope, shortcuts, dataPaths }) {
   const scriptPath = makeTempPath('cmd');
   const regRoot = scope === 'machine' ? 'HKLM' : 'HKCU';
   const lines = ['@echo off', 'setlocal'];
@@ -285,9 +419,9 @@ function buildWindowsCleanupScript({ installDir, scope, shortcuts, removeUserDat
   // Registry uninstall key
   lines.push('reg delete "%REG_KEY%" /f >nul 2>nul');
 
-  // Optional: user data
-  if (removeUserData && userDataPath) {
-    lines.push(`rmdir /s /q "${cmdQuote(userDataPath)}" >nul 2>nul`);
+  // Optional: user data folders (settings, profiles, team Git workspace, JSON stores)
+  for (const dataPath of dataPaths || []) {
+    lines.push(`rmdir /s /q "${cmdQuote(dataPath)}" >nul 2>nul`);
   }
 
   // Install dir
@@ -340,12 +474,11 @@ function buildWindowsHiddenLauncher(scriptPath) {
  *
  * @returns {string} path to the temp .sh (chmod +x applied)
  */
-function buildMacCleanupScript({ installDir, parentPid, removeUserData, userDataPath }) {
+function buildMacCleanupScript({ installDir, parentPid, dataPaths }) {
   const scriptPath = makeTempPath('sh');
   const lines = ['#!/usr/bin/env bash', 'set -eu'];
   lines.push(`PARENT_PID=${parentPid}`);
   lines.push(`INSTALL_DIR=${shellQuote(installDir)}`);
-  if (userDataPath) lines.push(`USER_DATA=${shellQuote(userDataPath)}`);
   lines.push('for i in $(seq 1 30); do');
   lines.push('  if ! kill -0 "$PARENT_PID" 2>/dev/null; then break; fi');
   lines.push('  sleep 1');
@@ -360,8 +493,8 @@ function buildMacCleanupScript({ installDir, parentPid, removeUserData, userData
     lines.push('rm -rf "$INSTALL_DIR"');
   }
 
-  if (removeUserData && userDataPath) {
-    lines.push('rm -rf "$USER_DATA" || true');
+  for (const dataPath of dataPaths || []) {
+    lines.push(`rm -rf ${shellQuote(dataPath)} || true`);
   }
 
   // self-delete
@@ -378,12 +511,11 @@ function buildMacCleanupScript({ installDir, parentPid, removeUserData, userData
  *
  * @returns {string} path to the temp .sh (chmod +x applied)
  */
-function buildLinuxCleanupScript({ installDir, parentPid, shortcuts, removeUserData, userDataPath }) {
+function buildLinuxCleanupScript({ installDir, parentPid, shortcuts, dataPaths }) {
   const scriptPath = makeTempPath('sh');
   const lines = ['#!/usr/bin/env bash', 'set -eu'];
   lines.push(`PARENT_PID=${parentPid}`);
   lines.push(`INSTALL_DIR=${shellQuote(installDir)}`);
-  if (userDataPath) lines.push(`USER_DATA=${shellQuote(userDataPath)}`);
   lines.push('for i in $(seq 1 30); do');
   lines.push('  if ! kill -0 "$PARENT_PID" 2>/dev/null; then break; fi');
   lines.push('  sleep 1');
@@ -402,8 +534,8 @@ function buildLinuxCleanupScript({ installDir, parentPid, shortcuts, removeUserD
     lines.push('rm -rf "$INSTALL_DIR" || true');
   }
 
-  if (removeUserData && userDataPath) {
-    lines.push('rm -rf "$USER_DATA" || true');
+  for (const dataPath of dataPaths || []) {
+    lines.push(`rm -rf ${shellQuote(dataPath)} || true`);
   }
 
   lines.push('rm -f "$0" || true');
@@ -597,14 +729,13 @@ async function removeInstallDirContents(installDir, runningExe, onProgress) {
  * here). Registry / shortcuts / user data are still passed through as a
  * safety net in case the in-process attempts failed silently.
  */
-function scheduleDeferredCleanup({ installDir, scope, parentPid }) {
+function scheduleDeferredCleanup({ installDir, scope, parentPid, dataPaths }) {
   if (process.platform === 'win32') {
     const script = buildWindowsCleanupScript({
       installDir,
       scope,
       shortcuts: [],
-      removeUserData: false,
-      userDataPath: null,
+      dataPaths: dataPaths || [],
     });
     spawnCleanupDetached(script);
     return;
@@ -613,8 +744,7 @@ function scheduleDeferredCleanup({ installDir, scope, parentPid }) {
     const script = buildMacCleanupScript({
       installDir,
       parentPid,
-      removeUserData: false,
-      userDataPath: null,
+      dataPaths: dataPaths || [],
     });
     spawnCleanupDetached(script);
     return;
@@ -624,8 +754,7 @@ function scheduleDeferredCleanup({ installDir, scope, parentPid }) {
       installDir,
       parentPid,
       shortcuts: [],
-      removeUserData: false,
-      userDataPath: null,
+      dataPaths: dataPaths || [],
     });
     spawnCleanupDetached(script);
   }
@@ -664,9 +793,18 @@ async function performUninstall({ removeUserData }) {
     removeRegistryInProcess(info.scope);
     sendProgress({ phase: 'removing-registry', percent: 0.3 });
 
-    if (removeUserData && info.userDataPath) {
+    const dataPaths =
+      removeUserData && info.dataDeletionTargets?.length
+        ? info.dataDeletionTargets
+        : removeUserData && info.userDataPath
+          ? collectDataDeletionTargets(info.userDataPath)
+          : [];
+
+    if (dataPaths.length > 0) {
       sendProgress({ phase: 'removing-data', percent: 0.35 });
-      removeDirInProcess(info.userDataPath);
+      for (const target of dataPaths) {
+        removeDirInProcess(target);
+      }
       sendProgress({ phase: 'removing-data', percent: 0.5 });
     }
 
@@ -684,6 +822,7 @@ async function performUninstall({ removeUserData }) {
       installDir: info.installDir,
       scope: info.scope,
       parentPid: process.pid,
+      dataPaths: removeUserData ? dataPaths : [],
     });
 
     sendProgress({ phase: 'done', percent: 1 });

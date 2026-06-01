@@ -64,6 +64,8 @@
               type="button"
               class="tx-sidebar__panel-back"
               aria-label="Back"
+              txTooltip="Back"
+              txTooltipPosition="bottom"
               (click)="onBack()"
             >
               <tx-icon name="arrowLeft" [size]="16" />
@@ -75,6 +77,8 @@
           type="button"
           class="tx-sidebar__panel-close"
           aria-label="Close panel"
+          txTooltip="Close panel"
+          txTooltipPosition="bottom"
           (click)="handleClosePanel()"
         >
           <tx-icon name="close" [size]="16" />

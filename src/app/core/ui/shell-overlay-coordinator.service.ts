@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 
-/** Mutually exclusive shell overlays (help, settings, teams). */
-export type ShellOverlayId = 'help' | 'settings' | 'teams';
+/** Mutually exclusive shell overlays (help, settings, teams, command palette). */
+export type ShellOverlayId = 'help' | 'settings' | 'teams' | 'commandPalette';
 
 /**
  * Ensures only one shell overlay is open at a time.

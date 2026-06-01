@@ -11,14 +11,23 @@
     </div>
   </section>
 } @else if (rule(); as r) {
-  <section class="int-tab tx-workspace-tab" [attr.aria-label]="title()">
+  <section
+    class="int-tab tx-workspace-tab"
+    [class.int-tab--titlebar]="useTitlebarLayout()"
+    [class.int-tab--sidebar]="useSidebarLayout()"
+    [attr.aria-label]="title()"
+  >
     <div
       class="tx-workspace-tab__chrome tx-entrance-stagger"
       [class.tx-entrance-stagger--play]="tabMotion.loadStaggerPlay()"
       [class.tx-entrance-stagger--settled]="tabMotion.loadStaggerSettled()"
     >
       <div class="tx-entrance-stagger__block int-tab__bar">
-        <div class="int-tab__bar-cluster">
+        <div class="int-tab__bar-cluster int-tab__bar-cluster--grow">
+          <div class="int-tab__protocol-chip" aria-hidden="true">
+            <tx-icon name="interceptor" [size]="14" aria-hidden="true" />
+            <span>INT</span>
+          </div>
           <tx-form-field class="int-tab__name-field" label="Name" controlId="int-rule-name">
             <tx-input
               id="int-rule-name"
@@ -26,14 +35,8 @@
               (ngModelChange)="handleNameChange($event)"
             />
           </tx-form-field>
-          <tx-form-field class="int-tab__match-field" label="Match URL" controlId="int-toolbar-match">
-            <tx-input
-              id="int-toolbar-match"
-              [ngModel]="r.matchUrl"
-              (ngModelChange)="handleMatchUrlChange($event)"
-              placeholder="*"
-            />
-          </tx-form-field>
+        </div>
+        <div class="int-tab__bar-cluster int-tab__bar-cluster--trailing">
           <tx-toggle
             class="int-tab__enabled-toggle"
             label="Enabled"
@@ -42,22 +45,108 @@
           />
         </div>
       </div>
+
+      @if (useTitlebarLayout()) {
+        <div class="tx-entrance-stagger__block int-tab__sections-wrap">
+          <nav
+            class="int-tab__sections-bar"
+            role="tablist"
+            aria-label="Interceptor rule sections"
+            [txWorkspaceSectionNav]="activeSection()"
+          >
+            @for (item of navItems; track item.id) {
+              <button
+                type="button"
+                class="int-tab__section-tab"
+                role="tab"
+                [attr.aria-selected]="activeSection() === item.id"
+                [class.is-active]="activeSection() === item.id"
+                (click)="handleSectionSelect(item.id)"
+              >
+                <tx-icon [name]="$any(item.icon)" [size]="14" aria-hidden="true" />
+                <span>{{ item.label }}</span>
+              </button>
+            }
+          </nav>
+        </div>
+      }
     </div>
 
     <div class="int-tab__workspace">
-      <div
-        class="int-tab__pane tx-workspace-tab__pane tx-entrance-stagger"
-        [class.tx-entrance-stagger--play]="tabMotion.loadStaggerPlay()"
-        [class.tx-entrance-stagger--settled]="tabMotion.loadStaggerSettled()"
-      >
-        <div class="tx-entrance-stagger__block int-tab__content">
-          <app-int-tab-action-panel
-            [rule]="r"
-            (actionChange)="handleActionChange($event)"
-            (mockStatusChange)="handleMockStatusChange($event)"
-            (mockBodyChange)="handleMockBodyChange($event)"
-          />
-        </div>
+      @if (useSidebarLayout()) {
+        <nav
+          class="int-tab__nav"
+          role="tablist"
+          aria-label="Interceptor rule sections"
+          [txWorkspaceSectionNav]="activeSection()"
+        >
+          @for (item of navItems; track item.id) {
+            <button
+              type="button"
+              class="int-tab__nav-item"
+              role="tab"
+              [attr.aria-selected]="activeSection() === item.id"
+              [class.is-active]="activeSection() === item.id"
+              (click)="handleSectionSelect(item.id)"
+            >
+              <span class="int-tab__nav-icon">
+                <tx-icon [name]="$any(item.icon)" [size]="14" aria-hidden="true" />
+              </span>
+              <span>{{ item.label }}</span>
+            </button>
+          }
+        </nav>
+        <div class="int-tab__divider" aria-hidden="true"></div>
+      }
+
+      <div class="int-tab__pane tx-workspace-tab__pane">
+        @switch (activeSection()) {
+          @case ('overview') {
+            <div
+              class="tx-workspace-tab__section-shell tx-entrance-stagger"
+              [class.tx-entrance-stagger--play]="isSectionContentAnimating('overview')"
+              [class.tx-entrance-stagger--settled]="isSectionContentSettled('overview')"
+            >
+              <div class="tx-entrance-stagger__block">
+                <app-int-tab-overview-panel
+                  [rule]="r"
+                  [interceptorRunning]="interceptorRunning()"
+                  (sectionSelect)="handleSectionSelect($event)"
+                />
+              </div>
+            </div>
+          }
+          @case ('match') {
+            <div
+              class="tx-workspace-tab__section-shell tx-entrance-stagger"
+              [class.tx-entrance-stagger--play]="isSectionContentAnimating('match')"
+              [class.tx-entrance-stagger--settled]="isSectionContentSettled('match')"
+            >
+              <div class="tx-entrance-stagger__block">
+                <app-int-tab-match-panel
+                  [matchUrl]="r.matchUrl"
+                  (matchUrlChange)="handleMatchUrlChange($event)"
+                />
+              </div>
+            </div>
+          }
+          @case ('action') {
+            <div
+              class="tx-workspace-tab__section-shell tx-entrance-stagger int-tab__action-shell"
+              [class.tx-entrance-stagger--play]="isSectionContentAnimating('action')"
+              [class.tx-entrance-stagger--settled]="isSectionContentSettled('action')"
+            >
+              <div class="tx-entrance-stagger__block int-tab__content">
+                <app-int-tab-action-panel
+                  [rule]="r"
+                  (actionChange)="handleActionChange($event)"
+                  (mockStatusChange)="handleMockStatusChange($event)"
+                  (mockBodyChange)="handleMockBodyChange($event)"
+                />
+              </div>
+            </div>
+          }
+        }
       </div>
     </div>
   </section>

@@ -1,4 +1,7 @@
-import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
+import { DomSanitizer } from '@angular/platform-browser';
+
+import { PublicAssetService } from '../../assets/public-asset-url';
 
 
 @Component({
@@ -24,11 +27,15 @@ export class TxBrandLogoComponent {
 
   readonly size = input(40);
 
+  private readonly assets = inject(PublicAssetService);
+  private readonly sanitizer = inject(DomSanitizer);
 
 
-
-
-  protected readonly logoSrc = computed(() => (this.variant() === 'dark' ? '/brand/logo-dark.svg' : '/brand/logo.svg'));
+  protected readonly logoSrc = computed(() =>
+    this.sanitizer.bypassSecurityTrustResourceUrl(
+      this.assets.url(this.variant() === 'dark' ? 'brand/logo-dark.svg' : 'brand/logo.svg'),
+    ),
+  );
 
 
 

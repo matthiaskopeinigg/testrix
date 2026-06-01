@@ -11,8 +11,13 @@ describe('settingsSectionMatchesQuery', () => {
   });
 
   it('does not match unrelated sections', () => {
-    expect(settingsSectionMatchesQuery('privacy', 'timeout')).toBe(false);
+    expect(settingsSectionMatchesQuery('regression', 'timeout')).toBe(false);
     expect(settingsSectionMatchesQuery('about', 'dracula')).toBe(false);
+  });
+
+  it('matches editor layout terms in workspace tab sections', () => {
+    expect(settingsSectionMatchesQuery('regression', 'editor layout')).toBe(true);
+    expect(settingsSectionMatchesQuery('capture', 'sidebar')).toBe(true);
   });
 
   it('treats an empty query as matching every section', () => {

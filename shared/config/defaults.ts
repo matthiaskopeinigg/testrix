@@ -9,7 +9,9 @@ import type { CollectionsFile } from './collections.schema';
 import type { EnvironmentDefinition, EnvironmentScopeNode, EnvironmentsFile } from './environments.schema';
 import { DEFAULT_COLLECTION_FOLDER_CLICK_BEHAVIOR } from './collection-folder-click-behavior';
 import { createDefaultEditorSettings } from './editor-settings.schema';
+import { createDefaultAppKeyboardSettings } from './app-keyboard-settings.schema';
 import { createDefaultHttpSettings } from './http-settings.schema';
+import { createDefaultWorkspaceTabEditorSettings } from './workspace-tab-editor-settings.schema';
 import type { HistoryFile, HistoryItem } from './history.schema';
 import type { ProfileEntry, ProfilesManifest } from './profiles.schema';
 import { createPathsAnchorV2 } from './migrate-paths-anchor';
@@ -40,6 +42,7 @@ export function createDefaultSettings(): SettingsFile {
       configFolderPath: null,
       language: 'en',
       openLastProjectOnStartup: true,
+      layoutOnboardingCompleted: false,
     },
     appearance: {
       theme: DEFAULT_APPEARANCE_THEME_ID,
@@ -110,7 +113,14 @@ export function createDefaultSettings(): SettingsFile {
       foldersFirst: true,
       showDescriptions: true,
       showTags: false,
+      editorLayout: 'sidebar',
     },
+    regression: createDefaultWorkspaceTabEditorSettings(),
+    loadTest: createDefaultWorkspaceTabEditorSettings(),
+    mockServer: createDefaultWorkspaceTabEditorSettings(),
+    capture: createDefaultWorkspaceTabEditorSettings(),
+    interceptor: createDefaultWorkspaceTabEditorSettings(),
+    keyboard: createDefaultAppKeyboardSettings(),
     editor: createDefaultEditorSettings(),
     http: createDefaultHttpSettings(),
     databases: {

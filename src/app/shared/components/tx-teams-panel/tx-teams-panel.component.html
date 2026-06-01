@@ -184,6 +184,14 @@
                 >
                   Connect
                 </tx-button>
+
+                @if (canDisconnectFromGit()) {
+                  <div class="tx-teams-panel__sync-actions">
+                    <tx-button variant="danger" [disabled]="loading()" (pressed)="handleRequestDisconnect()">
+                      Disconnect from repository
+                    </tx-button>
+                  </div>
+                }
               </div>
               } @else if (connectWizardStep() === 'discover') {
               <div class="tx-teams-panel__card tx-teams-panel__card--intro">
@@ -260,8 +268,11 @@
               </div>
 
               <div class="tx-teams-panel__card">
-                <span class="tx-teams-panel__card-label">Team repository folder</span>
-                <p class="tx-teams-panel__hint tx-teams-panel__hint--muted tx-teams-panel__profile-path">{{ teamRepoFolder() }}</p>
+                <span class="tx-teams-panel__card-label">Team data in repository</span>
+                <p class="tx-teams-panel__hint tx-teams-panel__hint--muted tx-teams-panel__profile-path">{{ repoDataDirLabel() }}</p>
+                <p class="tx-teams-panel__hint tx-teams-panel__hint--muted">
+                  Local Git clone: {{ teamRepoFolder() }}
+                </p>
                 @if (profiles.teamProfiles().length > 0) {
                   <p class="tx-teams-panel__hint tx-teams-panel__hint--muted">
                     Team profiles on this machine:
@@ -336,8 +347,8 @@
                     Pause sync
                   </tx-button>
                 }
-                <tx-button variant="danger" [disabled]="loading()" (pressed)="handleRemoveSync()">
-                  Remove sync
+                <tx-button variant="danger" [disabled]="loading()" (pressed)="handleRequestDisconnect()">
+                  Disconnect from repository
                 </tx-button>
               </div>
             }
@@ -415,6 +426,22 @@
                   Wait time before retrying after a network error.
                 </p>
               </div>
+
+              @if (canDisconnectFromGit()) {
+                <div class="tx-teams-panel__card tx-teams-panel__card--danger">
+                  <span class="tx-teams-panel__card-label">Git repository</span>
+                  <p class="tx-teams-panel__hint tx-teams-panel__hint--muted tx-teams-panel__profile-path">
+                    {{ disconnectRemoteLabel() }}
+                  </p>
+                  <p class="tx-teams-panel__hint tx-teams-panel__hint--muted">
+                    Remove the GitHub or Git remote connection completely. Sync stops, credentials are cleared, and the
+                    remote is removed from your local clone.
+                  </p>
+                  <tx-button variant="danger" [disabled]="loading()" (pressed)="handleRequestDisconnect()">
+                    Disconnect from repository
+                  </tx-button>
+                </div>
+              }
             }
           </section>
         }
@@ -657,6 +684,21 @@
               <p class="tx-teams-panel__hint tx-teams-panel__hint--muted">
                 Session, history, and cookies are always kept local.
               </p>
+
+              @if (canDisconnectFromGit()) {
+                <div class="tx-teams-panel__card tx-teams-panel__card--danger">
+                  <span class="tx-teams-panel__card-label">Git repository</span>
+                  <p class="tx-teams-panel__hint tx-teams-panel__hint--muted tx-teams-panel__profile-path">
+                    {{ disconnectRemoteLabel() }}
+                  </p>
+                  <p class="tx-teams-panel__hint tx-teams-panel__hint--muted">
+                    Disconnect completely to remove the Git remote, clear saved credentials, and stop sync.
+                  </p>
+                  <tx-button variant="danger" [disabled]="loading()" (pressed)="handleRequestDisconnect()">
+                    Disconnect from repository
+                  </tx-button>
+                </div>
+              }
             }
           </section>
         }
@@ -665,3 +707,107 @@
     </aside>
   </div>
 }
+
+<tx-modal
+  [open]="connectRepoDataDirOpen()"
+  title="Team data folder in repository"
+  ariaLabel="Choose team data folder in repository"
+  layer="stacked"
+  (closed)="handleCancelRepoDataDirModal()"
+>
+  <p class="tx-teams-panel__hint tx-teams-panel__hint--muted">
+    Choose where Testrix stores team profiles in this Git repository. Each team profile gets its own
+    subfolder under the path you select.
+  </p>
+
+  @if (loadingRepoDirectories()) {
+    <div class="tx-teams-panel__repo-dir-loading">
+      <tx-spinner size="sm" />
+      <span>Loading repository folders…</span>
+    </div>
+  } @else {
+    <div class="tx-teams-panel__repo-dir-list" role="radiogroup" aria-label="Repository folders">
+      <button
+        type="button"
+        class="tx-teams-panel__repo-dir-option"
+        role="radio"
+        [attr.aria-checked]="pendingRepoDataDir() === ''"
+        [class.is-selected]="pendingRepoDataDir() === ''"
+        (click)="handleSelectRepoDataDir('')"
+      >
+        <span class="tx-teams-panel__repo-dir-name">(repository root)</span>
+      </button>
+
+      @for (dir of visibleRepoDirectoryOptions(); track dir) {
+        <button
+          type="button"
+          class="tx-teams-panel__repo-dir-option"
+          role="radio"
+          [attr.aria-checked]="pendingRepoDataDir() === dir"
+          [class.is-selected]="pendingRepoDataDir() === dir"
+          (click)="handleSelectRepoDataDir(dir)"
+        >
+          <span class="tx-teams-panel__repo-dir-name">{{ dir }}</span>
+          @if (extraRepoDataDirOptions().includes(dir)) {
+            <tx-tag variant="info" casing="normal">New</tx-tag>
+          }
+        </button>
+      }
+
+      @if (visibleRepoDirectoryOptions().length === 0) {
+        <tx-banner variant="info" title="No folders in repository yet">
+          Create a new folder below or choose repository root — Testrix will create profile folders when you publish.
+        </tx-banner>
+      }
+    </div>
+
+    <div class="tx-teams-panel__repo-dir-create">
+      <span class="tx-teams-panel__card-label">Create new folder</span>
+      <p class="tx-teams-panel__hint tx-teams-panel__hint--muted">
+        Relative to the repository root. Use nested paths such as <code>data/team</code>.
+      </p>
+      <tx-form-field label="Folder path" controlId="tx-teams-new-repo-dir">
+        <div class="tx-teams-panel__path-row">
+          <tx-input
+            id="tx-teams-new-repo-dir"
+            [ngModel]="newRepoDataDirInput()"
+            (ngModelChange)="newRepoDataDirInput.set($event)"
+            placeholder="e.g. testrix-data"
+            (submitted)="handleApplyNewRepoDataDir()"
+          />
+          <tx-button variant="secondary" (pressed)="handleApplyNewRepoDataDir()">Use folder</tx-button>
+        </div>
+      </tx-form-field>
+      @if (newRepoDataDirError()) {
+        <p class="tx-teams-panel__hint tx-teams-panel__hint--error">{{ newRepoDataDirError() }}</p>
+      }
+    </div>
+
+    <p class="tx-teams-panel__hint tx-teams-panel__hint--muted">
+      Selected: <code>{{ selectedRepoDataDirLabel() }}</code>
+    </p>
+  }
+
+  <div class="tx-teams-panel__sync-actions">
+    <tx-button variant="secondary" (pressed)="handleCancelRepoDataDirModal()">Cancel</tx-button>
+    <tx-button
+      variant="primary"
+      [loading]="connectingGit()"
+      [disabled]="connectingGit() || loadingRepoDirectories()"
+      loadingLabel="Continuing…"
+      (pressed)="handleConfirmRepoDataDirAndConnect()"
+    >
+      Continue
+    </tx-button>
+  </div>
+</tx-modal>
+
+<tx-confirm-dialog
+  [open]="disconnectConfirmOpen()"
+  title="Disconnect from repository"
+  message="Remove the Git remote from your team workspace, clear saved access tokens, and stop all Git sync. Team profile files on this machine are kept; only the connection to GitHub or your Git host is removed."
+  confirmLabel="Disconnect"
+  variant="danger"
+  (confirmed)="handleConfirmDisconnect()"
+  (closed)="handleCancelDisconnect()"
+/>

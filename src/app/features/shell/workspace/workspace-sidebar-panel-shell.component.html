@@ -23,6 +23,8 @@
         [class.is-pressed]="allFoldersExpanded()"
         [attr.aria-label]="allFoldersExpanded() ? 'Collapse all folders' : 'Expand all folders'"
         [attr.aria-pressed]="allFoldersExpanded()"
+        [txTooltip]="allFoldersExpanded() ? 'Collapse all folders' : 'Expand all folders'"
+        txTooltipPosition="bottom"
         (click)="handleToggleFolders()"
       >
         <tx-icon [name]="allFoldersExpanded() ? 'chevronDown' : 'chevronRight'" [size]="16" />
@@ -36,6 +38,8 @@
         type="button"
         class="workspace-panel-shell__icon-btn"
         aria-label="Filter"
+        txTooltip="Filter"
+        txTooltipPosition="bottom"
         (click)="handleFilter()"
       >
         <tx-icon name="filter" [size]="16" />
@@ -47,6 +51,8 @@
         type="button"
         class="workspace-panel-shell__icon-btn"
         aria-label="Sort"
+        txTooltip="Sort"
+        txTooltipPosition="bottom"
         (click)="handleSort()"
       >
         <tx-icon name="list" [size]="16" />

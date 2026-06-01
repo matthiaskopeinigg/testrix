@@ -11,22 +11,24 @@ import {
 } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 
-import { ConfigService } from '@app/core/config/config.service';
+import { CollectionsService } from '@app/core/collections/collections.service';
+import { ImportExportFlowService } from '@app/core/import-export/import-export-flow.service';
 import { HelpPopupService } from '@app/core/ui/help-popup.service';
 import { UiPreferencesService } from '@app/core/ui/ui-preferences.service';
 import { ElectronService } from '@app/core/electron/electron.service';
-import { TxAutofocusDirective } from '@app/shared/directives/tx-autofocus.directive';
+import { FileDialogService } from '@app/core/platform/file-dialog.service';
 import { TxBrandLogoComponent } from '@app/shared/components/tx-brand-logo/tx-brand-logo.component';
-import { TxButtonComponent } from '@app/shared/components/tx-button/tx-button.component';
-import { TxFormFieldComponent } from '@app/shared/components/tx-form-field/tx-form-field.component';
-import { TxModalComponent } from '@app/shared/components/tx-modal/tx-modal.component';
+import { TxIconComponent } from '@app/shared/components/tx-icon/tx-icon.component';
 import { TxSidebarComponent } from '@app/shared/components/tx-sidebar/tx-sidebar.component';
 import {
   WORKSPACE_SIDEBAR_MAIN_ITEMS,
   workspaceSidebarFooterItems,
 } from '@app/features/shell/workspace/workspace-sidebar.constants';
 import { WorkspaceEditorService } from '@app/core/workspace/workspace-editor.service';
-import { WorkspaceSidebarSessionService } from '@app/core/workspace/workspace-sidebar-session.service';
+import {
+  WorkspaceSidebarSessionService,
+  type WorkspaceSidebarPanelId,
+} from '@app/core/workspace/workspace-sidebar-session.service';
 import { WorkspaceEditorComponent } from '@app/features/shell/workspace/workspace-editor/workspace-editor.component';
 import { workspaceSidebarPanelSearch } from '@app/features/shell/workspace/workspace-sidebar-panel-search';
 import { TxSpinnerComponent } from '@app/shared/components/tx-spinner/tx-spinner.component';
@@ -52,10 +54,7 @@ interface WelcomeToast {
     NgComponentOutlet,
     RouterLink,
     TxBrandLogoComponent,
-    TxButtonComponent,
-    TxModalComponent,
-    TxFormFieldComponent,
-    TxAutofocusDirective,
+    TxIconComponent,
     TxSidebarComponent,
     TxSpinnerComponent,
     WorkspaceEditorComponent,
@@ -67,14 +66,15 @@ interface WelcomeToast {
 export class HomeComponent {
   protected readonly workspaceEditor = inject(WorkspaceEditorService);
 
-  private readonly config = inject(ConfigService);
+  private readonly collections = inject(CollectionsService);
+  private readonly importExportFlow = inject(ImportExportFlowService);
+  private readonly fileDialog = inject(FileDialogService);
   private readonly helpPopup = inject(HelpPopupService);
   private readonly uiPreferences = inject(UiPreferencesService);
   private readonly electron = inject(ElectronService);
   private readonly route = inject(ActivatedRoute);
   private readonly sidebarSession = inject(WorkspaceSidebarSessionService);
 
-  protected readonly modalOpen = signal(false);
   protected readonly toast = signal<WelcomeToast | null>(null);
 
   protected readonly activeSidebarId = computed(
@@ -87,10 +87,6 @@ export class HomeComponent {
 
   protected readonly sidebarFooterItems = computed(() =>
     workspaceSidebarFooterItems(this.showDevToolkit() ?? false),
-  );
-
-  protected readonly longText = signal(
-    'This scaffold connects Angular UI with Electron IPC, splash boot sequencing, SVG branding sync, and local-first JSON config envelopes guarded by shared Zod schemas.',
   );
 
   protected readonly showDevToolkit = computed(
@@ -181,21 +177,53 @@ export class HomeComponent {
     return bridge?.versions.app ?? '0.1.0';
   });
 
-  protected readonly runtimeSummary = computed(() => {
-    const bridge = window.testrix;
-    if (!bridge) {
-      return 'Renderer-only dev mode — preload bridge is unavailable (run `npm start` or `npm run dev` for Electron).';
+  protected handleCreateCollection(): void {
+    const id = this.collections.createFolder(null, 'New collection');
+    this.openSidebarPanel('collections');
+    if (id) {
+      this.workspaceEditor.openResource({ resourceId: id, kind: 'folder' });
     }
-    const { platform, versions } = bridge;
-    return `${platform} · renderer app v${versions.app} · electron ${versions.electron} · chromium ${versions.chrome}`;
-  });
-
-  protected handleOpenModal(): void {
-    this.modalOpen.set(true);
   }
 
-  protected handleCloseModal(): void {
-    this.modalOpen.set(false);
+  protected handleNewRequest(): void {
+    const id = this.collections.createRequest(null);
+    this.openSidebarPanel('collections');
+    if (id) {
+      this.workspaceEditor.openResource({ resourceId: id, kind: 'request' });
+    }
+  }
+
+  protected async handleImportWorkspace(): Promise<void> {
+    if (!this.electron.hasBridge()) {
+      this.showToast('Import is only available in the desktop app.', 'error');
+      return;
+    }
+
+    try {
+      const files = await this.fileDialog.pickFiles([
+        'json',
+        'yaml',
+        'yml',
+        'har',
+        'ndjson',
+        'gelf',
+        'jsonl',
+      ]);
+      if (!files?.length) {
+        return;
+      }
+      this.importExportFlow.openBatchReview(files);
+    } catch {
+      this.showToast('Import failed.', 'error');
+    }
+  }
+
+  protected handleOpenEnvironments(): void {
+    this.openSidebarPanel('environments');
+  }
+
+  protected handleOpenHelpGuide(): void {
+    this.helpPopup.show();
   }
 
   protected handleSidebarSelect(id: string): void {
@@ -204,34 +232,9 @@ export class HomeComponent {
     }
   }
 
-  protected handleOpenDebug(): void {
-    if (!this.showDevToolkit()) {
-      this.showToast('Run `npm run dev` to enable the design system debug panel.', 'error');
-      return;
-    }
-    this.sidebarSession.setActiveSidebarPanelId('debug');
+  private openSidebarPanel(panelId: WorkspaceSidebarPanelId): void {
+    this.sidebarSession.setActiveSidebarPanelId(panelId);
     this.sidebarSession.setSidebarPanelOpen(true);
-  }
-
-  protected async handleRefreshConfig(): Promise<void> {
-    try {
-      await this.config.refresh();
-      this.showToast('Configuration reloaded from disk.');
-    } catch {
-      this.showToast('Could not reload configuration.', 'error');
-    }
-  }
-
-  protected handleCopyRuntime(): void {
-    const summary = this.runtimeSummary();
-    if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
-      void navigator.clipboard.writeText(summary).then(
-        () => this.showToast('Runtime summary copied to clipboard.'),
-        () => this.showToast(summary, 'success'),
-      );
-      return;
-    }
-    this.showToast(summary, 'success');
   }
 
   private showToast(message: string, tone: WelcomeToastTone = 'success'): void {

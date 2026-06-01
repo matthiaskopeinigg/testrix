@@ -40,6 +40,8 @@
     <section
       class="ts-flow-tab tx-workspace-tab tx-entrance-stagger"
       role="region"
+      [class.ts-flow-tab--titlebar]="useTitlebarLayout()"
+      [class.ts-flow-tab--sidebar]="useSidebarLayout()"
       [class.tx-entrance-stagger--play]="tabMotion.loadStaggerPlay()"
       [class.tx-entrance-stagger--settled]="tabMotion.loadStaggerSettled()"
       [attr.aria-label]="title()"
@@ -57,18 +59,6 @@
                 placeholder="Untitled flow"
                 [ngModel]="f.name"
                 (ngModelChange)="handleFlowNameChange($event)"
-              />
-            </tx-form-field>
-            <tx-form-field
-              class="ts-flow-tab__description-field"
-              label="Description"
-              controlId="ts-flow-description"
-            >
-              <tx-input
-                controlId="ts-flow-description"
-                placeholder="Description…"
-                [ngModel]="f.description"
-                (ngModelChange)="handleFlowDescriptionChange($event)"
               />
             </tx-form-field>
           </div>
@@ -127,19 +117,31 @@
             </tx-button>
           </div>
         </div>
-      </div>
 
-      <div class="tx-entrance-stagger__block ts-flow-tab__toolbar-chrome tx-workspace-tab__chrome ts-flow-tab__toolbar">
-        <div class="ts-flow-tab__bar-row ts-flow-tab__bar-row--options">
-          <app-ts-flow-settings-panel
-            [flow]="f"
-            [hasE2eSteps]="flowHasE2eSteps()"
-            (criticalChange)="handleFlowCriticalChange($event)"
-            (tagsChange)="handleFlowTagsChange($event)"
-            (e2eShowWindowChange)="handleFlowE2eShowWindowChange($event)"
-            (e2eKeepWindowOpenChange)="handleFlowE2eKeepWindowOpenChange($event)"
-          />
-        </div>
+        @if (useTitlebarLayout()) {
+          <div class="ts-flow-tab__sections-wrap">
+            <nav
+              class="ts-flow-tab__sections-bar"
+              role="tablist"
+              aria-label="Flow sections"
+              [txWorkspaceSectionNav]="activeFlowSection()"
+            >
+              @for (item of navItems; track item.id) {
+                <button
+                  type="button"
+                  class="ts-flow-tab__section-tab"
+                  role="tab"
+                  [attr.aria-selected]="activeFlowSection() === item.id"
+                  [class.is-active]="activeFlowSection() === item.id"
+                  (click)="handleFlowSectionSelect(item.id)"
+                >
+                  <tx-icon [name]="$any(item.icon)" [size]="14" aria-hidden="true" />
+                  <span>{{ item.label }}</span>
+                </button>
+              }
+            </nav>
+          </div>
+        }
       </div>
 
       @if (running() && runProgress(); as progress) {
@@ -155,66 +157,135 @@
         </div>
       }
 
-      <div class="tx-entrance-stagger__block ts-flow-tab__workspace tx-workspace-tab__section-shell">
-        <tx-vertical-split-pane
-          class="ts-flow-tab__split"
-          revealLabel="Run log"
-          [secondaryVisible]="showResultsPanel()"
-          [secondaryHidden]="resultsPanelHidden()"
-          [secondaryHeight]="resultsPanelHeight()"
-          (secondaryHeightChange)="handleResultsPanelHeight($event)"
-          (secondaryHeightCommit)="handleResultsPanelHeightCommit($event)"
-          (secondaryHiddenChange)="handleResultsPanelHidden($event)"
-        >
-          <tx-horizontal-split-pane
-            class="ts-flow-tab__h-split"
-            txSplitPrimary
-            [secondaryWidth]="stepsPanelWidth()"
-            (secondaryWidthChange)="handleStepsPanelWidth($event)"
-            (secondaryWidthCommit)="handleStepsPanelWidthCommit($event)"
+      <div class="ts-flow-tab__workspace">
+        @if (useSidebarLayout()) {
+          <nav
+            class="ts-flow-tab__nav"
+            role="tablist"
+            aria-label="Flow sections"
+            [txWorkspaceSectionNav]="activeFlowSection()"
           >
-            <aside
-              class="ts-flow-tab__steps ts-flow-tab__stagger-panel"
-              txSplitSecondary
-              (contextmenu)="handleTreeAreaContextMenu($event)"
-            >
-              <app-ts-flow-step-tree
-                [nodes]="f.nodes"
-                [liveStepStatuses]="liveStepStatuses()"
-                [selectedStepId]="selectedStepId()"
-                (selectedStepIdChange)="handleTreeStepSelected($event)"
-                (nodesChange)="handleFlowNodesChange($event)"
-                (rowContextMenu)="handleRowContextMenu($event)"
-              />
-            </aside>
-            <main class="ts-flow-tab__editor ts-flow-tab__stagger-panel" txSplitPrimary>
-              <app-ts-flow-step-editor
-                [step]="selectedStep()"
-                [flow]="f"
-                [suiteItems]="suiteItems()"
-                [lastRunMessage]="lastRunMessage()"
-                [liveStepError]="selectedStepLiveError()"
-                [failureAlertDismissed]="stepFailureDismissed()"
-                (stepChange)="handleStepChange($event)"
-                (removeStep)="handleRemoveStep()"
-                (failureDismissed)="handleFailureDismissed()"
-                (failureReopened)="handleFailureReopened()"
-              />
-            </main>
-          </tx-horizontal-split-pane>
+            @for (item of navItems; track item.id) {
+              <button
+                type="button"
+                class="ts-flow-tab__nav-item"
+                role="tab"
+                [attr.aria-selected]="activeFlowSection() === item.id"
+                [class.is-active]="activeFlowSection() === item.id"
+                (click)="handleFlowSectionSelect(item.id)"
+              >
+                <span class="ts-flow-tab__nav-icon">
+                  <tx-icon [name]="$any(item.icon)" [size]="14" aria-hidden="true" />
+                </span>
+                <span>{{ item.label }}</span>
+              </button>
+            }
+          </nav>
+          <div class="ts-flow-tab__divider" aria-hidden="true"></div>
+        }
 
-          <div class="ts-flow-tab__run-slot ts-flow-tab__stagger-panel" txSplitSecondary>
-            <app-ts-flow-run-panel
-              [flow]="f"
-              [running]="running()"
-              [liveStepStatuses]="liveStepStatuses()"
-              [liveStepErrors]="liveStepErrors()"
-              [lastRunMessage]="lastRunMessage()"
-              [selectedStepId]="selectedStepId()"
-              (stepSelect)="handleRunPanelStepSelect($event)"
-            />
-          </div>
-        </tx-vertical-split-pane>
+        <div class="ts-flow-tab__pane tx-workspace-tab__pane">
+          @switch (activeFlowSection()) {
+            @case ('overview') {
+              <div
+                class="tx-workspace-tab__section-shell tx-entrance-stagger"
+                [class.tx-entrance-stagger--play]="isSectionContentAnimating('overview')"
+                [class.tx-entrance-stagger--settled]="isSectionContentSettled('overview')"
+              >
+                <div class="tx-entrance-stagger__block ts-flow-tab__overview-block">
+                  <tx-form-field label="Description" controlId="ts-flow-description">
+                    <tx-textarea
+                      controlId="ts-flow-description"
+                      placeholder="Describe this flow…"
+                      [rows]="3"
+                      [ngModel]="f.description"
+                      (ngModelChange)="handleFlowDescriptionChange($event)"
+                    />
+                  </tx-form-field>
+                </div>
+                <div class="tx-entrance-stagger__block ts-flow-tab__overview-block">
+                  <app-ts-flow-settings-panel
+                    [flow]="f"
+                    [hasE2eSteps]="flowHasE2eSteps()"
+                    (criticalChange)="handleFlowCriticalChange($event)"
+                    (tagsChange)="handleFlowTagsChange($event)"
+                    (e2eShowWindowChange)="handleFlowE2eShowWindowChange($event)"
+                    (e2eKeepWindowOpenChange)="handleFlowE2eKeepWindowOpenChange($event)"
+                  />
+                </div>
+              </div>
+            }
+            @case ('steps') {
+              <div
+                class="tx-workspace-tab__section-shell tx-entrance-stagger ts-flow-tab__steps-shell"
+                [class.tx-entrance-stagger--play]="isSectionContentAnimating('steps')"
+                [class.tx-entrance-stagger--settled]="isSectionContentSettled('steps')"
+              >
+                <div class="tx-entrance-stagger__block ts-flow-tab__steps-block">
+                  <tx-vertical-split-pane
+                    class="ts-flow-tab__split"
+                    revealLabel="Run log"
+                    [secondaryVisible]="showResultsPanel()"
+                    [secondaryHidden]="resultsPanelHidden()"
+                    [secondaryHeight]="resultsPanelHeight()"
+                    (secondaryHeightChange)="handleResultsPanelHeight($event)"
+                    (secondaryHeightCommit)="handleResultsPanelHeightCommit($event)"
+                    (secondaryHiddenChange)="handleResultsPanelHidden($event)"
+                  >
+                    <tx-horizontal-split-pane
+                      class="ts-flow-tab__h-split"
+                      txSplitPrimary
+                      [secondaryWidth]="stepsPanelWidth()"
+                      (secondaryWidthChange)="handleStepsPanelWidth($event)"
+                      (secondaryWidthCommit)="handleStepsPanelWidthCommit($event)"
+                    >
+                      <aside
+                        class="ts-flow-tab__steps ts-flow-tab__stagger-panel"
+                        txSplitSecondary
+                        (contextmenu)="handleTreeAreaContextMenu($event)"
+                      >
+                        <app-ts-flow-step-tree
+                          [nodes]="f.nodes"
+                          [liveStepStatuses]="liveStepStatuses()"
+                          [selectedStepId]="selectedStepId()"
+                          (selectedStepIdChange)="handleTreeStepSelected($event)"
+                          (nodesChange)="handleFlowNodesChange($event)"
+                          (rowContextMenu)="handleRowContextMenu($event)"
+                        />
+                      </aside>
+                      <main class="ts-flow-tab__editor ts-flow-tab__stagger-panel" txSplitPrimary>
+                        <app-ts-flow-step-editor
+                          [step]="selectedStep()"
+                          [flow]="f"
+                          [suiteItems]="suiteItems()"
+                          [lastRunMessage]="lastRunMessage()"
+                          [liveStepError]="selectedStepLiveError()"
+                          [failureAlertDismissed]="stepFailureDismissed()"
+                          (stepChange)="handleStepChange($event)"
+                          (removeStep)="handleRemoveStep()"
+                          (failureDismissed)="handleFailureDismissed()"
+                          (failureReopened)="handleFailureReopened()"
+                        />
+                      </main>
+                    </tx-horizontal-split-pane>
+
+                    <div class="ts-flow-tab__run-slot ts-flow-tab__stagger-panel" txSplitSecondary>
+                      <app-ts-flow-run-panel
+                        [flow]="f"
+                        [running]="running()"
+                        [liveStepStatuses]="liveStepStatuses()"
+                        [liveStepErrors]="liveStepErrors()"
+                        [lastRunMessage]="lastRunMessage()"
+                        [selectedStepId]="selectedStepId()"
+                        (stepSelect)="handleRunPanelStepSelect($event)"
+                      />
+                    </div>
+                  </tx-vertical-split-pane>
+                </div>
+              </div>
+            }
+          }
+        </div>
       </div>
     </section>
 

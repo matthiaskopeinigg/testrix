@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { resolveDefaultTeamRepoDir } from './team-repo-paths';
+import { DEFAULT_TEAM_REPO_DATA_DIR, normalizeRepoDataDir, resolveDefaultTeamRepoDir } from './team-repo-paths';
 import { createProfileSyncEntry } from './team-profile-sync.helpers';
 
 export const TEAM_WORKSPACE_FILE_NAME = 'testrix.team.json';
@@ -76,6 +76,8 @@ export const teamWorkspaceConfigSchema = z.object({
   remoteUrl: z.string().nullable(),
   defaultBranch: z.string().min(1).max(120),
   teamRepoDir: z.string().min(1),
+  /** Repository-relative folder where team profiles and manifest are stored. */
+  repoDataDir: z.string().default(DEFAULT_TEAM_REPO_DATA_DIR),
   syncMode: teamSyncModeSchema,
   shareScope: teamShareScopeSchema,
   profileSync: teamProfileSyncSchema,
@@ -119,6 +121,7 @@ export function createDefaultTeamWorkspaceConfig(sharedConfigDir?: string): Team
     remoteUrl: null,
     defaultBranch: 'main',
     teamRepoDir: sharedConfigDir ? resolveDefaultTeamRepoDir(sharedConfigDir) : '',
+    repoDataDir: DEFAULT_TEAM_REPO_DATA_DIR,
     syncMode: 'mirror',
     shareScope: createDefaultTeamShareScope(),
     profileSync: createDefaultTeamProfileSync(),
@@ -150,12 +153,14 @@ export function enrichTeamWorkspaceConfig(
   const profileSync = migrateLegacyProfileSyncData(legacy.profileSync);
   const teamRepoDir =
     legacy.teamRepoDir && legacy.teamRepoDir.length > 0 ? legacy.teamRepoDir : defaults.teamRepoDir;
+  const repoDataDir = normalizeLegacyRepoDataDir(legacy.repoDataDir, defaults.repoDataDir);
 
   const merged: TeamWorkspaceConfig = {
     ...defaults,
     ...legacy,
     schemaVersion: 2,
     teamRepoDir,
+    repoDataDir,
     syncMode: 'mirror',
     shareScope: { ...defaults.shareScope, ...(legacy.shareScope ?? {}) },
     profileSync: {
@@ -173,6 +178,17 @@ export function enrichTeamWorkspaceConfig(
 
   const parsed = teamWorkspaceConfigSchema.safeParse(merged);
   return parsed.success ? parsed.data : merged;
+}
+
+function normalizeLegacyRepoDataDir(value: string | undefined, fallback: string): string {
+  if (value === undefined || value === null) {
+    return fallback;
+  }
+  try {
+    return normalizeRepoDataDir(value);
+  } catch {
+    return fallback;
+  }
 }
 
 function createProfileSyncEntryDefaults(): TeamProfileSyncEntry {

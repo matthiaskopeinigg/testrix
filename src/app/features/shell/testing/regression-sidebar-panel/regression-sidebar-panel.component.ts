@@ -59,6 +59,7 @@ import { TxContextMenuComponent } from '@app/shared/components/tx-context-menu/t
 import type { TxContextMenuItem } from '@app/shared/components/tx-context-menu/tx-context-menu.types';
 import { TxConfirmDialogComponent } from '@app/shared/components/tx-confirm-dialog/tx-confirm-dialog.component';
 import { TxIconComponent } from '@app/shared/components/tx-icon/tx-icon.component';
+import { TxTooltipDirective } from '@app/shared/components/tx-tooltip/tx-tooltip.directive';
 import { mergeTxTreeConfig } from '@app/shared/components/tx-tree/tx-tree.config';
 import { applyTreeDescriptionVisibility } from '@app/shared/components/tx-tree/tx-tree-description-visibility';
 import { applyTreeTagsVisibility } from '@app/shared/components/tx-tree/tx-tree-tags-visibility';
@@ -91,6 +92,7 @@ type RegressionDisplayNode = TxTreeNode<RegressionTreeNodeMeta>;
     TxContextMenuComponent,
     TxConfirmDialogComponent,
     TxIconComponent,
+    TxTooltipDirective,
   ],
   templateUrl: './regression-sidebar-panel.component.html',
   styleUrl: './regression-sidebar-panel.component.scss',

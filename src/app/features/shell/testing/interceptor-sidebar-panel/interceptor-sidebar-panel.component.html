@@ -83,7 +83,8 @@
       class="workspace-panel-shell__icon-btn"
       [class.is-pressed]="filterToolbarActive()"
       aria-label="Filter interceptor rules"
-      title="Filter"
+      txTooltip="Filter interceptor rules"
+      txTooltipPosition="bottom"
       [attr.aria-expanded]="filterMenuOpen()"
       (click)="handleFilterToolbarClick($event)"
     >
@@ -94,7 +95,8 @@
       class="workspace-panel-shell__icon-btn"
       [class.is-pressed]="sortToolbarActive()"
       aria-label="Sort interceptor rules"
-      title="Sort"
+      txTooltip="Sort interceptor rules"
+      txTooltipPosition="bottom"
       [attr.aria-expanded]="sortMenuOpen()"
       (click)="handleSortToolbarClick($event)"
     >

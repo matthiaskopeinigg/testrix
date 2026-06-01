@@ -20,6 +20,7 @@ import { TxContextMenuComponent } from '@app/shared/components/tx-context-menu/t
 import type { TxContextMenuItem } from '@app/shared/components/tx-context-menu/tx-context-menu.types';
 import { TxConfirmDialogComponent } from '@app/shared/components/tx-confirm-dialog/tx-confirm-dialog.component';
 import { TxIconComponent } from '@app/shared/components/tx-icon/tx-icon.component';
+import { TxTooltipDirective } from '@app/shared/components/tx-tooltip/tx-tooltip.directive';
 import { mergeTxTreeConfig } from '@app/shared/components/tx-tree/tx-tree.config';
 import { TxTreeComponent } from '@app/shared/components/tx-tree/tx-tree.component';
 import type {
@@ -61,6 +62,7 @@ const SEARCH_DEBOUNCE_MS = 100;
     WorkspaceSidebarPanelShellComponent,
     WorkspacePanelToolbarActionsDirective,
     TxIconComponent,
+    TxTooltipDirective,
     TxTreeComponent,
     TxContextMenuComponent,
     TxConfirmDialogComponent,

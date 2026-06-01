@@ -144,6 +144,21 @@ export class ConfigService {
         dataConfig: { ...current.dataConfig, ...patch.dataConfig },
         collections: { ...current.collections, ...patch.collections },
         environments: { ...current.environments, ...patch.environments },
+        testSuite: patch.testSuite ? { ...current.testSuite, ...patch.testSuite } : current.testSuite,
+        regression: patch.regression ? { ...current.regression, ...patch.regression } : current.regression,
+        loadTest: patch.loadTest ? { ...current.loadTest, ...patch.loadTest } : current.loadTest,
+        mockServer: patch.mockServer ? { ...current.mockServer, ...patch.mockServer } : current.mockServer,
+        capture: patch.capture ? { ...current.capture, ...patch.capture } : current.capture,
+        interceptor: patch.interceptor ? { ...current.interceptor, ...patch.interceptor } : current.interceptor,
+        keyboard: patch.keyboard
+          ? {
+              ...current.keyboard,
+              bindings:
+                patch.keyboard.bindings !== undefined
+                  ? { ...patch.keyboard.bindings }
+                  : current.keyboard.bindings,
+            }
+          : current.keyboard,
         editor: patch['editor']
           ? {
               ...current.editor,

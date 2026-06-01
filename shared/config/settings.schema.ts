@@ -12,9 +12,11 @@ import {
   UI_LINE_HEIGHT_IDS,
 } from '../theme/ui-typography-catalog';
 import { editorKeyboardSettingsSchema, editorSettingsSchema } from './editor-settings.schema';
+import { appKeyboardSettingsSchema } from './app-keyboard-settings.schema';
 import { httpSettingsPatchSchema, httpSettingsSchema } from './http-settings.schema';
 import { httpMethodDisplaySchema } from './http-method-display';
 import { workspaceEditorLayoutSchema } from './workspace-editor-layout.schema';
+import { workspaceTabEditorSettingsSchema } from './workspace-tab-editor-settings.schema';
 import { databaseSettingsSchema } from './database-settings.schema';
 
 const metaSettingsSchema = z.object({
@@ -26,6 +28,8 @@ const generalSchema = z.object({
   configFolderPath: z.string().nullable(),
   language: z.string(),
   openLastProjectOnStartup: z.boolean(),
+  /** When true, the first-run workspace layout picker has been completed. */
+  layoutOnboardingCompleted: z.boolean(),
 });
 
 const appearanceSchema = z.object({
@@ -117,7 +121,11 @@ const testSuiteTreeDisplaySchema = treeSidebarSettingsSchema.extend({
   showTags: z.boolean(),
 });
 
-export type TestSuiteSettings = z.infer<typeof testSuiteTreeDisplaySchema>;
+const testSuiteSettingsSchema = testSuiteTreeDisplaySchema.extend({
+  editorLayout: workspaceEditorLayoutSchema,
+});
+
+export type TestSuiteSettings = z.infer<typeof testSuiteSettingsSchema>;
 
 export const settingsFileSchema = z.object({
   schemaVersion: z.literal(1),
@@ -131,7 +139,13 @@ export const settingsFileSchema = z.object({
   dataConfig: dataConfigSchema,
   collections: collectionsSettingsSchema,
   environments: environmentsSettingsSchema,
-  testSuite: testSuiteTreeDisplaySchema,
+  testSuite: testSuiteSettingsSchema,
+  regression: workspaceTabEditorSettingsSchema,
+  loadTest: workspaceTabEditorSettingsSchema,
+  mockServer: workspaceTabEditorSettingsSchema,
+  capture: workspaceTabEditorSettingsSchema,
+  interceptor: workspaceTabEditorSettingsSchema,
+  keyboard: appKeyboardSettingsSchema,
   editor: editorSettingsSchema,
   http: httpSettingsSchema,
   databases: databaseSettingsSchema,
@@ -150,7 +164,13 @@ export const settingsPatchSchema = z
     dataConfig: dataConfigSchema.partial().optional(),
     collections: collectionsSettingsSchema.partial().optional(),
     environments: environmentsSettingsSchema.partial().optional(),
-    testSuite: testSuiteTreeDisplaySchema.partial().optional(),
+    testSuite: testSuiteSettingsSchema.partial().optional(),
+    regression: workspaceTabEditorSettingsSchema.partial().optional(),
+    loadTest: workspaceTabEditorSettingsSchema.partial().optional(),
+    mockServer: workspaceTabEditorSettingsSchema.partial().optional(),
+    capture: workspaceTabEditorSettingsSchema.partial().optional(),
+    interceptor: workspaceTabEditorSettingsSchema.partial().optional(),
+    keyboard: appKeyboardSettingsSchema.partial().optional(),
     editor: z
       .object({
         keyboard: editorKeyboardSettingsSchema.partial().optional(),

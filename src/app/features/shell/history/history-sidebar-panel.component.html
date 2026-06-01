@@ -15,7 +15,8 @@
       class="workspace-panel-shell__icon-btn"
       [class.is-pressed]="filterToolbarActive()"
       aria-label="Filter history"
-      title="Filter"
+      txTooltip="Filter history"
+      txTooltipPosition="bottom"
       [attr.aria-expanded]="filterMenuOpen()"
       (click)="handleFilterToolbarClick($event)"
     >
@@ -26,7 +27,8 @@
       class="workspace-panel-shell__icon-btn"
       [class.is-pressed]="sortToolbarActive()"
       aria-label="Sort history"
-      title="Sort"
+      txTooltip="Sort history"
+      txTooltipPosition="bottom"
       [attr.aria-expanded]="sortMenuOpen()"
       (click)="handleSortToolbarClick($event)"
     >
@@ -36,7 +38,8 @@
       type="button"
       class="workspace-panel-shell__icon-btn"
       aria-label="Clear history"
-      title="Clear history"
+      txTooltip="Clear history"
+      txTooltipPosition="bottom"
       [disabled]="!hasEntries()"
       (click)="handleClearHistory()"
     >
@@ -80,7 +83,8 @@
                     type="button"
                     class="history-sidebar-panel__entry"
                     [class.history-sidebar-panel__entry--active]="activeHistoryId() === entry.id"
-                    [title]="entry.url"
+                    [txTooltip]="entryUrl(entry.id)"
+                    txTooltipPosition="right"
                     (click)="handleSelectEntry(entry.id)"
                     (contextmenu)="handleEntryContextMenu($event, entry.id)"
                   >

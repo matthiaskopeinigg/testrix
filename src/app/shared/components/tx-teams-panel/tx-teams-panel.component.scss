@@ -357,6 +357,85 @@
   word-break: break-all;
 }
 
+.tx-teams-panel__path-row {
+  display: flex;
+  align-items: stretch;
+  gap: 0.5rem;
+
+  tx-input {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+}
+
+.tx-teams-panel__repo-dir-loading {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0;
+  color: var(--tx-text-muted, var(--tx-text-2));
+}
+
+.tx-teams-panel__repo-dir-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  max-height: 240px;
+  overflow-y: auto;
+  margin: 0.5rem 0;
+  padding: 0.15rem;
+}
+
+.tx-teams-panel__repo-dir-option {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  width: 100%;
+  margin: 0;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid color-mix(in srgb, var(--tx-border-0) 55%, transparent);
+  border-radius: var(--tx-radius-sm, 6px);
+  background: color-mix(in srgb, var(--tx-surface-1) 70%, transparent);
+  color: var(--tx-text-1);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
+
+  &:hover {
+    border-color: color-mix(in srgb, var(--tx-accent) 35%, var(--tx-border-0));
+  }
+
+  &.is-selected {
+    border-color: color-mix(in srgb, var(--tx-accent) 55%, var(--tx-border-0));
+    background: color-mix(in srgb, var(--tx-accent) 12%, var(--tx-surface-1));
+  }
+}
+
+.tx-teams-panel__repo-dir-name {
+  font-family: var(--tx-font-mono, ui-monospace, monospace);
+  font-size: 0.85rem;
+  word-break: break-all;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.tx-teams-panel__repo-dir-create {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid color-mix(in srgb, var(--tx-border-0) 45%, transparent);
+}
+
+.tx-teams-panel__hint--error {
+  color: var(--tx-danger, var(--tx-text-danger, #c62828));
+  margin: 0;
+}
+
 .tx-teams-panel__profile-scope {
   display: flex;
   flex-direction: column;
@@ -392,6 +471,11 @@
 
 .tx-teams-panel__card--intro {
   background: color-mix(in srgb, var(--tx-secondary) 8%, var(--tx-surface-2));
+}
+
+.tx-teams-panel__card--danger {
+  border-color: color-mix(in srgb, var(--tx-danger, #c62828) 28%, var(--tx-border-0));
+  background: color-mix(in srgb, var(--tx-danger, #c62828) 6%, var(--tx-surface-2));
 }
 
 .tx-teams-panel__card--auth {

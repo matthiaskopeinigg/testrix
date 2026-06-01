@@ -4,7 +4,6 @@ import * as path from 'node:path';
 
 import {
   TEAM_GITIGNORE_LINES,
-  TEAM_PROFILES_MANIFEST_FILE_NAME,
   buildTeamRemoteCatalog,
   createDefaultTeamGitSetupContext,
   createDefaultTeamSyncStatus,
@@ -16,6 +15,11 @@ import {
   resolveActiveTeamSyncTarget,
   resolveEffectiveShareScope,
   resolveShareScopeFileNames,
+  resolveLegacyTeamProfilesManifestPath,
+  normalizeRepoDataDir,
+  resolveTeamRepoDataDirPath,
+  resolveTeamProfilesManifestPath,
+  resolveTeamProfilesManifestRelativePath,
   resolveTeamRepoRelativePath,
   summarizeShareScope,
   teamProfilesManifestSchema,
@@ -42,7 +46,6 @@ import { teamProfileMirrorService } from './team-profile-mirror.service';
 import {
   migrateTeamSyncConfig,
   resolveGlobalTeamConfigPath,
-  resolveTeamProfilesManifestPath,
   type TeamSyncMigrationInput,
 } from './team-sync-migration.service';
 
@@ -51,10 +54,14 @@ type ExternalChangeListener = (payload: { readonly fileName: string; readonly wo
 type SyncTargetsResolver = () => Promise<readonly ProfileSyncTarget[]>;
 type ProfilesStateResolver = () => Promise<ProfilesState>;
 type TeamProfilesMergedListener = (payload: { readonly addedProfileIds: readonly string[] }) => void;
-type MergeTeamProfilesHandler = (teamRepoDir: string) => Promise<{ readonly addedProfileIds: readonly string[] }>;
+type MergeTeamProfilesHandler = (
+  teamRepoDir: string,
+  repoDataDir: string,
+) => Promise<{ readonly addedProfileIds: readonly string[] }>;
 type ImportTeamProfilesHandler = (
   teamRepoDir: string,
   profileIds: readonly string[],
+  repoDataDir: string,
 ) => Promise<{ readonly importedProfileIds: readonly string[] }>;
 type PublishLocalProfileHandler = (profileId: string) => Promise<ProfilesState>;
 type CreateTeamProfileHandler = (name: string) => Promise<{ readonly state: ProfilesState; readonly profileId: string }>;
@@ -223,6 +230,9 @@ export class TeamSyncEngine {
     this.workspaceDir = this.config.teamRepoDir;
     await fs.mkdir(this.sharedConfigDir, { recursive: true });
     await fs.mkdir(this.config.teamRepoDir, { recursive: true });
+    if (this.workspaceDir && normalizeRepoDataDir(this.config.repoDataDir).length > 0) {
+      await fs.mkdir(resolveTeamRepoDataDirPath(this.workspaceDir, this.config.repoDataDir), { recursive: true });
+    }
     await fs.writeFile(
       resolveGlobalTeamConfigPath(this.sharedConfigDir),
       `${JSON.stringify(this.config, null, 2)}\n`,
@@ -295,6 +305,19 @@ export class TeamSyncEngine {
   async disconnectSync(): Promise<TeamSyncStatus> {
     this.clearTimers();
     this.pendingFiles.clear();
+    this.syncInProgress = false;
+    this.syncRescheduleRequested = false;
+    this.authMethod = 'none';
+    this.authReady = false;
+
+    if (this.workspaceDir) {
+      try {
+        await gitWorkspaceService.removeRemote(this.workspaceDir);
+      } catch {
+        /* remote may already be absent */
+      }
+      await teamCredentialsService.clearToken(this.workspaceDir);
+    }
 
     if (this.sharedConfigDir) {
       this.config = await this.saveConfig({
@@ -312,7 +335,7 @@ export class TeamSyncEngine {
       });
     }
 
-    await this.refreshStatus();
+    this.updateStatus(createDefaultTeamSyncStatus());
     return this.status;
   }
 
@@ -425,6 +448,14 @@ export class TeamSyncEngine {
     }
   }
 
+  async listRepoDirectories(): Promise<readonly string[]> {
+    if (!this.workspaceDir) {
+      throw new Error('Team workspace is not initialized');
+    }
+
+    return gitWorkspaceService.listRepoDirectories(this.workspaceDir);
+  }
+
   async setRemote(url: string, token?: string | null): Promise<void> {
     if (!this.workspaceDir) {
       throw new Error('Team workspace is not initialized');
@@ -515,7 +546,7 @@ export class TeamSyncEngine {
       return [];
     }
 
-    const result = await this.importTeamProfiles(this.workspaceDir, profileIds);
+    const result = await this.importTeamProfiles(this.workspaceDir, profileIds, this.config.repoDataDir);
     await this.afterTeamProfilesChanged(result.importedProfileIds);
     for (const profileId of result.importedProfileIds) {
       await this.mirrorTeamProfileFromRepo(profileId);
@@ -612,13 +643,25 @@ export class TeamSyncEngine {
     if (!this.workspaceDir) {
       return null;
     }
-    try {
-      const raw = await fs.readFile(resolveTeamProfilesManifestPath(this.workspaceDir), 'utf8');
-      const parsed = teamProfilesManifestSchema.safeParse(JSON.parse(raw));
-      return parsed.success ? parsed.data : null;
-    } catch {
-      return null;
+
+    const candidatePaths = [
+      resolveTeamProfilesManifestPath(this.workspaceDir, this.config.repoDataDir),
+      resolveLegacyTeamProfilesManifestPath(this.workspaceDir),
+    ];
+
+    for (const manifestPath of candidatePaths) {
+      try {
+        const raw = await fs.readFile(manifestPath, 'utf8');
+        const parsed = teamProfilesManifestSchema.safeParse(JSON.parse(raw));
+        if (parsed.success) {
+          return parsed.data;
+        }
+      } catch {
+        /* try next location */
+      }
     }
+
+    return null;
   }
 
   private async afterTeamProfilesChanged(profileIds: readonly string[]): Promise<void> {
@@ -657,6 +700,7 @@ export class TeamSyncEngine {
       teamRepoDir: this.workspaceDir,
       target,
       shareScope,
+      repoDataDir: this.config.repoDataDir,
     });
     for (const fileName of mirrored) {
       const payload = { fileName, workspaceDir: target.dir };
@@ -865,10 +909,11 @@ export class TeamSyncEngine {
               teamRepoDir: this.workspaceDir,
               target,
               shareScope,
+              repoDataDir: this.config.repoDataDir,
               fileNames: filesToMirror,
             });
             for (const fileName of filesToMirror) {
-              repoPathsToStage.add(resolveTeamRepoRelativePath(target.profileId, fileName));
+              repoPathsToStage.add(resolveTeamRepoRelativePath(target.profileId, fileName, this.config.repoDataDir));
             }
           }
         }
@@ -883,7 +928,7 @@ export class TeamSyncEngine {
 
       if (shouldUpdateManifest) {
         await this.writeTeamProfilesManifest();
-        repoPathsToStage.add(TEAM_PROFILES_MANIFEST_FILE_NAME);
+        repoPathsToStage.add(resolveTeamProfilesManifestRelativePath(this.config.repoDataDir));
       }
 
       const stagedFiles = [...repoPathsToStage];
@@ -1093,7 +1138,7 @@ export class TeamSyncEngine {
     });
 
     await fs.writeFile(
-      resolveTeamProfilesManifestPath(this.workspaceDir),
+      resolveTeamProfilesManifestPath(this.workspaceDir, this.config.repoDataDir),
       `${JSON.stringify(manifest, null, 2)}\n`,
       'utf8',
     );
@@ -1115,6 +1160,7 @@ export class TeamSyncEngine {
       teamRepoDir: this.workspaceDir,
       target,
       shareScope,
+      repoDataDir: this.config.repoDataDir,
     });
     for (const fileName of mirrored) {
       const payload = { fileName, workspaceDir: target.dir };
@@ -1222,7 +1268,7 @@ export class TeamSyncEngine {
       ? await gitWorkspaceService.readUserIdentity(this.workspaceDir)
       : { name: null, email: null };
     const storedToken = await teamCredentialsService.loadToken(this.workspaceDir);
-    const remoteUrl = this.config.remoteUrl || gitRemoteUrl;
+    const remoteUrl = this.config.enabled ? this.config.remoteUrl || gitRemoteUrl : this.config.remoteUrl;
 
     let authMethod: TeamGitAuthMethod = 'none';
     let canAccessRemote = false;

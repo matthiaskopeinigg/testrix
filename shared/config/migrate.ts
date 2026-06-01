@@ -27,6 +27,8 @@ import {
   createDefaultSettings,
 } from './defaults';
 import { createDefaultEditorKeyboardSettings } from './editor-settings.schema';
+import { createDefaultAppKeyboardSettings } from './app-keyboard-settings.schema';
+import { createDefaultWorkspaceTabEditorSettings } from './workspace-tab-editor-settings.schema';
 import { coerceCollectionFolderClickBehavior } from './collection-folder-click-behavior';
 import { enrichCollectionFolderSettings } from './collection-folder-settings.schema';
 import { enrichCollectionRequestSettings } from './collection-request-settings.schema';
@@ -390,6 +392,54 @@ function migrateCollectionsSection(
   } as SettingsFile['collections'];
 }
 
+function migrateGeneralSection(
+  raw: unknown,
+  defaults: SettingsFile['general'],
+): SettingsFile['general'] {
+  const merged = sectionMerge(raw, defaults);
+  return {
+    ...merged,
+    layoutOnboardingCompleted:
+      typeof merged.layoutOnboardingCompleted === 'boolean'
+        ? merged.layoutOnboardingCompleted
+        : true,
+  };
+}
+
+function migrateTestSuiteSection(
+  raw: unknown,
+  defaults: SettingsFile['testSuite'],
+  collectionsLayout: WorkspaceEditorLayoutId,
+): SettingsFile['testSuite'] {
+  const merged = sectionMerge(raw, defaults);
+  return {
+    ...merged,
+    editorLayout: coerceWorkspaceEditorLayout(
+      merged.editorLayout ?? collectionsLayout,
+    ),
+  } as SettingsFile['testSuite'];
+}
+
+function migrateTabEditorSection(
+  raw: unknown,
+  defaults: SettingsFile['regression'],
+  collectionsLayout: WorkspaceEditorLayoutId,
+): SettingsFile['regression'] {
+  const merged = sectionMerge(raw, defaults);
+  return {
+    editorLayout: coerceWorkspaceEditorLayout(
+      merged.editorLayout ?? collectionsLayout,
+    ),
+  };
+}
+
+function sectionMerge<T extends object>(raw: unknown, fallback: T): T {
+  return {
+    ...fallback,
+    ...(typeof raw === 'object' && raw !== null ? (raw as T) : {}),
+  };
+}
+
 /**
  * Merges persisted settings with current defaults (e.g. new `ui` block) then validates.
  */
@@ -416,10 +466,12 @@ export function migrateSettings(data: unknown, options?: MigrateSettingsOptions)
       ? (record['ui'] as Record<string, unknown>)
       : undefined;
 
+  const collections = migrateCollectionsSection(record['collections'], defaults.collections, record['http']);
+
   return settingsFileSchema.parse({
     ...defaults,
     ...record,
-    general: section('general', defaults.general),
+    general: migrateGeneralSection(record['general'], defaults.general),
     appearance: migrateAppearance(
       typeof record['appearance'] === 'object' && record['appearance'] !== null
         ? (record['appearance'] as Record<string, unknown>)
@@ -431,9 +483,27 @@ export function migrateSettings(data: unknown, options?: MigrateSettingsOptions)
     ui: migrateUi(rawUi, defaults.ui),
     logging: section('logging', defaults.logging),
     dataConfig: section('dataConfig', defaults.dataConfig),
-    collections: migrateCollectionsSection(record['collections'], defaults.collections, record['http']),
+    collections,
     environments: section('environments', defaults.environments),
-    testSuite: section('testSuite', defaults.testSuite),
+    testSuite: migrateTestSuiteSection(record['testSuite'], defaults.testSuite, collections.editorLayout),
+    regression: migrateTabEditorSection(
+      record['regression'],
+      defaults.regression,
+      collections.editorLayout,
+    ),
+    loadTest: migrateTabEditorSection(record['loadTest'], defaults.loadTest, collections.editorLayout),
+    mockServer: migrateTabEditorSection(
+      record['mockServer'],
+      defaults.mockServer,
+      collections.editorLayout,
+    ),
+    capture: migrateTabEditorSection(record['capture'], defaults.capture, collections.editorLayout),
+    interceptor: migrateTabEditorSection(
+      record['interceptor'],
+      defaults.interceptor,
+      collections.editorLayout,
+    ),
+    keyboard: section('keyboard', defaults.keyboard),
     editor: migrateEditorSection(record['editor'], defaults.editor),
     http: migrateHttpSection(record['http'], defaults.http, appVersion),
     databases: section('databases', defaults.databases),

@@ -18,6 +18,14 @@ describe('settingsFileSchema', () => {
     expect(settings.collections.showTags).toBe(false);
     expect(settings.collections.folderClickBehavior).toBe('expandCollapseAndOpenTab');
     expect(settings.collections.editorLayout).toBe('sidebar');
+    expect(settings.testSuite.editorLayout).toBe('sidebar');
+    expect(settings.regression.editorLayout).toBe('sidebar');
+    expect(settings.loadTest.editorLayout).toBe('sidebar');
+    expect(settings.mockServer.editorLayout).toBe('sidebar');
+    expect(settings.capture.editorLayout).toBe('sidebar');
+    expect(settings.interceptor.editorLayout).toBe('sidebar');
+    expect(settings.general.layoutOnboardingCompleted).toBe(false);
+    expect(settings.keyboard.bindings).toEqual({});
     expect(settings.collections.displayHttpMethod).toBe('tree-and-tab');
     expect(settings.environments.animateMove).toBe(true);
     expect(settings.environments.animateExpand).toBe(true);

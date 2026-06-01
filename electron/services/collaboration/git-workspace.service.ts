@@ -271,6 +271,18 @@ export class GitWorkspaceService {
     }
   }
 
+  async removeRemote(workspaceDir: string, name = 'origin'): Promise<void> {
+    const existing = await this.runGit(['remote', 'get-url', name], workspaceDir);
+    if (!existing.ok) {
+      return;
+    }
+
+    const result = await this.runGit(['remote', 'remove', name], workspaceDir);
+    if (!result.ok) {
+      throw new Error(result.stderr || 'git remote remove failed');
+    }
+  }
+
   async getRemoteUrl(workspaceDir: string): Promise<string | null> {
     const result = await this.runGit(['remote', 'get-url', 'origin'], workspaceDir);
     return result.ok ? result.stdout.trim() || null : null;
@@ -404,6 +416,22 @@ export class GitWorkspaceService {
       });
     }
     return entries.sort((a, b) => (a.current === b.current ? a.name.localeCompare(b.name) : a.current ? -1 : 1));
+  }
+
+  /**
+   * Lists directory paths tracked in the current HEAD commit (repository-relative POSIX paths).
+   */
+  async listRepoDirectories(workspaceDir: string): Promise<readonly string[]> {
+    const result = await this.runGit(['ls-tree', '-d', '--name-only', '-r', 'HEAD'], workspaceDir);
+    if (!result.ok) {
+      return [];
+    }
+
+    return result.stdout
+      .split('\n')
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0)
+      .sort((a, b) => a.localeCompare(b));
   }
 
   async createBranch(workspaceDir: string, name: string): Promise<void> {

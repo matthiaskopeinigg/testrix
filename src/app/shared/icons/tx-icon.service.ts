@@ -2,14 +2,16 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 
-import { txIconAssetUrl, type TxIconName } from './tx-icon.registry';
+import { PublicAssetService } from '../assets/public-asset-url';
+import { txIconRelativePath, type TxIconName } from './tx-icon.registry';
 
 /**
- * Loads and caches inner SVG markup from `assets/icons` (`/icons/*.svg`) for `tx-icon`.
+ * Loads and caches inner SVG markup from `assets/icons` (`icons/*.svg`) for `tx-icon`.
  */
 @Injectable({ providedIn: 'root' })
 export class TxIconService {
   private readonly http = inject(HttpClient);
+  private readonly assets = inject(PublicAssetService);
 
   private readonly cache = new Map<TxIconName, string>();
   private readonly inflight = new Map<TxIconName, Promise<string>>();
@@ -28,7 +30,9 @@ export class TxIconService {
       return pending;
     }
 
-    const request = firstValueFrom(this.http.get(txIconAssetUrl(name), { responseType: 'text' }))
+    const request = firstValueFrom(
+      this.http.get(this.assets.url(txIconRelativePath(name)), { responseType: 'text' }),
+    )
       .then((svg) => {
         const inner = extractSvgInner(svg);
         this.cache.set(name, inner);

@@ -7,9 +7,11 @@ import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
 import { rcedit } from 'rcedit';
 
+import { resolvePackagedTestrixExe } from './win-payload-build-path.mjs';
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..');
-const exePath = path.join(repoRoot, 'release', 'win-unpacked', 'Testrix.exe');
+const exePath = resolvePackagedTestrixExe();
 const iconPath = path.join(repoRoot, 'build', 'icons', 'icon.ico');
 const require = createRequire(import.meta.url);
 

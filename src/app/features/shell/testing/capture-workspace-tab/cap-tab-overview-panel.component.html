@@ -1,0 +1,55 @@
+<div class="req-overview">
+  <header class="req-overview__hero">
+    <div class="req-overview__hero-main">
+      <h2 class="req-overview__title">Overview</h2>
+      <p class="req-overview__subtitle">
+        Session start URL, recording status, and captured traffic at a glance.
+      </p>
+    </div>
+    <div class="req-overview__endpoint" aria-label="Start URL">
+      <span class="req-overview__method" data-method="GET">URL</span>
+      <code class="req-overview__url">{{ session().startUrl || 'about:blank' }}</code>
+    </div>
+  </header>
+
+  <div class="req-overview__layout">
+    <section class="req-overview-card req-overview-card--about" aria-label="Session">
+      <h3 class="req-overview-card__title">Session</h3>
+      <p class="req-overview__env">
+        <tx-icon name="globe" [size]="12" aria-hidden="true" />
+        Name: <strong>{{ session().name }}</strong>
+      </p>
+      <p class="req-overview__env">
+        <tx-icon name="clock" [size]="12" aria-hidden="true" />
+        Updated: <strong>{{ session().updatedAt }}</strong>
+      </p>
+      <p class="req-overview__env">
+        <tx-icon name="list" [size]="12" aria-hidden="true" />
+        Captured requests: <strong>{{ entryCount() }}</strong>
+      </p>
+    </section>
+
+    <section class="req-overview-card req-overview-card--run" aria-label="Recording status">
+      <div class="req-overview-card__head">
+        <h3 class="req-overview-card__title">Status</h3>
+        <tx-tag [variant]="recording() ? 'success' : 'default'" casing="normal">
+          {{ recording() ? 'Recording' : 'Idle' }}
+        </tx-tag>
+      </div>
+      <div class="req-overview-run__footer">
+        @if (!captureSupported()) {
+          <p class="req-overview-run__history">
+            Capture requires the Testrix desktop app. Start capture opens a separate browser window with the start URL.
+          </p>
+        } @else {
+          <p class="req-overview-run__history">
+            Use the toolbar to start or stop capture. Review and filter traffic in the Traffic section.
+          </p>
+        }
+        <div class="cap-overview__actions">
+          <tx-button variant="secondary" (pressed)="sectionSelect.emit('traffic')">View traffic</tx-button>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>

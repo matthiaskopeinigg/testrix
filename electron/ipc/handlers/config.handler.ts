@@ -57,10 +57,12 @@ export interface ConfigHandlerDeps {
   readonly initTeamSync: () => Promise<void>;
   readonly mergeTeamProfilesFromManifest: (
     teamRepoDir: string,
+    repoDataDir: string,
   ) => Promise<{ readonly addedProfileIds: readonly string[] }>;
   readonly importTeamProfiles: (
     teamRepoDir: string,
     profileIds: readonly string[],
+    repoDataDir: string,
   ) => Promise<{ readonly importedProfileIds: readonly string[] }>;
   readonly publishLocalProfile: (profileId: string) => Promise<ProfilesState>;
   readonly createTeamProfile: (name: string) => Promise<{ readonly state: ProfilesState; readonly profileId: string }>;

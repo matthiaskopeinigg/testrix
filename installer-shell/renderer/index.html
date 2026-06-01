@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; script-src 'self'" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; script-src 'self'; connect-src http://127.0.0.1:7736" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="color-scheme" content="dark" />
     <title>Testrix Setup</title>
@@ -25,7 +25,7 @@
       <main class="installer-body">
         <section class="hero" aria-labelledby="hero-title">
           <div class="hero-logo-frame" aria-hidden="true">
-            <img class="hero-logo" src="./assets/logo.png" width="96" height="96" alt="" />
+            <img class="hero-logo" src="./assets/logo.svg" width="86" height="86" alt="" />
           </div>
           <h1 id="hero-title" class="hero-title">Install Testrix</h1>
           <p class="hero-subtitle">
@@ -139,13 +139,13 @@
             <a href="#" class="ext-link" data-href="https://github.com/matthiaskopeinigg/testrix/releases">Releases page</a>:
           </p>
           <ul class="modal-list modal-list--platforms">
-            <li><strong>Windows</strong> — <code>Testrix-Setup.exe</code> (this installer)</li>
-            <li><strong>macOS</strong> — <code>.dmg</code>, drag the app to <em>Applications</em></li>
-            <li><strong>Linux</strong> — <code>.AppImage</code> (portable) or <code>.deb</code> (Debian / Ubuntu)</li>
+            <li><strong>Windows</strong> — <code>Testrix Setup.exe</code></li>
+            <li><strong>macOS</strong> — <code>Testrix Setup.dmg</code></li>
+            <li><strong>Linux</strong> — <code>Testrix Setup.AppImage</code></li>
           </ul>
 
           <h3 class="modal-section-title">Troubleshooting</h3>
-          <p>If the installer says the payload is missing, rebuild with <code>npm run electron:pack</code> so the application files are bundled inside the setup executable.</p>
+          <p>If the installer says the payload is missing, download the installer again or rebuild with <code>npm run electron:pack</code>.</p>
         </div>
         <footer class="modal-footer">
           <button type="button" class="btn btn-primary" id="btn-help-done">Got it</button>

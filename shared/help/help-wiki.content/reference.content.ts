@@ -11,11 +11,41 @@ export const HELP_WIKI_REFERENCE_SECTIONS: readonly HelpWikiSection[] = [
     description: 'App chrome and editor bindings.',
     blocks: [
       {
+        type: 'paragraph',
+        text: 'App shortcuts listed below are defaults — rebind them in Settings → Keyboard → App shortcuts. Editor shortcuts inside code fields are documented in the same section (read-only reference).',
+      },
+      {
         type: 'list',
         items: [
           'Ctrl+, (Cmd+,) — open Settings.',
-          'Escape — close modals, settings, and this help wiki.',
-          'Editor shortcuts — see Settings → Keyboard for the full VS Code-style reference.',
+          'Ctrl+K (Cmd+K) — toggle command palette (search commands and quick-open workspace items).',
+          'Ctrl+Shift+T (Cmd+Shift+T) — toggle Teams panel.',
+          'Ctrl+W (Cmd+W) — close active workspace tab.',
+          'Ctrl+Tab / Ctrl+Shift+Tab — next / previous tab in the focused pane.',
+          'Escape — close modals, settings, help, and the command palette.',
+        ],
+      },
+    ],
+  }),
+  wikiSection({
+    id: 'ref-command-palette',
+    groupId: 'reference',
+    label: 'Command palette',
+    icon: 'search',
+    title: 'Command palette',
+    description: 'Quick search for commands and workspace items.',
+    blocks: [
+      {
+        type: 'paragraph',
+        text: 'Press Ctrl+K (Cmd+K) to open the command palette. Type to fuzzy-search static shell commands and dynamically indexed workspace targets (requests, environments, test flows, dev tools, and more).',
+      },
+      {
+        type: 'list',
+        items: [
+          'Arrow keys — move selection up or down.',
+          'Enter — run the selected command or open the selected item.',
+          'Escape — close the palette.',
+          'Result rows show contextual hints (method + URL, match URL, start URL, etc.) to distinguish similar names.',
         ],
       },
     ],
@@ -73,6 +103,8 @@ export const HELP_WIKI_REFERENCE_SECTIONS: readonly HelpWikiSection[] = [
         type: 'list',
         items: [
           'Update banner appears when a newer release is available (packaged builds).',
+          'Settings → About → Check for updates shows checking, available, error, or disabled states.',
+          'Dev and unpackaged builds show “Updates apply to the installed desktop app.” when the updater is unavailable.',
           'Splash screen shows during boot; disable with TESTRIX_NO_SPLASH=1 for local iteration.',
         ],
       },
@@ -91,7 +123,8 @@ export const HELP_WIKI_REFERENCE_SECTIONS: readonly HelpWikiSection[] = [
         items: [
           'Renderer-only mode — if IPC is unavailable, use npm start instead of ng serve alone.',
           'Profile switch — ensure the correct profile is active before editing collections.',
-          'Settings vs profile data — theme changes are global; collections are per profile.',
+          'Settings vs profile data — theme and keyboard bindings are global; collections are per profile.',
+          'Editor layout — each workspace tab type has its own layout setting under Settings (Sidebar vs Tabs).',
           'Reload config — welcome screen or restart app if files changed on disk externally.',
         ],
       },

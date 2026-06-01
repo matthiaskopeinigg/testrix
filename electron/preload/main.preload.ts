@@ -15,6 +15,8 @@ import { WindowChannels } from '../ipc/channels/window.channels';
 import { DbChannels } from '../ipc/channels/db.channels';
 import { TeamChannels } from '../ipc/channels/team.channels';
 
+import { resolveStaticAssetUrl } from './resolve-static-asset-url.js';
+
 import type { UpdaterStatus } from '../../shared/updater/updater-status.schema';
 import type { FlowRunProgressEvent } from '../../shared/testing';
 import {
@@ -61,6 +63,7 @@ const api: ElectronAPI = {
   bootThemeMode,
   bootThemeBg,
   nativeDevFrame: false,
+  resolveStaticAssetUrl,
   versions: mergedVersions as ElectronAPI['versions'],
   notifyReady: () => {
     ipcRenderer.send(AppChannels.ready);
@@ -306,6 +309,7 @@ const api: ElectronAPI = {
     resolveConflict: (resolution) => ipcRenderer.invoke(TeamChannels.resolveConflict, resolution),
     linkWorkspace: () => ipcRenderer.invoke(TeamChannels.linkWorkspace),
     disconnect: () => ipcRenderer.invoke(TeamChannels.disconnect),
+    listRepoDirectories: () => ipcRenderer.invoke(TeamChannels.listRepoDirectories),
     fetchRemoteCatalog: (options?: import('@shared/collaboration').TeamFetchRemoteCatalogOptions) =>
       ipcRenderer.invoke(TeamChannels.fetchRemoteCatalog, options),
     importProfiles: (profileIds) => ipcRenderer.invoke(TeamChannels.importProfiles, profileIds),

@@ -1,9 +1,7 @@
 /**
  * electron-builder afterPack hook for the installer shell (Windows VersionInfo + icon).
  *
- * Runs on the unpacked Electron app in `win-unpacked` **before** electron-builder seals
- * the NSIS portable wrapper. Never rcedit the final `Testrix-Setup.exe` portable —
- * that breaks NSIS integrity checks at launch.
+ * Runs on the unpacked Electron app (`dir` target).
  */
 const path = require('path');
 const fs = require('fs');
@@ -47,7 +45,20 @@ module.exports = async function afterPack(context) {
 
   const version = resolveInstallerShellVersion();
   const versionNumeric = numericVersion(version);
-  const { rcedit } = await import('rcedit');
+
+  let rceditModule;
+  try {
+    rceditModule = await import('rcedit');
+  } catch {
+    try {
+      rceditModule = await import(path.join(__dirname, '..', 'node_modules', 'rcedit', 'lib', 'rcedit.js'));
+    } catch (err) {
+      console.warn('[installer-after-pack] skip — rcedit not available:', err.message || err);
+      return;
+    }
+  }
+
+  const { rcedit } = rceditModule;
 
   try {
     await rcedit(exePath, {

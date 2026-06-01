@@ -19,6 +19,10 @@
   flex: 1 1 auto;
 }
 
+.tx-settings-databases__add {
+  flex-shrink: 0;
+}
+
 .tx-settings-databases__title {
   margin: 0 0 0.2rem;
   font-size: 1.125rem;

@@ -174,25 +174,9 @@
                   <div class="tx-entrance-stagger__block">
                     <h2 class="tx-settings__tab-title">User Interface</h2>
                     <p class="tx-settings__tab-description">
-                      Workbench behavior and presentation. Most options apply immediately and are
-                      saved to your config file.
+                      Motion and chrome presentation. Most options apply immediately and are saved
+                      to your config file.
                     </p>
-                  </div>
-
-                  <div class="tx-entrance-stagger__block">
-                  <h3 class="tx-settings__section-heading">Navigation</h3>
-                  <div class="tx-settings__toggle-stack">
-                    <tx-toggle
-                      label="Close sidebar panel when clicking outside"
-                      [ngModel]="s.ui.closeSidebarPanelOnOutsideClick"
-                      (ngModelChange)="patchUiToggle('closeSidebarPanelOnOutsideClick', $event)"
-                    />
-                    <tx-toggle
-                      label="Restore last sidebar panel on startup"
-                      [ngModel]="s.ui.restoreLastSidebarPanel"
-                      (ngModelChange)="patchUiToggle('restoreLastSidebarPanel', $event)"
-                    />
-                  </div>
                   </div>
 
                   <div class="tx-entrance-stagger__block">
@@ -249,7 +233,9 @@
                   >
                     <tx-settings-editor-keyboard-section
                       [keyboard]="s.editor.keyboard"
+                      [appBindings]="s.keyboard.bindings"
                       (keyboardChange)="patchEditorKeyboard($event)"
+                      (appBindingsChange)="patchAppKeyboardBindings($event)"
                     />
                   </div>
                 </section>
@@ -531,6 +517,22 @@
                   </div>
 
                   <div class="tx-entrance-stagger__block">
+                    <h3 class="tx-settings__section-heading">Editor</h3>
+                    <tx-form-field label="Editor layout" controlId="tx-settings-test-suite-editor-layout">
+                      <tx-dropdown
+                        id="tx-settings-test-suite-editor-layout"
+                        [options]="editorLayoutOptions"
+                        [ngModel]="s.testSuite.editorLayout"
+                        (ngModelChange)="patchTestSuiteEditorLayout($event)"
+                      />
+                    </tx-form-field>
+                    <p class="tx-settings__tab-description">
+                      How sections are arranged in test suite workspace tabs (section menu in the
+                      bar or tabs underneath).
+                    </p>
+                  </div>
+
+                  <div class="tx-entrance-stagger__block">
                     <h3 class="tx-settings__section-heading">Display</h3>
                     <tx-toggle
                       label="Show descriptions in tree"
@@ -554,6 +556,182 @@
                   </div>
                 </section>
               }
+              @if (isSectionActive('regression')) {
+                <section
+                  class="tx-settings__section"
+                  [class.tx-settings__section--active]="isSectionActive('regression')"
+                  [attr.aria-hidden]="!isSectionActive('regression')"
+                >
+                  <div
+                    class="tx-settings__section-inner tx-entrance-stagger"
+                    [class.tx-entrance-stagger--play]="isSectionContentAnimating('regression')"
+                    [class.tx-entrance-stagger--settled]="isSectionContentSettled('regression')"
+                  >
+                  <div class="tx-entrance-stagger__block">
+                    <h2 class="tx-settings__tab-title">Regression</h2>
+                    <p class="tx-settings__tab-description">
+                      Editor layout for regression workspace tabs (overview, flows, and related
+                      sections).
+                    </p>
+                  </div>
+                  <div class="tx-entrance-stagger__block">
+                    <h3 class="tx-settings__section-heading">Editor</h3>
+                    <tx-form-field label="Editor layout" controlId="tx-settings-regression-editor-layout">
+                      <tx-dropdown
+                        id="tx-settings-regression-editor-layout"
+                        [options]="editorLayoutOptions"
+                        [ngModel]="s.regression.editorLayout"
+                        (ngModelChange)="patchRegressionEditorLayout($event)"
+                      />
+                    </tx-form-field>
+                    <p class="tx-settings__tab-description">
+                      How sections are arranged in regression workspace tabs (section menu in the bar
+                      or tabs underneath).
+                    </p>
+                  </div>
+                  </div>
+                </section>
+              }
+              @if (isSectionActive('loadTest')) {
+                <section
+                  class="tx-settings__section"
+                  [class.tx-settings__section--active]="isSectionActive('loadTest')"
+                  [attr.aria-hidden]="!isSectionActive('loadTest')"
+                >
+                  <div
+                    class="tx-settings__section-inner tx-entrance-stagger"
+                    [class.tx-entrance-stagger--play]="isSectionContentAnimating('loadTest')"
+                    [class.tx-entrance-stagger--settled]="isSectionContentSettled('loadTest')"
+                  >
+                  <div class="tx-entrance-stagger__block">
+                    <h2 class="tx-settings__tab-title">Load Test</h2>
+                    <p class="tx-settings__tab-description">
+                      Editor layout for load test workspace tabs.
+                    </p>
+                  </div>
+                  <div class="tx-entrance-stagger__block">
+                    <h3 class="tx-settings__section-heading">Editor</h3>
+                    <tx-form-field label="Editor layout" controlId="tx-settings-load-test-editor-layout">
+                      <tx-dropdown
+                        id="tx-settings-load-test-editor-layout"
+                        [options]="editorLayoutOptions"
+                        [ngModel]="s.loadTest.editorLayout"
+                        (ngModelChange)="patchLoadTestEditorLayout($event)"
+                      />
+                    </tx-form-field>
+                    <p class="tx-settings__tab-description">
+                      How sections are arranged in load test workspace tabs (section menu in the bar
+                      or tabs underneath).
+                    </p>
+                  </div>
+                  </div>
+                </section>
+              }
+              @if (isSectionActive('mockServer')) {
+                <section
+                  class="tx-settings__section"
+                  [class.tx-settings__section--active]="isSectionActive('mockServer')"
+                  [attr.aria-hidden]="!isSectionActive('mockServer')"
+                >
+                  <div
+                    class="tx-settings__section-inner tx-entrance-stagger"
+                    [class.tx-entrance-stagger--play]="isSectionContentAnimating('mockServer')"
+                    [class.tx-entrance-stagger--settled]="isSectionContentSettled('mockServer')"
+                  >
+                  <div class="tx-entrance-stagger__block">
+                    <h2 class="tx-settings__tab-title">Mock Server</h2>
+                    <p class="tx-settings__tab-description">
+                      Editor layout for mock server endpoint workspace tabs.
+                    </p>
+                  </div>
+                  <div class="tx-entrance-stagger__block">
+                    <h3 class="tx-settings__section-heading">Editor</h3>
+                    <tx-form-field label="Editor layout" controlId="tx-settings-mock-server-editor-layout">
+                      <tx-dropdown
+                        id="tx-settings-mock-server-editor-layout"
+                        [options]="editorLayoutOptions"
+                        [ngModel]="s.mockServer.editorLayout"
+                        (ngModelChange)="patchMockServerEditorLayout($event)"
+                      />
+                    </tx-form-field>
+                    <p class="tx-settings__tab-description">
+                      How sections are arranged in mock server workspace tabs (section menu in the bar
+                      or tabs underneath).
+                    </p>
+                  </div>
+                  </div>
+                </section>
+              }
+              @if (isSectionActive('capture')) {
+                <section
+                  class="tx-settings__section"
+                  [class.tx-settings__section--active]="isSectionActive('capture')"
+                  [attr.aria-hidden]="!isSectionActive('capture')"
+                >
+                  <div
+                    class="tx-settings__section-inner tx-entrance-stagger"
+                    [class.tx-entrance-stagger--play]="isSectionContentAnimating('capture')"
+                    [class.tx-entrance-stagger--settled]="isSectionContentSettled('capture')"
+                  >
+                  <div class="tx-entrance-stagger__block">
+                    <h2 class="tx-settings__tab-title">Capture</h2>
+                    <p class="tx-settings__tab-description">
+                      Editor layout for capture session workspace tabs.
+                    </p>
+                  </div>
+                  <div class="tx-entrance-stagger__block">
+                    <h3 class="tx-settings__section-heading">Editor</h3>
+                    <tx-form-field label="Editor layout" controlId="tx-settings-capture-editor-layout">
+                      <tx-dropdown
+                        id="tx-settings-capture-editor-layout"
+                        [options]="editorLayoutOptions"
+                        [ngModel]="s.capture.editorLayout"
+                        (ngModelChange)="patchCaptureEditorLayout($event)"
+                      />
+                    </tx-form-field>
+                    <p class="tx-settings__tab-description">
+                      How sections are arranged in capture workspace tabs (section menu in the bar or
+                      tabs underneath).
+                    </p>
+                  </div>
+                  </div>
+                </section>
+              }
+              @if (isSectionActive('interceptor')) {
+                <section
+                  class="tx-settings__section"
+                  [class.tx-settings__section--active]="isSectionActive('interceptor')"
+                  [attr.aria-hidden]="!isSectionActive('interceptor')"
+                >
+                  <div
+                    class="tx-settings__section-inner tx-entrance-stagger"
+                    [class.tx-entrance-stagger--play]="isSectionContentAnimating('interceptor')"
+                    [class.tx-entrance-stagger--settled]="isSectionContentSettled('interceptor')"
+                  >
+                  <div class="tx-entrance-stagger__block">
+                    <h2 class="tx-settings__tab-title">Interceptor</h2>
+                    <p class="tx-settings__tab-description">
+                      Editor layout for interceptor rule workspace tabs.
+                    </p>
+                  </div>
+                  <div class="tx-entrance-stagger__block">
+                    <h3 class="tx-settings__section-heading">Editor</h3>
+                    <tx-form-field label="Editor layout" controlId="tx-settings-interceptor-editor-layout">
+                      <tx-dropdown
+                        id="tx-settings-interceptor-editor-layout"
+                        [options]="editorLayoutOptions"
+                        [ngModel]="s.interceptor.editorLayout"
+                        (ngModelChange)="patchInterceptorEditorLayout($event)"
+                      />
+                    </tx-form-field>
+                    <p class="tx-settings__tab-description">
+                      How sections are arranged in interceptor workspace tabs (section menu in the bar
+                      or tabs underneath).
+                    </p>
+                  </div>
+                  </div>
+                </section>
+              }
               @if (isSectionActive('general')) {
                 <section
                   class="tx-settings__section"
@@ -567,17 +745,32 @@
                   >
                   <div class="tx-entrance-stagger__block">
                     <h2 class="tx-settings__tab-title">General</h2>
+                    <p class="tx-settings__tab-description">
+                      Startup and workbench shell behavior. Changes apply immediately and are saved to
+                      your config file.
+                    </p>
                   </div>
                   <div class="tx-entrance-stagger__block">
-                    <tx-form-field label="Language" controlId="tx-settings-lang">
-                      <p id="tx-settings-lang" class="tx-settings__static">{{ s.general.language }}</p>
-                    </tx-form-field>
+                    <h3 class="tx-settings__section-heading">Startup</h3>
+                    <div class="tx-settings__toggle-stack">
+                      <tx-toggle
+                        label="Open last project on startup"
+                        [ngModel]="s.general.openLastProjectOnStartup"
+                        (ngModelChange)="patchGeneralToggle('openLastProjectOnStartup', $event)"
+                      />
+                      <tx-toggle
+                        label="Restore last sidebar panel on startup"
+                        [ngModel]="s.ui.restoreLastSidebarPanel"
+                        (ngModelChange)="patchUiToggle('restoreLastSidebarPanel', $event)"
+                      />
+                    </div>
                   </div>
                   <div class="tx-entrance-stagger__block">
+                    <h3 class="tx-settings__section-heading">Workbench</h3>
                     <tx-toggle
-                      label="Open last project on startup"
-                      [ngModel]="s.general.openLastProjectOnStartup"
-                      (ngModelChange)="patchGeneralToggle('openLastProjectOnStartup', $event)"
+                      label="Close sidebar panel when clicking outside"
+                      [ngModel]="s.ui.closeSidebarPanelOnOutsideClick"
+                      (ngModelChange)="patchUiToggle('closeSidebarPanelOnOutsideClick', $event)"
                     />
                   </div>
                   </div>
@@ -1052,33 +1245,6 @@
                   </div>
                 </section>
               }
-              @if (isSectionActive('privacy')) {
-                <section
-                  class="tx-settings__section"
-                  [class.tx-settings__section--active]="isSectionActive('privacy')"
-                  [attr.aria-hidden]="!isSectionActive('privacy')"
-                >
-                  <div
-                    class="tx-settings__section-inner tx-entrance-stagger"
-                    [class.tx-entrance-stagger--play]="isSectionContentAnimating('privacy')"
-                    [class.tx-entrance-stagger--settled]="isSectionContentSettled('privacy')"
-                  >
-                  <div class="tx-entrance-stagger__block">
-                    <h2 class="tx-settings__tab-title">Privacy</h2>
-                    <p class="tx-settings__tab-description">
-                      Telemetry is off by default in this scaffold.
-                    </p>
-                  </div>
-                  <div class="tx-entrance-stagger__block">
-                    <tx-toggle
-                      label="Send anonymous telemetry"
-                      [ngModel]="s.privacy.telemetryEnabled"
-                      (ngModelChange)="patchPrivacyToggle($event)"
-                    />
-                  </div>
-                  </div>
-                </section>
-              }
               @if (isSectionActive('about')) {
                 <section
                   class="tx-settings__section"
@@ -1093,6 +1259,7 @@
                   <div class="tx-entrance-stagger__block tx-settings__about-hero">
                     <tx-brand-logo [size]="56" />
                     <h2 class="tx-settings__tab-title">Testrix</h2>
+                    <p class="tx-settings__about-version">{{ appVersionLabel() }}</p>
                     <p class="tx-settings__tab-description">Product information and runtime details.</p>
                   </div>
 
@@ -1142,7 +1309,25 @@
                       </tx-button>
                     </div>
                     <h3 class="tx-settings__section-heading">Check</h3>
-                    <p class="tx-settings__update-status">{{ updateStatusMessage() }}</p>
+                    @if (showUpdateStatusBanner()) {
+                      <tx-banner
+                        [variant]="updateStatusBannerVariant()"
+                        [title]="
+                          updateStatus().state === 'error'
+                            ? 'Update check failed'
+                            : updateStatus().state === 'downloading'
+                              ? 'Downloading update'
+                              : updateStatus().state === 'downloaded'
+                                ? 'Update ready'
+                                : 'Update available'
+                        "
+                      >
+                        {{ updateStatusMessage() }}
+                      </tx-banner>
+                    }
+                    @if (!showUpdateStatusBanner()) {
+                      <p class="tx-settings__update-status">{{ updateStatusMessage() }}</p>
+                    }
                     <div class="tx-settings__action-row">
                       <tx-button variant="primary" (pressed)="handleCheckForUpdates()">
                         @if (updateStatus().state === 'checking') {
@@ -1150,6 +1335,11 @@
                         }
                         Check for updates
                       </tx-button>
+                      @if (updateStatus().state === 'available') {
+                        <tx-button variant="cta" (pressed)="handleDownloadAndInstallUpdate()">
+                          Download and install
+                        </tx-button>
+                      }
                       @if (updateStatus().state === 'downloaded') {
                         <tx-button variant="cta" (pressed)="handleInstallUpdate()">Restart to install</tx-button>
                       }

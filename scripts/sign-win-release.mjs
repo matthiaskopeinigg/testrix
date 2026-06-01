@@ -5,17 +5,14 @@
 import { execFileSync } from 'node:child_process';
 import { existsSync, readdirSync, unlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { join } from 'node:path';
 
-const root = join(dirname(fileURLToPath(import.meta.url)), '..');
+import { resolveShippedWindowsInstaller } from './installer-release-paths.mjs';
+import { resolvePackagedTestrixExe } from './win-payload-build-path.mjs';
+
 const link = process.env.CSC_LINK || process.env.WIN_CSC_LINK;
 const password = process.env.CSC_KEY_PASSWORD || process.env.WIN_CSC_KEY_PASSWORD || '';
-
-const targets = [
-  join(root, 'release', 'Testrix-Setup.exe'),
-  join(root, 'release', 'win-unpacked', 'Testrix.exe'),
-];
+const targets = [resolveShippedWindowsInstaller(), resolvePackagedTestrixExe()];
 
 if (!link) {
   if (process.env.REQUIRE_WIN_CODE_SIGN === '1') {

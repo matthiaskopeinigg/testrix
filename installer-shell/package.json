@@ -1,16 +1,16 @@
 {
   "name": "testrix-setup",
-  "version": "0.1.2",
+  "version": "0.9.0-beta.1",
   "description": "Testrix Setup",
   "main": "main.js",
   "private": true,
   "author": "Matthias Kopeinigg",
   "scripts": {
     "start": "electron .",
-    "pack": "electron-builder build --win dir --publish never",
+    "pack": "electron-builder build --win portable --publish never",
     "pack:win": "electron-builder build --win portable --publish never",
-    "pack:linux": "electron-builder build --linux AppImage tar.gz --publish never",
-    "pack:mac": "electron-builder build --mac dmg --publish never"
+    "pack:linux": "electron-builder build --linux AppImage --publish never",
+    "pack:mac": "electron-builder build --mac dir --publish never"
   },
   "devDependencies": {
     "electron": "^39.0.0",
@@ -25,7 +25,7 @@
       "enableEmbeddedAsarIntegrityValidation": false
     },
     "directories": {
-      "output": "../release/setup-shell",
+      "output": "../release/setup-shell-build",
       "buildResources": "build"
     },
     "files": [
@@ -35,15 +35,12 @@
       "renderer/**/*",
       "package.json"
     ],
-    "extraResources": [
-      {
-        "from": "resources/payload",
-        "to": "payload",
-        "filter": ["**/*"]
-      }
-    ],
     "asar": true,
     "afterPack": "../scripts/installer-after-pack.cjs",
+    "portable": {
+      "artifactName": "${productName}.${ext}",
+      "unpackDirName": "TestrixSetup"
+    },
     "win": {
       "target": [
         {
@@ -51,7 +48,6 @@
           "arch": ["x64"]
         }
       ],
-      "artifactName": "Testrix-Setup.${ext}",
       "forceCodeSigning": false,
       "signAndEditExecutable": false
     },
@@ -59,10 +55,6 @@
       "target": [
         {
           "target": "AppImage",
-          "arch": ["x64"]
-        },
-        {
-          "target": "tar.gz",
           "arch": ["x64"]
         }
       ],
@@ -73,12 +65,12 @@
     "mac": {
       "target": [
         {
-          "target": "dmg",
+          "target": "dir",
           "arch": ["x64", "arm64"]
         }
       ],
       "artifactName": "${productName}.${ext}",
-      "icon": "../public/icon.icns",
+      "icon": "../build/icons/icon-1024.png",
       "identity": null
     }
   }

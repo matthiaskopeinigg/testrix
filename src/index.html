@@ -27,7 +27,6 @@
         }
         if (window.testrix.opaqueDevWindow && window.testrix.bootThemeBg) {
           root.style.backgroundColor = window.testrix.bootThemeBg;
-          document.body.style.backgroundColor = window.testrix.bootThemeBg;
         }
         if (window.testrix.bootTheme) {
           var themeClass = 'theme-' + window.testrix.bootTheme;
@@ -41,8 +40,13 @@
   </head>
   <body class="theme-github-light">
     <script>
-      if (typeof window.testrix !== 'undefined' && window.testrix.bootTheme) {
-        document.body.className = 'theme-' + window.testrix.bootTheme;
+      if (typeof window.testrix !== 'undefined') {
+        if (window.testrix.bootTheme) {
+          document.body.className = 'theme-' + window.testrix.bootTheme;
+        }
+        if (window.testrix.opaqueDevWindow && window.testrix.bootThemeBg) {
+          document.body.style.backgroundColor = window.testrix.bootThemeBg;
+        }
       }
     </script>
     <app-root></app-root>

@@ -1,11 +1,13 @@
 import { app } from 'electron';
 
 import { configureAppIdentity } from './config/app-icon';
+import { registerBrowserProtocolSchemes } from './config/browser-protocol';
 import { shouldShowSplashBoot } from './config/environment';
 import { createSplashWindow } from './windows/splash-window/splash-window.factory';
 import { startApplication } from './boot/start-application';
 
 configureAppIdentity();
+registerBrowserProtocolSchemes();
 
 /** Splash is created on the first `whenReady` tick so config/CSP work cannot delay the window. */
 let bootSplashWindow: ReturnType<typeof createSplashWindow> | null = null;

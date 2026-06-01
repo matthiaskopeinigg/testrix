@@ -6,8 +6,9 @@ import { attachWin32DevToolsGuard } from './win32-devtools-guard';
 
 import { resolveDevServerOrigin } from '../../boot/wait-for-dev-server';
 import { appIconBrowserWindowOptions } from '../../config/app-icon';
+import { resolvePackagedBrowserIndexUrl } from '../../config/browser-protocol';
 import { shouldShowSplashBoot, usesAngularDevServer } from '../../config/environment';
-import { resolveBrowserIndexPath, resolveMainPreloadPath } from '../../config/paths';
+import { resolveMainPreloadPath } from '../../config/paths';
 import type { ConfigFileService } from '../../services/config/config-file.service';
 
 import { bootThemeAdditionalArguments } from '../../config/boot-theme';
@@ -37,7 +38,7 @@ export function loadMainWindowContent(win: BrowserWindow): void {
     void win.loadURL(resolveDevServerOrigin());
     return;
   }
-  void win.loadFile(resolveBrowserIndexPath());
+  void win.loadURL(resolvePackagedBrowserIndexUrl());
 }
 
 export function createMainWindow(
