@@ -57,12 +57,17 @@ jobs:
       - name: Install
         run: npm ci
 
-      - name: Build and sign Windows installer
+      - name: Build and sign Windows installer (stable)
+        if: ${{ !contains(github.ref_name, '-') }}
         run: npm run electron:pack:release
         env:
           REQUIRE_WIN_CODE_SIGN: '1'
           CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
           CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
+
+      - name: Build Windows installer (prerelease)
+        if: ${{ contains(github.ref_name, '-') }}
+        run: npm run electron:build:win
 
       - name: Upload Windows installer
         uses: actions/upload-artifact@v4
