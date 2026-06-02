@@ -16,6 +16,7 @@ export interface E2eExecutePayload {
   readonly show: boolean;
   readonly screenshotPath?: string;
   readonly screenshotFileName?: string;
+  readonly ignoreInvalidSsl?: boolean;
 }
 
 /** Result from the E2e runner main-process service. */
@@ -57,6 +58,7 @@ interface E2eServiceInstance {
     sender: unknown,
     screenshotPath?: string,
     screenshotFileName?: string,
+    ignoreInvalidSsl?: boolean,
   ): Promise<E2eExecuteResult>;
   clearRunnerSession(): Promise<void>;
   teardownHttpCaptures(): void;
@@ -98,6 +100,7 @@ export class E2eRunnerService {
       null,
       payload.screenshotPath,
       payload.screenshotFileName,
+      payload.ignoreInvalidSsl,
     );
   }
 

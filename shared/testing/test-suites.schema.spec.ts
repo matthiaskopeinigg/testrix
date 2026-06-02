@@ -100,6 +100,37 @@ describe('test-suites.schema', () => {
     expect(isTestSuiteFlow(parsed.suites[0]?.flows[0]!)).toBe(true);
   });
 
+  it('parses folders with environmentId as folders after reload', () => {
+    const parsed = testSuitesFileSchema.parse({
+      schemaVersion: 1,
+      suites: [
+        {
+          id: 'root-suite',
+          name: 'Test Suite',
+          flows: [
+            {
+              id: 'fld-env',
+              name: 'Folder',
+              description: '',
+              tags: [],
+              environmentId: 'env-default',
+              children: [],
+              updatedAt: '2026-01-01T00:00:00.000Z',
+            },
+          ],
+          updatedAt: '2026-01-01T00:00:00.000Z',
+        },
+      ],
+    });
+    const item = parsed.suites[0]?.flows[0];
+    expect(isTestSuiteFolder(item!)).toBe(true);
+    expect(isTestSuiteFlow(item!)).toBe(false);
+    if (isTestSuiteFolder(item!)) {
+      expect(item.environmentId).toBe('env-default');
+      expect(item.children).toEqual([]);
+    }
+  });
+
   it('accepts flow with step nodes', () => {
     const parsed = testSuitesFileSchema.parse({
       schemaVersion: 1,

@@ -7,6 +7,8 @@ export interface E2eExecutePayload {
   readonly show: boolean;
   readonly screenshotPath?: string;
   readonly screenshotFileName?: string;
+  /** When true, ignore TLS certificate errors in the E2E runner (test suite setting). */
+  readonly ignoreInvalidSsl?: boolean;
 }
 
 /** Result from {@link E2eExecutePayload} execution. */

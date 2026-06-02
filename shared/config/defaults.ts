@@ -114,6 +114,7 @@ export function createDefaultSettings(): SettingsFile {
       showDescriptions: true,
       showTags: false,
       editorLayout: 'sidebar',
+      e2eIgnoreInvalidSsl: false,
     },
     regression: createDefaultWorkspaceTabEditorSettings(),
     loadTest: createDefaultWorkspaceTabEditorSettings(),

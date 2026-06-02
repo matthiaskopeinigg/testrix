@@ -123,6 +123,8 @@ const testSuiteTreeDisplaySchema = treeSidebarSettingsSchema.extend({
 
 const testSuiteSettingsSchema = testSuiteTreeDisplaySchema.extend({
   editorLayout: workspaceEditorLayoutSchema,
+  /** When true, E2E browser steps ignore TLS certificate errors (e.g. ERR_CERT_COMMON_NAME_INVALID). */
+  e2eIgnoreInvalidSsl: z.boolean(),
 });
 
 export type TestSuiteSettings = z.infer<typeof testSuiteSettingsSchema>;

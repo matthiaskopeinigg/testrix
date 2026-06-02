@@ -373,11 +373,28 @@ export class TxTreeDnDController<TMeta = unknown> {
       indicatorIndentDepth !== null &&
       indicatorPosition === 'after'
     ) {
-      const seamTop = this.resolveFolderSeamTopPx(logicalTargetId);
+      const seamFolderId = this.resolveFolderExitSeamFolderId(logicalTargetId, logicalPosition);
+      const seamTop = seamFolderId
+        ? this.resolveFolderSeamTopPx(seamFolderId, draggingId)
+        : null;
       if (seamTop !== null) {
         indicatorFolderSeamTopPx = seamTop;
         indicatorTargetId = null;
         indicatorPosition = null;
+      }
+    }
+
+    if (indicatorTargetId === draggingId) {
+      indicatorTargetId = null;
+      indicatorPosition = null;
+      if (indicatorFolderSeamTopPx === null && logicalPosition === 'after') {
+        const seamFolderId = this.resolveFolderExitSeamFolderId(logicalTargetId, logicalPosition);
+        const seamTop = seamFolderId
+          ? this.resolveFolderSeamTopPx(seamFolderId, draggingId)
+          : null;
+        if (seamTop !== null) {
+          indicatorFolderSeamTopPx = seamTop;
+        }
       }
     }
 
@@ -646,6 +663,14 @@ export class TxTreeDnDController<TMeta = unknown> {
     }
 
     const clone = rowEl.cloneNode(true) as HTMLElement;
+    clone.classList.remove(
+      'tx-tree-row-host--dragging',
+      'tx-tree-row-host--drop-before',
+      'tx-tree-row-host--drop-after',
+      'tx-tree-row-host--drop-inside',
+      'tx-tree-row-host--drop-deny',
+      'tx-dnd-deny-active',
+    );
     clone.classList.add('tx-tree-ghost');
     clone.setAttribute('aria-hidden', 'true');
     clone.style.position = 'fixed';
@@ -656,6 +681,11 @@ export class TxTreeDnDController<TMeta = unknown> {
     clone.style.zIndex = '10000';
     clone.style.willChange = 'transform';
     clone.style.margin = '0';
+    clone.style.opacity = '';
+    clone.style.visibility = 'visible';
+    clone.querySelectorAll('.tx-tree-row').forEach((row) => {
+      (row as HTMLElement).style.visibility = 'visible';
+    });
     document.body.appendChild(clone);
     this.ghostEl = clone;
   }
@@ -676,7 +706,10 @@ export class TxTreeDnDController<TMeta = unknown> {
   }
 
   /** Bottom edge of an expanded folder block in viewport coordinates. */
-  private resolveFolderBlockBottomPx(folderId: string): number | null {
+  private resolveFolderBlockBottomPx(
+    folderId: string,
+    excludeRowId: string | null = null,
+  ): number | null {
     const rows = this.model.getVisibleRows();
     const folderIndex = rows.findIndex((row) => row.id === folderId);
     if (folderIndex < 0) {
@@ -691,8 +724,15 @@ export class TxTreeDnDController<TMeta = unknown> {
         if (rows[j].depth <= folderDepth) {
           break;
         }
-        lastRowId = rows[j].id;
+        if (rows[j].id !== excludeRowId) {
+          lastRowId = rows[j].id;
+        }
       }
+    }
+
+    if (lastRowId === excludeRowId) {
+      const folderEl = this.rowElements.get(folderId);
+      return folderEl?.getBoundingClientRect().bottom ?? null;
     }
 
     const element = this.rowElements.get(lastRowId);
@@ -700,14 +740,42 @@ export class TxTreeDnDController<TMeta = unknown> {
   }
 
   /** Folder-exit seam offset from the tree container top (px). */
-  private resolveFolderSeamTopPx(folderId: string): number | null {
+  private resolveFolderSeamTopPx(
+    folderId: string,
+    excludeRowId: string | null = null,
+  ): number | null {
     const treeHost = this.callbacks.getTreeHost?.();
-    const blockBottom = this.resolveFolderBlockBottomPx(folderId);
+    const blockBottom = this.resolveFolderBlockBottomPx(folderId, excludeRowId);
     if (!treeHost || blockBottom === null) {
       return null;
     }
 
     return blockBottom - treeHost.getBoundingClientRect().top;
+  }
+
+  /**
+   * Resolves the expanded folder whose exit seam should receive the insert line for an `after`
+   * drop on a folder row or one of its descendants.
+   */
+  private resolveFolderExitSeamFolderId(
+    logicalTargetId: string,
+    logicalPosition: TxTreeDropPosition,
+  ): string | null {
+    if (logicalPosition !== 'after') {
+      return null;
+    }
+
+    const rows = this.model.getVisibleRows();
+    const target = rows.find((row) => row.id === logicalTargetId);
+    if (!target) {
+      return null;
+    }
+
+    if (target.hasChildren && target.expanded) {
+      return target.id;
+    }
+
+    return target.parentId;
   }
 
   private setState(next: TxTreeDnDState): void {

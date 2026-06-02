@@ -209,6 +209,9 @@ export class TxTreeComponent<TMeta = unknown> {
   }
 
   protected isSelected(id: string): boolean {
+    if (this.dndState().draggingId === id) {
+      return false;
+    }
     return this.selectedIds().has(id);
   }
 

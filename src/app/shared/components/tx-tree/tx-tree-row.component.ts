@@ -113,18 +113,8 @@ export class TxTreeRowComponent<TMeta = unknown> implements AfterViewInit, OnDes
 
   protected dropPosition(): TxTreeDropPosition | null {
     const state = this.dndState();
-    if (state.denyTargetId) {
+    if (state.denyTargetId || state.draggingId === this.row().id) {
       return null;
-    }
-
-    if (state.draggingId === this.row().id) {
-      const allowFolderExitFallback =
-        state.indicatorFolderSeamTopPx === null &&
-        state.indicatorTargetId === this.row().id &&
-        state.indicatorIndentDepth !== null;
-      if (!allowFolderExitFallback) {
-        return null;
-      }
     }
 
     if (state.indicatorTargetId !== null && state.indicatorPosition !== null) {

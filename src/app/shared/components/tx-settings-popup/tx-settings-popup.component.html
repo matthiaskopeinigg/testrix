@@ -533,6 +533,19 @@
                   </div>
 
                   <div class="tx-entrance-stagger__block">
+                    <h3 class="tx-settings__section-heading">E2E</h3>
+                    <tx-toggle
+                      label="Ignore invalid SSL certificates"
+                      [ngModel]="s.testSuite.e2eIgnoreInvalidSsl"
+                      (ngModelChange)="patchTestSuiteToggle('e2eIgnoreInvalidSsl', $event)"
+                    />
+                    <p class="tx-settings__tab-description">
+                      When enabled, E2E browser steps continue past TLS certificate errors such as
+                      <code>ERR_CERT_COMMON_NAME_INVALID</code>. Use only for trusted test environments.
+                    </p>
+                  </div>
+
+                  <div class="tx-entrance-stagger__block">
                     <h3 class="tx-settings__section-heading">Display</h3>
                     <tx-toggle
                       label="Show descriptions in tree"

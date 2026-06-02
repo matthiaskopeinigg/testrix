@@ -225,7 +225,7 @@ describe('TxTreeDnDController', () => {
       indicatorTargetId: null,
       indicatorPosition: null,
       indicatorIndentDepth: 0,
-      indicatorFolderSeamTopPx: 112,
+      indicatorFolderSeamTopPx: 84,
     });
 
     treeHost.remove();

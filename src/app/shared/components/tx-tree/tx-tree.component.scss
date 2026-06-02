@@ -67,9 +67,9 @@
 }
 
 :global(.tx-tree-ghost) {
-  opacity: 0.92;
+  opacity: 0.9;
   box-shadow: 0 8px 24px color-mix(in srgb, var(--tx-scrim) 35%, transparent);
-  border-radius: var(--tx-radius-sm);
+  border-radius: var(--tx-radius-md, 10px);
   background: var(--tx-surface-1);
   pointer-events: none;
   contain: layout style paint;

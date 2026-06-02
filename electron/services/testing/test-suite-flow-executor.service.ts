@@ -212,6 +212,7 @@ export class TestSuiteFlowExecutor {
             appVersion: '0.0.0',
             showBrowser,
             e2eScreenshotFolder: settings.http.testing.e2eScreenshotFolder,
+            e2eIgnoreInvalidSsl: settings.testSuite.e2eIgnoreInvalidSsl === true,
             environmentIdOverride: options.environmentIdOverride,
             ancestorFolders,
             environmentVariableKeys: {
@@ -273,6 +274,7 @@ export class TestSuiteFlowExecutor {
       readonly appVersion: string;
       readonly showBrowser: boolean;
       readonly e2eScreenshotFolder: string;
+      readonly e2eIgnoreInvalidSsl: boolean;
       readonly environmentIdOverride?: string | null;
       readonly ancestorFolders: readonly TestSuiteAncestorFolderRef[];
       readonly environmentVariableKeys: import('@shared/http/collection-execution.schema').EnvironmentVariableKeyMode;
@@ -289,7 +291,7 @@ export class TestSuiteFlowExecutor {
         await this.executeValidation(step, flow, ctx.showBrowser);
         return;
       case 'E2E':
-        await this.executeE2e(step, flow, ctx.showBrowser, ctx.e2eScreenshotFolder);
+        await this.executeE2e(step, flow, ctx.showBrowser, ctx.e2eScreenshotFolder, ctx.e2eIgnoreInvalidSsl);
         return;
       case 'HTTP_LISTENER':
         await this.executeHttpListener(step, flow, ctx);
@@ -569,6 +571,7 @@ export class TestSuiteFlowExecutor {
     flow: TestSuiteFlow,
     showBrowser: boolean,
     e2eScreenshotFolder: string,
+    ignoreInvalidSsl: boolean,
   ): Promise<void> {
     await this.ensureBrowserSession();
     const runner = this.e2eRunner;
@@ -595,12 +598,14 @@ export class TestSuiteFlowExecutor {
       value,
       timeout,
       show: showBrowser,
+      ignoreInvalidSsl,
     } as {
       action: string;
       selector: string;
       value: string;
       timeout: number;
       show: boolean;
+      ignoreInvalidSsl: boolean;
       screenshotPath?: string;
       screenshotFileName?: string;
     };

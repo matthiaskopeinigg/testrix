@@ -795,7 +795,8 @@ export class TxSettingsPopupComponent {
       | 'animateExpand'
       | 'foldersFirst'
       | 'showDescriptions'
-      | 'showTags',
+      | 'showTags'
+      | 'e2eIgnoreInvalidSsl',
     value: boolean,
   ): Promise<void> {
     await this.patch({ testSuite: { [key]: value } });

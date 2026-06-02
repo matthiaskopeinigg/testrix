@@ -21,8 +21,32 @@
   transition: none;
 }
 
+:host-context(.tx-tree-host--dragging):host(.tx-tree-row-host--selected:not(.tx-tree-row-host--dragging))
+  .tx-tree-row:not(.tx-tree-row--debug-hit) {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+
+  .tx-tree-row__icon {
+    color: var(--tx-text-1);
+  }
+}
+
 :host.tx-tree-row-host--dragging {
   pointer-events: none;
+  height: 0;
+  min-height: 0;
+  overflow: hidden;
+  margin: 0;
+  opacity: 0;
+}
+
+:host.tx-tree-row-host--dragging .tx-tree-row {
+  visibility: hidden;
+}
+
+:host.tx-tree-row-host--dragging .tx-tree-row__insert-line {
+  display: none;
 }
 
 :host.tx-tree-row-host--moving {
@@ -118,10 +142,6 @@
   .tx-tree-row {
     cursor: not-allowed;
   }
-}
-
-:host.tx-tree-row-host--dragging .tx-tree-row {
-  visibility: hidden;
 }
 
 :host.tx-tree-row-host--dragging .tx-tree-row--debug-hit {

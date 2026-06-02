@@ -84,19 +84,63 @@ const E2E_PICK_BRIDGE_PRELOAD = path.join(__dirname, '..', '..', '..', 'preload'
 /** Isolated session so clearing cookies/storage for E2E never affects the main app window. */
 const E2E_RUNNER_PARTITION = 'persist:testrix-e2e-runner';
 
-/** One-time: TLS bypass + UA defaults for the runner partition only (desktop API testing). */
+/** One-time: TLS bypass hook for the runner partition only (desktop API testing). */
 let e2eRunnerPartitionHooksInstalled = false;
 
-function installE2eRunnerPartitionHooks() {
-  if (e2eRunnerPartitionHooksInstalled) return;
-  e2eRunnerPartitionHooksInstalled = true;
+/** Returns whether the current E2E run should bypass TLS certificate errors. */
+let e2eShouldIgnoreInvalidSsl = () => false;
+
+function isCertRelatedNavigationFailure(errorCode, errorDescription) {
+  const desc = String(errorDescription ?? '').toUpperCase();
+  if (desc.includes('ERR_CERT') || desc.includes('CERTIFICATE') || desc.includes('SSL')) {
+    return true;
+  }
+  const code = Number(errorCode);
+  return Number.isFinite(code) && code <= -200 && code >= -220;
+}
+
+function isCertRelatedNavigationError(err) {
+  const message = String(err?.message ?? err ?? '').toUpperCase();
+  return message.includes('ERR_CERT') || message.includes('CERTIFICATE') || message.includes('SSL');
+}
+
+function ensureE2eRunnerPartitionHooks() {
+  const install = () => {
+    if (e2eRunnerPartitionHooksInstalled) return;
+    try {
+      const ses = session.fromPartition(E2E_RUNNER_PARTITION);
+      ses.on('certificate-error', (event, _url, _error, _certificate, callback) => {
+        if (e2eShouldIgnoreInvalidSsl()) {
+          event.preventDefault();
+          callback(true);
+          return;
+        }
+        callback(false);
+      });
+      e2eRunnerPartitionHooksInstalled = true;
+    } catch (err) {
+      console.warn('[E2E] certificate-error hook install failed:', err?.message || err);
+    }
+  };
+  if (app.isReady()) {
+    install();
+  } else {
+    app.whenReady().then(install).catch(() => {});
+  }
+}
+
+function syncE2eRunnerCertificatePolicy(ignoreInvalidSsl) {
+  ensureE2eRunnerPartitionHooks();
   try {
     const ses = session.fromPartition(E2E_RUNNER_PARTITION);
-    ses.on('certificate-error', (event, _url, _error, _certificate, callback) => {
-      event.preventDefault();
-      callback(true);
-    });
-  } catch (_) {}
+    if (ignoreInvalidSsl) {
+      ses.setCertificateVerifyProc((_request, callback) => callback(0));
+      return;
+    }
+    ses.setCertificateVerifyProc(null);
+  } catch (err) {
+    console.warn('[E2E] certificate policy sync failed:', err?.message || err);
+  }
 }
 
 /**
@@ -134,7 +178,7 @@ function applyE2eRunnerChromeLikeUserAgent(wc) {
  * @param {string} url
  * @returns {Promise<void>}
  */
-function loadUrlReportingFailures(wc, url) {
+function loadUrlReportingFailures(wc, url, ignoreInvalidSsl = false) {
   return new Promise((resolve, reject) => {
     if (!wc || wc.isDestroyed()) {
       reject(new Error('E2E runner web contents unavailable'));
@@ -142,6 +186,9 @@ function loadUrlReportingFailures(wc, url) {
     }
     const onFail = (_e, errorCode, errorDescription, validatedURL, isMainFrame) => {
       if (!isMainFrame) return;
+      if (ignoreInvalidSsl && isCertRelatedNavigationFailure(errorCode, errorDescription)) {
+        return;
+      }
       cleanup();
       reject(
         new Error(
@@ -161,6 +208,18 @@ function loadUrlReportingFailures(wc, url) {
         resolve();
       })
       .catch((err) => {
+        if (ignoreInvalidSsl && isCertRelatedNavigationError(err)) {
+          wc.loadURL(url)
+            .then(() => {
+              cleanup();
+              resolve();
+            })
+            .catch((retryErr) => {
+              cleanup();
+              reject(retryErr instanceof Error ? retryErr : new Error(String(retryErr)));
+            });
+          return;
+        }
         cleanup();
         reject(err instanceof Error ? err : new Error(String(err)));
       });
@@ -1245,7 +1304,8 @@ function guestDeepSelectorHelperSource() {
 
 class E2eService {
   constructor() {
-    installE2eRunnerPartitionHooks();
+    ensureE2eRunnerPartitionHooks();
+    this.ignoreInvalidSsl = false;
     this.window = null;
     /** @type Map<string, { pattern: string; method: string; mutate: boolean; interceptAction?: 'modify'|'block'; amendHeaders: Record<string,string>; replacePostBody: string; settle: (cap: Record<string, unknown>) => void; settled: boolean; timeoutTimer: NodeJS.Timeout | null }>} */
     this.captureById = new Map();
@@ -1475,11 +1535,15 @@ class E2eService {
     ipcSender = null,
     screenshotPath,
     screenshotFileName,
+    ignoreInvalidSsl = false,
   ) {
     if (action === 'OPEN_PAGE') action = 'NAVIGATE_TO';
     if (action !== 'GET_CURRENT_URL') {
       console.log(`[E2E] Executing ${action} (show: ${show})`);
     }
+    this.ignoreInvalidSsl = !!ignoreInvalidSsl;
+    e2eShouldIgnoreInvalidSsl = () => this.ignoreInvalidSsl;
+    syncE2eRunnerCertificatePolicy(this.ignoreInvalidSsl);
     this.executeCancelRequested = false;
 
     const showPreferenceChanged =
@@ -1594,7 +1658,11 @@ class E2eService {
                 const resolvedUrl = normalizeE2eBrowseUrl(String(navUrl));
                 applyE2eRunnerChromeLikeUserAgent(this.window.webContents);
                 console.log('[E2E] Open page loadURL →', resolvedUrl, 'UA →', this.window.webContents.getUserAgent());
-                await loadUrlReportingFailures(this.window.webContents, resolvedUrl);
+                await loadUrlReportingFailures(
+                  this.window.webContents,
+                  resolvedUrl,
+                  this.ignoreInvalidSsl,
+                );
                 await awaitGuestPaintSettled(this.window.webContents);
                 await awaitSpaLateRenderSettled(this.window.webContents, Math.min(navTimeoutMs, 4000));
                 await new Promise((r) => setTimeout(r, 200));
@@ -2879,7 +2947,7 @@ ipcMain.handle('e2e:visible-runner-input-lock', (_event, payload = {}) => {
 
 ipcMain.handle(
   'e2e:execute',
-  async (event, { action, selector, value, timeout, show, screenshotPath, screenshotFileName }) => {
+  async (event, { action, selector, value, timeout, show, screenshotPath, screenshotFileName, ignoreInvalidSsl }) => {
   try {
     return await e2eService.execute(
       action,
@@ -2890,6 +2958,7 @@ ipcMain.handle(
       event.sender,
       screenshotPath,
       screenshotFileName,
+      ignoreInvalidSsl === true,
     );
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : String(err) };

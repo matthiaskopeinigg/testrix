@@ -151,13 +151,17 @@ function coerceMisparsedSuiteFlowItem(value: unknown): unknown {
   if ('nodes' in record) {
     return value;
   }
-  const hasFlowOnlyFields =
+  const hasFlowRunFields =
     'lastRunStatus' in record ||
     'lastRunAt' in record ||
-    'environmentId' in record ||
     'isCritical' in record ||
     'lastRunDurationMs' in record;
-  if (!hasFlowOnlyFields) {
+  // Sidebar folders serialize `children` (often `[]`). Do not treat folder-only fields
+  // such as `environmentId` as proof of a flow — that misclassified folders after move/sync.
+  if ('children' in record && !hasFlowRunFields) {
+    return value;
+  }
+  if (!hasFlowRunFields) {
     return value;
   }
   const { children: _children, ...rest } = record;
@@ -182,7 +186,7 @@ export function parseTestSuiteTreeItem(value: unknown): TestSuiteTreeItem {
 }
 
 export const testSuiteTreeItemSchema: z.ZodType<TestSuiteTreeItem> = z.lazy(() =>
-  z.custom<TestSuiteTreeItem>((value) => parseTestSuiteTreeItem(value)),
+  z.unknown().transform((value) => parseTestSuiteTreeItem(value)),
 );
 
 export const testSuiteRootSchema = z.object({
