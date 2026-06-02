@@ -20,6 +20,7 @@
     "start:dist": "node scripts/start.mjs",
     "splash": "node scripts/splash-only.mjs",
     "error:preview": "node scripts/error-preview.mjs",
+    "sync:brand": "node scripts/sync-brand-assets.mjs",
     "lock:ensure-emnapi": "node scripts/ensure-emnapi-lock.mjs",
     "icons:generate": "node scripts/generate-icon-svgs.mjs",
     "themes:seed": "node scripts/seed-theme-palettes.mjs",
