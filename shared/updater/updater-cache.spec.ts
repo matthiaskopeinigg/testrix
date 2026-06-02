@@ -27,4 +27,34 @@ describe('updater-cache', () => {
   it('accepts non-available cache entries', () => {
     expect(isUpdaterCacheStatusUsable({ state: 'not-available', info: null })).toBe(true);
   });
+
+  it('rejects downloaded cache when installed version is current', () => {
+    expect(
+      isUpdaterCacheStatusUsable(
+        {
+          state: 'downloaded',
+          info: {
+            version: '0.9.0-beta.4',
+            installerDownloadUrl: 'https://example.com/setup.exe',
+          },
+        },
+        '0.9.0-beta.4',
+      ),
+    ).toBe(false);
+  });
+
+  it('accepts downloaded cache when a newer build is still offered', () => {
+    expect(
+      isUpdaterCacheStatusUsable(
+        {
+          state: 'downloaded',
+          info: {
+            version: '0.9.0-beta.4',
+            installerDownloadUrl: 'https://example.com/setup.exe',
+          },
+        },
+        '0.9.0-beta.3',
+      ),
+    ).toBe(true);
+  });
 });

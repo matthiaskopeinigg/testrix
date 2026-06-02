@@ -400,26 +400,16 @@ function elevateExtractArchive(archivePath, destDir) {
 async function installPayloadFromArchive(archivePath, destDir, scope, onProgress) {
   onProgress({ phase: 'extracting', percent: null });
 
+  const extractDir = path.join(os.tmpdir(), 'TestrixSetup', pkgVersion(), 'payload-staging');
+
   if (scope === 'machine' && process.platform === 'win32') {
-    if (!elevateExtractArchive(archivePath, destDir)) {
+    try {
+      originalFs.rmSync(extractDir, { recursive: true, force: true });
+    } catch (_) {}
+    if (!elevateExtractArchive(archivePath, extractDir)) {
       throw new Error('Elevated extraction failed or was cancelled.');
     }
     onProgress({ phase: 'extracting', percent: 1 });
-    return;
-  }
-
-  const extractDir =
-    scope === 'machine'
-      ? path.join(os.tmpdir(), 'TestrixSetup', pkgVersion(), 'payload-staging')
-      : destDir;
-
-  try {
-    originalFs.rmSync(extractDir, { recursive: true, force: true });
-  } catch (_) {}
-
-  await extractPayloadArchive(archivePath, extractDir, onProgress);
-
-  if (scope === 'machine') {
     onProgress({ phase: 'copying', percent: null });
     await platform.installApp({
       src: extractDir,
@@ -427,7 +417,21 @@ async function installPayloadFromArchive(archivePath, destDir, scope, onProgress
       scope,
       onProgress,
     });
+    return;
   }
+
+  try {
+    originalFs.rmSync(extractDir, { recursive: true, force: true });
+  } catch (_) {}
+
+  await extractPayloadArchive(archivePath, extractDir, onProgress);
+  onProgress({ phase: 'copying', percent: scope === 'machine' ? null : 0 });
+  await platform.installApp({
+    src: extractDir,
+    dest: destDir,
+    scope,
+    onProgress,
+  });
 }
 
 function defaultInstallDir(scope) {
@@ -986,7 +990,7 @@ function waitForParentExit() {
         process.kill(pid, 0);
         setTimeout(poll, 250);
       } catch {
-        resolve();
+        setTimeout(resolve, 750);
       }
     };
     poll();
@@ -1160,6 +1164,7 @@ async function runSilentUpdateIfRequested() {
   });
 
   if (!result.ok) {
+    await launchInstalledApp(existing.mainExePath);
     app.exit(1);
     return true;
   }

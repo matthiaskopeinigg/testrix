@@ -49,12 +49,16 @@ function resolveFromInstallMeta(appRef: App): InstallLocation | null {
   let dir = dirname(appRef.getPath('exe'));
   for (let depth = 0; depth < 8; depth += 1) {
     const meta = readInstallMeta(dir);
-    if (meta?.installDir && existsSync(meta.installDir)) {
-      const scope = meta.scope === 'machine' ? 'machine' : 'user';
+    if (meta || existsSync(join(dir, META_FILE))) {
+      const installDir = meta?.installDir?.trim() || dir;
+      if (!existsSync(installDir)) {
+        break;
+      }
+      const scope = meta?.scope === 'machine' ? 'machine' : 'user';
       return {
-        installDir: meta.installDir,
+        installDir,
         scope,
-        mainExePath: resolveMainExePath(meta.installDir),
+        mainExePath: resolveMainExePath(installDir),
       };
     }
     const parent = dirname(dir);

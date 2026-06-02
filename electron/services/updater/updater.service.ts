@@ -12,7 +12,7 @@ import {
   type UpdaterStatus,
 } from '../../../shared/updater/updater-status.schema';
 import { updateCheckCacheSchema } from '../../../shared/updater/updater-status.schema';
-import { isUpdaterCacheStatusUsable } from '../../../shared/updater/updater-cache';
+import { isUpdaterCacheStatusStale, isUpdaterCacheStatusUsable } from '../../../shared/updater/updater-cache';
 import { DEFAULT_DEV_SIM_VERSION } from '../../../shared/updater/dev-update-sim';
 
 import { isDevMode } from '../../config/environment';
@@ -31,7 +31,7 @@ import {
   launchDownloadedInstaller,
   resolveInstallerDownloadPath,
 } from './installer-download.service';
-import { resolveInstallLocation } from '../install/install-location.service';
+import { resolveInstallLocation, type InstallLocation } from '../install/install-location.service';
 
 const UPDATE_CHECK_CACHE_FILE = 'update-check-cache.json';
 const CACHE_KEY_SUFFIX = 'v2';
@@ -129,7 +129,10 @@ export class UpdaterService {
     });
 
     this.applyChannel(this.readSettings().updates.channel);
-    this.pushStatus({ state: 'idle', info: null });
+    this.reconcileDiskCacheWithInstalledVersion();
+    if (this.lastStatus.state === 'idle' && this.lastStatus.info === null) {
+      this.pushStatus({ state: 'idle', info: null });
+    }
     this.scheduleBootCheck();
   }
 
@@ -285,6 +288,7 @@ export class UpdaterService {
 
     const localPath = this.lastStatus.info?.installerLocalPath;
     if (localPath) {
+      this.clearDiskCache();
       void this.runDownloadedInstaller(localPath);
       return;
     }
@@ -451,7 +455,9 @@ export class UpdaterService {
 
   private async runDownloadedInstaller(localPath: string): Promise<void> {
     try {
-      const install = resolveInstallLocation(electronApp);
+      const install =
+        resolveInstallLocation(electronApp) ??
+        resolveInstallLocationFromExecutableDir(electronApp);
       await launchDownloadedInstaller(
         localPath,
         buildSilentUpdateLaunchOptions(install),
@@ -588,12 +594,49 @@ export class UpdaterService {
       }
       const raw = JSON.parse(fs.readFileSync(fp, 'utf8')) as unknown;
       const parsed = updateCheckCacheSchema.parse(raw);
-      if (!isUpdaterCacheStatusUsable(parsed.status)) {
+      if (!isUpdaterCacheStatusUsable(parsed.status, this.resolveCurrentVersion())) {
         return null;
       }
       return parsed;
     } catch {
       return null;
+    }
+  }
+
+  private clearDiskCache(): void {
+    try {
+      const fp = this.cacheFilePath();
+      if (fs.existsSync(fp)) {
+        fs.rmSync(fp, { force: true });
+      }
+    } catch (error: unknown) {
+      logError(this.getPathFn(), 'updater cache clear failed', error);
+    }
+  }
+
+  private reconcileDiskCacheWithInstalledVersion(): void {
+    const installed = this.resolveCurrentVersion();
+    try {
+      const fp = this.cacheFilePath();
+      if (!fs.existsSync(fp)) {
+        return;
+      }
+
+      const raw = JSON.parse(fs.readFileSync(fp, 'utf8')) as unknown;
+      const parsed = updateCheckCacheSchema.parse(raw);
+      if (isUpdaterCacheStatusStale(parsed.status, installed)) {
+        this.clearDiskCache();
+        this.lastStatus = { state: 'idle', info: null };
+        return;
+      }
+
+      if (isUpdaterCacheStatusUsable(parsed.status, installed)) {
+        this.lastStatus = updaterStatusSchema.parse(parsed.status);
+      }
+    } catch (error: unknown) {
+      logError(this.getPathFn(), 'updater cache reconcile failed', error);
+      this.clearDiskCache();
+      this.lastStatus = { state: 'idle', info: null };
     }
   }
 
@@ -634,6 +677,24 @@ function formatGitHubUpdateError(error: unknown): string {
     return 'GitHub denied access to release metadata (HTTP 403).';
   }
   return message;
+}
+
+function resolveInstallLocationFromExecutableDir(appRef: App): InstallLocation | null {
+  if (!appRef.isPackaged || process.platform !== 'win32') {
+    return null;
+  }
+
+  const installDir = path.dirname(appRef.getPath('exe'));
+  const mainExePath = path.join(installDir, 'Testrix.exe');
+  if (!fs.existsSync(mainExePath)) {
+    return null;
+  }
+
+  return {
+    installDir,
+    scope: 'user',
+    mainExePath,
+  };
 }
 
 let singleton: UpdaterService | null = null;

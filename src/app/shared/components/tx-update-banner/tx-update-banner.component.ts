@@ -57,7 +57,10 @@ export class TxUpdateBannerComponent {
     const s = this.status();
     const channel =
       this.config.settings()?.updates.channel === 'beta' ? 'Beta channel' : 'Stable channel';
-    const currentVersion = this.electron.bridge()?.versions.app ?? '—';
+    const raw =
+      this.electron.bridge()?.versions.installedApp?.trim() ||
+      this.electron.bridge()?.versions.app?.trim();
+    const currentVersion = raw || '—';
     const base = `Current v${currentVersion} · ${channel}`;
 
     if (s.state === 'available') {
