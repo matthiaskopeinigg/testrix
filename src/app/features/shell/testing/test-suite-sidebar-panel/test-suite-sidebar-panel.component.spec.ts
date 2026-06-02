@@ -45,12 +45,14 @@ SAMPLE_FILE.suites[0] = {
 describe('TestSuiteSidebarPanelComponent', () => {
   let fixture: ComponentFixture<TestSuiteSidebarPanelComponent>;
   let openResource: ReturnType<typeof vi.fn>;
+  let closeTabsForResourceIds: ReturnType<typeof vi.fn>;
   const treeNodes = toTestSuiteTreeNodes(SAMPLE_FILE.suites[0]!.flows);
   const settingsState = signal(createDefaultSettings());
 
   beforeEach(async () => {
     settingsState.set(createDefaultSettings());
     openResource = vi.fn();
+    closeTabsForResourceIds = vi.fn();
 
     await TestBed.configureTestingModule({
       imports: [TestSuiteSidebarPanelComponent],
@@ -90,7 +92,7 @@ describe('TestSuiteSidebarPanelComponent', () => {
           useValue: {
             openResource,
             activeTab: signal(null),
-            closeTabsForResourceIds: vi.fn(),
+            closeTabsForResourceIds,
           },
         },
       ],
@@ -133,5 +135,14 @@ describe('TestSuiteSidebarPanelComponent', () => {
       resourceId: testSuiteTabResourceId('flow', 'flw-1'),
       kind: 'test-suite',
     });
+  });
+
+  it('closes folder and flow tabs when a folder is deleted', () => {
+    fixture.componentInstance['deleteNodeId'].set('fld-1');
+    fixture.componentInstance['handleDeleteConfirmed']();
+    expect(closeTabsForResourceIds).toHaveBeenCalledWith([
+      testSuiteTabResourceId('folder', 'fld-1'),
+      testSuiteTabResourceId('flow', 'flw-1'),
+    ]);
   });
 });

@@ -43,12 +43,6 @@
     @include surface.control-surface-disabled;
   }
 
-  &--masked {
-    .tx-variable-input__control {
-      -webkit-text-security: disc;
-      caret-color: var(--tx-text-0);
-    }
-  }
 }
 
 .tx-variable-input__mirror,

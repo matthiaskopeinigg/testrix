@@ -1,5 +1,10 @@
-import { TEST_SUITE_MAX_FOLDER_DEPTH } from '@shared/testing';
-import { isTestSuiteFlow, isTestSuiteFolder, type TestSuiteTreeItem } from '@shared/testing';
+import {
+  TEST_SUITE_MAX_FOLDER_DEPTH,
+  isTestSuiteFlow,
+  isTestSuiteFolder,
+  testSuiteTabResourceId,
+  type TestSuiteTreeItem,
+} from '@shared/testing';
 
 import { newTestingId } from '@app/core/testing/testing-id';
 
@@ -81,7 +86,8 @@ export function testSuiteFolderHasChildren(
   return !!loc?.node.children?.length;
 }
 
-export function collectTestSuiteFlowIdsForDeletion(
+/** Collects workspace tab resource ids for the deleted node and its subtree. */
+export function collectTestSuiteTabResourceIdsForDeletion(
   nodes: readonly TestSuiteTreeNode[],
   rootId: string,
 ): string[] {
@@ -91,8 +97,9 @@ export function collectTestSuiteFlowIdsForDeletion(
   }
   const ids: string[] = [];
   const walk = (node: TestSuiteTreeNode): void => {
-    if (node.data?.kind === 'flow' || node.kind === 'flow') {
-      ids.push(node.id);
+    const kind = node.data?.kind ?? node.kind;
+    if (kind === 'flow' || kind === 'folder') {
+      ids.push(testSuiteTabResourceId(kind, node.id));
     }
     for (const child of node.children ?? []) {
       walk(child);

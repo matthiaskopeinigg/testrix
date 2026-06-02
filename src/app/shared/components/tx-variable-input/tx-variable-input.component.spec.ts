@@ -50,14 +50,17 @@ describe('TxVariableInputComponent', () => {
     expect(param?.textContent).toBe('(6)');
   });
 
-  it('masks the mirror layer when maskValue is enabled and value is hidden', () => {
+  it('uses native secure text when maskValue hides the value', () => {
     fixture.componentRef.setInput('maskValue', true);
     fixture.componentRef.setInput('valueRevealed', false);
     fixture.componentInstance.writeValue('secret-token');
     fixture.detectChanges();
 
-    const mirror = fixture.nativeElement.querySelector('.tx-variable-input__mirror code');
-    expect(mirror?.textContent).toBe('************');
-    expect(fixture.nativeElement.querySelector('.tx-variable-input__field--masked')).toBeTruthy();
+    const field = fixture.nativeElement.querySelector('.tx-variable-input__field--masked');
+    expect(field).toBeTruthy();
+    const input = fixture.nativeElement.querySelector(
+      'input.tx-variable-input__control',
+    ) as HTMLInputElement;
+    expect(input.value).toBe('secret-token');
   });
 });

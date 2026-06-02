@@ -8,6 +8,22 @@
   -webkit-text-fill-color: transparent !important;
 }
 
+// Masked values render secure glyphs on the native input so the caret aligns with
+// visible characters. The mirror layer uses different glyph widths and causes drift.
+.tx-variable-input__field--masked {
+  .tx-variable-input__mirror,
+  .tx-variable-input__hit {
+    visibility: hidden;
+  }
+
+  .tx-variable-input__control {
+    color: var(--tx-text-0) !important;
+    -webkit-text-fill-color: var(--tx-text-0) !important;
+    -webkit-text-security: disc;
+    caret-color: var(--tx-text-0);
+  }
+}
+
 .tx-variable-input__mirror,
 .tx-variable-input__hit {
   margin: 0;

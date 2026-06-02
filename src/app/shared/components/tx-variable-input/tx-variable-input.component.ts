@@ -84,7 +84,7 @@ export class TxVariableInputComponent implements ControlValueAccessor {
   readonly valueSuggestions = input<readonly string[]>([]);
   /** When true, the value can be masked until {@link valueRevealed} is set. */
   readonly maskValue = input(false);
-  /** When false with {@link maskValue}, displays asterisks instead of the raw value. */
+  /** When false with {@link maskValue}, displays secure discs instead of the raw value. */
   readonly valueRevealed = input(true);
 
   /** Emitted when the user clicks a highlighted `{{environment}}` placeholder. */

@@ -56,7 +56,7 @@ import {
 } from './test-suite-tree.filter';
 import { applyTestSuiteTreeView } from './test-suite-tree.view';
 import {
-  collectTestSuiteFlowIdsForDeletion,
+  collectTestSuiteTabResourceIdsForDeletion,
   collectTestSuiteNodeIdsInSubtree,
   findTestSuiteNode,
   testSuiteFolderHasChildren,
@@ -464,9 +464,7 @@ export class TestSuiteSidebarPanelComponent {
     if (!id) {
       return;
     }
-    const removedTabIds = collectTestSuiteFlowIdsForDeletion(this.nodes(), id).map((flowId) =>
-      testSuiteTabResourceId('flow', flowId),
-    );
+    const removedTabIds = collectTestSuiteTabResourceIdsForDeletion(this.nodes(), id);
     this.testSuite.deleteTreeItem(id);
     this.workspaceEditor.closeTabsForResourceIds(removedTabIds);
     this.deleteOpen.set(false);
