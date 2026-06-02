@@ -102,6 +102,11 @@ export class UpdateService {
       return;
     }
 
+    const channel = this.config.settings()?.updates.channel;
+    if (channel) {
+      await this.setChannel(channel);
+    }
+
     const devCheckVersion = this.resolveDevGitHubCheckVersion();
     if (devCheckVersion) {
       await this.runDevVersionCheck(devCheckVersion);
@@ -221,6 +226,7 @@ export class UpdateService {
     if (bridge) {
       await bridge.setChannel(channel);
     }
+    this.statusState.set(IDLE_STATUS);
   }
 
   openReleaseNotes(): void {

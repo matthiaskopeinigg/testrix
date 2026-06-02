@@ -18,7 +18,7 @@ export function registerUpdaterHandlers(ipc: IpcMainBinder): void {
 
   ipc.handle(
     UpdaterChannels.check,
-    wrapInvokeHandler(UpdaterChannels.check, async () => updater.checkForUpdates()),
+    wrapInvokeHandler(UpdaterChannels.check, async () => updater.checkForUpdates({ force: true })),
   );
 
   ipc.handle(

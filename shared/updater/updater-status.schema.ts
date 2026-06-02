@@ -44,6 +44,7 @@ export type UpdaterStatus = z.infer<typeof updaterStatusSchema>;
 
 export const updateCheckCacheSchema = z.object({
   checkedAt: z.string(),
+  channel: z.enum(UPDATE_CHANNEL_IDS).optional(),
   status: updaterStatusSchema,
 });
 

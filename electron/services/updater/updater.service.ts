@@ -198,7 +198,7 @@ export class UpdaterService {
     }
   }
 
-  async checkForUpdates(): Promise<UpdaterStatus> {
+  async checkForUpdates(options?: { readonly force?: boolean }): Promise<UpdaterStatus> {
     if (!electronApp.isPackaged) {
       return this.lastStatus;
     }
@@ -211,7 +211,8 @@ export class UpdaterService {
     this.applyChannel(settings.updates.channel);
 
     const cacheKey = this.buildCacheKey(settings.updates.channel);
-    if (!this.shouldHitNetwork(cacheKey, false)) {
+    const force = options?.force === true;
+    if (!force && !this.shouldHitNetwork(cacheKey, false)) {
       const cached = this.readDiskCache();
       if (cached) {
         this.pushStatus(cached.status);
@@ -482,6 +483,9 @@ export class UpdaterService {
 
   setChannel(channel: UpdateChannel): void {
     this.applyChannel(channel);
+    this.clearDiskCache();
+    this.lastHttpKey = '';
+    this.lastHttpAt = 0;
   }
 
   private applyChannel(channel: UpdateChannel): void {
@@ -534,9 +538,9 @@ export class UpdaterService {
 
   private shouldHitNetwork(cacheKey: string, isBoot: boolean): boolean {
     const disk = this.readDiskCache();
-    if (disk && isUpdaterCacheStatusUsable(disk.status)) {
+    if (disk && isUpdaterCacheStatusUsable(disk.status, this.resolveCurrentVersion())) {
       const age = Date.now() - new Date(disk.checkedAt).getTime();
-      if (age < CACHE_TTL_MS) {
+      if (age < CACHE_TTL_MS && disk.channel === this.readSettings().updates.channel) {
         return false;
       }
     }
@@ -586,7 +590,7 @@ export class UpdaterService {
     return path.join(this.getConfigDir(), UPDATE_CHECK_CACHE_FILE);
   }
 
-  private readDiskCache(): { checkedAt: string; status: UpdaterStatus } | null {
+  private readDiskCache(): { checkedAt: string; channel?: UpdateChannel; status: UpdaterStatus } | null {
     try {
       const fp = this.cacheFilePath();
       if (!fs.existsSync(fp)) {
@@ -595,6 +599,13 @@ export class UpdaterService {
       const raw = JSON.parse(fs.readFileSync(fp, 'utf8')) as unknown;
       const parsed = updateCheckCacheSchema.parse(raw);
       if (!isUpdaterCacheStatusUsable(parsed.status, this.resolveCurrentVersion())) {
+        return null;
+      }
+      const activeChannel = this.readSettings().updates.channel;
+      if (parsed.channel && parsed.channel !== activeChannel) {
+        return null;
+      }
+      if (!parsed.channel) {
         return null;
       }
       return parsed;
@@ -644,6 +655,7 @@ export class UpdaterService {
     try {
       const payload = updateCheckCacheSchema.parse({
         checkedAt: new Date().toISOString(),
+        channel: this.readSettings().updates.channel,
         status,
       });
       fs.mkdirSync(this.getConfigDir(), { recursive: true });
