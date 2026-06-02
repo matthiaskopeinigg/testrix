@@ -1,5 +1,5 @@
 import type { App, BrowserWindow } from 'electron';
-import { app as electronApp } from 'electron';
+import { app as electronApp, shell } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
@@ -14,6 +14,12 @@ import {
 import { updateCheckCacheSchema } from '../../../shared/updater/updater-status.schema';
 
 import { logError } from '../../errors/logger';
+
+import {
+  fetchLatestGitHubRelease,
+  isReleaseVersionNewer,
+  type GitHubReleaseSummary,
+} from './github-release-update';
 
 const UPDATE_CHECK_CACHE_FILE = 'update-check-cache.json';
 
@@ -138,13 +144,16 @@ export class UpdaterService {
     }
 
     this.checkInFlight = true;
+    this.pushStatus({ state: 'checking', info: null });
     try {
       this.lastHttpAt = Date.now();
       this.lastHttpKey = cacheKey;
-      await autoUpdater.checkForUpdates();
+      const status = await this.checkGitHubRelease(settings.updates.channel);
+      this.pushStatus(status);
+      this.writeDiskCache(status);
       return this.lastStatus;
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Update check failed';
+      const message = formatGitHubUpdateError(error);
       this.pushStatus({ state: 'error', info: null, message });
       return this.lastStatus;
     } finally {
@@ -154,6 +163,12 @@ export class UpdaterService {
 
   async downloadUpdate(): Promise<UpdaterStatus> {
     if (!electronApp.isPackaged) {
+      return this.lastStatus;
+    }
+
+    const releaseUrl = this.lastStatus.info?.releasePageUrl;
+    if (this.lastStatus.info?.externalOnly && releaseUrl) {
+      await shell.openExternal(releaseUrl);
       return this.lastStatus;
     }
 
@@ -170,7 +185,54 @@ export class UpdaterService {
     if (!electronApp.isPackaged) {
       return;
     }
+
+    const releaseUrl = this.lastStatus.info?.releasePageUrl;
+    if (this.lastStatus.info?.externalOnly && releaseUrl) {
+      void shell.openExternal(releaseUrl);
+      return;
+    }
+
     autoUpdater.quitAndInstall(false, true);
+  }
+
+  private async checkGitHubRelease(channel: UpdateChannel): Promise<UpdaterStatus> {
+    const currentVersion = electronApp.getVersion() || '0.0.0';
+    const release = await fetchLatestGitHubRelease(channel);
+
+    if (!release) {
+      return {
+        state: 'not-available',
+        info: { version: currentVersion, externalOnly: true },
+        message:
+          channel === 'stable'
+            ? 'No stable release is published yet. Switch to Beta for prereleases.'
+            : 'No beta release is published yet.',
+      };
+    }
+
+    if (!isReleaseVersionNewer(currentVersion, release.version)) {
+      return {
+        state: 'not-available',
+        info: {
+          version: release.version,
+          releasePageUrl: release.releasePageUrl,
+          externalOnly: true,
+        },
+      };
+    }
+
+    return {
+      state: 'available',
+      info: this.mapGitHubReleaseInfo(release),
+    };
+  }
+
+  private mapGitHubReleaseInfo(release: GitHubReleaseSummary): UpdaterInfo {
+    return {
+      version: release.version,
+      releasePageUrl: release.releasePageUrl,
+      externalOnly: true,
+    };
   }
 
   setChannel(channel: UpdateChannel): void {
@@ -308,6 +370,17 @@ export class UpdaterService {
 }
 
 type ReleaseNote = string | { note?: string | null };
+
+function formatGitHubUpdateError(error: unknown): string {
+  const message = error instanceof Error ? error.message : 'Update check failed';
+  if (/\b404\b/.test(message)) {
+    return 'GitHub releases are unavailable. Confirm the repository is public or try again later.';
+  }
+  if (/\b403\b/.test(message)) {
+    return 'GitHub denied access to release metadata (HTTP 403).';
+  }
+  return message;
+}
 
 let singleton: UpdaterService | null = null;
 

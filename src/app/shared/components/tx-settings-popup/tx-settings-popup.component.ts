@@ -302,7 +302,7 @@ export class TxSettingsPopupComponent {
       case 'downloaded':
         return 'Update downloaded. Restart to install.';
       case 'not-available':
-        return 'You are on the latest version.';
+        return status.message ?? 'You are on the latest version.';
       case 'error':
         return formatUpdaterErrorForUser(status.message);
       case 'disabled':
