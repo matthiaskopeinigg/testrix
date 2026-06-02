@@ -1203,7 +1203,7 @@
                   >
                     <tx-settings-http-certificates-section
                       [certificates]="s.http.certificates"
-                      [canPickDirectory]="hasElectronBridge()"
+                      [canPickFile]="hasElectronBridge()"
                       (certificatesChange)="patchHttpCertificates($event)"
                     />
                   </div>

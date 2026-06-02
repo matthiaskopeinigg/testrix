@@ -43,6 +43,15 @@ const EMPTY_DRAFT: CertificateDraft = {
   pfxPath: null,
 };
 
+const CERT_FILE_PICKERS: Record<
+  CertificateFileField,
+  { readonly label: string; readonly extensions: readonly string[] }
+> = {
+  clientCertPath: { label: 'Certificate', extensions: ['crt', 'cer', 'pem', 'cert'] },
+  clientKeyPath: { label: 'Private key', extensions: ['key', 'pem'] },
+  pfxPath: { label: 'PKCS#12', extensions: ['pfx', 'p12'] },
+};
+
 @Component({
   selector: 'tx-settings-http-certificates-section',
   standalone: true,
@@ -59,7 +68,7 @@ const EMPTY_DRAFT: CertificateDraft = {
 })
 export class TxSettingsHttpCertificatesSectionComponent {
   readonly certificates = input.required<HttpCertificatesSettings>();
-  readonly canPickDirectory = input(false);
+  readonly canPickFile = input(false);
 
   readonly certificatesChange = output<Partial<HttpCertificatesSettings>>();
 
@@ -68,6 +77,7 @@ export class TxSettingsHttpCertificatesSectionComponent {
 
   protected readonly entryMax = HTTP_CERTIFICATE_ENTRY_MAX;
   protected readonly draft = signal<CertificateDraft>({ ...EMPTY_DRAFT });
+  protected readonly editingEntryId = signal<string | null>(null);
   protected readonly showPassphrase = signal(false);
 
   protected emit(patch: Partial<HttpCertificatesSettings>): void {
@@ -75,20 +85,20 @@ export class TxSettingsHttpCertificatesSectionComponent {
   }
 
   protected canAddEntry(): boolean {
-    return this.certificates().entries.length < this.entryMax;
+    return this.certificates().entries.length < this.entryMax || this.editingEntryId() !== null;
+  }
+
+  protected isEditingEntry(id: string): boolean {
+    return this.editingEntryId() === id;
+  }
+
+  protected saveButtonLabel(): string {
+    return this.editingEntryId() ? 'Save certificate' : 'Add certificate';
   }
 
   protected displayHostname(entry: HttpClientCertificateEntry): string {
     const label = entry.hostPattern.trim();
     return label || 'All hosts';
-  }
-
-  protected displayFileLabel(path: string | null): string {
-    if (!path?.trim()) {
-      return 'None selected';
-    }
-    const parts = path.split(/[/\\]/);
-    return parts[parts.length - 1] ?? path;
   }
 
   protected passphraseInputType(): 'text' | 'password' {
@@ -107,8 +117,32 @@ export class TxSettingsHttpCertificatesSectionComponent {
     this.draft.update((draft) => ({ ...draft, passphrase: value }));
   }
 
-  protected handleAddCertificate(): void {
-    if (!this.canAddEntry()) {
+  protected handleDraftPathChange(field: CertificateFileField, value: string): void {
+    const trimmed = value.trim();
+    this.draft.update((draft) => ({ ...draft, [field]: trimmed || null }));
+  }
+
+  protected handleSelectEntry(entry: HttpClientCertificateEntry): void {
+    this.editingEntryId.set(entry.id);
+    this.draft.set({
+      hostPattern: entry.hostPattern,
+      passphrase: entry.passphrase,
+      clientCertPath: entry.clientCertPath,
+      clientKeyPath: entry.clientKeyPath,
+      pfxPath: entry.pfxPath,
+    });
+    this.showPassphrase.set(false);
+  }
+
+  protected handleCancelEdit(): void {
+    this.editingEntryId.set(null);
+    this.draft.set({ ...EMPTY_DRAFT });
+    this.showPassphrase.set(false);
+  }
+
+  protected handleSaveCertificate(): void {
+    const editingId = this.editingEntryId();
+    if (!editingId && !this.canAddEntry()) {
       return;
     }
 
@@ -126,30 +160,51 @@ export class TxSettingsHttpCertificatesSectionComponent {
       return;
     }
 
-    this.emit({
-      entries: [
-        ...this.certificates().entries,
-        createHttpClientCertificateEntry({
-          hostPattern,
-          passphrase: draft.passphrase,
-          clientCertPath: draft.clientCertPath,
-          clientKeyPath: draft.clientKeyPath,
-          pfxPath: draft.pfxPath,
-        }),
-      ],
-    });
-    this.draft.set({ ...EMPTY_DRAFT });
-    this.showPassphrase.set(false);
+    if (editingId) {
+      this.emit({
+        entries: this.certificates().entries.map((entry) =>
+          entry.id === editingId
+            ? {
+                ...entry,
+                hostPattern,
+                passphrase: draft.passphrase,
+                clientCertPath: draft.clientCertPath,
+                clientKeyPath: draft.clientKeyPath,
+                pfxPath: draft.pfxPath,
+              }
+            : entry,
+        ),
+      });
+    } else {
+      this.emit({
+        entries: [
+          ...this.certificates().entries,
+          createHttpClientCertificateEntry({
+            hostPattern,
+            passphrase: draft.passphrase,
+            clientCertPath: draft.clientCertPath,
+            clientKeyPath: draft.clientKeyPath,
+            pfxPath: draft.pfxPath,
+          }),
+        ],
+      });
+    }
+
+    this.handleCancelEdit();
   }
 
-  protected handleRemoveEntry(id: string): void {
+  protected handleRemoveEntry(id: string, event: Event): void {
+    event.stopPropagation();
+    if (this.editingEntryId() === id) {
+      this.handleCancelEdit();
+    }
     this.emit({
       entries: this.certificates().entries.filter((entry) => entry.id !== id),
     });
   }
 
   protected async handleBrowseFile(field: CertificateFileField): Promise<void> {
-    if (!this.canPickDirectory()) {
+    if (!this.canPickFile()) {
       this.notifications.showError('Available in the desktop app only');
       return;
     }
@@ -160,12 +215,16 @@ export class TxSettingsHttpCertificatesSectionComponent {
       return;
     }
 
+    const picker = CERT_FILE_PICKERS[field];
+
     try {
-      const picked = await bridge.config.pickDirectory();
+      const picked = await bridge.shell.pickFile({
+        filters: [{ name: picker.label, extensions: [...picker.extensions] }],
+      });
       if (!picked) {
         return;
       }
-      this.draft.update((draft) => ({ ...draft, [field]: picked }));
+      this.draft.update((draft) => ({ ...draft, [field]: picked.filePath }));
     } catch {
       this.notifications.showError('Could not choose file');
     }

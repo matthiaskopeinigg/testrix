@@ -35,12 +35,20 @@
     <ul class="tx-http-cert-managed__list" aria-label="Configured client certificates">
       @for (entry of certificates().entries; track entry.id) {
         <li class="tx-http-cert-managed__item">
-          <span class="tx-http-cert-managed__hostname">{{ displayHostname(entry) }}</span>
+          <button
+            type="button"
+            class="tx-http-cert-managed__select"
+            [class.tx-http-cert-managed__select--active]="isEditingEntry(entry.id)"
+            [attr.aria-pressed]="isEditingEntry(entry.id)"
+            (click)="handleSelectEntry(entry)"
+          >
+            <span class="tx-http-cert-managed__hostname">{{ displayHostname(entry) }}</span>
+          </button>
           <button
             type="button"
             class="tx-http-cert-managed__remove"
             aria-label="Remove certificate for {{ displayHostname(entry) }}"
-            (click)="handleRemoveEntry(entry.id)"
+            (click)="handleRemoveEntry(entry.id, $event)"
           >
             <tx-icon name="close" [size]="14" />
           </button>
@@ -49,7 +57,7 @@
     </ul>
   }
 
-  <div class="tx-http-cert-form" aria-label="Add client certificate">
+  <div class="tx-http-cert-form" [attr.aria-label]="editingEntryId() ? 'Edit client certificate' : 'Add client certificate'">
     <div class="tx-http-cert-form__row">
       <tx-form-field label="Hostname" controlId="tx-settings-http-cert-draft-host">
         <tx-input
@@ -85,47 +93,58 @@
 
     <div class="tx-http-cert-files">
       <div class="tx-http-cert-files__row">
-        <button
-          type="button"
-          class="tx-http-cert-files__badge"
-          [disabled]="!canPickDirectory()"
-          (click)="handleBrowseFile('clientCertPath')"
-        >
-          CRT
-        </button>
-        <span class="tx-http-cert-files__name">{{ displayFileLabel(draft().clientCertPath) }}</span>
+        <span class="tx-http-cert-files__badge" aria-hidden="true">CRT</span>
+        <tx-input
+          class="tx-http-cert-files__path"
+          controlId="tx-settings-http-cert-draft-crt"
+          [ngModel]="draft().clientCertPath ?? ''"
+          (ngModelChange)="handleDraftPathChange('clientCertPath', $event)"
+          placeholder="Path to certificate (.crt, .pem)"
+        />
+        <tx-button variant="secondary" [disabled]="!canPickFile()" (pressed)="handleBrowseFile('clientCertPath')">
+          Browse
+        </tx-button>
       </div>
       <div class="tx-http-cert-files__row">
-        <button
-          type="button"
-          class="tx-http-cert-files__badge"
-          [disabled]="!canPickDirectory()"
-          (click)="handleBrowseFile('clientKeyPath')"
-        >
-          KEY
-        </button>
-        <span class="tx-http-cert-files__name">{{ displayFileLabel(draft().clientKeyPath) }}</span>
+        <span class="tx-http-cert-files__badge" aria-hidden="true">KEY</span>
+        <tx-input
+          class="tx-http-cert-files__path"
+          controlId="tx-settings-http-cert-draft-key"
+          [ngModel]="draft().clientKeyPath ?? ''"
+          (ngModelChange)="handleDraftPathChange('clientKeyPath', $event)"
+          placeholder="Path to private key (.key, .pem)"
+        />
+        <tx-button variant="secondary" [disabled]="!canPickFile()" (pressed)="handleBrowseFile('clientKeyPath')">
+          Browse
+        </tx-button>
       </div>
       <div class="tx-http-cert-files__row">
-        <button
-          type="button"
-          class="tx-http-cert-files__badge"
-          [disabled]="!canPickDirectory()"
-          (click)="handleBrowseFile('pfxPath')"
-        >
-          PFX
-        </button>
-        <span class="tx-http-cert-files__name">{{ displayFileLabel(draft().pfxPath) }}</span>
+        <span class="tx-http-cert-files__badge" aria-hidden="true">PFX</span>
+        <tx-input
+          class="tx-http-cert-files__path"
+          controlId="tx-settings-http-cert-draft-pfx"
+          [ngModel]="draft().pfxPath ?? ''"
+          (ngModelChange)="handleDraftPathChange('pfxPath', $event)"
+          placeholder="Path to PKCS#12 bundle (.pfx, .p12)"
+        />
+        <tx-button variant="secondary" [disabled]="!canPickFile()" (pressed)="handleBrowseFile('pfxPath')">
+          Browse
+        </tx-button>
       </div>
     </div>
 
-    <tx-button
-      class="tx-http-cert-form__add"
-      variant="secondary"
-      [disabled]="!canAddEntry()"
-      (pressed)="handleAddCertificate()"
-    >
-      Add Certificate
-    </tx-button>
+    <div class="tx-http-cert-form__actions">
+      @if (editingEntryId()) {
+        <tx-button variant="secondary" (pressed)="handleCancelEdit()">Cancel</tx-button>
+      }
+      <tx-button
+        class="tx-http-cert-form__save"
+        variant="secondary"
+        [disabled]="!canAddEntry()"
+        (pressed)="handleSaveCertificate()"
+      >
+        {{ saveButtonLabel() }}
+      </tx-button>
+    </div>
   </div>
 </div>

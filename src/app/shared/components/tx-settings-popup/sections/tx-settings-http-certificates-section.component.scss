@@ -51,12 +51,40 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.75rem;
+  gap: 0.35rem;
   min-height: 2.5rem;
-  padding: 0.45rem 0.75rem;
+  padding: 0.2rem 0.35rem 0.2rem 0.2rem;
   border-radius: var(--tx-radius-sm, 8px);
   background: color-mix(in srgb, var(--tx-surface-2) 55%, var(--tx-surface-1));
   border: 1px solid color-mix(in srgb, var(--tx-border-0) 50%, transparent);
+}
+
+.tx-http-cert-managed__select {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  min-width: 0;
+  min-height: 2.1rem;
+  padding: 0.25rem 0.55rem;
+  border: 0;
+  border-radius: calc(var(--tx-radius-sm, 8px) - 2px);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover {
+    background: color-mix(in srgb, var(--tx-text-0) 5%, transparent);
+  }
+
+  &--active {
+    background: color-mix(in srgb, var(--tx-secondary) 12%, transparent);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tx-secondary) 35%, transparent);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--tx-focus-ring, var(--tx-secondary));
+    outline-offset: 2px;
+  }
 }
 
 .tx-http-cert-managed__hostname {
@@ -165,7 +193,8 @@
 }
 
 .tx-http-cert-files__row {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: 0.65rem;
   min-height: 2rem;
@@ -182,37 +211,23 @@
   font-weight: 700;
   letter-spacing: 0.04em;
   color: color-mix(in srgb, var(--tx-text-1) 90%, transparent);
-  cursor: pointer;
-
-  &:hover:not(:disabled) {
-    border-color: color-mix(in srgb, var(--tx-secondary) 45%, transparent);
-    color: var(--tx-text-0);
-  }
-
-  &:disabled {
-    opacity: 0.45;
-    cursor: not-allowed;
-  }
-
-  &:focus-visible {
-    outline: 2px solid var(--tx-focus-ring, var(--tx-secondary));
-    outline-offset: 2px;
-  }
+  text-align: center;
 }
 
-.tx-http-cert-files__name {
-  flex: 1;
+.tx-http-cert-files__path {
   min-width: 0;
-  font-size: 0.8125rem;
-  color: color-mix(in srgb, var(--tx-text-1) 88%, transparent);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
-:host ::ng-deep button.tx-http-cert-form__add.tx-button {
-  width: 100%;
+.tx-http-cert-form__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
   margin-top: 0.15rem;
+}
+
+:host ::ng-deep button.tx-http-cert-form__save.tx-button {
+  flex: 1;
+  min-width: 10rem;
   border-color: color-mix(in srgb, var(--tx-accent, var(--tx-secondary)) 75%, transparent);
   color: color-mix(in srgb, var(--tx-accent, var(--tx-secondary)) 95%, var(--tx-text-0));
   background: transparent;
