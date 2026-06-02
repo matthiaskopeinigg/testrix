@@ -13,6 +13,12 @@ import { FormsModule } from '@angular/forms';
 
 import { resolveTestSuiteTabUi, type TestSuiteFlowSectionId, type WorkspaceEditorLayoutId } from '@shared/config';
 import {
+  buildCollectionEnvironmentDropdownOptions,
+  environmentIdFromDropdownValue,
+  getEnvironmentDefinition,
+  toEnvironmentDropdownValue,
+} from '@shared/config';
+import {
   buildInitialFlowRunStatuses,
   findFirstFailedFlowStepId,
   flattenEnabledFlowSteps,
@@ -265,12 +271,43 @@ export class TestSuiteWorkspaceTabComponent {
 
   protected readonly flowHasE2eSteps = computed(() => flowHasE2eSteps(this.flow()?.nodes));
 
-  protected readonly environmentOptions = computed((): readonly TxDropdownOption[] => {
-    const options: TxDropdownOption[] = [{ value: '', label: 'No environment' }];
-    for (const environment of this.environmentsService.environments()) {
-      options.push({ value: environment.id, label: environment.name });
+  protected readonly environmentOptions = computed((): readonly TxDropdownOption[] =>
+    buildCollectionEnvironmentDropdownOptions(this.environmentsService.environments(), {
+      includeInherit: true,
+    }),
+  );
+
+  protected readonly folderEnvironmentOptions = computed((): readonly TxDropdownOption[] =>
+    buildCollectionEnvironmentDropdownOptions(this.environmentsService.environments(), {
+      includeInherit: false,
+    }),
+  );
+
+  protected readonly flowEnvironmentDropdownValue = computed(() => {
+    const flow = this.flow();
+    return flow ? toEnvironmentDropdownValue(flow.environmentId) : '';
+  });
+
+  protected readonly folderEnvironmentDropdownValue = computed(() => {
+    const folder = this.folder();
+    if (!folder?.environmentId) {
+      return '';
     }
-    return options;
+    return getEnvironmentDefinition(this.environmentsService.environments(), folder.environmentId)
+      ? folder.environmentId
+      : '';
+  });
+
+  protected readonly resolvedFlowEnvironmentName = computed(() => {
+    const flow = this.flow();
+    if (!flow) {
+      return null;
+    }
+    const effectiveId = this.testSuite.resolveFlowEnvironmentId(flow.id);
+    if (!effectiveId) {
+      return 'No environment';
+    }
+    return getEnvironmentDefinition(this.environmentsService.environments(), effectiveId)?.name ?? effectiveId;
   });
 
   protected readonly selectedStep = computed(() => {
@@ -399,7 +436,16 @@ export class TestSuiteWorkspaceTabComponent {
     if (!flow) {
       return;
     }
-    this.testSuite.patchFlow(flow.id, { environmentId: value || null });
+    this.testSuite.patchFlow(flow.id, { environmentId: environmentIdFromDropdownValue(value) });
+  }
+
+  protected handleFolderEnvironmentChange(value: string): void {
+    const folder = this.folder();
+    if (!folder) {
+      return;
+    }
+    const nextId = value.trim() || null;
+    this.testSuite.patchFolder(folder.id, { environmentId: nextId });
   }
 
   protected handleFlowCriticalChange(critical: boolean): void {

@@ -9,7 +9,9 @@ import {
   isTestSuiteFolder,
   cloneTestSuiteTreeItem,
   insertTestSuiteTreeItemAfter,
+  findTestSuiteFlowInTree,
   migrateTestSuitesFile,
+  resolveTestSuiteFlowEnvironmentId,
   testSuitesFileSchema,
   type TestSuiteFlow,
   type TestSuiteFlowNode,
@@ -168,6 +170,18 @@ export class TestSuiteService {
       return null;
     };
     return walk(this.flows());
+  }
+
+  /** Resolves the effective environment id for a flow (inheritance + overrides). */
+  resolveFlowEnvironmentId(flowId: string): string | null {
+    const location = findTestSuiteFlowInTree(this.flows(), flowId);
+    if (!location) {
+      return null;
+    }
+    return resolveTestSuiteFlowEnvironmentId(
+      location.flow.environmentId,
+      location.ancestorFolders,
+    );
   }
 
   findFlowStep(flowId: string, stepId: string): TestSuiteFlowStep | null {

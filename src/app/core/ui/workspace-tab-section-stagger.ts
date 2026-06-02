@@ -69,7 +69,7 @@ export function interceptorRuleTabSectionBlockCount(_section: string): number {
 export function testSuiteTabSectionBlockCount(section: string): number {
   switch (section) {
     case 'overview':
-      return 2;
+      return 1;
     default:
       return 1;
   }

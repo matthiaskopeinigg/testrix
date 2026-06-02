@@ -7,6 +7,7 @@ import { resolveFlowStepRunError } from '@shared/testing';
 
 import { ConfigService } from '@app/core/config/config.service';
 import { EnvironmentsService } from '@app/core/environments/environments.service';
+import { TestSuiteService } from '@app/core/testing/test-suite.service';
 
 import { TxBannerComponent } from '@app/shared/components/tx-banner/tx-banner.component';
 import { TxButtonComponent } from '@app/shared/components/tx-button/tx-button.component';
@@ -66,6 +67,7 @@ import { TsFlowWaitStepPanelComponent } from './ts-flow-wait-step-panel.componen
 export class TsFlowStepEditorComponent {
   private readonly configService = inject(ConfigService);
   private readonly environmentsService = inject(EnvironmentsService);
+  private readonly testSuite = inject(TestSuiteService);
 
   readonly step = input<TestSuiteFlowStep | null>(null);
   readonly flow = input<TestSuiteFlow | null>(null);
@@ -147,9 +149,10 @@ export class TsFlowStepEditorComponent {
     if (!flow || !step) {
       return [];
     }
+    const effectiveId = this.testSuite.resolveFlowEnvironmentId(flow.id);
     const environment = getEnvironmentDefinition(
       this.environmentsService.environments(),
-      flow.environmentId,
+      effectiveId,
     );
     return collectPriorFlowPlaceholderKeys(
       flow,

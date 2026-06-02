@@ -986,7 +986,11 @@ export function remapIndicatorOffDraggingRow(
   readonly position: TxTreeDropPosition | null;
   readonly indentDepth: number | null;
 } {
-  if (indicatorTargetId !== draggingId || indicatorPosition !== 'after') {
+  if (indicatorTargetId !== draggingId) {
+    return { targetId: indicatorTargetId, position: indicatorPosition, indentDepth };
+  }
+
+  if (indicatorPosition !== 'before' && indicatorPosition !== 'after') {
     return { targetId: indicatorTargetId, position: indicatorPosition, indentDepth };
   }
 

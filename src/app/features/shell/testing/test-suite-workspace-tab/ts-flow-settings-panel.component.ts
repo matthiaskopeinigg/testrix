@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 
 import type { TestSuiteFlow } from '@shared/testing';
 
+import { TxFormFieldComponent } from '@app/shared/components/tx-form-field/tx-form-field.component';
 import { TxTagsInputComponent } from '@app/shared/components/tx-tags-input/tx-tags-input.component';
 import { TxToggleComponent } from '@app/shared/components/tx-toggle/tx-toggle.component';
 
@@ -11,6 +12,7 @@ import { TxToggleComponent } from '@app/shared/components/tx-toggle/tx-toggle.co
   standalone: true,
   imports: [
     FormsModule,
+    TxFormFieldComponent,
     TxToggleComponent,
     TxTagsInputComponent,
   ],

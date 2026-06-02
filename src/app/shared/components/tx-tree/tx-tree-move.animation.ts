@@ -5,6 +5,9 @@
 /** Minimum screen-space delta (px) before playing a move transition. */
 const TX_TREE_MOVE_ANIMATION_THRESHOLD_PX = 1;
 
+/** Clears FLIP motion when `transitionend` does not fire (row recycled mid-animation). */
+const TX_TREE_MOVE_ANIMATION_FALLBACK_MS = 400;
+
 /** Captured layout anchor for a visible row before a structural update. */
 export interface TreeRowFlipCapture {
   readonly rect: DOMRect;
@@ -115,6 +118,17 @@ export function animateTreeRowMoves(
     el.style.transform = `translate3d(${deltaX}px, ${deltaY}px, 0)`;
     el.style.transition = 'none';
 
+    let cleaned = false;
+    const cleanup = (): void => {
+      if (cleaned) {
+        return;
+      }
+      cleaned = true;
+      el.classList.remove('tx-tree-row-host--moving');
+      el.style.transition = '';
+      el.style.transform = '';
+    };
+
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         el.style.transition =
@@ -125,12 +139,12 @@ export function animateTreeRowMoves(
           if (event.propertyName !== 'transform') {
             return;
           }
-          el.classList.remove('tx-tree-row-host--moving');
-          el.style.transition = '';
+          cleanup();
           el.removeEventListener('transitionend', handleEnd);
         };
 
         el.addEventListener('transitionend', handleEnd);
+        globalThis.setTimeout(cleanup, TX_TREE_MOVE_ANIMATION_FALLBACK_MS);
       });
     });
   }

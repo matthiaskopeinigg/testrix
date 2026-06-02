@@ -16,6 +16,7 @@ import {
   buildHttpResponseStepCapture,
   evaluateValidationRule,
   findFlowStepById,
+  findTestSuiteFlowInTree,
   flattenEnabledFlowSteps,
   markRemainingFlowStepsSkipped,
   resolveGlobalE2eScreenshotDirectory,
@@ -24,6 +25,7 @@ import {
   validationFailureMessage,
   type FlowRunProgressEvent,
   type FlowStepRunCapture,
+  type TestSuiteAncestorFolderRef,
   type TestSuiteFlow,
   type TestSuiteFlowStep,
   type TestSuiteStepStatus,
@@ -113,8 +115,9 @@ export class TestSuiteFlowExecutor {
       };
     }
 
-    let flow = flowLoaded;
-    if (options.environmentIdOverride) {
+    let flow = flowLoaded.flow;
+    const ancestorFolders = flowLoaded.ancestorFolders;
+    if (options.environmentIdOverride !== undefined) {
       flow = { ...flow, environmentId: options.environmentIdOverride };
     }
 
@@ -210,6 +213,7 @@ export class TestSuiteFlowExecutor {
             showBrowser,
             e2eScreenshotFolder: settings.http.testing.e2eScreenshotFolder,
             environmentIdOverride: options.environmentIdOverride,
+            ancestorFolders,
             environmentVariableKeys: {
               useFolderPathInKeys: settings.environments.useFolderPathInKeys,
             },
@@ -244,28 +248,18 @@ export class TestSuiteFlowExecutor {
     }
   }
 
-  private async loadFlow(flowId: string, files: ConfigFileService): Promise<TestSuiteFlow | null> {
+  private async loadFlow(
+    flowId: string,
+    files: ConfigFileService,
+  ): Promise<{ readonly flow: TestSuiteFlow; readonly ancestorFolders: readonly TestSuiteAncestorFolderRef[] } | null> {
     const raw = await files.readTestSuites();
     const file = migrateTestSuitesFile(raw);
     const root = file.suites.find((s) => s.id === TEST_SUITE_ROOT_ID) ?? file.suites[0];
     if (!root) {
       return null;
     }
-    const walk = (items: readonly import('../../../shared/testing').TestSuiteTreeItem[]): TestSuiteFlow | null => {
-      for (const item of items) {
-        if (isTestSuiteFlow(item) && item.id === flowId) {
-          return item;
-        }
-        if (!isTestSuiteFlow(item)) {
-          const found = walk(item.children);
-          if (found) {
-            return found;
-          }
-        }
-      }
-      return null;
-    };
-    return walk(root.flows);
+    const location = findTestSuiteFlowInTree(root.flows, flowId);
+    return location ? { flow: location.flow, ancestorFolders: location.ancestorFolders } : null;
   }
 
   private async executeStep(
@@ -280,6 +274,7 @@ export class TestSuiteFlowExecutor {
       readonly showBrowser: boolean;
       readonly e2eScreenshotFolder: string;
       readonly environmentIdOverride?: string | null;
+      readonly ancestorFolders: readonly TestSuiteAncestorFolderRef[];
       readonly environmentVariableKeys: import('@shared/http/collection-execution.schema').EnvironmentVariableKeyMode;
     },
   ): Promise<void> {
@@ -317,6 +312,7 @@ export class TestSuiteFlowExecutor {
     flow: TestSuiteFlow,
     environments: import('@shared/config').EnvironmentsFile,
     environmentIdOverride: string | null | undefined,
+    ancestorFolders: readonly TestSuiteAncestorFolderRef[],
     environmentVariableKeys: import('@shared/http/collection-execution.schema').EnvironmentVariableKeyMode,
   ): Record<string, string> {
     const env = buildFlowEnvironmentVariableContext(
@@ -324,6 +320,7 @@ export class TestSuiteFlowExecutor {
       environments,
       environmentIdOverride,
       environmentVariableKeys,
+      ancestorFolders,
     );
     return { ...env, ...Object.fromEntries(this.flowVariables) };
   }
@@ -333,6 +330,7 @@ export class TestSuiteFlowExecutor {
     flow: TestSuiteFlow,
     environments: import('@shared/config').EnvironmentsFile,
     environmentIdOverride: string | null | undefined,
+    ancestorFolders: readonly TestSuiteAncestorFolderRef[],
     environmentVariableKeys: import('@shared/http/collection-execution.schema').EnvironmentVariableKeyMode,
   ): string {
     return resolveTemplateVariables(template, {
@@ -340,6 +338,7 @@ export class TestSuiteFlowExecutor {
         flow,
         environments,
         environmentIdOverride,
+        ancestorFolders,
         environmentVariableKeys,
       ),
     });
@@ -352,6 +351,7 @@ export class TestSuiteFlowExecutor {
       readonly environments: import('@shared/config').EnvironmentsFile;
       readonly databaseConnections: readonly DatabaseConnection[];
       readonly environmentIdOverride?: string | null;
+      readonly ancestorFolders: readonly TestSuiteAncestorFolderRef[];
       readonly environmentVariableKeys: import('@shared/http/collection-execution.schema').EnvironmentVariableKeyMode;
     },
   ): Promise<void> {
@@ -371,6 +371,7 @@ export class TestSuiteFlowExecutor {
       flow,
       ctx.environments,
       ctx.environmentIdOverride,
+      ctx.ancestorFolders,
       ctx.environmentVariableKeys,
     ).trim();
     if (!query) {
@@ -387,6 +388,7 @@ export class TestSuiteFlowExecutor {
       flow,
       ctx.environments,
       ctx.environmentIdOverride,
+      ctx.ancestorFolders,
       ctx.environmentVariableKeys,
     ).trim();
     if (alias) {
@@ -461,6 +463,7 @@ export class TestSuiteFlowExecutor {
       readonly environments: import('@shared/config').EnvironmentsFile;
       readonly showBrowser: boolean;
       readonly environmentIdOverride?: string | null;
+      readonly ancestorFolders: readonly TestSuiteAncestorFolderRef[];
       readonly environmentVariableKeys: import('@shared/http/collection-execution.schema').EnvironmentVariableKeyMode;
     },
   ): Promise<void> {
@@ -468,6 +471,7 @@ export class TestSuiteFlowExecutor {
       flow,
       ctx.environments,
       ctx.environmentIdOverride,
+      ctx.ancestorFolders,
       ctx.environmentVariableKeys,
     );
     const cfg = resolveHttpListenerStepConfig(step.config as HttpListenerStepConfig, variableContext);
@@ -491,6 +495,7 @@ export class TestSuiteFlowExecutor {
       readonly environments: import('@shared/config').EnvironmentsFile;
       readonly showBrowser: boolean;
       readonly environmentIdOverride?: string | null;
+      readonly ancestorFolders: readonly TestSuiteAncestorFolderRef[];
       readonly environmentVariableKeys: import('@shared/http/collection-execution.schema').EnvironmentVariableKeyMode;
     },
   ): Promise<void> {
@@ -498,6 +503,7 @@ export class TestSuiteFlowExecutor {
       flow,
       ctx.environments,
       ctx.environmentIdOverride,
+      ctx.ancestorFolders,
       ctx.environmentVariableKeys,
     );
     const cfg = resolveHttpInterceptorStepConfig(
@@ -899,6 +905,7 @@ export class TestSuiteFlowExecutor {
       flow,
       ctx.environments,
       ctx.environmentIdOverride,
+      ctx.ancestorFolders,
       ctx.environmentVariableKeys,
     );
 
@@ -907,6 +914,7 @@ export class TestSuiteFlowExecutor {
       flow,
       ctx.environments,
       ctx.environmentIdOverride,
+      ctx.ancestorFolders,
       ctx.environmentVariableKeys,
     ).trim();
     if (!url) {

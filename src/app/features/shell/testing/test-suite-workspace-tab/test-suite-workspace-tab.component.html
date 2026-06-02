@@ -3,7 +3,6 @@
     @if (folder(); as fld) {
       <app-testing-workspace-tab-shell
         [title]="title()"
-        [resourceId]="resourceId()"
         [description]="''"
       >
         <section class="ts-folder-tab-meta">
@@ -19,10 +18,20 @@
           <tx-form-field label="Tags" controlId="ts-folder-tags">
             <tx-tags-input
               controlId="ts-folder-tags"
-              placeholder="Add tag"
+              [compact]="true"
               [maxTags]="5"
               [ngModel]="fld.tags"
               (ngModelChange)="handleFolderTagsChange($event)"
+            />
+          </tx-form-field>
+          <tx-form-field label="Environment" controlId="ts-folder-environment">
+            <tx-dropdown
+              controlId="ts-folder-environment"
+              placeholder="No environment"
+              ariaLabel="Folder environment"
+              [options]="folderEnvironmentOptions()"
+              [ngModel]="folderEnvironmentDropdownValue()"
+              (ngModelChange)="handleFolderEnvironmentChange($event)"
             />
           </tx-form-field>
         </section>
@@ -95,10 +104,10 @@
             <tx-form-field class="ts-flow-tab__env-field" label="Environment" controlId="ts-flow-env">
               <tx-dropdown
                 controlId="ts-flow-env"
-                placeholder="No environment"
+                placeholder="Inherit from folder"
                 ariaLabel="Flow environment"
                 [options]="environmentOptions()"
-                [ngModel]="f.environmentId ?? ''"
+                [ngModel]="flowEnvironmentDropdownValue()"
                 (ngModelChange)="handleFlowEnvironmentChange($event)"
               />
             </tx-form-field>
@@ -188,30 +197,30 @@
           @switch (activeFlowSection()) {
             @case ('overview') {
               <div
-                class="tx-workspace-tab__section-shell tx-entrance-stagger"
+                class="tx-workspace-tab__section-shell tx-entrance-stagger ts-flow-tab__overview-shell"
                 [class.tx-entrance-stagger--play]="isSectionContentAnimating('overview')"
                 [class.tx-entrance-stagger--settled]="isSectionContentSettled('overview')"
               >
-                <div class="tx-entrance-stagger__block ts-flow-tab__overview-block">
-                  <tx-form-field label="Description" controlId="ts-flow-description">
-                    <tx-textarea
-                      controlId="ts-flow-description"
-                      placeholder="Describe this flow…"
-                      [rows]="3"
-                      [ngModel]="f.description"
-                      (ngModelChange)="handleFlowDescriptionChange($event)"
+                <div class="tx-entrance-stagger__block">
+                  <section class="ts-flow-tab__overview" aria-label="Flow overview">
+                    <tx-form-field label="Description" controlId="ts-flow-description">
+                      <tx-textarea
+                        controlId="ts-flow-description"
+                        placeholder="Describe this flow…"
+                        [rows]="3"
+                        [ngModel]="f.description"
+                        (ngModelChange)="handleFlowDescriptionChange($event)"
+                      />
+                    </tx-form-field>
+                    <app-ts-flow-settings-panel
+                      [flow]="f"
+                      [hasE2eSteps]="flowHasE2eSteps()"
+                      (criticalChange)="handleFlowCriticalChange($event)"
+                      (tagsChange)="handleFlowTagsChange($event)"
+                      (e2eShowWindowChange)="handleFlowE2eShowWindowChange($event)"
+                      (e2eKeepWindowOpenChange)="handleFlowE2eKeepWindowOpenChange($event)"
                     />
-                  </tx-form-field>
-                </div>
-                <div class="tx-entrance-stagger__block ts-flow-tab__overview-block">
-                  <app-ts-flow-settings-panel
-                    [flow]="f"
-                    [hasE2eSteps]="flowHasE2eSteps()"
-                    (criticalChange)="handleFlowCriticalChange($event)"
-                    (tagsChange)="handleFlowTagsChange($event)"
-                    (e2eShowWindowChange)="handleFlowE2eShowWindowChange($event)"
-                    (e2eKeepWindowOpenChange)="handleFlowE2eKeepWindowOpenChange($event)"
-                  />
+                  </section>
                 </div>
               </div>
             }

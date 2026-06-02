@@ -55,6 +55,11 @@ export class TxTagsInputComponent implements ControlValueAccessor {
   protected readonly tags = signal<readonly string[]>([]);
   protected readonly draft = signal('');
   protected readonly panelOpen = signal(false);
+  protected readonly panelCoords = signal<{
+    readonly top: number;
+    readonly left: number;
+    readonly minWidth: number;
+  } | null>(null);
 
   private readonly draftInputRef = viewChild<ElementRef<HTMLInputElement>>('draftInput');
 
@@ -87,14 +92,24 @@ export class TxTagsInputComponent implements ControlValueAccessor {
 
     effect(() => {
       if (!this.panelOpen()) {
+        this.panelCoords.set(null);
         return;
       }
-      const inputRef = this.draftInputRef();
-      if (!inputRef) {
-        return;
-      }
-      queueMicrotask(() => this.focusElement(inputRef.nativeElement));
+      queueMicrotask(() => {
+        this.positionPanel();
+        const inputRef = this.draftInputRef();
+        if (inputRef) {
+          this.focusElement(inputRef.nativeElement);
+        }
+      });
     });
+
+    fromEvent(document, 'scroll', { capture: true })
+      .pipe(
+        filter(() => this.panelOpen()),
+        takeUntilDestroyed(),
+      )
+      .subscribe(() => this.positionPanel());
   }
 
   protected effectiveId(): string {
@@ -110,6 +125,7 @@ export class TxTagsInputComponent implements ControlValueAccessor {
       this.closePanel();
       return;
     }
+    this.positionPanel();
     this.panelOpen.set(true);
   }
 
@@ -180,8 +196,29 @@ export class TxTagsInputComponent implements ControlValueAccessor {
 
   private closePanel(): void {
     this.panelOpen.set(false);
+    this.panelCoords.set(null);
     this.draft.set('');
     this.onTouched();
+  }
+
+  /** Pins the popover to the trigger using fixed coordinates (escapes overflow clipping). */
+  private positionPanel(): void {
+    const host = this.hostRef.nativeElement;
+    const trigger = host.querySelector(
+      '.tx-tags-input__trigger, .tx-tags-input__add-btn',
+    ) as HTMLElement | null;
+    if (!trigger) {
+      return;
+    }
+
+    const rect = trigger.getBoundingClientRect();
+    const minWidth = Math.min(320, Math.max(224, rect.width));
+    const viewportPadding = 8;
+    const maxLeft = Math.max(viewportPadding, globalThis.innerWidth - minWidth - viewportPadding);
+    const left = Math.min(Math.max(rect.left, viewportPadding), maxLeft);
+    const top = rect.bottom + 6;
+
+    this.panelCoords.set({ top, left, minWidth });
   }
 
   private focusDraftInput(): void {

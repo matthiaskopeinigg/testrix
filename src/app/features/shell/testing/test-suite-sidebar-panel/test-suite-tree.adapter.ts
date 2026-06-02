@@ -52,6 +52,7 @@ function toTestSuiteTreeNode(item: TestSuiteTreeItem): TestSuiteTreeNode {
       kind: 'folder',
       description: item.description,
       tags: item.tags,
+      environmentId: item.environmentId ?? null,
       updatedAt: item.updatedAt,
     },
     children: toTestSuiteTreeNodes(item.children),
@@ -87,6 +88,7 @@ function fromTestSuiteTreeNode(node: TestSuiteTreeNode, existing?: TestSuiteTree
     name: node.label,
     description: node.data?.description ?? prev?.description ?? '',
     tags: node.data?.tags ?? prev?.tags ?? [],
+    environmentId: node.data?.environmentId ?? prev?.environmentId ?? null,
     children: (node.children ?? []).map((child, index) => {
       const prevChild = prev?.children[index];
       const prevById = prev?.children.find((c) => c.id === child.id);

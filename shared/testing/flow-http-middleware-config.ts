@@ -16,6 +16,8 @@ import type {
   TestSuiteKeyValuePair,
 } from './test-suite-steps.schema';
 import type { TestSuiteFlow } from './test-suites.schema';
+import type { TestSuiteAncestorFolderRef } from './collect-test-suite-ancestor-folders';
+import { resolveTestSuiteFlowEnvironmentId } from './resolve-test-suite-flow-environment';
 
 /** Step types that require the E2E browser runner (CDP network capture / intercept). */
 export const FLOW_BROWSER_NETWORK_STEP_TYPES = ['E2E', 'HTTP_LISTENER', 'HTTP_INTERCEPTOR'] as const;
@@ -44,8 +46,12 @@ export function buildFlowEnvironmentVariableContext(
   environments: EnvironmentsFile,
   environmentIdOverride?: string | null,
   keyOptions: EnvironmentVariableKeyOptions = DEFAULT_ENVIRONMENT_VARIABLE_KEY_OPTIONS,
+  ancestorFolders: readonly Pick<TestSuiteAncestorFolderRef, 'environmentId'>[] = [],
 ): Readonly<Record<string, string>> {
-  const effectiveId = environmentIdOverride ?? flow.environmentId ?? null;
+  const effectiveId =
+    environmentIdOverride !== undefined
+      ? environmentIdOverride?.trim() || null
+      : resolveTestSuiteFlowEnvironmentId(flow.environmentId, ancestorFolders);
   const environment = getEnvironmentDefinition(environments.environments, effectiveId);
   if (!environment) {
     return {};

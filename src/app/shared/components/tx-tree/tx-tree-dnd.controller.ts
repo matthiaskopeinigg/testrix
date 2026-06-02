@@ -423,8 +423,11 @@ export class TxTreeDnDController<TMeta = unknown> {
     if (draggingId && targetId && position && !denied) {
       const result = this.model.moveNode(draggingId, targetId, position);
       if (result) {
-        this.callbacks.onDrop(result.event, result.nodes);
-        this.endDrag(true, result.event);
+        try {
+          this.callbacks.onDrop(result.event, result.nodes);
+        } finally {
+          this.endDrag(true, result.event);
+        }
         return;
       }
     }
@@ -635,6 +638,8 @@ export class TxTreeDnDController<TMeta = unknown> {
   }
 
   private createGhost(nodeId: string): void {
+    this.removeGhost();
+
     const rowEl = this.rowElements.get(nodeId);
     if (!rowEl) {
       return;
@@ -667,6 +672,7 @@ export class TxTreeDnDController<TMeta = unknown> {
   private removeGhost(): void {
     this.ghostEl?.remove();
     this.ghostEl = null;
+    document.querySelectorAll('.tx-tree-ghost').forEach((element) => element.remove());
   }
 
   /** Bottom edge of an expanded folder block in viewport coordinates. */

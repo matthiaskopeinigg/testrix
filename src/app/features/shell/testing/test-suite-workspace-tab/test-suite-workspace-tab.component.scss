@@ -239,9 +239,9 @@ $toolbar-control-h: tab-chrome.$workspace-tab-chip-height;
 }
 
 .ts-flow-tab__env-field {
-  flex: 0 1 9rem;
-  width: 9rem;
-  min-width: 0;
+  flex: 0 1 12.5rem;
+  width: 12.5rem;
+  min-width: 10.5rem;
   max-width: 100%;
 
   @include ts-flow-toolbar-sr-label;
@@ -418,12 +418,17 @@ $toolbar-control-h: tab-chrome.$workspace-tab-chip-height;
   overflow: hidden;
 }
 
-.ts-flow-tab__overview-block {
-  max-width: 36rem;
+.ts-flow-tab__overview-shell {
+  flex: 0 1 auto;
+  overflow: auto;
+  padding: 14px 18px 18px;
 }
 
-.ts-flow-tab__overview-block + .ts-flow-tab__overview-block {
-  margin-top: 0.75rem;
+.ts-flow-tab__overview {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-width: 36rem;
 }
 
 .ts-flow-tab__steps-shell,

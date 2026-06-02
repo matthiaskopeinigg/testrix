@@ -33,10 +33,13 @@
 
     @if (panelOpen()) {
       <div
-        class="tx-tags-input__panel tx-menu-popover"
+        class="tx-tags-input__panel tx-tags-input__panel--fixed tx-menu-popover"
         [id]="effectiveId() + '-panel'"
         role="dialog"
         aria-label="Manage tags"
+        [style.top.px]="panelCoords()?.top"
+        [style.left.px]="panelCoords()?.left"
+        [style.min-width.px]="panelCoords()?.minWidth"
         (click)="$event.stopPropagation()"
         (keydown)="handlePanelKeydown($event)"
       >
@@ -106,9 +109,12 @@
 
           @if (panelOpen()) {
             <div
-              class="tx-tags-input__panel tx-tags-input__panel--inline tx-menu-popover"
+              class="tx-tags-input__panel tx-tags-input__panel--inline tx-tags-input__panel--fixed tx-menu-popover"
               role="dialog"
               aria-label="Add tag"
+              [style.top.px]="panelCoords()?.top"
+              [style.left.px]="panelCoords()?.left"
+              [style.min-width.px]="panelCoords()?.minWidth"
               (click)="$event.stopPropagation()"
               (keydown)="handlePanelKeydown($event)"
             >

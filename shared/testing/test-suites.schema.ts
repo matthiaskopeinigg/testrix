@@ -95,6 +95,8 @@ export type TestSuiteFolder = {
   readonly name: string;
   readonly description: string;
   readonly tags: readonly string[];
+  /** Environment profile id; unset folders do not override inherited values. */
+  readonly environmentId?: string | null;
   readonly children: readonly TestSuiteTreeItem[];
   readonly updatedAt: string;
 };
@@ -120,6 +122,7 @@ export const testSuiteFolderSchema: z.ZodType<TestSuiteFolder> = z.lazy(() =>
       name: boundedText(256),
       description: boundedText(4_000).default(''),
       tags: z.array(boundedText(64)).default([]),
+      environmentId: z.string().nullable().optional(),
       children: z.array(testSuiteTreeItemSchema).default([]),
       updatedAt: z.string(),
     })

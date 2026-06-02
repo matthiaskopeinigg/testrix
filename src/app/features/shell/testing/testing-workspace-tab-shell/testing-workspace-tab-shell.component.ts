@@ -13,7 +13,6 @@ import { TxButtonComponent } from '@app/shared/components/tx-button/tx-button.co
 })
 export class TestingWorkspaceTabShellComponent {
   readonly title = input.required<string>();
-  readonly resourceId = input.required<string>();
   readonly description = input('');
   readonly primaryActionLabel = input<string | null>(null);
   readonly primaryAction = output<void>();

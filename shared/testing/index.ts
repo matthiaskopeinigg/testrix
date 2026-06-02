@@ -4,6 +4,8 @@ export * from './flow-step-clone';
 export * from './flow-step-capture';
 export * from './flow-step-validation';
 export * from './flow-http-middleware-config';
+export * from './collect-test-suite-ancestor-folders';
+export * from './resolve-test-suite-flow-environment';
 export * from './test-suite-steps.schema';
 export * from './test-suite-migrate';
 export * from './test-suite-tree-clone';

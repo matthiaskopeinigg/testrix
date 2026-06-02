@@ -121,11 +121,11 @@
 }
 
 :host.tx-tree-row-host--dragging .tx-tree-row {
-  opacity: 0.2;
+  visibility: hidden;
 }
 
 :host.tx-tree-row-host--dragging .tx-tree-row--debug-hit {
-  opacity: 1;
+  visibility: visible;
 }
 
 :host.tx-tree-row-host--drop-deny .tx-tree-row:not(.tx-tree-row--debug-hit) {

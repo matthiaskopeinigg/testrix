@@ -5,20 +5,17 @@
 }
 
 .ts-flow-settings {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 0.5rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.75rem;
   width: 100%;
   min-width: 0;
 }
 
 .ts-flow-settings__tags {
-  grid-column: 1;
-  min-width: 0;
   width: 100%;
-  max-width: none;
-  overflow: hidden;
+  min-width: 0;
 
   ::ng-deep .tx-tags-input--compact {
     width: 100%;
@@ -26,11 +23,12 @@
   }
 
   ::ng-deep .tx-tags-input__compact-row {
-    align-items: flex-start;
+    align-items: center;
+    justify-content: flex-start;
   }
 
   ::ng-deep .tx-tags-input__compact-chips {
-    flex: 1 1 auto;
+    flex: 0 1 auto;
     min-width: 0;
   }
 
@@ -47,15 +45,12 @@
 }
 
 .ts-flow-settings__toggles {
-  grid-column: 2;
   display: flex;
-  flex: none;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: flex-end;
-  gap: 0.35rem 0.55rem;
+  justify-content: flex-start;
+  gap: 0.35rem 0.75rem;
   min-width: 0;
-  isolation: isolate;
 }
 
 .ts-flow-settings__toggle {
@@ -69,22 +64,5 @@
     font-size: 0.75rem;
     font-weight: 600;
     white-space: nowrap;
-  }
-}
-
-@container ts-flow-toolbar (max-width: 720px) {
-  .ts-flow-settings {
-    grid-template-columns: 1fr;
-    align-items: stretch;
-    gap: 0.45rem;
-  }
-
-  .ts-flow-settings__tags,
-  .ts-flow-settings__toggles {
-    grid-column: 1;
-  }
-
-  .ts-flow-settings__toggles {
-    justify-content: flex-start;
   }
 }

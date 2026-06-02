@@ -33,13 +33,6 @@
   color: var(--tx-text-0);
 }
 
-.testing-workspace-tab__id {
-  margin: 0;
-  font-size: 12px;
-  font-family: var(--tx-font-mono, ui-monospace, monospace);
-  color: color-mix(in srgb, var(--tx-text-1) 70%, transparent);
-}
-
 .testing-workspace-tab__body {
   display: flex;
   flex: 1 1 auto;

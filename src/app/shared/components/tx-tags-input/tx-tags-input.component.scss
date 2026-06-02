@@ -37,6 +37,10 @@
   @include surface.control-surface-focus;
 }
 
+.tx-tags-input--open .tx-tags-input__surface {
+  overflow: visible;
+}
+
 .tx-tags-input--disabled .tx-tags-input__surface {
   @include surface.control-surface-disabled;
 }
@@ -219,6 +223,13 @@
   box-shadow:
     var(--tx-shadow-md),
     0 0 0 1px color-mix(in srgb, var(--tx-border-0) 35%, transparent);
+
+  &--fixed {
+    position: fixed;
+    top: auto;
+    inset-inline: auto;
+    max-width: min(20rem, calc(100vw - 1rem));
+  }
 
   &--inline {
     inset-inline-end: 0;

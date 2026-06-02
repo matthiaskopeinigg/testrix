@@ -282,7 +282,13 @@ describe('TxTreeModel', () => {
       remapIndicatorOffDraggingRow(rows, 'b', 'b', 'after', null),
     ).toEqual({ targetId: 'a', position: 'after', indentDepth: null });
     expect(
+      remapIndicatorOffDraggingRow(rows, 'b', 'b', 'before', null),
+    ).toEqual({ targetId: 'a', position: 'after', indentDepth: null });
+    expect(
       remapIndicatorOffDraggingRow(rows, 'a', 'a', 'after', null),
+    ).toEqual({ targetId: null, position: null, indentDepth: null });
+    expect(
+      remapIndicatorOffDraggingRow(rows, 'a', 'a', 'before', null),
     ).toEqual({ targetId: null, position: null, indentDepth: null });
   });
 

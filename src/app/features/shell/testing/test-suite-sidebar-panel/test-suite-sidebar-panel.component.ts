@@ -140,7 +140,8 @@ export class TestSuiteSidebarPanelComponent {
       this.sortBy() === 'saved' ? (testSuite?.foldersFirst ?? true) : true;
     return mergeTxTreeConfig<TestSuiteTreeNodeMeta>({
       ariaLabel: 'Test suite',
-      sort: { foldersFirst },
+      // Suite items persist sibling order by array position, not `order` fields.
+      sort: { foldersFirst, siblingSort: 'manual' },
       expansion: {
         expandOnClick: false,
         expandFolderOnDrag: testSuite?.expandFolderOnDrag ?? false,
