@@ -62,6 +62,7 @@ describe('TestSuiteWorkspaceTabComponent', () => {
             addFlowStep: vi.fn().mockReturnValue({ id: 'step-new', stepType: 'WAIT' }),
             addFlowStepFolder: vi.fn(),
             applyFlowRunStatuses: vi.fn(),
+            resolveFlowEnvironmentId: vi.fn().mockReturnValue(null),
           },
         },
         {
