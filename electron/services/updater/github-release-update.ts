@@ -1,5 +1,5 @@
-import type { UpdateChannel } from './updater-status.schema';
-import { isReleaseVersionNewer, normalizeReleaseTag } from './release-version';
+import type { UpdateChannel } from '../../../shared/updater/updater-status.schema';
+import { isReleaseVersionNewer, normalizeReleaseTag } from '../../../shared/updater/release-version';
 
 const GITHUB_OWNER = 'matthiaskopeinigg';
 const GITHUB_REPO = 'testrix';
