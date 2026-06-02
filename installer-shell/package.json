@@ -1,6 +1,6 @@
 {
   "name": "testrix-setup",
-  "version": "0.9.0-beta.8",
+  "version": "0.9.0-beta.9",
   "description": "Testrix Setup",
   "main": "main.js",
   "private": true,
