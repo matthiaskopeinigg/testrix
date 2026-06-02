@@ -258,6 +258,42 @@
   }
 }
 
+.ds-layout__dev-sim {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.65rem;
+  padding-top: 0.65rem;
+  border-top: 1px solid color-mix(in srgb, var(--tx-border-0) 70%, transparent);
+}
+
+.ds-layout__dev-sim-label {
+  margin: 0;
+  font-size: 11px;
+  color: color-mix(in srgb, var(--tx-text-1) 68%, transparent);
+}
+
+.ds-layout__dev-sim-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.ds-layout__dev-sim-preset {
+  border: 1px solid color-mix(in srgb, var(--tx-border-0) 80%, transparent);
+  border-radius: var(--tx-radius-sm, 8px);
+  background: transparent;
+  color: var(--tx-text-0);
+  font-size: 11px;
+  padding: 0.2rem 0.45rem;
+  cursor: pointer;
+}
+
+.ds-layout__dev-sim-preset--active {
+  border-color: color-mix(in srgb, var(--tx-primary) 45%, var(--tx-border-0));
+  color: var(--tx-primary);
+}
+
 .ds-layout__edge {
   flex-shrink: 0;
   width: 1px;

@@ -1268,7 +1268,7 @@
                     <h3 class="tx-settings__section-heading">Runtime</h3>
                     <dl class="tx-settings__meta">
                       <dt>Application</dt>
-                      <dd>{{ meta.app }}</dd>
+                      <dd>{{ displayAppVersion() ?? '—' }}</dd>
                       <dt>Electron</dt>
                       <dd>{{ meta.electron }}</dd>
                       <dt>Chromium</dt>
@@ -1341,7 +1341,13 @@
                         </tx-button>
                       }
                       @if (updateStatus().state === 'downloaded') {
-                        <tx-button variant="cta" (pressed)="handleInstallUpdate()">Restart to install</tx-button>
+                        <tx-button variant="cta" (pressed)="handleInstallUpdate()">
+                          @if (updateStatus().info?.installerDownloadUrl) {
+                            Install update
+                          } @else {
+                            Restart to install
+                          }
+                        </tx-button>
                       }
                       <tx-button variant="secondary" (pressed)="openReleasesPage()">
                         View on GitHub

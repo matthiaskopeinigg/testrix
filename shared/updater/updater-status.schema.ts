@@ -27,6 +27,9 @@ export const updaterInfoSchema = z.object({
   total: z.number().nonnegative().optional(),
   devPreviewOnly: z.boolean().optional(),
   externalOnly: z.boolean().optional(),
+  installerAssetName: z.string().optional(),
+  installerDownloadUrl: z.string().optional(),
+  installerLocalPath: z.string().optional(),
 });
 
 export type UpdaterInfo = z.infer<typeof updaterInfoSchema>;

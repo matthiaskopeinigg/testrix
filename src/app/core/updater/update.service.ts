@@ -1,6 +1,7 @@
 import { DestroyRef, Injectable, NgZone, computed, inject, signal } from '@angular/core';
 
 import { createDefaultSettings } from '@shared/config';
+import { DEFAULT_DEV_SIM_VERSION } from '@shared/updater/dev-update-sim';
 import type { UpdateChannel, UpdaterStatus } from '@shared/updater/updater-status.schema';
 
 import { ConfigService } from '../config/config.service';
@@ -41,6 +42,8 @@ export class UpdateService {
   readonly status = this.statusState.asReadonly();
   readonly isInstalling = this.installingState.asReadonly();
   readonly showInstallOverlay = computed(() => this.installingState());
+  /** Set after a dev-only real GitHub check pretending to run an older semver. */
+  readonly devSimulatedAppVersion = signal<string | null>(null);
 
   readonly showUpdateBanner = computed(() => {
     if (this.installingState()) {
@@ -72,6 +75,7 @@ export class UpdateService {
 
     void bridge.updater.getStatus().then((status) => {
       this.statusState.set(status);
+      this.syncDevSimulatedVersionFromBridge();
     });
 
     this.unsubscribeStatus = bridge.updater.onStatus((status) => {
@@ -98,9 +102,65 @@ export class UpdateService {
       return;
     }
 
+    const devCheckVersion = this.resolveDevGitHubCheckVersion();
+    if (devCheckVersion) {
+      await this.runDevVersionCheck(devCheckVersion);
+      return;
+    }
+
     this.statusState.set({ state: 'checking', info: null });
     const status = await bridge.check();
     this.statusState.set(status);
+  }
+
+  /**
+   * Dev toolkit only — sets the simulated installed app version (no update check).
+   */
+  async setDevSimulatedVersion(version = DEFAULT_DEV_SIM_VERSION): Promise<void> {
+    if (!this.isDevSimulationAllowed()) {
+      return;
+    }
+
+    this.clearDevSimulation();
+    const bridge = this.electron.bridge()?.updater;
+    if (!bridge?.setDevSimulatedVersion) {
+      return;
+    }
+
+    const trimmed = version.trim();
+    if (!trimmed) {
+      return;
+    }
+
+    await bridge.setDevSimulatedVersion(trimmed);
+    this.devSimulatedAppVersion.set(trimmed);
+    this.statusState.set(IDLE_STATUS);
+  }
+
+  private async runDevVersionCheck(version: string): Promise<void> {
+    if (!this.isDevSimulationAllowed()) {
+      return;
+    }
+
+    this.clearDevSimulation();
+    const bridge = this.electron.bridge()?.updater;
+    if (!bridge?.checkAsVersion) {
+      return;
+    }
+
+    const trimmed = version.trim();
+    this.statusState.set({ state: 'checking', info: null });
+    try {
+      const status = await bridge.checkAsVersion(trimmed);
+      this.devSimulatedAppVersion.set(trimmed);
+      this.statusState.set(status);
+    } catch (error: unknown) {
+      this.statusState.set({
+        state: 'error',
+        info: null,
+        message: error instanceof Error ? error.message : 'Update check failed',
+      });
+    }
   }
 
   async download(): Promise<void> {
@@ -117,8 +177,6 @@ export class UpdateService {
     this.statusState.set(status);
     await this.maybeFinishDownloadAndInstall(status);
   }
-
-  /** Downloads the offered update, then installs (and restarts) when the package is ready. */
   async downloadAndInstall(): Promise<void> {
     const state = this.statusState().state;
     if (state === 'downloaded') {
@@ -338,6 +396,45 @@ export class UpdateService {
       !!ngDevMode &&
       this.electron.isDevToolkit()
     );
+  }
+
+  /**
+   * Dev unpackaged builds disable `updater:check`; route to a real GitHub check instead.
+   */
+  private resolveDevGitHubCheckVersion(): string | null {
+    if (!this.isDevSimulationAllowed()) {
+      return null;
+    }
+
+    const bridge = this.electron.bridge();
+    const versions = bridge?.versions;
+    const simulated =
+      this.devSimulatedAppVersion() ??
+      (versions && versions.app !== versions.installedApp ? versions.app : null);
+
+    if (simulated?.trim()) {
+      return simulated.trim();
+    }
+
+    const status = this.statusState();
+    if (status.state === 'disabled' && status.info?.devPreviewOnly) {
+      return versions?.installedApp?.trim() || DEFAULT_DEV_SIM_VERSION;
+    }
+
+    return null;
+  }
+
+  private syncDevSimulatedVersionFromBridge(): void {
+    if (!this.isDevSimulationAllowed()) {
+      return;
+    }
+
+    const versions = this.electron.bridge()?.versions;
+    if (!versions || versions.app === versions.installedApp) {
+      return;
+    }
+
+    this.devSimulatedAppVersion.set(versions.app);
   }
 
   private devSimulationVersion(): string {

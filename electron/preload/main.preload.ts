@@ -33,7 +33,7 @@ import {
  * App semver still comes from main via IPC (`AppChannels.versions`) and merges in afterward.
  */
 
-type VersionBundle = { app: string; electron: string; chrome: string };
+type VersionBundle = { app: string; installedApp: string; electron: string; chrome: string };
 
 function readAdditionalArg(prefix: string): string | undefined {
   const entry = process.argv.find((arg) => arg.startsWith(prefix));
@@ -50,7 +50,19 @@ const mergedVersions: VersionBundle = {
   electron: process.versions.electron ?? '',
   chrome: process.versions.chrome ?? '',
   app: '',
+  installedApp: '',
 };
+
+function refreshMergedAppVersions(): void {
+  void ipcRenderer
+    .invoke(AppChannels.versions)
+    .then((v: unknown) => {
+      const incoming = v as VersionBundle;
+      mergedVersions.app = incoming.app ?? mergedVersions.app;
+      mergedVersions.installedApp = incoming.installedApp ?? incoming.app ?? mergedVersions.installedApp;
+    })
+    .catch(() => undefined);
+}
 
 const api: ElectronAPI = {
   platform: process.platform,
@@ -278,6 +290,22 @@ const api: ElectronAPI = {
   updater: {
     getStatus: () => ipcRenderer.invoke(UpdaterChannels.getStatus) as Promise<UpdaterStatus>,
     check: () => ipcRenderer.invoke(UpdaterChannels.check) as Promise<UpdaterStatus>,
+    checkAsVersion: async (version?: string) => {
+      const status = (await ipcRenderer.invoke(
+        UpdaterChannels.checkAsVersion,
+        version,
+      )) as UpdaterStatus;
+      refreshMergedAppVersions();
+      return status;
+    },
+    setDevSimulatedVersion: async (version?: string) => {
+      const status = (await ipcRenderer.invoke(
+        UpdaterChannels.setDevSimulatedVersion,
+        version,
+      )) as UpdaterStatus;
+      refreshMergedAppVersions();
+      return status;
+    },
     download: () => ipcRenderer.invoke(UpdaterChannels.download) as Promise<UpdaterStatus>,
     install: () => ipcRenderer.invoke(UpdaterChannels.install) as Promise<void>,
     setChannel: (channel) => ipcRenderer.invoke(UpdaterChannels.setChannel, channel) as Promise<void>,
@@ -362,6 +390,7 @@ void ipcRenderer
   .then((v: unknown) => {
     const incoming = v as ElectronAPI['versions'];
     mergedVersions.app = incoming.app ?? '';
+    mergedVersions.installedApp = incoming.installedApp ?? incoming.app ?? '';
     mergedVersions.electron = incoming.electron || mergedVersions.electron;
     mergedVersions.chrome = incoming.chrome || mergedVersions.chrome;
   })

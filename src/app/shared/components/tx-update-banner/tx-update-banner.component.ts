@@ -43,7 +43,9 @@ export class TxUpdateBannerComponent {
       case 'downloading':
         return 'Downloading update';
       case 'downloaded':
-        return `Installing update${versionSuffix}`;
+        return s.info?.installerDownloadUrl
+          ? `Ready to install${versionSuffix}`
+          : `Installing update${versionSuffix}`;
       case 'error':
         return formatUpdaterErrorBannerTitle(s.message);
       default:
@@ -67,7 +69,9 @@ export class TxUpdateBannerComponent {
       return `${base} · ${percent}%${sim}`;
     }
     if (s.state === 'downloaded') {
-      return `${base} · Restarting when ready`;
+      return s.info?.installerDownloadUrl
+        ? `${base} · Ready to run installer`
+        : `${base} · Restarting when ready`;
     }
     if (s.state === 'error') {
       return `${base} · ${formatUpdaterErrorForUser(s.message)}`;
@@ -107,7 +111,18 @@ export class TxUpdateBannerComponent {
     return s.state === 'downloaded' ? 100 : null;
   });
 
-  protected readonly showPrimary = computed(() => this.status().state === 'available');
+  protected readonly showPrimary = computed(() => {
+    const state = this.status().state;
+    return state === 'available' || state === 'downloaded';
+  });
+
+  protected readonly primaryLabel = computed(() => {
+    const state = this.status().state;
+    if (state === 'downloaded') {
+      return this.status().info?.installerDownloadUrl ? 'Install update' : 'Restart to install';
+    }
+    return 'Download and install';
+  });
 
   protected readonly showReleaseNotesLink = computed(() => {
     const state = this.status().state;
@@ -119,6 +134,10 @@ export class TxUpdateBannerComponent {
   protected readonly isAvailableLayout = computed(() => this.status().state === 'available');
 
   protected handlePrimary(): void {
+    if (this.status().state === 'downloaded') {
+      void this.updates.installAndRestart();
+      return;
+    }
     void this.updates.downloadAndInstall();
   }
 

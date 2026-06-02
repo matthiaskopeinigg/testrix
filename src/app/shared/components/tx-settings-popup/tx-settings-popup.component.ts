@@ -253,6 +253,7 @@ export class TxSettingsPopupComponent {
     return {
       platform: bridge.platform,
       app: bridge.versions.app,
+      installedApp: bridge.versions.installedApp,
       electron: bridge.versions.electron,
       chrome: bridge.versions.chrome,
       devToolkit: bridge.devToolkit,
@@ -262,8 +263,12 @@ export class TxSettingsPopupComponent {
   protected readonly updateStatus = this.updateService.status;
   protected readonly releasesPageUrl = UPDATER_DOWNLOAD_RELEASES_PAGE_URL;
 
+  protected readonly displayAppVersion = computed(
+    () => this.bridgeMeta()?.installedApp ?? this.bridgeMeta()?.app ?? null,
+  );
+
   protected readonly appVersionLabel = computed(() => {
-    const app = this.bridgeMeta()?.app;
+    const app = this.displayAppVersion();
     return app ? `Version ${app}` : 'Version (dev)';
   });
 
@@ -300,7 +305,9 @@ export class TxSettingsPopupComponent {
       case 'downloading':
         return `Downloading… ${status.info?.percent ?? 0}%`;
       case 'downloaded':
-        return 'Update downloaded. Restart to install.';
+        return status.info?.installerDownloadUrl
+          ? 'Update downloaded. Installing replaces the current version.'
+          : 'Update downloaded. Restart to install.';
       case 'not-available':
         return status.message ?? 'You are on the latest version.';
       case 'error':

@@ -87,6 +87,27 @@
           </button>
         </li>
       </ul>
+      <div class="ds-sidebar-panel__dev-sim">
+        <p class="ds-sidebar-panel__dev-sim-label">Simulate app version</p>
+        <div class="ds-sidebar-panel__dev-sim-presets">
+          @for (preset of devVersionPresets; track preset) {
+            <button
+              type="button"
+              class="ds-sidebar-panel__dev-sim-preset"
+              [class.ds-sidebar-panel__dev-sim-preset--active]="devSimVersionDraft() === preset"
+              (click)="selectDevSimPreset(preset)"
+            >
+              {{ preset }}
+            </button>
+          }
+        </div>
+        <tx-input
+          controlId="ds-sidebar-dev-sim-version"
+          [ngModel]="devSimVersionDraft()"
+          (ngModelChange)="devSimVersionDraft.set($event)"
+        />
+        <tx-button variant="secondary" (pressed)="simulateAppVersion()">Simulate app version</tx-button>
+      </div>
     </section>
   }
 </app-workspace-sidebar-panel-shell>

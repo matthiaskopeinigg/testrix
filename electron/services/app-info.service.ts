@@ -2,6 +2,8 @@ import type { App } from 'electron';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
+import { getUpdaterService } from './updater/updater.service';
+
 /**
  * Returns runtime version metadata exposed to the renderer.
  *
@@ -9,14 +11,27 @@ import { join } from 'node:path';
  */
 export function getAppVersions(appRef: App): {
   app: string;
+  installedApp: string;
   electron: string;
   chrome: string;
 } {
+  const installedApp = resolveAppVersion(appRef);
+  const devSimulated = getUpdaterService().getDevSimulatedVersion();
   return {
-    app: resolveAppVersion(appRef),
+    app: devSimulated ?? installedApp,
+    installedApp,
     electron: process.versions.electron ?? '',
     chrome: process.versions.chrome ?? '',
   };
+}
+
+/**
+ * Returns the installed app semver without dev simulation overrides.
+ *
+ * @param appRef Electron app reference.
+ */
+export function getInstalledAppVersion(appRef: App): string {
+  return resolveAppVersion(appRef);
 }
 
 function resolveAppVersion(appRef: App): string {

@@ -337,6 +337,43 @@ function writeInstallMeta(installDir, data, scope) {
   }
 }
 
+function resolveExistingInstall() {
+  for (const scope of ['user', 'machine']) {
+    const candidate = defaultInstallDir(scope);
+    if (fs.existsSync(path.join(candidate, META_FILE))) {
+      const meta = readInstallMeta(candidate);
+      const installDir = meta?.installDir || candidate;
+      return {
+        installDir,
+        scope: meta?.scope === 'machine' ? 'machine' : scope,
+        mainExePath: getLaunchPath(installDir),
+      };
+    }
+  }
+
+  for (const root of ['HKCU', 'HKLM']) {
+    try {
+      const query = spawnSync('reg', ['query', `${root}\\${REG_SUBKEY}`, '/v', 'InstallLocation'], {
+        encoding: 'utf8',
+        windowsHide: true,
+      });
+      const match = /InstallLocation\s+REG_SZ\s+(.*)/.exec(query.stdout || '');
+      const installDir = match?.[1]?.trim();
+      if (!installDir || !fs.existsSync(installDir)) {
+        continue;
+      }
+      const meta = readInstallMeta(installDir);
+      return {
+        installDir,
+        scope: root === 'HKLM' || meta?.scope === 'machine' ? 'machine' : 'user',
+        mainExePath: getLaunchPath(installDir),
+      };
+    } catch {}
+  }
+
+  return null;
+}
+
 function runUninstall() {
   let installDir = null;
   let meta = null;
@@ -407,6 +444,7 @@ module.exports = {
   isValidLaunchTarget,
   payloadExists,
   registerApp,
+  resolveExistingInstall,
   runUninstall,
   writeInstallMeta,
   writeUninstaller,

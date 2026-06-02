@@ -1,3 +1,5 @@
+import type { UpdateChannel } from './updater-status.schema';
+
 /**
  * Normalizes GitHub release tags for version comparison.
  *
@@ -5,6 +7,25 @@
  */
 export function normalizeReleaseTag(tag: string): string {
   return tag.replace(/^v/i, '').trim();
+}
+
+/**
+ * Returns true when `version` is a semver prerelease (e.g. `0.9.0-beta.2`).
+ *
+ * @param version Normalized or tagged app/release version.
+ */
+export function isPrereleaseVersion(version: string): boolean {
+  const normalized = normalizeReleaseTag(version);
+  return normalized.includes('-');
+}
+
+/**
+ * Maps an installed app version to the matching update channel.
+ *
+ * @param version Installed app semver.
+ */
+export function resolveUpdateChannelForVersion(version: string): UpdateChannel {
+  return isPrereleaseVersion(version) ? 'beta' : 'stable';
 }
 
 /**

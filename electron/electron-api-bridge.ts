@@ -68,6 +68,7 @@ export interface ElectronAPI {
   readonly nativeDevFrame: boolean;
   readonly versions: {
     readonly app: string;
+    readonly installedApp: string;
     readonly electron: string;
     readonly chrome: string;
   };
@@ -146,6 +147,8 @@ export interface ElectronAPI {
   updater: {
     getStatus: () => Promise<UpdaterStatus>;
     check: () => Promise<UpdaterStatus>;
+    checkAsVersion: (version?: string) => Promise<UpdaterStatus>;
+    setDevSimulatedVersion: (version?: string) => Promise<UpdaterStatus>;
     download: () => Promise<UpdaterStatus>;
     install: () => Promise<void>;
     setChannel: (channel: UpdateChannel) => Promise<void>;

@@ -56,7 +56,21 @@ export function getUpdaterErrorDisplay(raw: string | undefined | null): UpdaterE
     };
   }
 
-  if (/\b5\d\d\b/.test(m) || lower.includes('github')) {
+  if (lower.includes('github releases are unavailable')) {
+    return {
+      message: m,
+      showWebsiteDownloadLink: true,
+    };
+  }
+
+  if (lower.includes('github denied access')) {
+    return {
+      message: m,
+      showWebsiteDownloadLink: true,
+    };
+  }
+
+  if (/\b5\d\d\b/.test(m) || lower.includes('github api request failed')) {
     return {
       message: 'The update service had a problem. Try again later.',
       showWebsiteDownloadLink: true,

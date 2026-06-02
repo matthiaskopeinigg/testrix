@@ -182,6 +182,42 @@
   list-style: none;
 }
 
+.ds-sidebar-panel__dev-sim {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.65rem;
+  padding-top: 0.65rem;
+  border-top: 1px solid color-mix(in srgb, var(--tx-border-0) 70%, transparent);
+}
+
+.ds-sidebar-panel__dev-sim-label {
+  margin: 0;
+  font-size: 11px;
+  color: color-mix(in srgb, var(--tx-text-1) 68%, transparent);
+}
+
+.ds-sidebar-panel__dev-sim-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.ds-sidebar-panel__dev-sim-preset {
+  border: 1px solid color-mix(in srgb, var(--tx-border-0) 80%, transparent);
+  border-radius: var(--tx-radius-sm, 8px);
+  background: transparent;
+  color: var(--tx-text-0);
+  font-size: 11px;
+  padding: 0.2rem 0.45rem;
+  cursor: pointer;
+}
+
+.ds-sidebar-panel__dev-sim-preset--active {
+  border-color: color-mix(in srgb, var(--tx-primary) 45%, var(--tx-border-0));
+  color: var(--tx-primary);
+}
+
 .ds-sidebar-panel__simulate-btn {
   display: flex;
   align-items: center;

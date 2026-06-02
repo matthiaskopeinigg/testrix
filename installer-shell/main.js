@@ -58,6 +58,8 @@ const MAIN_EXE = 'Testrix.exe';
 const UNINSTALL_CMD = 'uninstall.cmd';
 const META_FILE = '.install-meta.json';
 const PAYLOAD_ARCHIVE = 'payload.zip';
+const SILENT_UPDATE =
+  process.argv.includes('--silent-update') || process.env.TESTRIX_SILENT_UPDATE === '1';
 const APPENDED_PAYLOAD_MAGIC = Buffer.from('TESTRIXPK');
 const APPENDED_PAYLOAD_FOOTER_BYTES = 8 + 8 + APPENDED_PAYLOAD_MAGIC.length;
 
@@ -963,13 +965,221 @@ function payloadInfoResponse(available) {
   };
 }
 
+/**
+ * Waits until the parent Testrix process exits so install files are unlocked.
+ *
+ * @returns {Promise<void>}
+ */
+function waitForParentExit() {
+  const raw = process.env.TESTRIX_PARENT_PID;
+  if (!raw) {
+    return Promise.resolve();
+  }
+  const pid = Number.parseInt(String(raw).trim(), 10);
+  if (!Number.isFinite(pid) || pid <= 0) {
+    return Promise.resolve();
+  }
+
+  return new Promise((resolve) => {
+    const poll = () => {
+      try {
+        process.kill(pid, 0);
+        setTimeout(poll, 250);
+      } catch {
+        resolve();
+      }
+    };
+    poll();
+  });
+}
+
+/**
+ * Resolves an existing install target for silent in-app updates.
+ *
+ * @returns {{ installDir: string, scope: 'user' | 'machine', mainExePath: string } | null}
+ */
+function resolveExistingInstallForSilentUpdate() {
+  const forced = String(process.env.TESTRIX_INSTALL_DIR || '').trim();
+  if (forced && fs.existsSync(forced)) {
+    const meta = readInstallMeta(forced);
+    return {
+      installDir: forced,
+      scope: meta?.scope === 'machine' ? 'machine' : 'user',
+      mainExePath: platform.getLaunchPath(forced),
+    };
+  }
+
+  if (typeof platform.resolveExistingInstall === 'function') {
+    return platform.resolveExistingInstall();
+  }
+
+  return null;
+}
+
+/**
+ * Installs or updates Testrix into `installDir`.
+ *
+ * @param {{ installDir: string, scope: 'user' | 'machine', onProgress?: (payload: object) => void }} opts
+ */
+async function performInstall(opts) {
+  const scope = opts?.scope === 'machine' ? 'machine' : 'user';
+  const available = checkPayloadAvailable();
+
+  if (!available.ok) {
+    return {
+      ok: false,
+      message:
+        available.message ||
+        'Application payload missing. Re-download the installer or run sync-installer-payload after building the main app.',
+    };
+  }
+
+  const dest = String(opts?.installDir || '').trim() || platform.defaultInstallDir(scope);
+  const onProgress = typeof opts?.onProgress === 'function' ? opts.onProgress : () => {};
+
+  try {
+    if (available.source === 'archive') {
+      let archivePath = available.archivePath;
+      if (available.archiveKind === 'appended') {
+        archivePath = materializeAppendedPayloadArchive(available.archivePath);
+        if (!archivePath) {
+          return { ok: false, message: 'Failed to read embedded application payload.' };
+        }
+      }
+      await installPayloadFromArchive(archivePath, dest, scope, onProgress);
+    } else {
+      const src = available.payloadDir;
+      if (!platform.payloadExists(src)) {
+        return {
+          ok: false,
+          message:
+            available.message ||
+            'Application payload missing. Re-download the installer or run sync-installer-payload after building the main app.',
+        };
+      }
+
+      onProgress({ phase: 'preparing', percent: 0 });
+      onProgress({ phase: 'copying', percent: scope === 'machine' ? null : 0 });
+      await platform.installApp({
+        src,
+        dest,
+        scope,
+        onProgress,
+      });
+    }
+
+    onProgress({ phase: 'finalizing', percent: 1 });
+
+    const registration = platform.registerApp({ installDir: dest, scope });
+    const installMeta = {
+      scope,
+      installDir: dest,
+      version: pkgVersion(),
+      shortcuts: registration.shortcuts || [],
+      uninstallScript: registration.uninstallScript || null,
+    };
+    if (typeof platform.writeInstallMeta === 'function') {
+      platform.writeInstallMeta(dest, installMeta, scope);
+    } else {
+      common.writeInstallMeta(dest, installMeta);
+    }
+
+    onProgress({ phase: 'done', percent: 1 });
+    return {
+      ok: true,
+      installDir: dest,
+      mainExePath: registration.mainExePath || platform.getLaunchPath(dest),
+    };
+  } catch (err) {
+    return {
+      ok: false,
+      message: err.message || String(err),
+      code: err.code || null,
+      failedFile: err.failedFile || null,
+    };
+  }
+}
+
+/**
+ * @param {string} exePath
+ * @returns {Promise<{ ok: boolean, message?: string }>}
+ */
+async function launchInstalledApp(exePath) {
+  const p = String(exePath || '').trim();
+  if (!p || !path.isAbsolute(p) || !fs.existsSync(p)) {
+    return { ok: false, message: 'Executable not found.' };
+  }
+  const resolved = path.resolve(p);
+  if (!platform.isValidLaunchTarget(resolved)) {
+    return { ok: false, message: 'Invalid launch target.' };
+  }
+
+  const installDir = path.dirname(resolved);
+  if (process.platform === 'win32' && !fs.existsSync(path.join(installDir, 'icudtl.dat'))) {
+    return {
+      ok: false,
+      message:
+        'Installation is incomplete (missing Electron runtime files such as icudtl.dat). Uninstall and reinstall using a freshly built Testrix Setup.exe.',
+    };
+  }
+
+  try {
+    const child = spawn(resolved, [], {
+      detached: true,
+      stdio: 'ignore',
+      windowsHide: false,
+      cwd: installDir,
+    });
+    child.unref();
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, message: err.message || String(err) };
+  }
+}
+
+/**
+ * Headless in-app update invoked by a running Testrix instance.
+ *
+ * @returns {Promise<boolean>} True when silent update handled startup (no UI).
+ */
+async function runSilentUpdateIfRequested() {
+  if (!SILENT_UPDATE) {
+    return false;
+  }
+
+  const existing = resolveExistingInstallForSilentUpdate();
+  if (!existing?.installDir) {
+    return false;
+  }
+
+  await waitForParentExit();
+
+  const result = await performInstall({
+    installDir: existing.installDir,
+    scope: existing.scope === 'machine' ? 'machine' : 'user',
+  });
+
+  if (!result.ok) {
+    app.exit(1);
+    return true;
+  }
+
+  const launchPath = result.mainExePath || existing.mainExePath;
+  await launchInstalledApp(launchPath);
+  app.exit(0);
+  return true;
+}
+
 if (process.argv.includes('--uninstall')) {
   app.whenReady().then(() => {
     const r = platform.runUninstall();
     app.exit(r.ok ? 0 : 1);
   });
 } else {
-  app.whenReady().then(() => {
+  app.whenReady().then(async () => {
+    if (await runSilentUpdateIfRequested()) {
+      return;
+    }
     mainWindow = createWindow();
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) {
@@ -1012,82 +1222,16 @@ ipcMain.handle('setup:getPayloadInfo', async () => payloadInfoResponse(checkPayl
 
 ipcMain.handle('setup:install', async (event, opts) => {
   const scope = opts?.scope === 'machine' ? 'machine' : 'user';
-  const available = checkPayloadAvailable();
-
-  if (!available.ok) {
-    return {
-      ok: false,
-      message:
-        available.message ||
-        'Application payload missing. Re-download the installer or run sync-installer-payload after building the main app.',
-    };
-  }
-
-  const dest =
-    String(opts?.installDir || '').trim() || platform.defaultInstallDir(scope);
-
   const wc = event.sender;
   const sendProgress = (payload) => {
     if (wc && !wc.isDestroyed()) wc.send('setup:progress', payload);
   };
 
-  try {
-    if (available.source === 'archive') {
-      let archivePath = available.archivePath;
-      if (available.archiveKind === 'appended') {
-        archivePath = materializeAppendedPayloadArchive(available.archivePath);
-        if (!archivePath) {
-          return { ok: false, message: 'Failed to read embedded application payload.' };
-        }
-      }
-      await installPayloadFromArchive(archivePath, dest, scope, sendProgress);
-    } else {
-      const src = available.payloadDir;
-      if (!platform.payloadExists(src)) {
-        return {
-          ok: false,
-          message:
-            available.message ||
-            'Application payload missing. Re-download the installer or run sync-installer-payload after building the main app.',
-        };
-      }
-
-      sendProgress({ phase: 'preparing', percent: 0 });
-      sendProgress({ phase: 'copying', percent: scope === 'machine' ? null : 0 });
-      await platform.installApp({
-        src,
-        dest,
-        scope,
-        onProgress: sendProgress,
-      });
-    }
-
-    sendProgress({ phase: 'finalizing', percent: 1 });
-
-    const registration = platform.registerApp({ installDir: dest, scope });
-    const installMeta = {
-      scope,
-      installDir: dest,
-      version: pkgVersion(),
-      shortcuts: registration.shortcuts || [],
-      uninstallScript: registration.uninstallScript || null,
-    };
-    if (typeof platform.writeInstallMeta === 'function') {
-      platform.writeInstallMeta(dest, installMeta, scope);
-    } else {
-      common.writeInstallMeta(dest, installMeta);
-    }
-
-    sendProgress({ phase: 'done', percent: 1 });
-    return { ok: true, installDir: dest, mainExePath: registration.mainExePath || platform.getLaunchPath(dest) };
-  } catch (err) {
-    return {
-      ok: false,
-      message: err.message || String(err),
-      code: err.code || null,
-      failedFile: err.failedFile || null,
-    };
-  }
+  return performInstall({
+    installDir: String(opts?.installDir || '').trim() || platform.defaultInstallDir(scope),
+    scope,
+    onProgress: sendProgress,
+  });
 });
 
 ipcMain.handle('setup:uninstall', () => platform.runUninstall());

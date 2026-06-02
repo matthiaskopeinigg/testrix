@@ -7,6 +7,7 @@ const {
   META_FILE,
   copyDirWithProgress,
   shellQuote,
+  readInstallMeta,
   writeInstallMeta: writeCommonInstallMeta,
   which,
 } = require('./common');
@@ -226,6 +227,22 @@ function writeInstallMeta(installDir, data, scope) {
   );
 }
 
+function resolveExistingInstall() {
+  for (const scope of ['user', 'machine']) {
+    const candidate = defaultInstallDir(scope);
+    if (fs.existsSync(path.join(candidate, META_FILE))) {
+      const meta = readInstallMeta(candidate);
+      const installDir = meta?.installDir || candidate;
+      return {
+        installDir,
+        scope: meta?.scope === 'machine' ? 'machine' : scope,
+        mainExePath: getLaunchPath(installDir),
+      };
+    }
+  }
+  return null;
+}
+
 function runUninstall() {
   const candidates = [defaultInstallDir('user'), defaultInstallDir('machine')];
   for (const installDir of candidates) {
@@ -248,6 +265,7 @@ module.exports = {
   isValidLaunchTarget,
   payloadExists,
   registerApp,
+  resolveExistingInstall,
   runUninstall,
   writeInstallMeta,
   writeUninstaller,

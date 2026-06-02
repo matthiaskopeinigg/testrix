@@ -1,5 +1,5 @@
 import type { App, BrowserWindow } from 'electron';
-import { app as electronApp, shell } from 'electron';
+import { app as electronApp } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
@@ -12,16 +12,29 @@ import {
   type UpdaterStatus,
 } from '../../../shared/updater/updater-status.schema';
 import { updateCheckCacheSchema } from '../../../shared/updater/updater-status.schema';
+import { isUpdaterCacheStatusUsable } from '../../../shared/updater/updater-cache';
+import { DEFAULT_DEV_SIM_VERSION } from '../../../shared/updater/dev-update-sim';
 
+import { isDevMode } from '../../config/environment';
 import { logError } from '../../errors/logger';
 
 import {
   fetchLatestGitHubRelease,
+  formatInstallerAssetError,
   isReleaseVersionNewer,
+  resolveInstallerAssetForVersion,
   type GitHubReleaseSummary,
 } from './github-release-update';
+import {
+  buildSilentUpdateLaunchOptions,
+  downloadInstallerAsset,
+  launchDownloadedInstaller,
+  resolveInstallerDownloadPath,
+} from './installer-download.service';
+import { resolveInstallLocation } from '../install/install-location.service';
 
 const UPDATE_CHECK_CACHE_FILE = 'update-check-cache.json';
+const CACHE_KEY_SUFFIX = 'v2';
 
 const CACHE_TTL_MS = parsePositiveIntEnv(process.env.TESTRIX_UPDATE_CACHE_MS, 30 * 60 * 1000);
 const HTTP_MIN_INTERVAL_MS = parsePositiveIntEnv(process.env.TESTRIX_UPDATE_HTTP_MIN_MS, 60 * 1000);
@@ -39,6 +52,8 @@ export class UpdaterService {
   private getConfigDir: () => string = () => '';
   private readSettings: () => SettingsFile = () => ({}) as SettingsFile;
   private checkInFlight = false;
+  private downloadInFlight = false;
+  private devSimulatedVersion: string | null = null;
 
   init(deps: {
     readonly getMainWindow: () => BrowserWindow | null;
@@ -122,6 +137,64 @@ export class UpdaterService {
     return this.lastStatus;
   }
 
+  /** Dev-only semver override for real GitHub release checks from unpackaged builds. */
+  getDevSimulatedVersion(): string | null {
+    return this.devSimulatedVersion;
+  }
+
+  /**
+   * Dev-only: sets the simulated installed app version without running an update check.
+   *
+   * @param version Semver to treat as the installed app version.
+   */
+  setDevSimulatedVersion(version: string): UpdaterStatus {
+    if (!isDevMode() || electronApp.isPackaged) {
+      throw new Error('Simulated version is dev-only.');
+    }
+
+    const trimmed = version.trim();
+    if (!trimmed) {
+      throw new Error('Version is required.');
+    }
+
+    this.devSimulatedVersion = trimmed;
+    this.pushStatus({ state: 'idle', info: null });
+    return this.lastStatus;
+  }
+
+  async checkForUpdatesAsVersion(version = DEFAULT_DEV_SIM_VERSION): Promise<UpdaterStatus> {
+    if (!isDevMode() || electronApp.isPackaged) {
+      throw new Error('Simulated version checks are dev-only.');
+    }
+
+    const trimmed = version.trim();
+    if (!trimmed) {
+      throw new Error('Version is required.');
+    }
+
+    this.devSimulatedVersion = trimmed;
+    const channel = this.readSettings().updates.channel;
+    this.applyChannel(channel);
+
+    if (this.checkInFlight) {
+      return this.lastStatus;
+    }
+
+    this.checkInFlight = true;
+    this.pushStatus({ state: 'checking', info: null });
+    try {
+      const status = await this.checkGitHubRelease(channel, trimmed);
+      this.pushStatus(status);
+      return this.lastStatus;
+    } catch (error: unknown) {
+      const message = formatGitHubUpdateError(error);
+      this.pushStatus({ state: 'error', info: null, message });
+      return this.lastStatus;
+    } finally {
+      this.checkInFlight = false;
+    }
+  }
+
   async checkForUpdates(): Promise<UpdaterStatus> {
     if (!electronApp.isPackaged) {
       return this.lastStatus;
@@ -162,13 +235,37 @@ export class UpdaterService {
   }
 
   async downloadUpdate(): Promise<UpdaterStatus> {
-    if (!electronApp.isPackaged) {
+    if (!electronApp.isPackaged && !this.canRunDevSimulatedUpdateActions()) {
       return this.lastStatus;
     }
 
-    const releaseUrl = this.lastStatus.info?.releasePageUrl;
-    if (this.lastStatus.info?.externalOnly && releaseUrl) {
-      await shell.openExternal(releaseUrl);
+    let info = this.lastStatus.info;
+    if (
+      this.lastStatus.state === 'available' &&
+      info?.version &&
+      !info.installerDownloadUrl
+    ) {
+      info = await this.enrichInfoWithInstallerAsset(info);
+      if (info !== this.lastStatus.info) {
+        this.pushStatus({ state: 'available', info });
+      }
+    }
+
+    if (info?.installerDownloadUrl && info.version) {
+      return this.downloadCustomInstaller(info);
+    }
+
+    if (this.lastStatus.state === 'available' && info?.version) {
+      const { assetNames } = await resolveInstallerAssetForVersion(info.version);
+      this.pushStatus({
+        state: 'error',
+        info,
+        message: formatInstallerAssetError(info.version, assetNames),
+      });
+      return this.lastStatus;
+    }
+
+    if (!electronApp.isPackaged) {
       return this.lastStatus;
     }
 
@@ -182,21 +279,38 @@ export class UpdaterService {
   }
 
   quitAndInstall(): void {
-    if (!electronApp.isPackaged) {
+    if (!electronApp.isPackaged && !this.canRunDevSimulatedUpdateActions()) {
       return;
     }
 
-    const releaseUrl = this.lastStatus.info?.releasePageUrl;
-    if (this.lastStatus.info?.externalOnly && releaseUrl) {
-      void shell.openExternal(releaseUrl);
+    const localPath = this.lastStatus.info?.installerLocalPath;
+    if (localPath) {
+      void this.runDownloadedInstaller(localPath);
+      return;
+    }
+
+    if (this.lastStatus.state === 'downloaded' && this.lastStatus.info?.version) {
+      void this.downloadUpdate().then((status) => {
+        const pathAfterDownload = status.info?.installerLocalPath;
+        if (pathAfterDownload) {
+          void this.runDownloadedInstaller(pathAfterDownload);
+        }
+      });
+      return;
+    }
+
+    if (!electronApp.isPackaged) {
       return;
     }
 
     autoUpdater.quitAndInstall(false, true);
   }
 
-  private async checkGitHubRelease(channel: UpdateChannel): Promise<UpdaterStatus> {
-    const currentVersion = electronApp.getVersion() || '0.0.0';
+  private async checkGitHubRelease(
+    channel: UpdateChannel,
+    currentVersionOverride?: string,
+  ): Promise<UpdaterStatus> {
+    const currentVersion = currentVersionOverride ?? this.resolveCurrentVersion();
     const release = await fetchLatestGitHubRelease(channel);
 
     if (!release) {
@@ -206,7 +320,7 @@ export class UpdaterService {
         message:
           channel === 'stable'
             ? 'No stable release is published yet. Switch to Beta for prereleases.'
-            : 'No beta release is published yet.',
+            : 'No beta release is published yet. Confirm GitHub releases are public.',
       };
     }
 
@@ -227,12 +341,137 @@ export class UpdaterService {
     };
   }
 
+  private async enrichInfoWithInstallerAsset(info: UpdaterInfo): Promise<UpdaterInfo> {
+    const version = info.version;
+    if (!version || info.installerDownloadUrl) {
+      return info;
+    }
+
+    const { asset } = await resolveInstallerAssetForVersion(version);
+    if (!asset) {
+      return info;
+    }
+
+    return {
+      ...info,
+      externalOnly: false,
+      installerAssetName: asset.name,
+      installerDownloadUrl: asset.downloadUrl,
+      total: asset.size,
+    };
+  }
+
   private mapGitHubReleaseInfo(release: GitHubReleaseSummary): UpdaterInfo {
+    const asset = release.installerAsset;
     return {
       version: release.version,
       releasePageUrl: release.releasePageUrl,
-      externalOnly: true,
+      externalOnly: asset == null,
+      installerAssetName: asset?.name,
+      installerDownloadUrl: asset?.downloadUrl,
+      total: asset?.size,
     };
+  }
+
+  private async downloadCustomInstaller(info: UpdaterInfo): Promise<UpdaterStatus> {
+    const downloadUrl = info.installerDownloadUrl;
+    const version = info.version;
+    if (!downloadUrl || !version) {
+      return this.lastStatus;
+    }
+
+    if (this.downloadInFlight) {
+      return this.lastStatus;
+    }
+
+    const destPath = resolveInstallerDownloadPath(version);
+    const existingPath = info.installerLocalPath ?? destPath;
+    const expectedSize = info.total ?? 0;
+
+    if (fs.existsSync(existingPath)) {
+      const size = fs.statSync(existingPath).size;
+      if (!expectedSize || size === expectedSize) {
+        this.pushStatus({
+          state: 'downloaded',
+          info: { ...info, installerLocalPath: existingPath, percent: 100 },
+        });
+        this.writeDiskCache(this.lastStatus);
+        return this.lastStatus;
+      }
+    }
+
+    this.downloadInFlight = true;
+    this.pushStatus({
+      state: 'downloading',
+      info: {
+        ...info,
+        installerLocalPath: undefined,
+        percent: 0,
+        transferred: 0,
+        total: expectedSize,
+        bytesPerSecond: 0,
+      },
+    });
+
+    try {
+      await downloadInstallerAsset(downloadUrl, destPath, expectedSize, (progress) => {
+        this.pushStatus({
+          state: 'downloading',
+          info: {
+            ...info,
+            installerLocalPath: undefined,
+            percent: progress.percent,
+            bytesPerSecond: progress.bytesPerSecond,
+            transferred: progress.transferred,
+            total: progress.total,
+          },
+        });
+      });
+
+      this.pushStatus({
+        state: 'downloaded',
+        info: {
+          ...info,
+          installerLocalPath: destPath,
+          percent: 100,
+          transferred: expectedSize || undefined,
+          total: expectedSize || undefined,
+        },
+      });
+      this.writeDiskCache(this.lastStatus);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Download failed';
+      this.pushStatus({ state: 'error', info: info, message });
+    } finally {
+      this.downloadInFlight = false;
+    }
+
+    return this.lastStatus;
+  }
+
+  private async runDownloadedInstaller(localPath: string): Promise<void> {
+    try {
+      const install = resolveInstallLocation(electronApp);
+      await launchDownloadedInstaller(
+        localPath,
+        buildSilentUpdateLaunchOptions(install),
+      );
+      if (process.platform !== 'darwin') {
+        electronApp.quit();
+        return;
+      }
+      setTimeout(() => {
+        electronApp.quit();
+      }, 400);
+    } catch (error: unknown) {
+      logError(this.getPathFn(), 'installer launch failed', error);
+      const message = error instanceof Error ? error.message : 'Could not launch the installer.';
+      this.pushStatus({
+        state: 'error',
+        info: this.lastStatus.info,
+        message,
+      });
+    }
   }
 
   setChannel(channel: UpdateChannel): void {
@@ -273,12 +512,23 @@ export class UpdaterService {
   }
 
   private buildCacheKey(channel: UpdateChannel): string {
-    return `${channel}|${electronApp.getVersion()}`;
+    return `${channel}|${this.resolveCurrentVersion()}|${CACHE_KEY_SUFFIX}`;
+  }
+
+  private resolveCurrentVersion(): string {
+    if (isDevMode() && this.devSimulatedVersion) {
+      return this.devSimulatedVersion;
+    }
+    return electronApp.getVersion() || '0.0.0';
+  }
+
+  private canRunDevSimulatedUpdateActions(): boolean {
+    return isDevMode() && this.devSimulatedVersion != null;
   }
 
   private shouldHitNetwork(cacheKey: string, isBoot: boolean): boolean {
     const disk = this.readDiskCache();
-    if (disk) {
+    if (disk && isUpdaterCacheStatusUsable(disk.status)) {
       const age = Date.now() - new Date(disk.checkedAt).getTime();
       if (age < CACHE_TTL_MS) {
         return false;
@@ -337,7 +587,11 @@ export class UpdaterService {
         return null;
       }
       const raw = JSON.parse(fs.readFileSync(fp, 'utf8')) as unknown;
-      return updateCheckCacheSchema.parse(raw);
+      const parsed = updateCheckCacheSchema.parse(raw);
+      if (!isUpdaterCacheStatusUsable(parsed.status)) {
+        return null;
+      }
+      return parsed;
     } catch {
       return null;
     }

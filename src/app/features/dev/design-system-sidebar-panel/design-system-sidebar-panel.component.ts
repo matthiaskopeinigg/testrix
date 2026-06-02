@@ -11,6 +11,8 @@ import {
   signal,
 } from '@angular/core';
 
+import { FormsModule } from '@angular/forms';
+
 import { DESIGN_SYSTEM_NAV, findDesignSystemSection } from '@app/core/design-system/design-system.registry';
 import { DesignSystemSessionService } from '@app/core/design-system/design-system-session.service';
 import { startEntranceStaggerAnimation } from '@app/core/ui/entrance-stagger';
@@ -18,17 +20,20 @@ import { UiPreferencesService } from '@app/core/ui/ui-preferences.service';
 import type { DesignSystemNavGroup, DesignSystemPillar } from '@app/core/design-system/design-system.types';
 import { ElectronService } from '@app/core/electron/electron.service';
 import { UpdateService } from '@app/core/updater/update.service';
+import { DEFAULT_DEV_SIM_VERSION, DEV_VERSION_SIM_PRESETS } from '@shared/updater/dev-update-sim';
 import { WorkspaceEditorService } from '@app/core/workspace/workspace-editor.service';
 import { WorkspaceSidebarPanelShellComponent } from '@app/features/shell/workspace/workspace-sidebar-panel-shell.component';
 import { DS_PILLAR_ICONS } from '@app/features/dev/pages/design-system/design-system-page.constants';
+import { TxButtonComponent } from '@app/shared/components/tx-button/tx-button.component';
 import { TxIconComponent } from '@app/shared/components/tx-icon/tx-icon.component';
+import { TxInputComponent } from '@app/shared/components/tx-input/tx-input.component';
 import type { TxIconName } from '@app/shared/icons/tx-icon.registry';
 import { createDefaultWorkspaceDesignSystem } from '@shared/config';
 
 @Component({
   selector: 'app-design-system-sidebar-panel',
   standalone: true,
-  imports: [WorkspaceSidebarPanelShellComponent, TxIconComponent],
+  imports: [FormsModule, WorkspaceSidebarPanelShellComponent, TxButtonComponent, TxIconComponent, TxInputComponent],
   templateUrl: './design-system-sidebar-panel.component.html',
   styleUrl: './design-system-sidebar-panel.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -182,6 +187,18 @@ export class DesignSystemSidebarPanelComponent implements OnInit {
 
   protected simulateUpdateInstalling(): void {
     void this.updates.simulateUpdateInstalling();
+  }
+
+  protected readonly devSimVersionDraft = signal(DEFAULT_DEV_SIM_VERSION);
+  protected readonly devVersionPresets = DEV_VERSION_SIM_PRESETS;
+
+  protected simulateAppVersion(): void {
+    void this.updates.setDevSimulatedVersion(this.devSimVersionDraft());
+  }
+
+  protected selectDevSimPreset(version: string): void {
+    this.devSimVersionDraft.set(version);
+    this.cdr.markForCheck();
   }
 
   private persistExpandedPillars(pillars: readonly DesignSystemPillar[]): void {
