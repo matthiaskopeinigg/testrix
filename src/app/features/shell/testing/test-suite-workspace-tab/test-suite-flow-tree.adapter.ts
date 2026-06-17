@@ -1,6 +1,6 @@
 import type { TestSuiteFlowNode, TestSuiteFlowStep } from '@shared/testing';
 import { isFlowStepNode, normalizeFlowStepNodes } from '@shared/testing';
-import type { TestSuiteStepType, ValidationStepConfig } from '@shared/testing';
+import type { TestSuiteStepType, ValidationStepConfig, CacheStepConfig } from '@shared/testing';
 
 import type { TxIconName } from '@app/shared/icons/tx-icon.registry';
 import type { TxTreeNode } from '@app/shared/components/tx-tree/tx-tree.types';
@@ -26,6 +26,8 @@ function iconForStepType(stepType: TestSuiteStepType): TxIconName {
       return 'http';
     case 'VALIDATION':
       return 'checkCircle';
+    case 'CACHE':
+      return 'bookmark';
     case 'WAIT':
       return 'clock';
     case 'E2E':
@@ -56,8 +58,8 @@ function toFlowStepTreeNode(
 ): FlowStepTreeNode {
   const subtitle = flowStepTreeSubtitle(step, stepById);
   const refStepId =
-    step.stepType === 'VALIDATION'
-      ? ((step.config as ValidationStepConfig).refStepId ?? null)
+    step.stepType === 'VALIDATION' || step.stepType === 'CACHE'
+      ? ((step.config as ValidationStepConfig | CacheStepConfig).refStepId ?? null)
       : null;
   return {
     id: step.id,

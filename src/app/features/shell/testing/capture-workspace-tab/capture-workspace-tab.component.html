@@ -54,7 +54,7 @@
           <tx-button
             [variant]="sessionRecording() ? 'secondary' : 'primary'"
             [disabled]="!captureSupported() || (capture.running() && !sessionRecording())"
-            [title]="capture.running() && !sessionRecording() ? 'Another session is recording' : ''"
+            [hint]="capture.running() && !sessionRecording() ? 'Another session is recording' : ''"
             (pressed)="handleRunToggle()"
           >
             {{ sessionRecording() ? 'Stop capture' : 'Start capture' }}

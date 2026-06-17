@@ -1,5 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
+import { UiPreferencesService } from '@app/core/ui/ui-preferences.service';
+
 import { TxButtonComponent } from './tx-button.component';
 
 describe('TxButtonComponent', () => {
@@ -8,6 +10,12 @@ describe('TxButtonComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [TxButtonComponent],
+      providers: [
+        {
+          provide: UiPreferencesService,
+          useValue: { showIconTooltips: () => true },
+        },
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(TxButtonComponent);

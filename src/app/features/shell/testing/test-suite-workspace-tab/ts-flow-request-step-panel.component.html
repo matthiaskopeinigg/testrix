@@ -13,9 +13,11 @@
 
     @if (requestSource() === 'manual') {
       @if (needsManualUrl()) {
-        <tx-banner variant="warning" title="HTTP Request">
-          Specify a URL for this manual request.
-        </tx-banner>
+        <div class="ts-flow-request-tab__banner-row">
+          <tx-banner variant="warning" title="HTTP Request">
+            Specify a URL for this manual request.
+          </tx-banner>
+        </div>
       }
 
       <div class="request-tab__bar">

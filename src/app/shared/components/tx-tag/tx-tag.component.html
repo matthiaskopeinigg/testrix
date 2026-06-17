@@ -1,4 +1,4 @@
-<span class="tx-tag">
+<span class="tx-tag" [txTooltip]="hint()" txTooltipPosition="top">
   <ng-content />
   @if (removable()) {
     <button type="button" class="tx-tag__remove" aria-label="Remove" (click)="handleRemoveClick($event)">

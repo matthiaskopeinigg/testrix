@@ -7,9 +7,12 @@ import {
 } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 
+import { TxTooltipDirective } from '../tx-tooltip/tx-tooltip.directive';
+
 @Component({
   selector: 'tx-toggle',
   standalone: true,
+  imports: [TxTooltipDirective],
   templateUrl: './tx-toggle.component.html',
   styleUrl: './tx-toggle.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -31,6 +34,7 @@ export class TxToggleComponent implements ControlValueAccessor {
 
   readonly controlId = input('');
   readonly label = input('');
+  readonly hint = input('');
   readonly disabled = input(false);
 
   protected readonly autoId = `tx-toggle-${TxToggleComponent.nextId++}`;

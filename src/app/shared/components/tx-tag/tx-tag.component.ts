@@ -1,5 +1,7 @@
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 
+import { TxTooltipDirective } from '../tx-tooltip/tx-tooltip.directive';
+
 export type TxTagVariant = 'default' | 'success' | 'warning' | 'error' | 'info';
 
 /** Label casing for tag text (metrics use normal case). */
@@ -8,6 +10,7 @@ export type TxTagCasing = 'uppercase' | 'normal';
 @Component({
   selector: 'tx-tag',
   standalone: true,
+  imports: [TxTooltipDirective],
   templateUrl: './tx-tag.component.html',
   styleUrl: './tx-tag.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -22,6 +25,7 @@ export class TxTagComponent {
   readonly variant = input<TxTagVariant>('default');
   readonly casing = input<TxTagCasing>('uppercase');
   readonly removable = input(false);
+  readonly hint = input('');
 
   readonly removed = output<void>();
 

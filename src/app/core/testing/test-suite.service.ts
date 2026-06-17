@@ -536,6 +536,8 @@ function defaultStepName(stepType: TestSuiteStepType): string {
       return 'HTTP Request';
     case 'VALIDATION':
       return 'Validation';
+    case 'CACHE':
+      return 'Cache';
     case 'WAIT':
       return 'Wait';
     case 'E2E':

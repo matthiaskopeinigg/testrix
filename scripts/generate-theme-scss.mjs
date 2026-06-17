@@ -118,8 +118,31 @@ scss += `@media (prefers-color-scheme: light) {
 }
 `;
 
+function contrastOnPrimary(primary, text) {
+  const rgb = hexToRgb(primary);
+  const lightness = relativeLightness(rgb);
+  return lightness > 0.52 ? text : '#ffffff';
+}
+
+function hexToRgb(hex) {
+  const value = hex.replace('#', '');
+  return [
+    Number.parseInt(value.slice(0, 2), 16),
+    Number.parseInt(value.slice(2, 4), 16),
+    Number.parseInt(value.slice(4, 6), 16),
+  ];
+}
+
+function relativeLightness([r, g, b]) {
+  const channel = (c) => {
+    const s = c / 255;
+    return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+  };
+  return 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b);
+}
+
 function paletteArgs(p) {
-  const onPrimary = p.appearance === 'light' ? p.text : p.bg;
+  const onPrimary = contrastOnPrimary(p.primary, p.text);
   return `${hex(p.bg)}, ${hex(p.surface)}, ${hex(p.text)}, ${hex(p.primary)}, ${hex(p.secondary)}, ${hex(p.accent)}, ${hex(p.border)}, ${hex(onPrimary)}`;
 }
 

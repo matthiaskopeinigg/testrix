@@ -33,7 +33,7 @@
             [variant]="runButtonVariant()"
             [loading]="runActionPending()"
             loadingLabel="Working"
-            [title]="runButtonTitle()"
+            [hint]="runButtonTitle()"
             [disabled]="!running() && !canStartLoadTest()"
             (pressed)="handleRunToggle()"
           >

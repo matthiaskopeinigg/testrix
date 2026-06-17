@@ -8,6 +8,7 @@ import { FLOW_STEP_ADD_HINTS, FLOW_STEP_ADD_ICONS, FLOW_STEP_GUIDED_TITLES } fro
 const STEP_LABELS: Record<TestSuiteStepType, string> = {
   REQUEST: 'HTTP Request',
   VALIDATION: 'Validation',
+  CACHE: 'Cache',
   DATABASE: 'Database',
   E2E: 'Browser (E2E)',
   HTTP_LISTENER: 'HTTP Listener',
@@ -89,6 +90,14 @@ export const FLOW_STEP_VALIDATION_OPERATOR_OPTIONS: readonly TxDropdownOption[] 
   { value: 'not_exists', label: 'Does not exist' },
   { value: 'is_empty', label: 'Is empty' },
   { value: 'is_not_empty', label: 'Is not empty' },
+];
+
+/** Validation rule extract kind options. */
+export const FLOW_STEP_VALIDATION_EXTRACT_KIND_OPTIONS: readonly TxDropdownOption[] = [
+  { value: 'jsonpath', label: 'JSONPath' },
+  { value: 'json_pointer', label: 'JSON Pointer' },
+  { value: 'text_regex', label: 'Text regex' },
+  { value: 'full', label: 'Full value' },
 ];
 
 /** HTTP listener match phase. */

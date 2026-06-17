@@ -8,6 +8,7 @@ const boundedText = (max: number) => z.string().max(max);
 export const TEST_SUITE_STEP_TYPES = [
   'REQUEST',
   'VALIDATION',
+  'CACHE',
   'DATABASE',
   'E2E',
   'HTTP_LISTENER',
@@ -98,14 +99,29 @@ export const validationRuleSchema = z.object({
   bodyFormat: z
     .enum(['auto', 'json', 'xml', 'text', 'graphql', 'form-data', 'urlencoded', 'binary'])
     .optional(),
-  extractKind: z
-    .enum(['full', 'json_pointer', 'jsonpath', 'xpath', 'text_regex', 'form_field', 'url_param', 'binary_metric'])
-    .optional(),
-  extract: z.string().optional(),
   bodyWiremockMatcherJson: z.string().optional(),
 });
 
 export type ValidationRule = z.infer<typeof validationRuleSchema>;
+
+export const cacheStepEntrySchema = z.object({
+  variableName: z.string().default(''),
+  source: validationRuleSchema.shape.source,
+  expression: z.string().default(''),
+  extractKind: z
+    .enum(['full', 'json_pointer', 'jsonpath', 'xpath', 'text_regex', 'form_field', 'url_param', 'binary_metric'])
+    .optional(),
+  extract: z.string().optional(),
+});
+
+export type CacheStepEntry = z.infer<typeof cacheStepEntrySchema>;
+
+export const cacheStepConfigSchema = z.object({
+  refStepId: z.string().nullable().optional(),
+  entries: z.array(cacheStepEntrySchema).default([]),
+});
+
+export type CacheStepConfig = z.infer<typeof cacheStepConfigSchema>;
 
 export const validationStepConfigSchema = z.object({
   refStepId: z.string().nullable().optional(),
@@ -159,6 +175,8 @@ export const manualStepConfigSchema = z.object({
   timeout: z.union([z.number(), z.string()]).optional(),
 });
 
+export type ManualStepConfig = z.infer<typeof manualStepConfigSchema>;
+
 export const httpListenerStepConfigSchema = z.object({
   urlPattern: z.string().default(''),
   method: z.string().default('POST'),
@@ -186,6 +204,7 @@ export const triggerStepConfigSchema = z.object({
 export const testSuiteStepConfigSchema = z.union([
   requestStepConfigSchema,
   validationStepConfigSchema,
+  cacheStepConfigSchema,
   databaseStepConfigSchema,
   e2eStepConfigSchema,
   httpListenerStepConfigSchema,
@@ -220,6 +239,21 @@ export function createDefaultValidationStepConfig(): ValidationStepConfig {
         expression: '',
         operator: 'equals',
         expected: '200',
+      },
+    ],
+  });
+}
+
+export function createDefaultCacheStepConfig(): CacheStepConfig {
+  return cacheStepConfigSchema.parse({
+    refStepId: null,
+    entries: [
+      {
+        variableName: '',
+        source: 'response_body',
+        expression: '',
+        extractKind: 'jsonpath',
+        extract: '',
       },
     ],
   });
@@ -272,6 +306,8 @@ export function defaultConfigForStepType(stepType: TestSuiteStepType): TestSuite
       return createDefaultRequestStepConfig();
     case 'VALIDATION':
       return createDefaultValidationStepConfig();
+    case 'CACHE':
+      return createDefaultCacheStepConfig();
     case 'DATABASE':
       return createDefaultDatabaseStepConfig();
     case 'E2E':

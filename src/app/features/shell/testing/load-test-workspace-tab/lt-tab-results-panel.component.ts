@@ -25,6 +25,7 @@ import { TxDropdownComponent } from '@app/shared/components/tx-dropdown/tx-dropd
 import type { TxDropdownOption } from '@app/shared/components/tx-dropdown/tx-dropdown.types';
 import { TxFormFieldComponent } from '@app/shared/components/tx-form-field/tx-form-field.component';
 import { TxIconComponent } from '@app/shared/components/tx-icon/tx-icon.component';
+import { TxTooltipDirective } from '@app/shared/components/tx-tooltip/tx-tooltip.directive';
 import { TxTagComponent } from '@app/shared/components/tx-tag/tx-tag.component';
 
 import { LtResultsComparePanelComponent } from './lt-results-compare-panel.component';
@@ -61,6 +62,7 @@ const EMPTY_METRIC_HEALTH = {
     TxDropdownComponent,
     TxFormFieldComponent,
     TxIconComponent,
+    TxTooltipDirective,
     TxTagComponent,
     LtResultsComparePanelComponent,
     LtResultsExportToolbarComponent,

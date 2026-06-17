@@ -63,7 +63,8 @@
           [class.is-active]="resultsView() === 'compare'"
           [attr.aria-selected]="resultsView() === 'compare'"
           [disabled]="!canCompare()"
-          [title]="canCompare() ? 'Compare two saved runs' : 'Save at least two runs to compare'"
+          [txTooltip]="canCompare() ? 'Compare two saved runs' : 'Save at least two runs to compare'"
+          txTooltipPosition="top"
           (click)="handleViewChange('compare')"
         >
           Compare
@@ -93,7 +94,7 @@
               (ngModelChange)="handleCompareRunAChange($event)"
             />
           </tx-form-field>
-          <tx-button variant="secondary" title="Swap baseline and comparison runs" (pressed)="handleSwapCompareRuns()">
+          <tx-button variant="secondary" hint="Swap baseline and comparison runs" (pressed)="handleSwapCompareRuns()">
             Swap
           </tx-button>
           <tx-form-field label="Run B (comparison)" controlId="lt-compare-run-b">

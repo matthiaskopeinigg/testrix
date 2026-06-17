@@ -266,6 +266,12 @@ export interface ElectronRendererBridge {
     onFlowRunProgress: (
       listener: (event: import('@shared/testing').FlowRunProgressEvent) => void,
     ) => () => void;
+    onFlowManualInputPrompt: (
+      listener: (event: import('@shared/testing').FlowManualInputPrompt) => void,
+    ) => () => void;
+    flowManualInputSubmit: (
+      payload: import('@shared/testing').FlowManualInputSubmitPayload,
+    ) => Promise<{ readonly ok: boolean; readonly error?: string }>;
     e2eExecute: (payload: import('@shared/testing').E2eExecutePayload) => Promise<import('@shared/testing').E2eExecuteResult>;
     e2eSignalCancel: () => void;
     clearE2eRunnerSession: () => Promise<{ readonly ok: boolean }>;

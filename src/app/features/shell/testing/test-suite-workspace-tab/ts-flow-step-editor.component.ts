@@ -35,6 +35,7 @@ import { TsFlowRequestStepPanelComponent } from './ts-flow-request-step-panel.co
 import { TsFlowStepFailureAlertComponent } from './ts-flow-step-failure-alert.component';
 import { TsFlowTriggerStepPanelComponent } from './ts-flow-trigger-step-panel.component';
 import { TsFlowValidationStepPanelComponent } from './ts-flow-validation-step-panel.component';
+import { TsFlowCacheStepPanelComponent } from './ts-flow-cache-step-panel.component';
 import { TsFlowWaitStepPanelComponent } from './ts-flow-wait-step-panel.component';
 
 @Component({
@@ -52,6 +53,7 @@ import { TsFlowWaitStepPanelComponent } from './ts-flow-wait-step-panel.componen
     TsFlowStepFailureAlertComponent,
     TsFlowRequestStepPanelComponent,
     TsFlowValidationStepPanelComponent,
+    TsFlowCacheStepPanelComponent,
     TsFlowE2eStepPanelComponent,
     TsFlowWaitStepPanelComponent,
     TsFlowManualStepPanelComponent,

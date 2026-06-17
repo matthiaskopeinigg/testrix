@@ -24,7 +24,12 @@
 .ts-flow-request-tab__source-row {
   flex-shrink: 0;
   max-width: 18rem;
-  padding: 0.45rem 12px 0.35rem;
+  padding: 0.45rem tab-chrome.$workspace-tab-inset-x 0.35rem;
+}
+
+.ts-flow-request-tab__banner-row {
+  flex-shrink: 0;
+  padding: 0.35rem tab-chrome.$workspace-tab-inset-x;
 }
 
 .request-tab__bar {

@@ -95,4 +95,42 @@ describe('collectPriorFlowPlaceholderKeys', () => {
 
     expect(catalog.some((item) => item.label === '{{laterVar}}')).toBe(false);
   });
+
+  it('includes cache step placeholders from prior steps only', () => {
+    const flow = baseFlow([
+      {
+        id: 'step-1',
+        type: 'step',
+        parentId: null,
+        stepType: 'CACHE',
+        name: 'Extract user id',
+        enabled: true,
+        config: {
+          refStepId: 'req-1',
+          entries: [
+            {
+              variableName: 'userId',
+              source: 'response_body',
+              expression: '',
+              extractKind: 'jsonpath',
+              extract: '$[0].id',
+            },
+          ],
+        },
+      },
+      {
+        id: 'step-2',
+        type: 'step',
+        parentId: null,
+        stepType: 'REQUEST',
+        name: 'Follow-up',
+        enabled: true,
+        config: {},
+      },
+    ]);
+
+    const catalog = collectPriorFlowPlaceholderKeys(flow, 'step-2', null);
+
+    expect(catalog.some((item) => item.label === '{{userId}}')).toBe(true);
+  });
 });

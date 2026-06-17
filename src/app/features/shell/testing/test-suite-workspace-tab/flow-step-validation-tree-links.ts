@@ -1,6 +1,6 @@
 import type { TestSuiteFlowNode } from '@shared/testing';
 import { normalizeFlowStepNodes } from '@shared/testing';
-import type { ValidationStepConfig } from '@shared/testing';
+import type { ValidationStepConfig, CacheStepConfig } from '@shared/testing';
 
 /** Directed link from a validation step to its reference step in the flat tree. */
 export interface FlowValidationTreeLink {
@@ -17,10 +17,12 @@ export function collectFlowValidationReferenceLinks(
   const links: FlowValidationTreeLink[] = [];
 
   for (const step of steps) {
-    if (step.stepType !== 'VALIDATION') {
+    if (step.stepType !== 'VALIDATION' && step.stepType !== 'CACHE') {
       continue;
     }
-    const refId = String((step.config as ValidationStepConfig).refStepId ?? '').trim();
+    const refId = String(
+      (step.config as ValidationStepConfig | CacheStepConfig).refStepId ?? '',
+    ).trim();
     if (!refId || !stepIds.has(refId)) {
       continue;
     }

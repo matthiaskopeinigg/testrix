@@ -1,4 +1,6 @@
 :host {
+  --tx-vertical-split-handle-height: 24px;
+
   display: flex;
   flex: 1 1 auto;
   flex-direction: column;
@@ -40,7 +42,8 @@
 
 .tx-vertical-split-pane__handle {
   position: relative;
-  flex: 0 0 14px;
+  z-index: 1;
+  flex: 0 0 var(--tx-vertical-split-handle-height);
   flex-shrink: 0;
   cursor: row-resize;
   touch-action: none;
@@ -83,6 +86,7 @@
   top: 50%;
   transform: translate(-50%, -50%);
   z-index: 2;
+  pointer-events: auto;
 }
 
 .tx-vertical-split-pane__reveal {

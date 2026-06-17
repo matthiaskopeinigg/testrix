@@ -234,6 +234,12 @@ export function registerTestingHandlers(ipc: IpcMainBinder, deps: TestingHandler
     }),
   );
   ipc.handle(
+    TestingChannels.flowManualInputSubmit,
+    wrapInvokeHandler(TestingChannels.flowManualInputSubmit, async (_event, payload: unknown) =>
+      runtime.submitFlowManualInput(payload),
+    ),
+  );
+  ipc.handle(
     TestingChannels.regressionStatus,
     wrapInvokeHandler(TestingChannels.regressionStatus, async () => runtime.regressionStatus()),
   );

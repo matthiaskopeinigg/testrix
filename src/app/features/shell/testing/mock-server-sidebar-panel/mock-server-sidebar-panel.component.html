@@ -32,7 +32,8 @@
               <button
                 type="button"
                 class="mock-server-sidebar-panel__status-addr"
-                [title]="'Copy ' + listenUrl()"
+                [txTooltip]="'Copy ' + listenUrl()"
+                txTooltipPosition="bottom"
                 [attr.aria-label]="'Copy listen address ' + listenUrl()"
                 (click)="handleCopyListenAddress()"
               >

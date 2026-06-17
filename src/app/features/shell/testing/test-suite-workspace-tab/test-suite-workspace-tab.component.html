@@ -119,7 +119,7 @@
               [loading]="running()"
               loadingLabel="Running"
               [disabled]="!running() && !canRun()"
-              [title]="runBlockReason() ?? 'Run all enabled steps in order'"
+              [hint]="runBlockReason() ?? 'Run all enabled steps in order'"
               (pressed)="handleRun()"
             >
               {{ runLabel() }}
@@ -320,6 +320,12 @@
       variant="danger"
       (confirmed)="handleDeleteConfirmed()"
       (closed)="handleDeleteClosed()"
+    />
+
+    <app-ts-flow-manual-input-dialog
+      [prompt]="manualInputPrompt()"
+      (submitted)="handleManualInputSubmit($event)"
+      (cancelled)="handleManualInputCancelled($event)"
     />
   }
 }

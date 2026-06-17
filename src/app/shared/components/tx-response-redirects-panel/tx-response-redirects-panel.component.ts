@@ -6,11 +6,12 @@ import { copyTextToClipboard } from '@shared/http/response-clipboard';
 
 import { TxButtonComponent } from '../tx-button/tx-button.component';
 import { TxIconComponent } from '../tx-icon/tx-icon.component';
+import { TxTooltipDirective } from '../tx-tooltip/tx-tooltip.directive';
 
 @Component({
   selector: 'tx-response-redirects-panel',
   standalone: true,
-  imports: [TxButtonComponent, TxIconComponent],
+  imports: [TxButtonComponent, TxIconComponent, TxTooltipDirective],
   templateUrl: './tx-response-redirects-panel.component.html',
   styleUrl: './tx-response-redirects-panel.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

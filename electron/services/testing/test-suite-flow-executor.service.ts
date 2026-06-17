@@ -22,6 +22,9 @@ import {
   resolveGlobalE2eScreenshotDirectory,
   resolveValidationActualValue,
   sanitizeValidationRulesForReferenceStepType,
+  sanitizeCacheEntriesForReferenceStepType,
+  resolveCacheEntryValue,
+  cacheEntryExtractFailureMessage,
   validationFailureMessage,
   type FlowRunProgressEvent,
   type FlowStepRunCapture,
@@ -31,15 +34,18 @@ import {
   type TestSuiteStepStatus,
 } from '../../../shared/testing';
 import type {
+  CacheStepConfig,
   DatabaseStepConfig,
   E2eStepConfig,
   HttpInterceptorStepConfig,
   HttpListenerStepConfig,
+  ManualStepConfig,
   RequestStepConfig,
   ValidationRule,
   ValidationStepConfig,
   WaitStepConfig,
 } from '../../../shared/testing/test-suite-steps.schema';
+import type { FlowManualInputRequest, FlowManualInputResult } from '../../../shared/testing/flow-manual-input.schema';
 import { migrateTestSuitesFile } from '../../../shared/testing/test-suite-migrate';
 import { isTestSuiteFlow, TEST_SUITE_ROOT_ID } from '../../../shared/testing/test-suites.schema';
 
@@ -68,6 +74,7 @@ export interface TestSuiteFlowExecuteOptions {
   readonly environmentIdOverride?: string | null;
   readonly e2eShowWindowOverride?: boolean;
   readonly e2eKeepWindowOpenOverride?: boolean;
+  readonly requestManualInput?: (request: FlowManualInputRequest) => Promise<FlowManualInputResult>;
 }
 
 /**
@@ -205,6 +212,8 @@ export class TestSuiteFlowExecutor {
         const stepStartedAt = Date.now();
         try {
           await this.executeStep(step, flow, {
+            flowId: flow.id,
+            requestManualInput: options.requestManualInput,
             collections: collections.nodes,
             http: settings.http,
             environments,
@@ -267,6 +276,8 @@ export class TestSuiteFlowExecutor {
     step: TestSuiteFlowStep,
     flow: TestSuiteFlow,
     ctx: {
+      readonly flowId: string;
+      readonly requestManualInput?: (request: FlowManualInputRequest) => Promise<FlowManualInputResult>;
       readonly collections: readonly import('@shared/config').CollectionNode[];
       readonly http: import('@shared/config').HttpSettings;
       readonly environments: import('@shared/config').EnvironmentsFile;
@@ -290,6 +301,9 @@ export class TestSuiteFlowExecutor {
       case 'VALIDATION':
         await this.executeValidation(step, flow, ctx.showBrowser);
         return;
+      case 'CACHE':
+        await this.executeCache(step, flow, ctx.showBrowser);
+        return;
       case 'E2E':
         await this.executeE2e(step, flow, ctx.showBrowser, ctx.e2eScreenshotFolder, ctx.e2eIgnoreInvalidSsl);
         return;
@@ -303,6 +317,8 @@ export class TestSuiteFlowExecutor {
         await this.executeDatabase(step, flow, ctx);
         return;
       case 'MANUAL':
+        await this.executeManual(step, ctx);
+        return;
       case 'TRIGGER':
         throw new Error(`${step.stepType} execution is not yet implemented in Testrix.`);
       default:
@@ -900,9 +916,6 @@ export class TestSuiteFlowExecutor {
       });
       const { snapshot } = await executeHttpRequest(payload);
       this.captures.set(step.id, buildHttpResponseStepCapture(snapshot));
-      if (!snapshot.status.ok) {
-        throw new Error(formatHttpStepFailure(snapshot));
-      }
       return;
     }
 
@@ -963,15 +976,52 @@ export class TestSuiteFlowExecutor {
 
     const { snapshot } = await executeHttpRequest(payload);
     this.captures.set(step.id, buildHttpResponseStepCapture(snapshot));
-    if (!snapshot.status.ok) {
-      throw new Error(formatHttpStepFailure(snapshot));
-    }
   }
 
   private async executeWait(step: TestSuiteFlowStep): Promise<void> {
     const cfg = step.config as WaitStepConfig;
     const ms = Number(cfg.durationMs) || 1000;
     await sleep(ms);
+  }
+
+  private async executeManual(
+    step: TestSuiteFlowStep,
+    ctx: {
+      readonly flowId: string;
+      readonly requestManualInput?: (request: FlowManualInputRequest) => Promise<FlowManualInputResult>;
+    },
+  ): Promise<void> {
+    const cfg = step.config as ManualStepConfig;
+    const variableName = String(cfg.variableName ?? '').trim() || 'userInput';
+    const prompt = String(cfg.prompt ?? '').trim() || 'Please enter value:';
+
+    if (!ctx.requestManualInput) {
+      throw new Error('Manual input requires an interactive flow run.');
+    }
+
+    if (this.cancelled) {
+      throw new Error('Run cancelled.');
+    }
+
+    const timeoutMs = resolveTimeoutMs(cfg.timeout, 0) || undefined;
+    const result = await ctx.requestManualInput({
+      flowId: ctx.flowId,
+      stepId: step.id,
+      stepName: step.name,
+      prompt,
+      variableName,
+      timeoutMs,
+    });
+
+    if (this.cancelled || result.cancelled) {
+      throw new Error(result.error ?? 'Run cancelled.');
+    }
+
+    if (!result.ok) {
+      throw new Error(result.error ?? 'Manual input failed.');
+    }
+
+    this.flowVariables.set(variableName, result.value ?? '');
   }
 
   private async executeValidation(
@@ -1009,6 +1059,44 @@ export class TestSuiteFlowExecutor {
       }
     }
   }
+
+  private async executeCache(
+    step: TestSuiteFlowStep,
+    flow: TestSuiteFlow,
+    showBrowser: boolean,
+  ): Promise<void> {
+    const cfg = step.config as CacheStepConfig;
+    const refId = cfg.refStepId;
+    if (!refId) {
+      throw new Error('Cache step needs a reference step.');
+    }
+
+    const refStep = findFlowStepById(flow.nodes, refId);
+    if (!refStep) {
+      throw new Error('Reference step was not found in this flow.');
+    }
+
+    const entries = sanitizeCacheEntriesForReferenceStepType(refStep.stepType, cfg.entries ?? []);
+    if (entries.length === 0) {
+      return;
+    }
+
+    const capture = await this.resolveValidationReferenceCapture(refStep, refId, [], showBrowser);
+
+    for (const entry of entries) {
+      const variableName = String(entry.variableName ?? '').trim();
+      if (!variableName) {
+        continue;
+      }
+
+      const value = resolveCacheEntryValue(capture, entry);
+      if (value === null) {
+        throw new Error(cacheEntryExtractFailureMessage(entry, variableName));
+      }
+
+      this.flowVariables.set(variableName, value);
+    }
+  }
 }
 
 function resolveTimeoutMs(raw: number | string | undefined, fallback: number): number {
@@ -1024,20 +1112,4 @@ function resolveTimeoutMs(raw: number | string | undefined, fallback: number): n
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-function formatHttpStepFailure(snapshot: {
-  readonly status: { readonly code: number; readonly text: string };
-  readonly body: { readonly text?: string };
-}): string {
-  const statusText = snapshot.status.text.trim();
-  const statusLabel = statusText
-    ? `HTTP ${snapshot.status.code} ${statusText}`
-    : `HTTP ${snapshot.status.code}`;
-  const body = snapshot.body.text?.trim() ?? '';
-  if (!body) {
-    return statusLabel;
-  }
-  const preview = body.length > 160 ? `${body.slice(0, 160)}…` : body;
-  return `${statusLabel}: ${preview}`;
 }

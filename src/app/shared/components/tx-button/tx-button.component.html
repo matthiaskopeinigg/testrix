@@ -5,7 +5,7 @@
   [attr.data-variant]="variant()"
   [attr.data-size]="size()"
   [attr.aria-label]="ariaLabel() ?? null"
-  [attr.title]="ariaLabel() ?? null"
+  [txTooltip]="tooltipText()"
   [disabled]="isInteractionBlocked()"
   [attr.aria-busy]="loading() ? 'true' : null"
   (click)="handlePress($event)"

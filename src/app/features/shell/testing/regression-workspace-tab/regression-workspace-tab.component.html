@@ -32,7 +32,7 @@
           @if (canRerunFailed()) {
             <tx-button
               variant="secondary"
-              [title]="'Rerun flows that failed in the last run'"
+              [hint]="'Rerun flows that failed in the last run'"
               [disabled]="runActionPending()"
               (pressed)="handleRerunFailed()"
             >
@@ -43,7 +43,7 @@
             [variant]="runButtonVariant()"
             [loading]="running() || runActionPending()"
             loadingLabel="Working"
-            [title]="runButtonTitle()"
+            [hint]="runButtonTitle()"
             [disabled]="!running() && !canStartRegression()"
             (pressed)="handleRunToggle()"
           >

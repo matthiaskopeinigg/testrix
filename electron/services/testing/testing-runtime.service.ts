@@ -22,6 +22,7 @@ import { LoadTestRunner } from './load-test-runner.service';
 import { MockServerRunner, type MockServerStatus } from './mock-server-runner.service';
 import { RegressionRunner } from './regression-runner.service';
 import { TestSuiteFlowExecutor, type TestSuiteFlowRunResult } from './test-suite-flow-executor.service';
+import { FlowManualInputCoordinator } from './flow-manual-input-coordinator.service';
 import {
   E2eRunnerService,
   type E2eExecutePayload,
@@ -37,6 +38,7 @@ export class TestingRuntimeService {
   private readonly loadTestRunner = new LoadTestRunner();
   private readonly regressionRunner = new RegressionRunner();
   private readonly flowExecutor = new TestSuiteFlowExecutor();
+  private readonly manualInputCoordinator = new FlowManualInputCoordinator();
   private readonly e2eRunner = new E2eRunnerService();
   private readonly mockServerRunner: MockServerRunner;
   private readonly captureRunner = new CaptureRunner();
@@ -166,13 +168,30 @@ export class TestingRuntimeService {
   }
 
   async e2eExecuteFlow(flowId: string, sender?: WebContents): Promise<TestSuiteFlowRunResult> {
-    return this.flowExecutor.executeFlow(flowId, this.files, (event: FlowRunProgressEvent) => {
-      sender?.send(TestingChannels.flowRunProgress, event);
-    });
+    this.manualInputCoordinator.bindSender(sender);
+    try {
+      return await this.flowExecutor.executeFlow(
+        flowId,
+        this.files,
+        (event: FlowRunProgressEvent) => {
+          sender?.send(TestingChannels.flowRunProgress, event);
+        },
+        {
+          requestManualInput: (request) => this.manualInputCoordinator.prompt(request),
+        },
+      );
+    } finally {
+      this.manualInputCoordinator.reset();
+    }
   }
 
   e2eCancel(): void {
     this.flowExecutor.cancel();
+    this.manualInputCoordinator.cancelActivePrompts();
+  }
+
+  submitFlowManualInput(payload: unknown): { readonly ok: boolean; readonly error?: string } {
+    return this.manualInputCoordinator.submit(payload);
   }
 
   async e2eExecute(payload: E2eExecutePayload): Promise<E2eExecuteResult> {

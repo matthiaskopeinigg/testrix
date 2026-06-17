@@ -66,14 +66,30 @@
 }
 
 .ts-flow-step-panel__rule {
-  display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 1fr) auto;
+  display: flex;
+  flex-direction: column;
   gap: 0.5rem;
-  align-items: end;
   padding: 0.65rem;
   border-radius: var(--tx-radius-sm, 8px);
   border: 1px solid color-mix(in srgb, var(--tx-border-0) 42%, transparent);
   background: color-mix(in srgb, var(--tx-surface-0) 65%, transparent);
+}
+
+.ts-flow-step-panel__rule-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) auto;
+  gap: 0.5rem;
+  align-items: end;
+}
+
+.ts-flow-step-panel__rule-main--cache {
+  grid-template-columns:
+    minmax(0, 0.9fr)
+    minmax(0, 1fr)
+    minmax(0, 0.9fr)
+    minmax(0, 1.1fr)
+    minmax(0, 0.9fr)
+    auto;
 }
 
 .ts-flow-step-panel__capture-preview {
@@ -99,7 +115,8 @@
 }
 
 @media (max-width: 48rem) {
-  .ts-flow-step-panel__rule {
+  .ts-flow-step-panel__rule-main,
+  .ts-flow-step-panel__rule-main--cache {
     grid-template-columns: 1fr;
   }
 }

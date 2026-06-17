@@ -9,6 +9,14 @@
     color.channel($bg, 'lightness', $space: hsl);
 }
 
+/** Foreground for labels/icons on saturated fill colors (CTA buttons, chips). */
+@function tx-contrast-on-fill($fill, $dark-fg: #111111, $light-fg: #ffffff) {
+  @if color.channel($fill, 'lightness', $space: hsl) > 52% {
+    @return $dark-fg;
+  }
+  @return $light-fg;
+}
+
 /** Extra contrast tuning for light IDE themes (VS Code, GitHub, …). */
 @mixin tx-theme-light-polish($muted-text, $elevated-surface, $primary, $surface) {
   --tx-text-2: #{$muted-text};
@@ -80,7 +88,7 @@
   --tx-btn-primary-hover-bg: #{color-mix(in srgb, #{$primary} 22%, #{$surface})};
   --tx-btn-primary-active-bg: #{color-mix(in srgb, #{$primary} 30%, #{$surface})};
   --tx-btn-cta-bg: #{$primary};
-  --tx-btn-cta-fg: #{$on-primary};
+  --tx-btn-cta-fg: #{tx-contrast-on-fill($primary, $text, #ffffff)};
   --tx-btn-cta-border: #{color-mix(in srgb, #{$primary} 92%, #{$border})};
   --tx-btn-cta-hover-bg: #{color-mix(in srgb, #{$primary} 88%, #{$text} 12%)};
   --tx-btn-cta-active-bg: #{color-mix(in srgb, #{$primary} 82%, #{$bg} 18%)};

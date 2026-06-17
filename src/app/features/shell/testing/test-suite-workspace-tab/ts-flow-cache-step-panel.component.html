@@ -1,0 +1,101 @@
+<div class="request-panel ts-flow-step-panel">
+  <h2 class="request-panel__title">Cache</h2>
+  <p class="request-panel__hint">{{ referenceHint() }}</p>
+
+  <tx-form-field label="Reference step" controlId="ts-cache-ref">
+    <tx-dropdown
+      controlId="ts-cache-ref"
+      [options]="refStepOptions()"
+      placeholder="Select prior step…"
+      [ngModel]="cfg().refStepId ?? ''"
+      (ngModelChange)="handleRefStepChange($event)"
+    />
+  </tx-form-field>
+
+  @if (refStepCapture(); as capture) {
+    <p class="ts-flow-step-panel__capture-preview" role="status">
+      Cached from last run:
+      @if (capture.kind === 'http_response') {
+        <span>HTTP {{ capture.statusCode }}</span>
+        @if (capture.bodyText) {
+          <span> · {{ capture.bodyText.length }} chars body</span>
+        }
+      } @else {
+        <span>{{ capturePreview() }}</span>
+      }
+    </p>
+  } @else if (cfg().refStepId) {
+    <p class="ts-flow-step-panel__capture-preview ts-flow-step-panel__capture-preview--empty" role="status">
+      No cached data yet — run the flow so the reference step executes first.
+    </p>
+  }
+
+  @if (sourceOptions().length === 0) {
+    <p class="ts-flow-step-panel__hint-inline">Select a reference step to configure cache entries.</p>
+  } @else {
+    <div class="ts-flow-step-panel__rules">
+      @for (entry of entries(); track $index) {
+        <div class="ts-flow-step-panel__rule">
+          <div class="ts-flow-step-panel__rule-main ts-flow-step-panel__rule-main--cache">
+            <tx-form-field label="Variable name" [controlId]="'ts-cache-var-' + $index">
+              <tx-input
+                [controlId]="'ts-cache-var-' + $index"
+                [ngModel]="entry.variableName"
+                (ngModelChange)="patchEntry($index, { variableName: $event })"
+                placeholder="userId"
+              />
+            </tx-form-field>
+            <tx-form-field label="Source" [controlId]="'ts-cache-src-' + $index">
+              <tx-dropdown
+                [controlId]="'ts-cache-src-' + $index"
+                [options]="sourceOptions()"
+                [ngModel]="entry.source"
+                (ngModelChange)="patchEntry($index, { source: $event })"
+              />
+            </tx-form-field>
+            @if (expressionLabel(entry.source); as exprLabel) {
+              <tx-form-field [label]="exprLabel" [controlId]="'ts-cache-expr-' + $index">
+                @if (expressionSuggestions(entry.source); as catalog) {
+                  <tx-suggest-input
+                    [controlId]="'ts-cache-expr-' + $index"
+                    [suggestions]="catalog"
+                    [completionLabel]="exprLabel"
+                    [ngModel]="entry.expression"
+                    (ngModelChange)="patchEntry($index, { expression: $event })"
+                  />
+                } @else {
+                  <tx-input
+                    [controlId]="'ts-cache-expr-' + $index"
+                    [ngModel]="entry.expression"
+                    (ngModelChange)="patchEntry($index, { expression: $event })"
+                  />
+                }
+              </tx-form-field>
+            }
+            <tx-form-field label="Extract path" [controlId]="'ts-cache-path-' + $index">
+              <tx-input
+                [controlId]="'ts-cache-path-' + $index"
+                [ngModel]="entry.extract ?? ''"
+                (ngModelChange)="patchEntry($index, { extract: $event || undefined })"
+                placeholder="$[0].id"
+              />
+            </tx-form-field>
+            <tx-form-field label="Extract kind" [controlId]="'ts-cache-kind-' + $index">
+              <tx-dropdown
+                [controlId]="'ts-cache-kind-' + $index"
+                [options]="extractKindOptions"
+                [ngModel]="entry.extractKind ?? 'jsonpath'"
+                (ngModelChange)="patchEntry($index, { extractKind: $event })"
+              />
+            </tx-form-field>
+            <tx-button variant="secondary" size="icon" ariaLabel="Remove entry" (pressed)="handleRemoveEntry($index)">
+              <tx-icon name="close" [size]="14" aria-hidden="true" />
+            </tx-button>
+          </div>
+        </div>
+      }
+    </div>
+
+    <tx-button variant="add" [disabled]="!refStepType()" (pressed)="handleAddEntry()">Add variable</tx-button>
+  }
+</div>

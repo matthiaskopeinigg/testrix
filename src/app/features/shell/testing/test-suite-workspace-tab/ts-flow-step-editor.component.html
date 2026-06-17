@@ -69,6 +69,14 @@
             (configChange)="patchConfig($event)"
           />
         }
+        @case ('CACHE') {
+          <app-ts-flow-cache-step-panel
+            [config]="s.config"
+            [flow]="flow()"
+            [refStepOptions]="refStepOptions()"
+            (configChange)="patchConfig($event)"
+          />
+        }
         @case ('WAIT') {
           <app-ts-flow-wait-step-panel
             [config]="s.config"

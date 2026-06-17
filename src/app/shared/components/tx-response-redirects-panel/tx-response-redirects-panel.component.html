@@ -11,29 +11,45 @@
           </div>
           <div class="tx-response-redirects-panel__url-row">
             <span class="tx-response-redirects-panel__label">From</span>
-            <code class="tx-response-redirects-panel__url" [title]="hop.from">{{ hop.from }}</code>
+            <code class="tx-response-redirects-panel__url" [txTooltip]="hop.from" txTooltipPosition="top">{{ hop.from }}</code>
             <tx-button
               variant="secondary"
-              [title]="copiedUrl() === hop.from ? 'Copied' : 'Copy URL'"
+              size="icon"
+              [hint]="copiedUrl() === hop.from ? 'Copied' : 'Copy URL'"
+              [ariaLabel]="copiedUrl() === hop.from ? 'Copied' : 'Copy URL'"
               (pressed)="handleCopy(hop.from)"
             >
               <tx-icon name="copy" [size]="12" aria-hidden="true" />
             </tx-button>
-            <tx-button variant="secondary" title="Open in browser" (pressed)="handleOpen(hop.from)">
+            <tx-button
+              variant="secondary"
+              size="icon"
+              hint="Open in browser"
+              ariaLabel="Open in browser"
+              (pressed)="handleOpen(hop.from)"
+            >
               <tx-icon name="externalLink" [size]="12" aria-hidden="true" />
             </tx-button>
           </div>
           <div class="tx-response-redirects-panel__url-row">
             <span class="tx-response-redirects-panel__label">To</span>
-            <code class="tx-response-redirects-panel__url" [title]="hop.to">{{ hop.to }}</code>
+            <code class="tx-response-redirects-panel__url" [txTooltip]="hop.to" txTooltipPosition="top">{{ hop.to }}</code>
             <tx-button
               variant="secondary"
-              [title]="copiedUrl() === hop.to ? 'Copied' : 'Copy URL'"
+              size="icon"
+              [hint]="copiedUrl() === hop.to ? 'Copied' : 'Copy URL'"
+              [ariaLabel]="copiedUrl() === hop.to ? 'Copied' : 'Copy URL'"
               (pressed)="handleCopy(hop.to)"
             >
               <tx-icon name="copy" [size]="12" aria-hidden="true" />
             </tx-button>
-            <tx-button variant="secondary" title="Open in browser" (pressed)="handleOpen(hop.to)">
+            <tx-button
+              variant="secondary"
+              size="icon"
+              hint="Open in browser"
+              ariaLabel="Open in browser"
+              (pressed)="handleOpen(hop.to)"
+            >
               <tx-icon name="externalLink" [size]="12" aria-hidden="true" />
             </tx-button>
           </div>

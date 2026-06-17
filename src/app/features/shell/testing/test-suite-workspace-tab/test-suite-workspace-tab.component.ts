@@ -24,6 +24,7 @@ import {
   flattenEnabledFlowSteps,
   getFlowRunBlockingReason,
   normalizeFlowStepNodes,
+  type FlowManualInputPrompt,
 } from '@shared/testing';
 import type { TestSuiteFlowNode, TestSuiteFlowStep, TestSuiteStepStatus, TestSuiteStepType } from '@shared/testing';
 import { parseTestSuiteTabResourceId } from '@shared/testing';
@@ -75,6 +76,7 @@ import {
   findFlowStepTreeNode,
 } from './test-suite-flow-tree.mutations';
 import { TsAddFlowStepModalComponent } from './ts-add-flow-step-modal.component';
+import { TsFlowManualInputDialogComponent, type FlowManualInputDialogSubmit } from './ts-flow-manual-input-dialog.component';
 import { TsFlowRunPanelComponent } from './ts-flow-run-panel/ts-flow-run-panel.component';
 import { TsFlowSettingsPanelComponent } from './ts-flow-settings-panel.component';
 import { TsFlowStepEditorComponent } from './ts-flow-step-editor.component';
@@ -126,6 +128,7 @@ const FLOW_NAV_ITEMS: readonly TsFlowNavItem[] = [
     TsFlowSettingsPanelComponent,
     TsFlowRunPanelComponent,
     TsAddFlowStepModalComponent,
+    TsFlowManualInputDialogComponent,
     WorkspaceSectionNavSliderDirective,
   ],
   templateUrl: './test-suite-workspace-tab.component.html',
@@ -174,6 +177,7 @@ export class TestSuiteWorkspaceTabComponent {
   protected readonly deleteOpen = signal(false);
   protected readonly deleteNodeId = signal<string | null>(null);
   protected readonly deleteMessage = signal('');
+  protected readonly manualInputPrompt = signal<FlowManualInputPrompt | null>(null);
 
   private sessionUiTimer: ReturnType<typeof setTimeout> | null = null;
   private panelSizeSaveTimer: ReturnType<typeof setTimeout> | null = null;
@@ -339,6 +343,15 @@ export class TestSuiteWorkspaceTabComponent {
       () => this.loadEntranceChildCount(),
       { tabActive: () => this.active() },
     );
+
+    const unsubscribeManualInput = this.electron.bridge()?.testing.onFlowManualInputPrompt?.((prompt) => {
+      const parsed = this.parsed();
+      if (parsed?.kind === 'flow' && parsed.id === prompt.flowId) {
+        this.manualInputPrompt.set(prompt);
+        this.handleSelectedStepChange(prompt.stepId);
+      }
+    });
+    this.destroyRef.onDestroy(() => unsubscribeManualInput?.());
 
     effect(() => {
       if (!this.active()) {
@@ -740,8 +753,30 @@ export class TestSuiteWorkspaceTabComponent {
       this.notifier.reportUnknown(error);
     } finally {
       unsubscribeProgress?.();
+      this.manualInputPrompt.set(null);
       this.running.set(false);
     }
+  }
+
+  protected async handleManualInputSubmit(event: FlowManualInputDialogSubmit): Promise<void> {
+    const bridge = this.electron.bridge();
+    const result = await bridge?.testing.flowManualInputSubmit?.({
+      requestId: event.requestId,
+      value: event.value,
+    });
+    this.manualInputPrompt.set(null);
+    if (result && !result.ok && result.error) {
+      this.notifier.reportUnknown(new Error(result.error));
+    }
+  }
+
+  protected async handleManualInputCancelled(requestId: string): Promise<void> {
+    const bridge = this.electron.bridge();
+    await bridge?.testing.flowManualInputSubmit?.({
+      requestId,
+      cancelled: true,
+    });
+    this.manualInputPrompt.set(null);
   }
 
   private openContextMenu(x: number, y: number, nodeId: string | null): void {

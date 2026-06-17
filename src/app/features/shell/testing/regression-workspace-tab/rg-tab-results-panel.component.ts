@@ -34,6 +34,7 @@ import { TxDropdownComponent } from '@app/shared/components/tx-dropdown/tx-dropd
 import type { TxDropdownOption } from '@app/shared/components/tx-dropdown/tx-dropdown.types';
 import { TxFormFieldComponent } from '@app/shared/components/tx-form-field/tx-form-field.component';
 import { TxIconComponent } from '@app/shared/components/tx-icon/tx-icon.component';
+import { TxTooltipDirective } from '@app/shared/components/tx-tooltip/tx-tooltip.directive';
 import { TxTagComponent } from '@app/shared/components/tx-tag/tx-tag.component';
 
 import { RgResultsExportToolbarComponent } from './rg-results-export-toolbar.component';
@@ -70,6 +71,7 @@ type RgResultsSectionId =
     TxDropdownComponent,
     TxFormFieldComponent,
     TxIconComponent,
+    TxTooltipDirective,
     TxTagComponent,
     RgResultsRunTimelineComponent,
     RgResultsStatCardComponent,

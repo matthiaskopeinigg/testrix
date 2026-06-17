@@ -13,15 +13,18 @@ import {
 } from '@angular/core';
 
 import { TxIconComponent } from '../tx-icon/tx-icon.component';
+import { TxTooltipDirective } from '../tx-tooltip/tx-tooltip.directive';
 
 const MIN_SECONDARY_HEIGHT = 140;
 const AUTO_HIDE_THRESHOLD = 120;
 const SECONDARY_MOTION_MS_FALLBACK = 180;
+/** Must match `--tx-vertical-split-handle-height` in the split pane stylesheet. */
+const SPLIT_HANDLE_HEIGHT_PX = 24;
 
 @Component({
   selector: 'tx-vertical-split-pane',
   standalone: true,
-  imports: [TxIconComponent],
+  imports: [TxIconComponent, TxTooltipDirective],
   template: `
     <div class="tx-vertical-split-pane">
       <div class="tx-vertical-split-pane__primary">
@@ -36,7 +39,8 @@ const SECONDARY_MOTION_MS_FALLBACK = 180;
             <button
               type="button"
               class="tx-vertical-split-pane__reveal-pill"
-              [title]="'Show ' + revealLabel() + ' panel'"
+              [txTooltip]="'Show ' + revealLabel() + ' panel'"
+              txTooltipPosition="top"
               [attr.aria-label]="'Show ' + revealLabel() + ' panel'"
               (click)="handleRevealClick($event)"
             >
@@ -62,7 +66,8 @@ const SECONDARY_MOTION_MS_FALLBACK = 180;
               <button
                 type="button"
                 class="tx-vertical-split-pane__hide-pill"
-                [title]="'Hide ' + revealLabel() + ' panel'"
+                [txTooltip]="'Hide ' + revealLabel() + ' panel'"
+                txTooltipPosition="top"
                 [attr.aria-label]="'Hide ' + revealLabel() + ' panel'"
                 (click)="handleHideClick($event)"
               >
@@ -118,7 +123,7 @@ export class TxVerticalSplitPaneComponent {
   private readonly document = inject(DOCUMENT);
   private readonly destroyRef = inject(DestroyRef);
 
-  private readonly handleHeightPx = 14;
+  private readonly handleHeightPx = SPLIT_HANDLE_HEIGHT_PX;
   private motionTimer: ReturnType<typeof setTimeout> | null = null;
   private dragging = false;
 

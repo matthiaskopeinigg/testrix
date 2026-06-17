@@ -2,14 +2,14 @@ import { ChangeDetectionStrategy, Component, computed, input, output } from '@an
 import { FormsModule } from '@angular/forms';
 
 import {
-  defaultValidationRuleForReferenceStepType,
+  defaultCacheEntryForReferenceStepType,
   findFlowStepById,
-  sanitizeValidationRulesForReferenceStepType,
+  sanitizeCacheEntriesForReferenceStepType,
   type FlowStepRunCapture,
   type TestSuiteFlow,
   type TestSuiteStepType,
 } from '@shared/testing';
-import type { ValidationStepConfig } from '@shared/testing/test-suite-steps.schema';
+import type { CacheStepConfig } from '@shared/testing/test-suite-steps.schema';
 import type { TxDropdownOption } from '@app/shared/components/tx-dropdown/tx-dropdown.types';
 
 import { TxButtonComponent } from '@app/shared/components/tx-button/tx-button.component';
@@ -19,16 +19,16 @@ import { TxFormFieldComponent } from '@app/shared/components/tx-form-field/tx-fo
 import { TxInputComponent } from '@app/shared/components/tx-input/tx-input.component';
 import { TxSuggestInputComponent } from '@app/shared/components/tx-suggest-input/tx-suggest-input.component';
 
-import { FLOW_STEP_VALIDATION_OPERATOR_OPTIONS } from './flow-step-editor-options';
+import { FLOW_STEP_VALIDATION_EXTRACT_KIND_OPTIONS } from './flow-step-editor-options';
 import {
-  buildValidationSourceOptions,
-  validationReferenceHint,
-  validationExpressionLabel,
-  validationExpressionSuggestions,
-} from './flow-step-validation-options';
+  buildCacheSourceOptions,
+  cacheExpressionLabel,
+  cacheExpressionSuggestions,
+  cacheReferenceHint,
+} from './flow-step-cache-options';
 
 @Component({
-  selector: 'app-ts-flow-validation-step-panel',
+  selector: 'app-ts-flow-cache-step-panel',
   standalone: true,
   imports: [
     FormsModule,
@@ -39,18 +39,18 @@ import {
     TxButtonComponent,
     TxIconComponent,
   ],
-  templateUrl: './ts-flow-validation-step-panel.component.html',
+  templateUrl: './ts-flow-cache-step-panel.component.html',
   styleUrl: './ts-flow-step-panel.shared.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class TsFlowValidationStepPanelComponent {
+export class TsFlowCacheStepPanelComponent {
   readonly config = input<Record<string, unknown>>({});
   readonly flow = input<TestSuiteFlow | null>(null);
   readonly refStepOptions = input<readonly TxDropdownOption[]>([]);
 
   readonly configChange = output<Record<string, unknown>>();
 
-  protected readonly operatorOptions = FLOW_STEP_VALIDATION_OPERATOR_OPTIONS;
+  protected readonly extractKindOptions = FLOW_STEP_VALIDATION_EXTRACT_KIND_OPTIONS;
 
   protected readonly refStepType = computed((): TestSuiteStepType | null => {
     const flow = this.flow();
@@ -70,65 +70,63 @@ export class TsFlowValidationStepPanelComponent {
     return findFlowStepById(flow.nodes, refId)?.lastRunCapture ?? null;
   });
 
-  protected readonly sourceOptions = computed(() =>
-    buildValidationSourceOptions(this.refStepType()),
-  );
+  protected readonly sourceOptions = computed(() => buildCacheSourceOptions(this.refStepType()));
 
-  protected readonly referenceHint = computed(() => validationReferenceHint(this.refStepType()));
+  protected readonly referenceHint = computed(() => cacheReferenceHint(this.refStepType()));
 
-  protected cfg(): ValidationStepConfig {
-    return (this.config() ?? { refStepId: null, rules: [] }) as ValidationStepConfig;
+  protected cfg(): CacheStepConfig {
+    return (this.config() ?? { refStepId: null, entries: [] }) as CacheStepConfig;
   }
 
-  protected rules(): ValidationStepConfig['rules'] {
-    return this.cfg().rules ?? [];
+  protected entries(): CacheStepConfig['entries'] {
+    return this.cfg().entries ?? [];
   }
 
-  protected patch(patch: Partial<ValidationStepConfig>): void {
+  protected patch(patch: Partial<CacheStepConfig>): void {
     this.configChange.emit({ ...this.cfg(), ...patch });
   }
 
-  protected patchRule(index: number, patch: Partial<ValidationStepConfig['rules'][number]>): void {
-    const rules = [...this.rules()];
-    rules[index] = { ...rules[index], ...patch };
-    this.patch({ rules });
+  protected patchEntry(index: number, patch: Partial<CacheStepConfig['entries'][number]>): void {
+    const entries = [...this.entries()];
+    entries[index] = { ...entries[index], ...patch };
+    this.patch({ entries });
   }
 
-  protected expressionLabel(source: ValidationStepConfig['rules'][number]['source']): string | null {
-    return validationExpressionLabel(source);
+  protected expressionLabel(source: CacheStepConfig['entries'][number]['source']): string | null {
+    return cacheExpressionLabel(source);
   }
 
   protected expressionSuggestions(
-    source: ValidationStepConfig['rules'][number]['source'],
+    source: CacheStepConfig['entries'][number]['source'],
   ): readonly string[] | null {
-    return validationExpressionSuggestions(source);
+    return cacheExpressionSuggestions(source);
   }
 
   protected handleRefStepChange(refStepId: string): void {
     const nextRefId = refStepId || null;
     const flow = this.flow();
     const refStep = nextRefId && flow ? findFlowStepById(flow.nodes, nextRefId) : null;
-    const rules = nextRefId
-      ? sanitizeValidationRulesForReferenceStepType(refStep?.stepType, this.rules())
+    const entries = nextRefId
+      ? sanitizeCacheEntriesForReferenceStepType(refStep?.stepType, this.entries())
       : [];
-    if (rules.length === 0) {
-      const fallback = defaultValidationRuleForReferenceStepType(refStep?.stepType);
-      this.patch({ refStepId: nextRefId, rules: fallback ? [fallback] : [] });
+    if (entries.length === 0) {
+      const fallback = defaultCacheEntryForReferenceStepType(refStep?.stepType);
+      this.patch({ refStepId: nextRefId, entries: fallback ? [fallback] : [] });
       return;
     }
-    this.patch({ refStepId: nextRefId, rules });
+    this.patch({ refStepId: nextRefId, entries });
   }
 
-  protected handleAddRule(): void {
-    const fallback = defaultValidationRuleForReferenceStepType(this.refStepType());
+  protected handleAddEntry(): void {
+    const fallback = defaultCacheEntryForReferenceStepType(this.refStepType());
     if (!fallback) {
       return;
     }
-    this.patch({ rules: [...this.rules(), fallback] });
+    this.patch({ entries: [...this.entries(), fallback] });
   }
 
-  protected handleRemoveRule(index: number): void {
-    this.patch({ rules: this.rules().filter((_, i) => i !== index) });
+  protected handleRemoveEntry(index: number): void {
+    this.patch({ entries: this.entries().filter((_, i) => i !== index) });
   }
 
   protected capturePreview(): string | null {
@@ -144,10 +142,6 @@ export class TsFlowValidationStepPanelComponent {
     }
     if (capture.kind !== 'e2e_element') {
       return null;
-    }
-    const usesPageUrl = this.rules().some((rule) => rule.source === 'e2e_page_url');
-    if (usesPageUrl && capture.pageUrl.trim()) {
-      return capture.pageUrl.trim();
     }
     if (capture.elementExists) {
       const preview = capture.elementText.trim() || capture.elementHtml.trim();

@@ -1,5 +1,5 @@
 import type { TestSuiteFlowStep, TestSuiteStepStatus, TestSuiteStepType } from '@shared/testing';
-import type { ValidationStepConfig } from '@shared/testing';
+import type { ValidationStepConfig, CacheStepConfig } from '@shared/testing';
 
 import type { TxTagVariant } from '@app/shared/components/tx-tag/tx-tag.component';
 
@@ -7,6 +7,7 @@ import type { TxTagVariant } from '@app/shared/components/tx-tag/tx-tag.componen
 export const FLOW_STEP_GUIDED_TITLES: Record<TestSuiteStepType, string> = {
   REQUEST: 'Send API request',
   VALIDATION: 'Check expected result',
+  CACHE: 'Save values for later',
   DATABASE: 'Query saved database',
   E2E: 'Automate browser action',
   HTTP_LISTENER: 'Listen for network request',
@@ -20,6 +21,7 @@ export const FLOW_STEP_GUIDED_TITLES: Record<TestSuiteStepType, string> = {
 export const FLOW_STEP_ADD_HINTS: Record<TestSuiteStepType, string> = {
   REQUEST: 'Call an API and store the response.',
   VALIDATION: 'Assert a prior response or value.',
+  CACHE: 'Extract values from a prior step into flow variables.',
   DATABASE: 'Run a query and cache the result.',
   E2E: 'Drive the browser (navigate, click, type).',
   HTTP_LISTENER: 'Wait for a matching HTTP request.',
@@ -36,6 +38,7 @@ export const FLOW_STEP_ADD_ICONS: Record<
 > = {
   REQUEST: 'http',
   VALIDATION: 'checkCircle',
+  CACHE: 'bookmark',
   DATABASE: 'database',
   E2E: 'globe',
   HTTP_LISTENER: 'filter',
@@ -81,8 +84,10 @@ export function flowStepTreeSubtitle(
   const guided = FLOW_STEP_GUIDED_TITLES[step.stepType];
   const prefix = trimmed.length > 0 ? guided : undefined;
 
-  if (step.stepType === 'VALIDATION') {
-    const refId = String((step.config as ValidationStepConfig).refStepId ?? '').trim();
+  if (step.stepType === 'VALIDATION' || step.stepType === 'CACHE') {
+    const refId = String(
+      (step.config as ValidationStepConfig | CacheStepConfig).refStepId ?? '',
+    ).trim();
     if (!refId) {
       return prefix;
     }
@@ -90,7 +95,8 @@ export function flowStepTreeSubtitle(
     const refLabel = refStep
       ? flowStepPrimaryLabel(refStep.name, refStep.stepType)
       : 'Missing step';
-    const detail = `Validates → ${refLabel}`;
+    const detail =
+      step.stepType === 'CACHE' ? `Caches from → ${refLabel}` : `Validates → ${refLabel}`;
     return prefix ? `${prefix} · ${detail}` : detail;
   }
 
@@ -194,6 +200,8 @@ export function flowStepTypeAccentToken(stepType: TestSuiteStepType): string {
   switch (stepType) {
     case 'VALIDATION':
       return 'var(--tx-success)';
+    case 'CACHE':
+      return 'var(--tx-link)';
     case 'DATABASE':
       return 'var(--tx-accent)';
     case 'E2E':

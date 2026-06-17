@@ -19,6 +19,10 @@ import { resolveStaticAssetUrl } from './resolve-static-asset-url.js';
 
 import type { UpdaterStatus } from '../../shared/updater/updater-status.schema';
 import type { FlowRunProgressEvent } from '../../shared/testing';
+import type {
+  FlowManualInputPrompt,
+  FlowManualInputSubmitPayload,
+} from '../../shared/testing/flow-manual-input.schema';
 import {
   DEFAULT_APPEARANCE_THEME_ID,
   normalizeAppearanceThemeId,
@@ -259,6 +263,17 @@ const api: ElectronAPI = {
         ipcRenderer.removeListener(TestingChannels.flowRunProgress, handler);
       };
     },
+    onFlowManualInputPrompt: (listener) => {
+      const handler = (_event: IpcRendererEvent, payload: FlowManualInputPrompt): void => {
+        listener(payload);
+      };
+      ipcRenderer.on(TestingChannels.flowManualInputPrompt, handler);
+      return () => {
+        ipcRenderer.removeListener(TestingChannels.flowManualInputPrompt, handler);
+      };
+    },
+    flowManualInputSubmit: (payload) =>
+      ipcRenderer.invoke(TestingChannels.flowManualInputSubmit, payload),
     e2eExecute: (payload) => ipcRenderer.invoke(E2eChannels.execute, payload),
     e2eSignalCancel: () => ipcRenderer.send(E2eChannels.signalCancel),
     clearE2eRunnerSession: () => ipcRenderer.invoke(E2eChannels.clearRunnerSession),

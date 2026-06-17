@@ -16,7 +16,7 @@
       <tx-toggle
         class="ts-flow-settings__toggle"
         label="Critical"
-        title="Mark flow as critical"
+        hint="Mark flow as critical"
         [ngModel]="flow().isCritical === true"
         (ngModelChange)="criticalChange.emit($event)"
       />
@@ -25,14 +25,14 @@
         <tx-toggle
           class="ts-flow-settings__toggle ts-flow-settings__toggle--e2e"
           label="Show E2E"
-          title="Show E2E browser window during run"
+          hint="Show E2E browser window during run"
           [ngModel]="e2eShowWindow()"
           (ngModelChange)="e2eShowWindowChange.emit($event)"
         />
         <tx-toggle
           class="ts-flow-settings__toggle ts-flow-settings__toggle--e2e"
           label="Keep E2E"
-          title="Keep E2E browser window open after run"
+          hint="Keep E2E browser window open after run"
           [ngModel]="e2eKeepWindowOpen()"
           (ngModelChange)="e2eKeepWindowOpenChange.emit($event)"
         />

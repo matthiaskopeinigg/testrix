@@ -6,6 +6,7 @@ import {
 } from '@shared/config';
 import { DYNAMIC_VARIABLES, type DynamicVariableCatalogItem } from '@shared/dynamic-variables';
 import { flattenEnabledFlowSteps, type TestSuiteFlow } from '@shared/testing';
+import type { CacheStepConfig } from '@shared/testing/test-suite-steps.schema';
 
 import { FLOW_STEP_GUIDED_TITLES } from './flow-step-labels';
 
@@ -48,6 +49,22 @@ export function collectPriorFlowPlaceholderKeys(
           label: `{{${key}}}`,
           insert: `{{${key}}}`,
           detail: `Cached query result from database step "${step.name || FLOW_STEP_GUIDED_TITLES.DATABASE}".`,
+        });
+      }
+    }
+
+    if (step.stepType === 'CACHE') {
+      const cfg = step.config as CacheStepConfig;
+      for (const entry of cfg.entries ?? []) {
+        const key = entry.variableName?.trim();
+        if (!key) {
+          continue;
+        }
+        extras.push({
+          id: `cache-${step.id}-${key}`,
+          label: `{{${key}}}`,
+          insert: `{{${key}}}`,
+          detail: `Cached value from cache step "${step.name || FLOW_STEP_GUIDED_TITLES.CACHE}".`,
         });
       }
     }

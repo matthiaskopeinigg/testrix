@@ -36,51 +36,53 @@
     <div class="ts-flow-step-panel__rules">
       @for (rule of rules(); track $index) {
         <div class="ts-flow-step-panel__rule">
-          <tx-form-field label="Source" [controlId]="'ts-val-src-' + $index">
-            <tx-dropdown
-              [controlId]="'ts-val-src-' + $index"
-              [options]="sourceOptions()"
-              [ngModel]="rule.source"
-              (ngModelChange)="patchRule($index, { source: $event })"
-            />
-          </tx-form-field>
-          @if (expressionLabel(rule.source); as exprLabel) {
-            <tx-form-field [label]="exprLabel" [controlId]="'ts-val-expr-' + $index">
-              @if (expressionSuggestions(rule.source); as catalog) {
-                <tx-suggest-input
-                  [controlId]="'ts-val-expr-' + $index"
-                  [suggestions]="catalog"
-                  [completionLabel]="exprLabel"
-                  [ngModel]="rule.expression"
-                  (ngModelChange)="patchRule($index, { expression: $event })"
-                />
-              } @else {
-                <tx-input
-                  [controlId]="'ts-val-expr-' + $index"
-                  [ngModel]="rule.expression"
-                  (ngModelChange)="patchRule($index, { expression: $event })"
-                />
-              }
+          <div class="ts-flow-step-panel__rule-main">
+            <tx-form-field label="Source" [controlId]="'ts-val-src-' + $index">
+              <tx-dropdown
+                [controlId]="'ts-val-src-' + $index"
+                [options]="sourceOptions()"
+                [ngModel]="rule.source"
+                (ngModelChange)="patchRule($index, { source: $event })"
+              />
             </tx-form-field>
-          }
-          <tx-form-field label="Operator" [controlId]="'ts-val-op-' + $index">
-            <tx-dropdown
-              [controlId]="'ts-val-op-' + $index"
-              [options]="operatorOptions"
-              [ngModel]="rule.operator"
-              (ngModelChange)="patchRule($index, { operator: $event })"
-            />
-          </tx-form-field>
-          <tx-form-field label="Expected" [controlId]="'ts-val-exp-' + $index">
-            <tx-input
-              [controlId]="'ts-val-exp-' + $index"
-              [ngModel]="rule.expected"
-              (ngModelChange)="patchRule($index, { expected: $event })"
-            />
-          </tx-form-field>
-          <tx-button variant="secondary" size="icon" ariaLabel="Remove rule" (pressed)="handleRemoveRule($index)">
-            <tx-icon name="close" [size]="14" aria-hidden="true" />
-          </tx-button>
+            @if (expressionLabel(rule.source); as exprLabel) {
+              <tx-form-field [label]="exprLabel" [controlId]="'ts-val-expr-' + $index">
+                @if (expressionSuggestions(rule.source); as catalog) {
+                  <tx-suggest-input
+                    [controlId]="'ts-val-expr-' + $index"
+                    [suggestions]="catalog"
+                    [completionLabel]="exprLabel"
+                    [ngModel]="rule.expression"
+                    (ngModelChange)="patchRule($index, { expression: $event })"
+                  />
+                } @else {
+                  <tx-input
+                    [controlId]="'ts-val-expr-' + $index"
+                    [ngModel]="rule.expression"
+                    (ngModelChange)="patchRule($index, { expression: $event })"
+                  />
+                }
+              </tx-form-field>
+            }
+            <tx-form-field label="Operator" [controlId]="'ts-val-op-' + $index">
+              <tx-dropdown
+                [controlId]="'ts-val-op-' + $index"
+                [options]="operatorOptions"
+                [ngModel]="rule.operator"
+                (ngModelChange)="patchRule($index, { operator: $event })"
+              />
+            </tx-form-field>
+            <tx-form-field label="Expected" [controlId]="'ts-val-exp-' + $index">
+              <tx-input
+                [controlId]="'ts-val-exp-' + $index"
+                [ngModel]="rule.expected"
+                (ngModelChange)="patchRule($index, { expected: $event })"
+              />
+            </tx-form-field>
+            <tx-button variant="secondary" size="icon" ariaLabel="Remove rule" (pressed)="handleRemoveRule($index)">
+              <tx-icon name="close" [size]="14" aria-hidden="true" />
+            </tx-button>
+          </div>
         </div>
       }
     </div>
