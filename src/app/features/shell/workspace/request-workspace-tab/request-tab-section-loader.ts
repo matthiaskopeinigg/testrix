@@ -78,3 +78,17 @@ export function prefetchRequestTabSections(...sections: readonly RequestTabSecti
     void loadRequestTabSection(section);
   }
 }
+
+/** Waits for in-flight lazy section loads (Vitest teardown helper). */
+export async function drainRequestTabSectionLoadsForTests(): Promise<void> {
+  if (inflightBySection.size === 0) {
+    return;
+  }
+  await Promise.allSettled([...inflightBySection.values()]);
+}
+
+/** Clears cached lazy section loads between Vitest cases. */
+export function resetRequestTabSectionLoadsForTests(): void {
+  loadedBySection.clear();
+  inflightBySection.clear();
+}

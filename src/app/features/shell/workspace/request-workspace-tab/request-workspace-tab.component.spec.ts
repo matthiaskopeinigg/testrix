@@ -14,6 +14,10 @@ import { TxIconService } from '@app/shared/icons/tx-icon.service';
 
 import { COLLECTION_TREE_MOCK } from '@app/features/shell/collections/collection-tree.mock';
 
+import {
+  drainRequestTabSectionLoadsForTests,
+  resetRequestTabSectionLoadsForTests,
+} from './request-tab-section-loader';
 import { RequestWorkspaceTabComponent } from './request-workspace-tab.component';
 
 describe('RequestWorkspaceTabComponent', () => {
@@ -23,6 +27,7 @@ describe('RequestWorkspaceTabComponent', () => {
   let bindRequest: ReturnType<typeof vi.fn>;
 
   beforeEach(async () => {
+    resetRequestTabSectionLoadsForTests();
     patchRequestSettings = vi.fn().mockReturnValue(true);
     patchSession = vi.fn().mockResolvedValue(undefined);
     bindRequest = vi.fn();
@@ -70,6 +75,7 @@ describe('RequestWorkspaceTabComponent', () => {
           useValue: {
             entranceStaggerEnabled: () => false,
             animationsEnabled: () => false,
+            showIconTooltips: () => false,
           },
         },
         {
@@ -98,7 +104,9 @@ describe('RequestWorkspaceTabComponent', () => {
 
   afterEach(async () => {
     await fixture.whenStable();
+    await drainRequestTabSectionLoadsForTests();
     fixture.destroy();
+    resetRequestTabSectionLoadsForTests();
   });
 
   it('bindRequest runs only when the tab is active', () => {

@@ -43,7 +43,13 @@ describe('TxSettingsPopupComponent http request section', () => {
         },
         { provide: TxNotificationService, useValue: { success: vi.fn(), error: vi.fn() } },
         { provide: ThemeService, useValue: { activeThemeId: signal('default') } },
-        { provide: UiPreferencesService, useValue: { entranceStaggerEnabled: computed(() => false) } },
+        {
+          provide: UiPreferencesService,
+          useValue: {
+            entranceStaggerEnabled: computed(() => false),
+            showIconTooltips: computed(() => false),
+          },
+        },
         { provide: UpdateService, useValue: { status: signal(null) } },
         {
           provide: UpdateBannerContextService,

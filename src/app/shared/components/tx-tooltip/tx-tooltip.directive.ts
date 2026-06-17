@@ -54,11 +54,8 @@ export class TxTooltipDirective implements OnDestroy {
   }
 
   private show(): void {
-    if (
-      this.txTooltipDisabled() ||
-      !this.uiPreferences.showIconTooltips() ||
-      !this.txTooltip().trim()
-    ) {
+    const showTooltips = this.uiPreferences.showIconTooltips?.() ?? true;
+    if (this.txTooltipDisabled() || !showTooltips || !this.txTooltip().trim()) {
       return;
     }
     this.tooltips.show(this.host.nativeElement, this.txTooltip(), this.txTooltipPosition());
