@@ -1,6 +1,6 @@
 {
   "name": "testrix-setup",
-  "version": "0.9.0-beta.10",
+  "version": "0.9.0-beta.11",
   "description": "Testrix Setup",
   "main": "main.js",
   "private": true,
@@ -45,7 +45,9 @@
       "target": [
         {
           "target": "portable",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ],
       "forceCodeSigning": false,
@@ -55,7 +57,9 @@
       "target": [
         {
           "target": "AppImage",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ],
       "artifactName": "${productName}.${ext}",
@@ -66,7 +70,10 @@
       "target": [
         {
           "target": "dir",
-          "arch": ["x64", "arm64"]
+          "arch": [
+            "x64",
+            "arm64"
+          ]
         }
       ],
       "artifactName": "${productName}.${ext}",
