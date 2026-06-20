@@ -71,12 +71,12 @@
     "rxjs": "~7.8.0",
     "tough-cookie": "^6.0.1",
     "tslib": "^2.3.0",
-    "undici": "^7.16.0",
+    "undici": "^7.28.0",
     "yaml": "^2.9.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@angular/build": "^21.2.7",
+    "@angular/build": "^22.0.3",
     "@angular/cli": "^21.2.7",
     "@angular/compiler-cli": "^21.2.0",
     "@types/bcryptjs": "^2.4.6",
