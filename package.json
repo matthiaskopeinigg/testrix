@@ -61,7 +61,7 @@
     "chokidar": "^5.0.0",
     "cron-parser": "^5.5.0",
     "cronstrue": "^3.14.0",
-    "diff": "^7.0.0",
+    "diff": "^8.0.3",
     "electron-updater": "^6.8.3",
     "ioredis": "^5.10.1",
     "jose": "^6.2.3",
