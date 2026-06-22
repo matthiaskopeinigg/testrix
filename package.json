@@ -1,6 +1,6 @@
 {
   "name": "testrix",
-  "version": "0.9.0-beta.13",
+  "version": "0.9.0-beta.14",
   "description": "Testrix — Angular + Electron desktop shell scaffold",
   "main": "dist/electron/main.js",
   "private": true,
