@@ -98,15 +98,26 @@ export class RequestTabUrlInputComponent implements ControlValueAccessor {
     this.value.set(next);
     this.onChange(next);
     this.updateCompletion(next, inputEl.selectionStart ?? next.length);
-    queueMicrotask(() => this.syncMirrorScroll());
+    this.scheduleMirrorScrollSync();
   }
 
   protected handleFocus(): void {
     this.isFocused = true;
+    this.scheduleMirrorScrollSync();
   }
 
   protected handleScroll(): void {
     this.syncMirrorScroll();
+  }
+
+  protected handleSelect(): void {
+    this.scheduleMirrorScrollSync();
+  }
+
+  protected handleKeyup(ev: KeyboardEvent): void {
+    if (['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(ev.key)) {
+      this.scheduleMirrorScrollSync();
+    }
   }
 
   protected handleBlur(): void {
@@ -209,6 +220,7 @@ export class RequestTabUrlInputComponent implements ControlValueAccessor {
     const caret = caretIndexFromClientX(inputEl, ev.clientX);
     inputEl.focus({ preventScroll: true });
     inputEl.setSelectionRange(caret, caret);
+    this.scheduleMirrorScrollSync();
   }
 
   protected handleKeydown(ev: KeyboardEvent): void {
@@ -265,7 +277,7 @@ export class RequestTabUrlInputComponent implements ControlValueAccessor {
     queueMicrotask(() => {
       inputEl.focus({ preventScroll: true });
       inputEl.setSelectionRange(caret, caret);
-      this.syncMirrorScroll();
+      this.scheduleMirrorScrollSync();
     });
     this.closeCompletion();
   }
@@ -326,20 +338,37 @@ export class RequestTabUrlInputComponent implements ControlValueAccessor {
     }
   }
 
+  /** After the native input scrolls/repaints, align the highlight layer to its scrollLeft. */
+  private scheduleMirrorScrollSync(): void {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => this.syncMirrorScroll());
+    });
+  }
+
   private syncMirrorScroll(): void {
     const inputEl = this.nativeInput()?.nativeElement;
     if (!inputEl) {
       return;
     }
-    const scrollLeft = inputEl.scrollLeft;
-    const mirrors = this.hostEl.nativeElement.querySelectorAll(
+
+    const offset = inputEl.scrollLeft;
+    const layers = this.hostEl.nativeElement.querySelectorAll(
+      '.request-tab-url-input__mirror, .request-tab-url-input__hit',
+    );
+    for (const layer of layers) {
+      if (layer instanceof HTMLElement) {
+        layer.scrollLeft = 0;
+      }
+    }
+
+    const codes = this.hostEl.nativeElement.querySelectorAll(
       '.request-tab-url-input__mirror code, .request-tab-url-input__hit code',
     );
-    for (const el of mirrors) {
-      if (!(el instanceof HTMLElement)) {
+    for (const code of codes) {
+      if (!(code instanceof HTMLElement)) {
         continue;
       }
-      el.scrollLeft = scrollLeft;
+      code.style.transform = offset > 0 ? `translateX(-${offset}px)` : '';
     }
   }
 

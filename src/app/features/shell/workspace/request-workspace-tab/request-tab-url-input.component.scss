@@ -43,18 +43,19 @@
   margin: 0;
   padding: 0.5rem 0.75rem;
   border: none;
-  font: inherit;
+  font-family: inherit;
   font-size: 0.875rem;
   font-weight: 400;
+  font-style: normal;
   line-height: 1.4;
   letter-spacing: normal;
   word-spacing: normal;
   white-space: pre;
-  overflow-x: auto;
+  overflow-x: hidden;
   overflow-y: hidden;
-  scrollbar-width: thin;
   font-variant-ligatures: none;
   font-feature-settings: 'liga' 0, 'calt' 0;
+  text-rendering: geometricPrecision;
 }
 
 .request-tab-url-input__mirror {
@@ -68,7 +69,8 @@
 
   code {
     display: block;
-    width: 100%;
+    width: max-content;
+    min-width: 100%;
     min-height: 100%;
     margin: 0;
     padding: 0;
@@ -77,8 +79,10 @@
     font-size: inherit;
     line-height: inherit;
     font-weight: inherit;
+    font-style: inherit;
     letter-spacing: inherit;
     white-space: pre;
+    will-change: transform;
   }
 }
 
@@ -92,17 +96,21 @@
 
   code {
     display: block;
-    width: 100%;
+    width: max-content;
+    min-width: 100%;
     min-height: 100%;
     margin: 0;
     padding: 0;
+    border: 0;
     font: inherit;
     font-size: inherit;
     line-height: inherit;
     font-weight: inherit;
+    font-style: inherit;
     letter-spacing: inherit;
     white-space: pre;
     pointer-events: none;
+    will-change: transform;
   }
 }
 
@@ -115,6 +123,14 @@
   caret-color: var(--tx-text-0);
   background: transparent;
   outline: none;
+  scroll-padding-inline: 0.75rem;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
 
   &::placeholder {
     color: color-mix(in srgb, var(--tx-text-1) 85%, transparent);

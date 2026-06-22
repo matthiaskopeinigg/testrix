@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { findTxCodeEditorFoldRegions } from './tx-code-editor-folding';
 import { highlightCodeEditorContent, highlightHtml } from './tx-code-editor-highlight';
 
 describe('highlightCodeEditorContent JSON with catalog', () => {
@@ -54,5 +55,32 @@ describe('highlightHtml', () => {
     const redis = highlightCodeEditorContent('SET key "hello world"', 'redis');
     expect(redis).toContain('token-keyword">SET</span>');
     expect(redis).toContain('token-string');
+  });
+});
+
+describe('highlightCodeEditorContent fold placeholders', () => {
+  it('wraps collapsed ellipsis lines in clickable spans', () => {
+    const sample = `{
+  "widget": {
+    "text": {
+      "data": "Click Me"
+    }
+  }
+}`;
+    const regions = findTxCodeEditorFoldRegions(sample, 'json');
+    const outer = regions.find((r) => r.startLine === 0);
+    expect(outer).toBeDefined();
+    if (!outer) {
+      return;
+    }
+
+    const display = `{\n  ...\n}`;
+    const html = highlightCodeEditorContent(display, 'json', [], {
+      canonical: sample,
+      collapsedIds: new Set([outer.id]),
+      regions,
+    });
+    expect(html).toContain('tx-fold-placeholder');
+    expect(html).toContain(`data-fold-id="${outer.id}"`);
   });
 });

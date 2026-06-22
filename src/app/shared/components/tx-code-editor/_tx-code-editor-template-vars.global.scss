@@ -22,6 +22,12 @@
       color: color-mix(in srgb, var(--tx-warning) 92%, var(--tx-text-0));
       font-weight: 700;
     }
+
+    .tx-fold-placeholder {
+      color: color-mix(in srgb, var(--tx-text-1) 88%, var(--tx-text-0));
+      font-style: italic;
+      opacity: 0.9;
+    }
   }
 }
 
@@ -43,6 +49,16 @@
 
     .tx-var-token--env {
       cursor: pointer;
+    }
+
+    .tx-fold-placeholder {
+      pointer-events: auto;
+      cursor: pointer;
+
+      &:hover {
+        opacity: 1;
+        color: color-mix(in srgb, var(--tx-primary) 85%, var(--tx-text-0));
+      }
     }
   }
 }

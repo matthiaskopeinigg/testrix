@@ -59,6 +59,14 @@ import {
   TX_CODE_EDITOR_PM_COMPLETIONS,
 } from './tx-code-editor-pm-completions';
 import { tryFormatCodeEditorContent } from './tx-code-editor-format';
+import {
+  buildTxCodeEditorFoldedDisplay,
+  extractTxCodeEditorFoldHidden,
+  findCollapsedFoldRegionAtPlaceholderLine,
+  findTxCodeEditorFoldRegions,
+  txCodeEditorLineIndexAtClientY,
+  type TxCodeEditorFoldRegion,
+} from './tx-code-editor-folding';
 import { highlightCodeEditorContent } from './tx-code-editor-highlight';
 import {
   txCodeEditorLanguageLabel,
@@ -93,6 +101,8 @@ import { TxCodeEditorUndoStack, type TxCodeEditorUndoSnapshot } from './tx-code-
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
     '[class.tx-code-editor-host--template-vars]': 'templateVarsActive()',
+    '[class.tx-code-editor-host--folding]': 'codeFolding()',
+    '[class.tx-code-editor-host--fill]': 'fillHeight()',
   },
   providers: [
     {
@@ -125,7 +135,11 @@ export class TxCodeEditorComponent implements ControlValueAccessor, AfterViewIni
   readonly languageBadgeLabel = input<string | undefined>(undefined);
   readonly hideLineNumbers = input(false);
   readonly framed = input(false);
+  /** When true, expands to fill a flex/grid parent (e.g. dev tool or request body pane). */
+  readonly fillHeight = input(false);
   readonly autoFormat = input(true);
+  /** Pretty-print immediately after paste (independent of debounced {@link autoFormat}). */
+  readonly formatOnPaste = input(true);
   readonly overlaySyntaxHighlight = input(true);
   readonly jsonSnippetAutocomplete = input<boolean | undefined>(undefined);
   /** Enables Ctrl+Space and trigger-based suggestions (JSON / JS). */
@@ -140,6 +154,8 @@ export class TxCodeEditorComponent implements ControlValueAccessor, AfterViewIni
   readonly autoClose = input<boolean | undefined>(undefined);
   readonly smartEditing = input<boolean | undefined>(undefined);
   readonly markupSnippetAutocomplete = input<boolean | undefined>(undefined);
+  /** Enables gutter chevrons to collapse multiline `{` / `[` blocks (JSON and brace languages). */
+  readonly codeFolding = input(false);
   readonly showVariablePlaceholderHint = input(false);
   readonly placeholder = input('');
   /** VS Code–style shortcuts (copy, cut, paste, undo, Tab indent, Ctrl+/ comment, …). Overrides settings when set. */
@@ -187,13 +203,35 @@ export class TxCodeEditorComponent implements ControlValueAccessor, AfterViewIni
   protected readonly templateVarsActive = computed(
     () => this.variableCatalog().length > 0 && this.overlaySyntaxHighlight(),
   );
+  protected readonly foldingHitLayerActive = computed(
+    () => this.codeFolding() && this.collapsedFoldIds().size > 0 && this.overlaySyntaxHighlight(),
+  );
+  protected readonly hitLayerActive = computed(
+    () => this.templateVarsActive() || this.foldingHitLayerActive(),
+  );
 
   readonly blurred = output<void>();
   readonly environmentVariableClick = output<{ readonly key: string }>();
 
   protected readonly innerValue = signal('');
+  /** Full document text (unfolded); emitted via ControlValueAccessor. */
+  private readonly canonicalValue = signal('');
+  private readonly collapsedFoldIds = signal<ReadonlySet<string>>(new Set());
+  private readonly foldHiddenById = signal<ReadonlyMap<string, string>>(new Map());
   protected readonly highlightedHtml = signal('');
   protected readonly lineNumbers = signal<number[]>([1]);
+  protected readonly foldRegions = computed(() =>
+    this.codeFolding()
+      ? findTxCodeEditorFoldRegions(this.canonicalValue(), this.language())
+      : [],
+  );
+  protected readonly foldRegionsByStartLine = computed(() => {
+    const map = new Map<number, TxCodeEditorFoldRegion>();
+    for (const region of this.foldRegions()) {
+      map.set(region.startLine, region);
+    }
+    return map;
+  });
   protected readonly completionOpen = signal(false);
   protected readonly completionItems = signal<readonly TxCodeEditorCompletionItem[]>([]);
   protected readonly completionIndex = signal(0);
@@ -226,9 +264,14 @@ export class TxCodeEditorComponent implements ControlValueAccessor, AfterViewIni
   private tooltipAnchor: HTMLElement | null = null;
   private autoFormatTimer: ReturnType<typeof setTimeout> | null = null;
   private readonly autoFormatDebounceMs = 420;
+  private pendingFormatOnPaste = false;
   private readonly undoStack = new TxCodeEditorUndoStack();
   private pendingUndoSnapshot: TxCodeEditorUndoSnapshot | null = null;
   private applyingHistory = false;
+  private fillSlotResizeObserver: ResizeObserver | null = null;
+  private fillSlotResizeFrame: number | null = null;
+  private lastFillSlotHostPx = -1;
+  private lastFillSlotBodyPx = -1;
 
   private onChange: (value: string) => void = () => {};
   private onTouched: () => void = () => {};
@@ -237,7 +280,16 @@ export class TxCodeEditorComponent implements ControlValueAccessor, AfterViewIni
     effect(() => {
       const lang = this.language();
       const text = this.innerValue();
-      this.highlightedHtml.set(highlightCodeEditorContent(text, lang, this.variableCatalog()));
+      const collapsedIds = this.collapsedFoldIds();
+      const foldCtx =
+        this.codeFolding() && collapsedIds.size > 0
+          ? {
+              canonical: this.canonicalValue(),
+              collapsedIds,
+              regions: this.foldRegions(),
+            }
+          : undefined;
+      this.highlightedHtml.set(highlightCodeEditorContent(text, lang, this.variableCatalog(), foldCtx));
       const count = Math.max(1, text.split('\n').length);
       this.lineNumbers.set(Array.from({ length: count }, () => 0));
     });
@@ -250,19 +302,188 @@ export class TxCodeEditorComponent implements ControlValueAccessor, AfterViewIni
       this.applyExternalContent(bound);
     });
 
-    this.destroyRef.onDestroy(() => this.hideVariableTooltip());
+    effect(() => {
+      if (!this.fillHeight()) {
+        this.teardownFillSlotLayout();
+        return;
+      }
+      queueMicrotask(() => this.bindFillSlotLayout());
+    });
+
+    effect(() => {
+      this.completionOpen();
+      if (this.fillHeight()) {
+        queueMicrotask(() => this.syncFillSlotLayout());
+      }
+    });
+
+    this.destroyRef.onDestroy(() => {
+      this.hideVariableTooltip();
+      this.teardownFillSlotLayout();
+    });
+  }
+
+  private findFillSlotRoot(): HTMLElement | null {
+    let el: HTMLElement | null = this.hostRef.nativeElement.parentElement;
+    while (el) {
+      if (el.classList.contains('dev-tool-tab__body')) {
+        return el;
+      }
+      el = el.parentElement;
+    }
+    return null;
+  }
+
+  private findWorkspaceTabPanel(): HTMLElement | null {
+    let el: HTMLElement | null = this.hostRef.nativeElement;
+    while (el) {
+      if (
+        el.classList.contains('workspace-editor__tab-panel') &&
+        el.classList.contains('workspace-editor__tab-panel--active')
+      ) {
+        return el;
+      }
+      el = el.parentElement;
+    }
+    el = this.hostRef.nativeElement;
+    while (el) {
+      if (el.classList.contains('workspace-editor__tab-panel')) {
+        return el;
+      }
+      el = el.parentElement;
+    }
+    return null;
+  }
+
+  private computeFillSlotHeights(
+    host: HTMLElement,
+    root: HTMLElement,
+  ): { slotHeight: number; bodyHeight: number } {
+    const toolbar = root.querySelector('.tx-code-editor__toolbar');
+    const toolbarHeight = toolbar instanceof HTMLElement ? toolbar.offsetHeight : 0;
+    const completion = root.querySelector('.tx-code-editor__completion');
+    const completionHeight = completion instanceof HTMLElement ? completion.offsetHeight : 0;
+
+    const editorHost = host.parentElement;
+    const tabPanel = this.findWorkspaceTabPanel();
+    if (editorHost instanceof HTMLElement && tabPanel) {
+      const panelRect = tabPanel.getBoundingClientRect();
+      const editorHostRect = editorHost.getBoundingClientRect();
+      const padBottom = parseFloat(getComputedStyle(tabPanel).paddingBottom) || 0;
+      const slotHeight = Math.max(0, Math.floor(panelRect.bottom - editorHostRect.top - padBottom));
+      return {
+        slotHeight,
+        bodyHeight: Math.max(0, slotHeight - toolbarHeight - completionHeight),
+      };
+    }
+
+    const slotRoot = this.findFillSlotRoot();
+    if (!slotRoot) {
+      return { slotHeight: 0, bodyHeight: 0 };
+    }
+    const statStrip = slotRoot.querySelector('app-dev-tool-stat-strip');
+    const statHeight = statStrip instanceof HTMLElement ? statStrip.offsetHeight : 0;
+    const slotStyle = getComputedStyle(slotRoot);
+    const rowGap = parseFloat(slotStyle.rowGap || slotStyle.gap || '0') || 0;
+    const slotHeight = Math.max(0, slotRoot.clientHeight - statHeight - rowGap);
+    return {
+      slotHeight,
+      bodyHeight: Math.max(0, slotHeight - toolbarHeight - completionHeight),
+    };
+  }
+
+  private teardownFillSlotLayout(): void {
+    if (this.fillSlotResizeFrame !== null) {
+      cancelAnimationFrame(this.fillSlotResizeFrame);
+      this.fillSlotResizeFrame = null;
+    }
+    this.fillSlotResizeObserver?.disconnect();
+    this.fillSlotResizeObserver = null;
+    this.lastFillSlotHostPx = -1;
+    this.lastFillSlotBodyPx = -1;
+    const host = this.hostRef.nativeElement;
+    host.style.removeProperty('height');
+    host.style.removeProperty('max-height');
+    const root = host.querySelector('.tx-code-editor');
+    const body = root?.querySelector('.tx-code-editor__body');
+    if (root instanceof HTMLElement) {
+      root.style.removeProperty('height');
+    }
+    if (body instanceof HTMLElement) {
+      body.style.removeProperty('height');
+    }
+  }
+
+  /** Observe the workspace tab panel — stable pane height, not shrinking editor-host. */
+  private bindFillSlotLayout(): void {
+    if (!this.fillHeight()) {
+      this.teardownFillSlotLayout();
+      return;
+    }
+    const observeTarget = this.findWorkspaceTabPanel() ?? this.findFillSlotRoot();
+    if (!observeTarget) {
+      return;
+    }
+
+    const schedule = (): void => {
+      if (this.fillSlotResizeFrame !== null) {
+        return;
+      }
+      this.fillSlotResizeFrame = requestAnimationFrame(() => {
+        this.fillSlotResizeFrame = null;
+        this.syncFillSlotLayout();
+      });
+    };
+
+    this.fillSlotResizeObserver?.disconnect();
+    this.fillSlotResizeObserver = new ResizeObserver(() => schedule());
+    this.fillSlotResizeObserver.observe(observeTarget);
+    schedule();
+  }
+
+  private syncFillSlotLayout(): void {
+    if (!this.fillHeight()) {
+      return;
+    }
+
+    const host = this.hostRef.nativeElement;
+    const root = host.querySelector('.tx-code-editor');
+    const body = root?.querySelector('.tx-code-editor__body');
+    if (!(root instanceof HTMLElement) || !(body instanceof HTMLElement)) {
+      return;
+    }
+
+    const { slotHeight, bodyHeight } = this.computeFillSlotHeights(host, root);
+
+    if (slotHeight === this.lastFillSlotHostPx && bodyHeight === this.lastFillSlotBodyPx) {
+      return;
+    }
+    this.lastFillSlotHostPx = slotHeight;
+    this.lastFillSlotBodyPx = bodyHeight;
+
+    host.style.height = `${slotHeight}px`;
+    host.style.maxHeight = `${slotHeight}px`;
+    root.style.height = `${slotHeight}px`;
+    body.style.height = `${bodyHeight}px`;
+
+    requestAnimationFrame(() => this.handleScroll());
   }
 
   private applyExternalContent(next: string): void {
-    if (next === this.innerValue()) {
+    if (next === this.canonicalValue()) {
       return;
     }
+    this.clearFoldState();
+    this.canonicalValue.set(next);
     this.innerValue.set(next);
     queueMicrotask(() => this.syncTextareaDom());
   }
 
   ngAfterViewInit(): void {
-    queueMicrotask(() => this.syncTextareaDom());
+    queueMicrotask(() => {
+      this.syncTextareaDom();
+      this.bindFillSlotLayout();
+    });
   }
 
   @HostListener('document:mousedown', ['$event'])
@@ -282,10 +503,12 @@ export class TxCodeEditorComponent implements ControlValueAccessor, AfterViewIni
       return;
     }
     const next = value == null ? '' : String(value);
-    if (next !== this.innerValue()) {
+    if (next !== this.canonicalValue()) {
       this.undoStack.clear();
       this.pendingUndoSnapshot = null;
+      this.clearFoldState();
     }
+    this.canonicalValue.set(next);
     this.innerValue.set(next);
     queueMicrotask(() => this.syncTextareaDom());
   }
@@ -304,12 +527,37 @@ export class TxCodeEditorComponent implements ControlValueAccessor, AfterViewIni
 
   protected handleInput(event: Event): void {
     const ta = event.target as HTMLTextAreaElement;
+    if (this.collapsedFoldIds().size > 0) {
+      this.expandAllFoldsToDisplay();
+      const next = ta.value;
+      if (next !== this.canonicalValue()) {
+        if (!this.applyingHistory && this.pendingUndoSnapshot) {
+          this.undoStack.record(this.pendingUndoSnapshot);
+          this.pendingUndoSnapshot = null;
+        }
+        this.emitContentChange(next);
+        if (this.pendingFormatOnPaste) {
+          this.pendingFormatOnPaste = false;
+          this.clearAutoFormatTimer();
+          queueMicrotask(() => this.handleFormat());
+        } else {
+          this.scheduleAutoFormat();
+        }
+      }
+      return;
+    }
     const next = ta.value;
     if (!this.applyingHistory && this.pendingUndoSnapshot) {
       this.undoStack.record(this.pendingUndoSnapshot);
       this.pendingUndoSnapshot = null;
     }
     this.emitContentChange(next);
+    if (this.pendingFormatOnPaste) {
+      this.pendingFormatOnPaste = false;
+      this.clearAutoFormatTimer();
+      queueMicrotask(() => this.handleFormat());
+      return;
+    }
     this.scheduleAutoFormat();
     if (this.completionOpen()) {
       this.refreshCompletionFilter();
@@ -330,6 +578,17 @@ export class TxCodeEditorComponent implements ControlValueAccessor, AfterViewIni
     this.closeCompletion();
     this.hideVariableTooltip();
     this.tryFormatOnBlur();
+  }
+
+  protected handlePaste(_event: ClipboardEvent): void {
+    if (this.readOnly() || !this.formatOnPaste() || !txCodeEditorSupportsAutoFormat(this.language())) {
+      return;
+    }
+    const ta = this.textareaRef()?.nativeElement;
+    if (ta && !this.applyingHistory) {
+      this.pendingUndoSnapshot = txCodeEditorSnapshot(this.innerValue(), ta);
+    }
+    this.pendingFormatOnPaste = true;
   }
 
   protected handleFieldMouseEnter(ev: MouseEvent): void {
@@ -380,6 +639,12 @@ export class TxCodeEditorComponent implements ControlValueAccessor, AfterViewIni
   }
 
   protected handleMirrorPointerDown(ev: PointerEvent): void {
+    const foldSpan = this.findFoldPlaceholderSpan(ev.target);
+    if (foldSpan) {
+      this.handleExpandFoldFromPlaceholder(foldSpan, ev);
+      return;
+    }
+
     const ta = this.textareaRef()?.nativeElement;
     if (!ta || this.readOnly()) {
       return;
@@ -403,6 +668,23 @@ export class TxCodeEditorComponent implements ControlValueAccessor, AfterViewIni
     ta.focus({ preventScroll: true });
   }
 
+  protected handleTextareaPointerDown(ev: PointerEvent): void {
+    if (this.readOnly() || !this.codeFolding() || this.overlaySyntaxHighlight()) {
+      return;
+    }
+    const ta = this.textareaRef()?.nativeElement;
+    if (!ta || ev.target !== ta) {
+      return;
+    }
+    const lineIndex = txCodeEditorLineIndexAtClientY(ta, ev.clientY);
+    const region = this.foldRegionAtPlaceholderLine(lineIndex);
+    if (!region) {
+      return;
+    }
+    ev.preventDefault();
+    this.handleToggleFold(region, ev);
+  }
+
   protected handleScroll(): void {
     const ta = this.textareaRef()?.nativeElement;
     const mirror = this.hostRef.nativeElement.querySelector('.tx-code-editor__mirror');
@@ -422,8 +704,47 @@ export class TxCodeEditorComponent implements ControlValueAccessor, AfterViewIni
     }
   }
 
+  protected handleGutterWheel(ev: WheelEvent): void {
+    this.scrollEditorBy(ev.deltaY, ev.deltaX);
+    ev.preventDefault();
+  }
+
+  protected handleEditorWheel(ev: WheelEvent): void {
+    const ta = this.textareaRef()?.nativeElement;
+    if (!ta || ev.target === ta) {
+      return;
+    }
+    this.scrollEditorBy(ev.deltaY, ev.deltaX);
+    ev.preventDefault();
+  }
+
+  private scrollEditorBy(deltaY: number, deltaX: number): void {
+    const ta = this.textareaRef()?.nativeElement;
+    if (!ta) {
+      return;
+    }
+    ta.scrollTop += deltaY;
+    ta.scrollLeft += deltaX;
+    this.handleScroll();
+  }
+
   protected handleKeydown(ev: KeyboardEvent): void {
     const ta = this.textareaRef()?.nativeElement;
+    if (
+      !this.readOnly() &&
+      this.collapsedFoldIds().size > 0 &&
+      !ev.ctrlKey &&
+      !ev.metaKey &&
+      !ev.altKey &&
+      ev.key !== 'Tab' &&
+      ev.key !== 'Escape'
+    ) {
+      this.expandAllFoldsToDisplay();
+      if (ta) {
+        ta.value = this.innerValue();
+      }
+    }
+
     if (ta && !this.readOnly() && !this.applyingHistory && this.shouldRecordUndoForKey(ev)) {
       this.pendingUndoSnapshot = txCodeEditorSnapshot(this.innerValue(), ta);
     }
@@ -505,7 +826,8 @@ export class TxCodeEditorComponent implements ControlValueAccessor, AfterViewIni
     if (this.readOnly()) {
       return;
     }
-    const before = this.innerValue();
+    this.expandAllFoldsToDisplay();
+    const before = this.canonicalValue();
     const formatted = tryFormatCodeEditorContent(before, this.language());
     if (formatted === null || formatted === before) {
       return;
@@ -566,10 +888,106 @@ export class TxCodeEditorComponent implements ControlValueAccessor, AfterViewIni
     this.closeCompletion();
   }
 
+  protected handleToggleFold(region: TxCodeEditorFoldRegion, ev: Event): void {
+    ev.preventDefault();
+    ev.stopPropagation();
+    if (this.readOnly() || !this.codeFolding()) {
+      return;
+    }
+
+    const nextCollapsed = new Set(this.collapsedFoldIds());
+    const hidden = new Map(this.foldHiddenById());
+
+    if (nextCollapsed.has(region.id)) {
+      nextCollapsed.delete(region.id);
+      hidden.delete(region.id);
+    } else {
+      const extracted = extractTxCodeEditorFoldHidden(this.canonicalValue(), region);
+      if (!extracted) {
+        return;
+      }
+      hidden.set(region.id, extracted);
+      nextCollapsed.add(region.id);
+    }
+
+    this.collapsedFoldIds.set(nextCollapsed);
+    this.foldHiddenById.set(hidden);
+    this.refreshFoldedDisplay();
+  }
+
+  protected isFoldCollapsed(region: TxCodeEditorFoldRegion): boolean {
+    return this.collapsedFoldIds().has(region.id);
+  }
+
+  protected foldRegionAtLine(lineIndex: number): TxCodeEditorFoldRegion | null {
+    return this.foldRegionsByStartLine().get(lineIndex) ?? null;
+  }
+
+  protected foldRegionAtPlaceholderLine(lineIndex: number): TxCodeEditorFoldRegion | null {
+    return findCollapsedFoldRegionAtPlaceholderLine(
+      this.innerValue(),
+      lineIndex,
+      this.canonicalValue(),
+      this.collapsedFoldIds(),
+      this.foldRegions(),
+    );
+  }
+
+  private handleExpandFoldFromPlaceholder(span: HTMLElement, ev: Event): void {
+    if (this.readOnly() || !this.codeFolding()) {
+      return;
+    }
+    const regionId = span.dataset['foldId'] ?? '';
+    const region = this.foldRegions().find((entry) => entry.id === regionId);
+    if (!region || !this.isFoldCollapsed(region)) {
+      return;
+    }
+    ev.preventDefault();
+    ev.stopPropagation();
+    this.handleToggleFold(region, ev);
+  }
+
+  private findFoldPlaceholderSpan(target: EventTarget | null): HTMLElement | null {
+    if (!(target instanceof HTMLElement)) {
+      return null;
+    }
+    const span = target.closest('.tx-fold-placeholder');
+    return span instanceof HTMLElement ? span : null;
+  }
+
   private emitContentChange(next: string): void {
+    this.clearFoldState();
+    this.canonicalValue.set(next);
     this.innerValue.set(next);
     this.onChange(next);
     this.syncTextareaDom();
+  }
+
+  private clearFoldState(): void {
+    this.collapsedFoldIds.set(new Set());
+    this.foldHiddenById.set(new Map());
+  }
+
+  private expandAllFoldsToDisplay(): void {
+    if (this.collapsedFoldIds().size === 0) {
+      return;
+    }
+    this.clearFoldState();
+    this.innerValue.set(this.canonicalValue());
+    queueMicrotask(() => this.syncTextareaDom());
+  }
+
+  private refreshFoldedDisplay(): void {
+    const display = buildTxCodeEditorFoldedDisplay(
+      this.canonicalValue(),
+      this.collapsedFoldIds(),
+      this.foldRegions(),
+    );
+    this.innerValue.set(display);
+    queueMicrotask(() => {
+      this.syncTextareaDom();
+      this.handleScroll();
+    });
   }
 
   private syncTextareaDom(): void {
@@ -607,7 +1025,8 @@ export class TxCodeEditorComponent implements ControlValueAccessor, AfterViewIni
   }
 
   private applyAutoFormatIfChanged(): void {
-    const before = this.innerValue();
+    this.expandAllFoldsToDisplay();
+    const before = this.canonicalValue();
     const formatted = tryFormatCodeEditorContent(before, this.language());
     if (formatted === null || formatted === before) {
       return;

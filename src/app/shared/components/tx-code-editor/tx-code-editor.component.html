@@ -5,6 +5,8 @@
   [class.tx-code-editor--framed]="framed()"
   [class.tx-code-editor--badge-toolbar]="hideToolbarActions() && !hideToolbar()"
   [class.tx-code-editor--plain]="!overlaySyntaxHighlight()"
+  [class.tx-code-editor--folding]="codeFolding()"
+  [class.tx-code-editor--fill]="fillHeight()"
 >
   @if (!hideToolbar() && (!readOnly() || title())) {
     <div class="tx-code-editor__toolbar" role="toolbar" [attr.aria-label]="toolbarAriaLabel()">
@@ -30,11 +32,31 @@
     </div>
   }
 
-  <div class="tx-code-editor__body">
+  <div class="tx-code-editor__body" [class.tx-code-editor__body--no-gutter]="hideLineNumbers()">
     @if (!hideLineNumbers()) {
-      <div class="tx-code-editor__gutter" aria-hidden="true">
+      <div class="tx-code-editor__gutter" aria-hidden="true" (wheel)="handleGutterWheel($event)">
         @for (line of lineNumbers(); track $index) {
-          <div class="tx-code-editor__line-num">{{ $index + 1 }}</div>
+          <div class="tx-code-editor__gutter-row">
+            @if (codeFolding() && foldRegionAtLine($index); as region) {
+              <button
+                type="button"
+                class="tx-code-editor__fold"
+                [attr.aria-label]="isFoldCollapsed(region) ? 'Expand section' : 'Collapse section'"
+                [attr.aria-expanded]="!isFoldCollapsed(region)"
+                (mousedown)="$event.preventDefault()"
+                (click)="handleToggleFold(region, $event)"
+              >
+                <tx-icon
+                  [name]="isFoldCollapsed(region) ? 'chevronRight' : 'chevronDown'"
+                  [size]="12"
+                  aria-hidden="true"
+                />
+              </button>
+            } @else if (codeFolding()) {
+              <span class="tx-code-editor__fold-spacer" aria-hidden="true"></span>
+            }
+            <div class="tx-code-editor__line-num">{{ $index + 1 }}</div>
+          </div>
         }
       </div>
     }
@@ -42,6 +64,7 @@
       class="tx-code-editor__field"
       (mouseenter)="handleFieldMouseEnter($event)"
       (mouseleave)="handleFieldMouseLeave($event)"
+      (wheel)="handleEditorWheel($event)"
     >
       @if (showPlaceholder()) {
         <div class="tx-code-editor__placeholder" aria-hidden="true">{{ placeholder() }}</div>
@@ -56,13 +79,15 @@
         autocomplete="off"
         autocorrect="off"
         (input)="handleInput($event)"
+        (paste)="handlePaste($event)"
         (scroll)="handleScroll()"
         (keydown)="handleKeydown($event)"
+        (pointerdown)="handleTextareaPointerDown($event)"
         (blur)="handleBlur()"
       ></textarea>
       @if (overlaySyntaxHighlight()) {
         <pre class="tx-code-editor__mirror" aria-hidden="true"><code [innerHTML]="highlightedHtml() | txCodeEditorHtml"></code></pre>
-        @if (templateVarsActive()) {
+        @if (hitLayerActive()) {
           <pre
             class="tx-code-editor__hit"
             aria-hidden="true"

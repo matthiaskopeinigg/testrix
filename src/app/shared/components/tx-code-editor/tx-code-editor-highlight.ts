@@ -1,5 +1,10 @@
 import type { DynamicVariableCatalogItem } from '@shared/dynamic-variables';
 
+import {
+  findCollapsedFoldRegionAtPlaceholderLine,
+  TX_CODE_EDITOR_FOLD_PLACEHOLDER,
+  type TxCodeEditorFoldRegion,
+} from './tx-code-editor-folding';
 import type { TxCodeEditorLanguage } from './tx-code-editor-language';
 
 const TEMPLATE_TOKEN_PATTERN = /\$([a-zA-Z][a-zA-Z0-9]*)(\(\d*\))?|\{\{([\w.-]+)\}\}/g;
@@ -7,6 +12,16 @@ const TX_VAR_SLOT_PREFIX = '\uE000txv';
 const TX_VAR_SLOT_SUFFIX = '\uE001';
 /** HTML comment placeholders survive JSON highlighting after escape. */
 const TX_VAR_HTML_COMMENT_PREFIX = '<!--txv';
+const TX_FOLD_SLOT_PREFIX = '\uE002txf';
+const TX_FOLD_SLOT_SUFFIX = '\uE003';
+const TX_FOLD_SLOT_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+
+/** Optional fold state for clickable `...` placeholders in the syntax overlay. */
+export interface TxCodeEditorFoldHighlightContext {
+  readonly canonical: string;
+  readonly collapsedIds: ReadonlySet<string>;
+  readonly regions: readonly TxCodeEditorFoldRegion[];
+}
 
 export function escapeCodeEditorHtml(text: string): string {
   return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -263,6 +278,51 @@ function restoreTemplateVariableHtmlCommentSlots(html: string, slots: string[]):
   return html.replace(/&lt;!--txv(\d+)--&gt;/g, (_, index) => slots[Number(index)] ?? '');
 }
 
+function buildFoldPlaceholderSpanHtml(regionId: string, indent: string): string {
+  return `${indent}<span class="tx-fold-placeholder" data-fold-id="${escapeAttr(regionId)}" role="button" aria-label="Expand section">${TX_CODE_EDITOR_FOLD_PLACEHOLDER}</span>`;
+}
+
+function stashFoldPlaceholderLines(
+  text: string,
+  fold: TxCodeEditorFoldHighlightContext,
+  slots: string[],
+): string {
+  if (fold.collapsedIds.size === 0) {
+    return text;
+  }
+
+  const lines = text.split('\n');
+  for (let i = 0; i < lines.length; i++) {
+    const region = findCollapsedFoldRegionAtPlaceholderLine(
+      text,
+      i,
+      fold.canonical,
+      fold.collapsedIds,
+      fold.regions,
+    );
+    if (!region) {
+      continue;
+    }
+    const indent = lines[i]?.match(/^(\s*)/)?.[1] ?? '';
+    const slotIndex = slots.length;
+    slots.push(buildFoldPlaceholderSpanHtml(region.id, indent));
+    const slotChar = TX_FOLD_SLOT_CHARS[slotIndex] ?? 'Z';
+    lines[i] = `${indent}${TX_FOLD_SLOT_PREFIX}${slotChar}${TX_FOLD_SLOT_SUFFIX}`;
+  }
+
+  return lines.join('\n');
+}
+
+function restoreFoldPlaceholderSlots(html: string, slots: string[]): string {
+  return html.replace(
+    new RegExp(`${TX_FOLD_SLOT_PREFIX}([A-Za-z])${TX_FOLD_SLOT_SUFFIX}`, 'g'),
+    (_, char: string) => {
+      const index = TX_FOLD_SLOT_CHARS.indexOf(char);
+      return index >= 0 ? (slots[index] ?? '') : '';
+    },
+  );
+}
+
 function buildTemplateVariableSpanHtml(
   match: string,
   dollarName: string | undefined,
@@ -311,12 +371,18 @@ function escapeAttr(value: string): string {
 function highlightJsonWithTemplateVariables(
   text: string,
   catalog: readonly DynamicVariableCatalogItem[],
+  fold?: TxCodeEditorFoldHighlightContext,
 ): string {
   const varSlots: string[] = [];
-  const source = stashTemplateVariableSlotsAsHtmlComments(text, catalog, varSlots);
+  const foldSlots: string[] = [];
+  let source = stashTemplateVariableSlotsAsHtmlComments(text, catalog, varSlots);
+  if (fold) {
+    source = stashFoldPlaceholderLines(source, fold, foldSlots);
+  }
   let html = escapeCodeEditorHtml(source);
   html = highlightJson(html);
   html = restoreTemplateVariableHtmlCommentSlots(html, varSlots);
+  html = restoreFoldPlaceholderSlots(html, foldSlots);
   if (text.endsWith('\n')) {
     html += '<br>';
   }
@@ -327,6 +393,7 @@ export function highlightCodeEditorContent(
   text: string,
   language: TxCodeEditorLanguage,
   catalog: readonly DynamicVariableCatalogItem[] = [],
+  fold?: TxCodeEditorFoldHighlightContext,
 ): string {
   if (!text) {
     return '';
@@ -334,11 +401,15 @@ export function highlightCodeEditorContent(
 
   const useCatalog = catalog.length > 0;
   if (useCatalog && language === 'json') {
-    return highlightJsonWithTemplateVariables(text, catalog);
+    return highlightJsonWithTemplateVariables(text, catalog, fold);
   }
 
   const varSlots: string[] = [];
+  const foldSlots: string[] = [];
   let source = useCatalog ? stashTemplateVariableSlots(text, catalog, varSlots) : text;
+  if (fold) {
+    source = stashFoldPlaceholderLines(source, fold, foldSlots);
+  }
 
   if (language === 'plaintext') {
     let html = useCatalog ? restoreTemplateVariableSlots(escapeCodeEditorHtml(source), varSlots) : escapeCodeEditorHtml(text);
@@ -385,6 +456,7 @@ export function highlightCodeEditorContent(
   if (useCatalog) {
     html = restoreTemplateVariableSlots(html, varSlots);
   }
+  html = restoreFoldPlaceholderSlots(html, foldSlots);
 
   if (text.endsWith('\n')) {
     html += '<br>';

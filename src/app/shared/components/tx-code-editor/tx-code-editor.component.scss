@@ -6,7 +6,28 @@
   min-height: 0;
   min-width: 0;
   width: 100%;
+}
+
+:host.tx-code-editor-host--fill {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  align-self: stretch;
   height: 100%;
+  max-height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+:host.tx-code-editor-host--fill .tx-code-editor {
+  flex: 1 1 auto;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
+  height: 100%;
+  max-height: 100%;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .tx-code-editor {
@@ -14,6 +35,8 @@
   flex-direction: column;
   flex: 1 1 auto;
   min-height: 0;
+  width: 100%;
+  --tx-code-editor-gutter-width: 44px;
   border: 1px solid var(--tx-border-0);
   border-radius: var(--tx-radius-md, 10px);
   overflow: hidden;
@@ -35,6 +58,25 @@
     box-shadow:
       inset 0 1px 0 color-mix(in srgb, var(--tx-text-0) 8%, transparent),
       0 1px 4px color-mix(in srgb, var(--tx-shadow-color, #000) 20%, transparent);
+  }
+
+  &--folding {
+    --tx-code-editor-gutter-width: 56px;
+  }
+
+  &--fill {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr);
+    flex: 1 1 auto;
+    height: 100%;
+    max-height: 100%;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  &--fill#{&}--no-toolbar {
+    grid-template-rows: minmax(0, 1fr);
   }
 
   &--badge-toolbar:not(&--framed) {
@@ -171,19 +213,35 @@
   }
 }
 
+// Body height comes from fill shell grid row; gutter is absolute so line count cannot stretch it.
 .tx-code-editor__body {
-  display: flex;
+  position: relative;
   flex: 1 1 auto;
-  min-height: 0;
+  min-height: 8rem;
   overflow: hidden;
   font-family: var(--tx-font-mono, 'Cascadia Code', 'Fira Code', Consolas, monospace);
   font-size: 0.8125rem;
   line-height: 1.5;
 }
 
+.tx-code-editor--fill .tx-code-editor__toolbar {
+  grid-row: 1;
+}
+
+.tx-code-editor--fill .tx-code-editor__body {
+  grid-row: 2;
+  min-height: 0;
+  max-height: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
 .tx-code-editor__gutter {
-  width: 44px;
-  flex-shrink: 0;
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  z-index: 1;
+  width: var(--tx-code-editor-gutter-width);
   padding: 10px 8px 10px 0;
   border-right: 1px solid var(--tx-border-0);
   background: color-mix(in srgb, var(--tx-surface-0) 70%, var(--tx-surface-1));
@@ -191,20 +249,69 @@
   text-align: right;
   overflow: hidden;
   user-select: none;
+  box-sizing: border-box;
+}
+
+.tx-code-editor__gutter-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 2px;
+  height: 1.5em;
+}
+
+.tx-code-editor__fold {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  padding: 0;
+  border: none;
+  border-radius: calc(var(--tx-radius-sm, 8px) - 4px);
+  background: transparent;
+  color: var(--tx-text-1);
+  cursor: pointer;
+  opacity: 0.72;
+
+  &:hover {
+    opacity: 1;
+    background: color-mix(in srgb, var(--tx-surface-2) 80%, transparent);
+    color: var(--tx-text-0);
+  }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--tx-focus-ring) 50%, transparent);
+  }
+}
+
+.tx-code-editor__fold-spacer {
+  display: inline-block;
+  width: 14px;
+  flex-shrink: 0;
 }
 
 .tx-code-editor__line-num {
+  min-width: 1.25rem;
   height: 1.5em;
   font-size: 0.6875rem;
   opacity: 0.55;
+  line-height: 1.5em;
 }
 
 .tx-code-editor__field {
-  position: relative;
-  flex: 1 1 auto;
+  position: absolute;
+  inset: 0;
+  inset-inline-start: var(--tx-code-editor-gutter-width);
   min-width: 0;
-  min-height: 8rem;
+  min-height: 0;
   overflow: hidden;
+}
+
+.tx-code-editor__body--no-gutter .tx-code-editor__field {
+  inset-inline-start: 0;
 }
 
 .tx-code-editor__placeholder {
@@ -237,15 +344,26 @@
   letter-spacing: normal;
   word-spacing: normal;
   white-space: pre;
-  overflow: auto;
   tab-size: 2;
   font-feature-settings: 'liga' 0, 'calt' 0;
   font-variant-ligatures: none;
-  scrollbar-gutter: stable;
+}
+
+.tx-code-editor__mirror {
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.tx-code-editor__hit {
+  overflow: hidden;
 }
 
 .tx-code-editor__input {
   z-index: 2;
+  overflow-x: auto;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
   width: 100%;
   height: 100%;
   resize: none;
@@ -253,6 +371,30 @@
   color: transparent;
   caret-color: var(--tx-text-0);
   background: transparent;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--tx-primary) 60%, var(--tx-border-0))
+    color-mix(in srgb, var(--tx-border-0) 55%, var(--tx-surface-1));
+
+  &::-webkit-scrollbar {
+    width: 12px;
+    height: 12px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: color-mix(in srgb, var(--tx-border-0) 35%, var(--tx-surface-1));
+  }
+
+  &::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--tx-primary) 55%, var(--tx-border-0));
+    border: 2px solid color-mix(in srgb, var(--tx-border-0) 35%, var(--tx-surface-1));
+    background-clip: padding-box;
+  }
+
+  &::-webkit-scrollbar-thumb:hover {
+    background: color-mix(in srgb, var(--tx-primary) 75%, var(--tx-border-0));
+    background-clip: padding-box;
+  }
 
   &--readonly {
     cursor: default;
@@ -274,7 +416,6 @@
 
 .tx-code-editor__mirror {
   z-index: 1;
-  pointer-events: none;
   color: var(--tx-text-0);
   transform: translateZ(0);
 
@@ -288,7 +429,6 @@
   }
 }
 
-/* Token colors + weights mirror api-workbench `app-code-editor` (VS Code dark). */
 ::ng-deep .tx-code-editor__mirror code .token-string {
   color: #ce9178;
   font-weight: 400;

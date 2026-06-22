@@ -26,7 +26,11 @@
     <tx-code-editor
       [language]="state().language"
       [framed]="true"
+      [fillHeight]="true"
       [autoFormat]="false"
+      [hideToolbarActions]="true"
+      [smartEditing]="true"
+      [codeFolding]="true"
       [ngModel]="state().content"
       (ngModelChange)="state.update((s) => ({ ...s, content: $event }))"
     />

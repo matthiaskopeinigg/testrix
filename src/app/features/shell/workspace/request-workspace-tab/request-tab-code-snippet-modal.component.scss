@@ -53,10 +53,6 @@
   min-height: 14rem;
 }
 
-:host ::ng-deep .request-code-snippet-modal__editor .tx-code-editor__field {
-  min-height: 14rem;
-}
-
 :host ::ng-deep .request-code-snippet-modal__editor .tx-code-editor__input,
 :host ::ng-deep .request-code-snippet-modal__editor .tx-code-editor__mirror {
   overflow: auto;
