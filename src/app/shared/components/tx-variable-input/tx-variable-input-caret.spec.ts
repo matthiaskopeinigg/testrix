@@ -1,9 +1,35 @@
-import { describe, expect, it } from 'vitest';
+// @vitest-environment jsdom
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { caretIndexFromClientX, ensureInputCaretVisible } from './tx-variable-input-caret';
 
+/** Fixed-width mock so caret helpers run without a real Canvas 2D context (unavailable in some CI runners). */
+function mockCanvasContext(charWidthPx: number): CanvasRenderingContext2D {
+  return {
+    font: '',
+    measureText(text: string) {
+      return { width: text.length * charWidthPx };
+    },
+  } as CanvasRenderingContext2D;
+}
+
+function installCanvasMeasureMock(charWidthPx: number): void {
+  vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockImplementation((type) => {
+    if (type === '2d') {
+      return mockCanvasContext(charWidthPx);
+    }
+    return null;
+  });
+}
+
 describe('caretIndexFromClientX', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it('maps click offset to caret index', () => {
+    installCanvasMeasureMock(8);
+
     const input = document.createElement('input');
     input.value = '$uuid-test';
     input.style.position = 'absolute';
@@ -14,8 +40,8 @@ describe('caretIndexFromClientX', () => {
     input.style.font = '400 14px Inter, sans-serif';
     document.body.appendChild(input);
 
-    const rect = input.getBoundingClientRect();
-    const nearEnd = caretIndexFromClientX(input, rect.right - 20);
+    const paddingLeft = Number.parseFloat(getComputedStyle(input).paddingLeft) || 0;
+    const nearEnd = caretIndexFromClientX(input, paddingLeft + 7 * 8);
     expect(nearEnd).toBeGreaterThan(4);
 
     document.body.removeChild(input);
@@ -23,7 +49,14 @@ describe('caretIndexFromClientX', () => {
 });
 
 describe('ensureInputCaretVisible', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it('scrolls long values so the caret is not flush against the right edge', () => {
+    const charWidthPx = 8;
+    installCanvasMeasureMock(charWidthPx);
+
     const input = document.createElement('input');
     input.value = 'a'.repeat(200);
     input.style.position = 'absolute';
@@ -43,10 +76,7 @@ describe('ensureInputCaretVisible', () => {
     const paddingLeft = Number.parseFloat(style.paddingLeft) || 0;
     const paddingRight = Number.parseFloat(style.paddingRight) || 0;
     const innerWidth = input.clientWidth - paddingLeft - paddingRight;
-    const canvas = document.createElement('canvas');
-    const context = canvas.getContext('2d')!;
-    context.font = '400 14px Inter, sans-serif';
-    const caretX = context.measureText(input.value).width;
+    const caretX = input.value.length * charWidthPx;
     const visibleRight = input.scrollLeft + innerWidth - 12;
 
     expect(caretX).toBeLessThanOrEqual(visibleRight + 0.5);
