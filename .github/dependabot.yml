@@ -1,0 +1,63 @@
+# Grouped dependency updates to reduce PR noise.
+# https://docs.github.com/code-security/dependabot/dependabot-version-updates
+
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 15
+    groups:
+      angular:
+        patterns:
+          - '@angular/*'
+      electron-builder:
+        patterns:
+          - electron-builder
+          - electron-updater
+          - app-builder-lib
+          - builder-util-runtime
+      sigstore:
+        patterns:
+          - sigstore
+          - '@sigstore/*'
+      dev-tooling:
+        patterns:
+          - vitest
+          - prettier
+          - typescript
+          - '@types/*'
+          - concurrently
+          - cross-env
+          - wait-on
+          - jsdom
+          - esbuild
+
+  - package-ecosystem: npm
+    directory: /installer-shell
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 10
+    groups:
+      electron-builder:
+        patterns:
+          - electron-builder
+          - electron-updater
+          - app-builder-lib
+          - builder-util-runtime
+      installer-tooling:
+        patterns:
+          - undici
+          - tar
+          - js-yaml
+          - tmp
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5

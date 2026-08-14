@@ -1,0 +1,9 @@
+# CODEOWNERS — critical paths
+# https://docs.github.com/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+* @matthiaskopeinigg
+
+/electron/ @matthiaskopeinigg
+/shared/ @matthiaskopeinigg
+/src/app/shared/ @matthiaskopeinigg
+/.github/ @matthiaskopeinigg

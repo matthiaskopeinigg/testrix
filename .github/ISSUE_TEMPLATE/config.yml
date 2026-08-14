@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Documentation
+    url: https://github.com/matthiaskopeinigg/testrix/blob/main/docs/README.md
+    about: Architecture, development, and releasing guides
+  - name: Security vulnerability
+    url: https://github.com/matthiaskopeinigg/testrix/security/advisories/new
+    about: Report a security issue privately (do not open a public issue)

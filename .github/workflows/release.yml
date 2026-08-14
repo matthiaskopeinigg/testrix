@@ -1,0 +1,110 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to pack and publish (e.g. v1.0.0-beta.1)'
+        required: true
+        type: string
+
+concurrency:
+  group: release-${{ github.event.inputs.tag || github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+env:
+  RELEASE_TAG: ${{ github.event.inputs.tag || github.ref_name }}
+
+jobs:
+  test-gate:
+    name: Test gate
+    uses: ./.github/workflows/test-gate.yml
+
+  pack-windows:
+    name: Pack Windows
+    needs: test-gate
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.RELEASE_TAG }}
+      - uses: ./.github/actions/setup-node-npm
+      - name: Build and sign Windows installer (stable)
+        if: ${{ !contains(env.RELEASE_TAG, '-') }}
+        run: npm run electron:pack:release
+        env:
+          REQUIRE_WIN_CODE_SIGN: '1'
+          CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
+      - name: Build Windows installer (prerelease)
+        if: ${{ contains(env.RELEASE_TAG, '-') }}
+        run: npm run electron:build:win
+      - name: Upload Windows installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-installer
+          path: release/Testrix Setup.exe
+
+  pack-linux:
+    name: Pack Linux
+    needs: test-gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.RELEASE_TAG }}
+      - uses: ./.github/actions/setup-node-npm
+      - name: Build Linux installer
+        run: npm run electron:build:linux
+      - name: Upload Linux installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-installer
+          path: release/Testrix Setup.AppImage
+
+  pack-macos:
+    name: Pack macOS
+    needs: test-gate
+    runs-on: macos-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.RELEASE_TAG }}
+      - uses: ./.github/actions/setup-node-npm
+      - name: Build macOS installer
+        run: npm run electron:build:mac
+      - name: Upload macOS installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: mac-installer
+          path: release/Testrix Setup.dmg
+
+  publish-release:
+    name: Publish GitHub Release
+    needs: [pack-windows, pack-linux, pack-macos]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download installers
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.RELEASE_TAG }}
+          name: Testrix ${{ env.RELEASE_TAG }}
+          generate_release_notes: true
+          prerelease: ${{ contains(env.RELEASE_TAG, '-') }}
+          files: |
+            artifacts/**/*
+          fail_on_unmatched_files: true

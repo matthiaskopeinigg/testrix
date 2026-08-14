@@ -1,0 +1,18 @@
+name: Setup Node and npm ci
+description: Checkout-ready Node setup with lockfile install for Testrix
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@v4
+      with:
+        node-version-file: .nvmrc
+        cache: npm
+
+    - name: Ensure optional lock entries
+      shell: bash
+      run: node scripts/ensure-emnapi-lock.mjs
+
+    - name: Install
+      shell: bash
+      run: npm ci
