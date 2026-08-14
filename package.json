@@ -81,7 +81,7 @@
     "@types/better-sqlite3": "^7.6.13",
     "@types/diff": "^7.0.2",
     "@types/mssql": "^12.3.0",
-    "@types/node": "^25.8.0",
+    "@types/node": "^26.2.0",
     "@types/pg": "^8.20.0",
     "concurrently": "^9.2.4",
     "cross-env": "^10.1.0",
