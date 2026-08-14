@@ -1,0 +1,20 @@
+{
+  "light": {
+    "bg": "#f3efe6",
+    "surface": "#faf7f1",
+    "text": "#1a1612",
+    "primary": "#8f6808",
+    "secondary": "#6a5c4c",
+    "accent": "#2f7a52",
+    "border": "#ddd2c0"
+  },
+  "dark": {
+    "bg": "#1a1714",
+    "surface": "#221e1a",
+    "text": "#ede5d8",
+    "primary": "#e0b85a",
+    "secondary": "#a89070",
+    "accent": "#6b9e82",
+    "border": "#3d3530"
+  }
+}
