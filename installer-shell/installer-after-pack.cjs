@@ -1,7 +1,10 @@
 /**
  * electron-builder afterPack hook for the installer shell (Windows VersionInfo + icon).
  *
- * Runs on the unpacked Electron app (`dir` target).
+ * Must live inside `installer-shell/` — electron-builder rejects hook paths outside
+ * that package's workspace root.
+ *
+ * Runs on the unpacked Electron app (`dir` / portable target).
  */
 const path = require('path');
 const fs = require('fs');
@@ -19,7 +22,7 @@ function numericVersion(raw) {
 
 function resolveInstallerShellVersion() {
   try {
-    return require('../installer-shell/package.json').version || '0.0.0';
+    return require('./package.json').version || '0.0.0';
   } catch {
     return '0.0.0';
   }

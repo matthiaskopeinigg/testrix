@@ -1,6 +1,6 @@
 {
   "name": "testrix-setup",
-  "version": "1.0.0-beta.2",
+  "version": "1.0.0-beta.3",
   "description": "Testrix Setup",
   "main": "main.js",
   "private": true,
@@ -40,7 +40,7 @@
       "package.json"
     ],
     "asar": true,
-    "afterPack": "../scripts/installer-after-pack.cjs",
+    "afterPack": "./installer-after-pack.cjs",
     "portable": {
       "artifactName": "${productName}.${ext}",
       "unpackDirName": "TestrixSetup"
