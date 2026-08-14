@@ -61,11 +61,11 @@
     "cronstrue": "^3.24.0",
     "diff": "^7.0.0",
     "electron-updater": "^6.8.9",
-    "ioredis": "^5.10.1",
+    "ioredis": "^5.11.1",
     "jose": "^6.2.8",
     "mssql": "^12.7.0",
     "mysql2": "^3.23.3",
-    "pg": "^8.21.0",
+    "pg": "^8.23.0",
     "rxjs": "~7.8.0",
     "tough-cookie": "^6.0.2",
     "tslib": "^2.3.0",
@@ -82,7 +82,7 @@
     "@types/diff": "^7.0.2",
     "@types/mssql": "^12.3.0",
     "@types/node": "^25.8.0",
-    "@types/pg": "^8.20.0",
+    "@types/pg": "^8.21.0",
     "concurrently": "^9.2.4",
     "cross-env": "^10.1.0",
     "electron": "^42.9.0",
@@ -90,7 +90,7 @@
     "esbuild": "^0.27.2",
     "jimp": "^1.6.0",
     "jsdom": "^28.0.0",
-    "png-to-ico": "^3.0.1",
+    "png-to-ico": "^3.0.2",
     "prettier": "^3.9.6",
     "rcedit": "^5.0.2",
     "sharp": "^0.35.3",
@@ -99,7 +99,7 @@
     "wait-on": "^9.1.0"
   },
   "optionalDependencies": {
-    "@emnapi/core": "1.10.0",
-    "@emnapi/runtime": "1.10.0"
+    "@emnapi/core": "1.11.3",
+    "@emnapi/runtime": "1.11.3"
   }
 }
