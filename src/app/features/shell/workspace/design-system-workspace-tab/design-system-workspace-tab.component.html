@@ -1,0 +1,51 @@
+@if (!located()) {
+  <p class="ds-tab__missing">Unknown design system section.</p>
+} @else {
+  <section class="ds-tab" [attr.aria-label]="activeSectionLabel()">
+    <header class="ds-tab__header">
+      <div class="ds-tab__header-copy">
+        <p class="ds-tab__crumb">{{ activePillarLabel() }}</p>
+        <h1 class="ds-tab__title">{{ activeSectionLabel() }}</h1>
+        <p class="ds-tab__lede">{{ activeSectionDescription() }}</p>
+      </div>
+    </header>
+
+    <article class="ds-tab__card">
+      <div class="ds-tab__toolbar" role="toolbar" aria-label="Section tools">
+        <div class="ds-tab__toolbar-leading">
+          <tx-icon name="layers" [size]="18" aria-hidden="true" />
+          <span class="ds-tab__toolbar-title">Live preview</span>
+        </div>
+        <span class="ds-tab__toolbar-spacer"></span>
+        @if (sectionSupportsDebug()) {
+          <tx-button [variant]="debugEnabled() ? 'primary' : 'secondary'" (pressed)="toggleDebug()">
+            <tx-icon [name]="debugEnabled() ? 'eye' : 'eyeOff'" [size]="16" aria-hidden="true" />
+            {{ debugEnabled() ? 'Debug on' : 'Debug layout' }}
+          </tx-button>
+        }
+      </div>
+
+      <div class="ds-tab__canvas" [class.ds-tab__canvas--debug]="debugEnabled()">
+        <div class="ds-tab__canvas-inner">
+          @switch (activePillar()) {
+            @case ('style-guide') {
+              <app-ds-style-guide-panel [sectionId]="resourceId()" />
+            }
+            @case ('brand') {
+              <app-ds-brand-panel [sectionId]="resourceId()" />
+            }
+            @case ('components') {
+              <app-ds-components-panel [sectionId]="resourceId()" [debugEnabled]="debugEnabled()" />
+            }
+            @case ('patterns') {
+              <app-ds-patterns-panel [sectionId]="resourceId()" [debugEnabled]="debugEnabled()" />
+            }
+            @case ('ui-kit') {
+              <app-ds-ui-kit-panel [sectionId]="resourceId()" />
+            }
+          }
+        </div>
+      </div>
+    </article>
+  </section>
+}

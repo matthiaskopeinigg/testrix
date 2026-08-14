@@ -1,0 +1,41 @@
+<div class="tx-entrance-stagger__block">
+  <h2 class="tx-settings__tab-title">Proxy</h2>
+  <p class="tx-settings__tab-description">
+    Route HTTP and HTTPS traffic through a proxy. Bypass list uses comma-separated hosts.
+  </p>
+</div>
+
+<div class="tx-entrance-stagger__block">
+  <tx-toggle
+    label="Enable proxy"
+    [ngModel]="proxy().enabled"
+    (ngModelChange)="emit({ enabled: $event })"
+  />
+  <tx-form-field label="HTTP proxy" controlId="tx-settings-http-proxy-http">
+    <tx-input
+      controlId="tx-settings-http-proxy-http"
+      type="url"
+      [ngModel]="proxy().httpProxy"
+      (ngModelChange)="emit({ httpProxy: $event })"
+      placeholder="http://127.0.0.1:8080"
+    />
+  </tx-form-field>
+  <tx-form-field label="HTTPS proxy" controlId="tx-settings-http-proxy-https">
+    <tx-input
+      controlId="tx-settings-http-proxy-https"
+      type="url"
+      [ngModel]="proxy().httpsProxy"
+      (ngModelChange)="emit({ httpsProxy: $event })"
+      placeholder="http://127.0.0.1:8080"
+    />
+  </tx-form-field>
+  <tx-form-field label="Bypass list" controlId="tx-settings-http-proxy-bypass">
+    <tx-textarea
+      controlId="tx-settings-http-proxy-bypass"
+      [rows]="3"
+      [ngModel]="proxy().bypass"
+      (ngModelChange)="emit({ bypass: $event })"
+      placeholder="localhost, 127.0.0.1, *.internal"
+    />
+  </tx-form-field>
+</div>

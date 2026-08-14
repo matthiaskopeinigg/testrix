@@ -1,0 +1,34 @@
+@if (!isDismissed()) {
+  <article class="tx-banner" [class.tx-banner--compact]="compact()">
+    @if (showIcon()) {
+      <div class="tx-banner__icon" aria-hidden="true">
+        <tx-icon [name]="resolvedIcon()" [size]="18" />
+      </div>
+    }
+
+    <div class="tx-banner__content">
+      @if (title()) {
+        <p class="tx-banner__title">{{ title() }}</p>
+      }
+
+      <div class="tx-banner__body">
+        <ng-content />
+      </div>
+
+      <div class="tx-banner__actions">
+        <ng-content select="[bannerActions]" />
+      </div>
+    </div>
+
+    @if (dismissible()) {
+      <button
+        type="button"
+        class="tx-banner__dismiss"
+        aria-label="Dismiss banner"
+        (click)="handleDismiss()"
+      >
+        <tx-icon name="close" [size]="16" />
+      </button>
+    }
+  </article>
+}

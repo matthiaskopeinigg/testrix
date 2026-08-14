@@ -1,0 +1,39 @@
+<app-workspace-sidebar-panel-shell
+  class="development-sidebar-panel"
+  [searchPlaceholder]="searchPlaceholder()"
+  [searchAriaLabel]="searchAriaLabel()"
+  [showFolderToggle]="false"
+  [showFilterButton]="false"
+  [showSortButton]="false"
+  (searchChange)="handleSearch($event)"
+>
+  <div
+    class="development-sidebar-panel__list tx-entrance-stagger"
+    [class.tx-entrance-stagger--play]="entranceStaggerPlay()"
+    [class.tx-entrance-stagger--settled]="entranceStaggerSettled()"
+    role="list"
+    aria-label="Development tools"
+  >
+    @if (filteredTools().length === 0) {
+      <p class="development-sidebar-panel__empty" role="status">No tools match your search.</p>
+    } @else {
+      @for (tool of filteredTools(); track tool.id) {
+        <button
+          type="button"
+          role="listitem"
+          class="development-sidebar-panel__item"
+          [class.is-active]="activeToolId() === tool.id"
+          (click)="handleToolSelect(tool.id)"
+        >
+          <span class="development-sidebar-panel__icon" aria-hidden="true">
+            <tx-icon [name]="tool.icon" [size]="16" />
+          </span>
+          <span class="development-sidebar-panel__text">
+            <span class="development-sidebar-panel__label">{{ tool.label }}</span>
+            <span class="development-sidebar-panel__desc">{{ tool.description }}</span>
+          </span>
+        </button>
+      }
+    }
+  </div>
+</app-workspace-sidebar-panel-shell>

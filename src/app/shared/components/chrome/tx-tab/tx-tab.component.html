@@ -1,0 +1,34 @@
+<button type="button" class="tx-tab" (click)="handleClick($event)">
+  @if (icon(); as iconName) {
+    <span class="tx-tab__kind-icon" aria-hidden="true">
+      <tx-icon [name]="iconName" [size]="14" />
+    </span>
+  }
+  @if (method(); as m) {
+    <span class="tx-tab__method" [attr.data-method]="m">{{ m }}</span>
+  }
+  <span class="tx-tab__label">{{ label() }}</span>
+  @if (dirty()) {
+    <span class="tx-tab__dirty" aria-hidden="true">●</span>
+  }
+  <span class="tx-tab__actions">
+    <button
+      type="button"
+      class="tx-tab__icon-btn"
+      [class.is-active]="pinned()"
+      [attr.aria-label]="pinned() ? 'Unpin tab' : 'Pin tab'"
+      [attr.aria-pressed]="pinned()"
+      (click)="handlePinClick($event)"
+    >
+      <tx-icon [name]="pinned() ? 'bookmark' : 'bookmark'" [size]="14" />
+    </button>
+    <button
+      type="button"
+      class="tx-tab__icon-btn tx-tab__icon-btn--close"
+      aria-label="Close tab"
+      (click)="handleCloseClick($event)"
+    >
+      <tx-icon name="close" [size]="14" />
+    </button>
+  </span>
+</button>

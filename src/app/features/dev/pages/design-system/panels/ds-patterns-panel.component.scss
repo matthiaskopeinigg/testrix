@@ -1,0 +1,7 @@
+@use './ds-panel.shared';
+
+.ds-debug {
+  outline: 1px dashed color-mix(in srgb, var(--tx-primary) 50%, transparent);
+  outline-offset: 6px;
+  border-radius: var(--tx-radius-md, 10px);
+}

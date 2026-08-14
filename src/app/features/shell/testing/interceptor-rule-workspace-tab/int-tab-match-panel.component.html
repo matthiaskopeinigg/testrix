@@ -1,0 +1,16 @@
+<section class="int-panel" aria-label="Match settings">
+  <header class="int-panel__head">
+    <h2 class="int-panel__title">Match</h2>
+    <p class="int-panel__subtitle">
+      Requests whose URL matches this pattern are handled by this rule. Use <code>*</code> as a wildcard.
+    </p>
+  </header>
+  <tx-form-field label="URL pattern" controlId="int-match-url">
+    <tx-input
+      id="int-match-url"
+      [ngModel]="matchUrl()"
+      (ngModelChange)="matchUrlChange.emit($event)"
+      placeholder="https://api.example.com/**"
+    />
+  </tx-form-field>
+</section>

@@ -1,0 +1,511 @@
+<app-dev-tool-layout toolId="jwt">
+  <app-dev-tool-toolbar devToolToolbar>
+    <div leading>
+      <app-dev-tool-mode-chip [active]="state().mode === 'generate'" (selected)="setMode('generate')"
+        >Generate</app-dev-tool-mode-chip
+      >
+      <app-dev-tool-mode-chip [active]="state().mode === 'decode'" (selected)="setMode('decode')"
+        >Decode</app-dev-tool-mode-chip
+      >
+      <app-dev-tool-mode-chip [active]="state().mode === 'validate'" (selected)="setMode('validate')"
+        >Validate</app-dev-tool-mode-chip
+      >
+    </div>
+    <div trailing>
+      @if (state().mode === 'generate') {
+        <tx-button variant="primary" (pressed)="handleGenerateAndCopy()">Generate &amp; copy</tx-button>
+        <tx-button variant="secondary" (pressed)="handleGenerate()">Generate only</tx-button>
+        <tx-button variant="secondary" (pressed)="handleSendTo('decode')">Open in Decode</tx-button>
+        <tx-button variant="secondary" (pressed)="handleSendTo('validate')">Open in Validate</tx-button>
+      }
+      @if (state().mode === 'validate') {
+        <tx-button variant="primary" (pressed)="handleValidate()">Run validation</tx-button>
+      }
+      <tx-button variant="secondary" (pressed)="handleCopyToken()">Copy token</tx-button>
+      @if (state().mode === 'decode') {
+        <tx-button variant="secondary" (pressed)="handleCopyHeader()">Copy header</tx-button>
+        <tx-button variant="secondary" (pressed)="handleCopyPayload()">Copy payload</tx-button>
+        <tx-button variant="secondary" (pressed)="handleCopySignature()">Copy signature</tx-button>
+      }
+      <tx-button variant="secondary" (pressed)="handleClear()">Clear</tx-button>
+    </div>
+  </app-dev-tool-toolbar>
+
+  <header class="jwt-tool__mode-intro">
+    <h2 class="jwt-tool__mode-title">{{ modeTitle() }}</h2>
+    <p class="jwt-tool__mode-desc">{{ modeDescription() }}</p>
+  </header>
+
+  @if (actionError()) {
+    <tx-banner variant="error" [title]="actionError()!" />
+  }
+  @if (state().mode === 'decode' && state().token.trim() && decoded().error) {
+    <tx-banner variant="error" [title]="decoded().error!" />
+  }
+  @if (state().mode === 'validate' && validateOk() === true) {
+    <tx-banner variant="success" title="Token is valid for the active profile." />
+  }
+  @if (state().mode === 'validate' && validateOk() === false) {
+    <tx-banner variant="warning" title="Validation failed">
+      <ul class="jwt-tool__issue-list">
+        @for (issue of validateIssues(); track issue.message) {
+          <li>
+            <strong>{{ issue.code }}:</strong> {{ issue.message }}
+          </li>
+        }
+      </ul>
+    </tx-banner>
+  }
+
+  @if (state().mode === 'generate') {
+    <section class="jwt-tool__card" aria-labelledby="jwt-output-heading">
+      <div class="jwt-tool__card-head">
+        <h3 id="jwt-output-heading" class="jwt-tool__card-title">Generated token</h3>
+        <p class="jwt-tool__card-desc">
+          Appears after you generate. Use Generate &amp; copy to sign and put the token on the clipboard in one
+          step.
+        </p>
+      </div>
+      <label class="jwt-tool__toggle jwt-tool__toggle--compact">
+        <tx-toggle
+          [ngModel]="state().copyWithBearerPrefix"
+          (ngModelChange)="state.update((s) => ({ ...s, copyWithBearerPrefix: $event }))"
+        />
+        <span>
+          <strong>Copy with Bearer prefix</strong>
+          <small>Clipboard value becomes <code>Bearer &lt;token&gt;</code> (saved in session)</small>
+        </span>
+      </label>
+      @if (outputToken()) {
+        <pre class="jwt-tool__token">{{ outputToken() }}</pre>
+      } @else {
+        <p class="jwt-tool__empty">No token yet.</p>
+      }
+    </section>
+  }
+
+  <!-- Shared: profile + signing key (Generate + Validate) -->
+  @if ((state().mode === 'generate' || state().mode === 'validate') && activeProfile(); as profile) {
+    <section class="jwt-tool__card" aria-labelledby="jwt-profile-heading">
+      <div class="jwt-tool__card-head">
+        <h3 id="jwt-profile-heading" class="jwt-tool__card-title">Signing profile</h3>
+        <p class="jwt-tool__card-desc">
+          A reusable preset for one API or backend (algorithm, key location, and default claims). Create one
+          profile per secret — for example “Local HS256” and “Staging RS256”.
+        </p>
+      </div>
+      <div class="jwt-tool__row jwt-tool__row--profile">
+        <tx-form-field label="Active profile" controlId="jwt-profile">
+          <tx-dropdown
+            controlId="jwt-profile"
+            [options]="profileOptions()"
+            [ngModel]="state().activeProfileId"
+            (ngModelChange)="handleProfileSelect($event)"
+          />
+        </tx-form-field>
+        <tx-form-field label="Profile name" controlId="jwt-profile-name">
+          <tx-input
+            controlId="jwt-profile-name"
+            placeholder="e.g. Staging API"
+            [ngModel]="profile.name"
+            (ngModelChange)="patchProfile({ name: $event })"
+          />
+        </tx-form-field>
+        <tx-form-field label="Environment" controlId="jwt-profile-env">
+          <tx-dropdown
+            controlId="jwt-profile-env"
+            [options]="environmentOptions()"
+            [ngModel]="environmentDropdownValue()"
+            (ngModelChange)="handleEnvironmentChange($event)"
+          />
+        </tx-form-field>
+        <div class="jwt-tool__inline-actions">
+          <tx-button variant="secondary" (pressed)="handleAddProfile()">New</tx-button>
+          <tx-button variant="secondary" (pressed)="handleDuplicateProfile()">Duplicate</tx-button>
+          <tx-button variant="secondary" (pressed)="handleDeleteProfile()">Delete</tx-button>
+        </div>
+      </div>
+      <p class="jwt-tool__field-hint">
+        Link a workspace environment when this profile should read a signing secret (or other values) from
+        environment variables.
+      </p>
+    </section>
+
+    <section class="jwt-tool__card" aria-labelledby="jwt-key-heading">
+      <div class="jwt-tool__card-head">
+        <h3 id="jwt-key-heading" class="jwt-tool__card-title">Signing key</h3>
+        <p class="jwt-tool__card-desc">
+          Used to sign (Generate) or verify (Validate). Inline secrets stay in memory only. File profiles store
+          the path; environment-variable profiles store the variable name — never the secret value.
+        </p>
+      </div>
+      <div class="jwt-tool__row">
+        <tx-form-field label="Algorithm" controlId="jwt-alg">
+          <tx-dropdown
+            controlId="jwt-alg"
+            [options]="algorithmOptions"
+            [ngModel]="profile.alg"
+            (ngModelChange)="patchProfile({ alg: $event })"
+          />
+        </tx-form-field>
+        <tx-form-field label="Where is the key?" controlId="jwt-secret-source">
+          <tx-dropdown
+            controlId="jwt-secret-source"
+            [options]="secretSourceOptions"
+            [ngModel]="profile.secretSource"
+            (ngModelChange)="patchProfile({ secretSource: $event })"
+          />
+        </tx-form-field>
+      </div>
+
+      @if (profile.secretSource === 'inline') {
+        <tx-form-field label="Secret or private key" controlId="jwt-inline-secret">
+          <tx-input
+            controlId="jwt-inline-secret"
+            type="password"
+            placeholder="HMAC secret, PKCS#8 PEM, or JWK JSON"
+            [ngModel]="inlineSecret()"
+            (ngModelChange)="inlineSecret.set($event)"
+          />
+        </tx-form-field>
+        <p class="jwt-tool__field-hint">Cleared when you leave the tool. Not written to disk or session.</p>
+      }
+      @if (profile.secretSource === 'file') {
+        <div class="jwt-tool__file-row">
+          <tx-form-field label="Key file" controlId="jwt-secret-file">
+            <tx-input
+              controlId="jwt-secret-file"
+              [disabled]="true"
+              [ngModel]="profile.secretFileName || profile.secretFilePath || 'No file selected'"
+            />
+          </tx-form-field>
+          <tx-button variant="secondary" (pressed)="handlePickSecretFile()">Choose file…</tx-button>
+        </div>
+        <p class="jwt-tool__field-hint">Supports .pem / .key / .jwk / .txt. The file is re-read when you generate or validate.</p>
+      }
+      @if (profile.secretSource === 'envVar') {
+        <tx-form-field label="Environment variable" controlId="jwt-secret-env">
+          <tx-dropdown
+            controlId="jwt-secret-env"
+            [options]="envVarOptions()"
+            [ngModel]="profile.secretEnvVarKey"
+            (ngModelChange)="patchProfile({ secretEnvVarKey: $event })"
+          />
+        </tx-form-field>
+        <p class="jwt-tool__field-hint">
+          Variables from the environment selected on this profile. Choose “Environment variable” only after
+          linking an environment above.
+        </p>
+      }
+    </section>
+  }
+
+  <!-- Generate -->
+  @if (state().mode === 'generate' && activeProfile(); as profile) {
+    <section class="jwt-tool__card" aria-labelledby="jwt-claims-heading">
+      <div class="jwt-tool__card-head">
+        <h3 id="jwt-claims-heading" class="jwt-tool__card-title">Standard claims</h3>
+        <p class="jwt-tool__card-desc">
+          Common JWT registered claims. Leave a field empty to omit it from the payload (except toggles below).
+        </p>
+      </div>
+      <div class="jwt-tool__grid">
+        <div class="jwt-tool__field">
+          <tx-form-field label="Subject (sub)" controlId="jwt-sub">
+            <tx-input
+              controlId="jwt-sub"
+              placeholder="User or client id"
+              [ngModel]="profile.sub"
+              (ngModelChange)="patchProfile({ sub: $event })"
+            />
+          </tx-form-field>
+          <p class="jwt-tool__field-hint">Who the token is about.</p>
+        </div>
+        <div class="jwt-tool__field">
+          <tx-form-field label="Issuer (iss)" controlId="jwt-iss">
+            <tx-input
+              controlId="jwt-iss"
+              placeholder="https://auth.example.com"
+              [ngModel]="profile.iss"
+              (ngModelChange)="patchProfile({ iss: $event })"
+            />
+          </tx-form-field>
+          <p class="jwt-tool__field-hint">Who created the token.</p>
+        </div>
+        <div class="jwt-tool__field">
+          <tx-form-field label="Audience (aud)" controlId="jwt-aud">
+            <tx-input
+              controlId="jwt-aud"
+              placeholder="api, admin-api"
+              [ngModel]="profile.aud"
+              (ngModelChange)="patchProfile({ aud: $event })"
+            />
+          </tx-form-field>
+          <p class="jwt-tool__field-hint">Intended recipients. Comma-separate multiple values.</p>
+        </div>
+        <div class="jwt-tool__field">
+          <tx-form-field label="Key ID (kid)" controlId="jwt-kid">
+            <tx-input
+              controlId="jwt-kid"
+              placeholder="Optional header kid"
+              [ngModel]="profile.kid"
+              (ngModelChange)="patchProfile({ kid: $event })"
+            />
+          </tx-form-field>
+          <p class="jwt-tool__field-hint">Header hint for which key was used (not a claim).</p>
+        </div>
+        <div class="jwt-tool__field">
+          <tx-form-field label="Token type (typ)" controlId="jwt-typ">
+            <tx-input
+              controlId="jwt-typ"
+              [ngModel]="profile.typ"
+              (ngModelChange)="patchProfile({ typ: $event })"
+            />
+          </tx-form-field>
+          <p class="jwt-tool__field-hint">Usually “JWT”.</p>
+        </div>
+        <div class="jwt-tool__field">
+          <tx-form-field label="Expiration" controlId="jwt-ttl-preset">
+            <tx-dropdown
+              controlId="jwt-ttl-preset"
+              [options]="ttlPresetOptions"
+              [ngModel]="ttlPresetValue()"
+              (ngModelChange)="handleTtlPresetChange($event)"
+            />
+          </tx-form-field>
+          <p class="jwt-tool__field-hint">Sets the exp claim relative to now.</p>
+        </div>
+        @if (ttlPresetValue() === 'custom') {
+          <div class="jwt-tool__field">
+            <tx-form-field label="Custom TTL (seconds)" controlId="jwt-ttl-custom">
+              <tx-input
+                controlId="jwt-ttl-custom"
+                type="number"
+                [ngModel]="'' + profile.ttlSec"
+                (ngModelChange)="handleTtlCustomChange($event)"
+              />
+            </tx-form-field>
+          </div>
+        }
+        <div class="jwt-tool__field">
+          <tx-form-field label="Not before delay (seconds)" controlId="jwt-nbf">
+            <tx-input
+              controlId="jwt-nbf"
+              type="number"
+              [ngModel]="'' + profile.nbfOffsetSec"
+              (ngModelChange)="handleNbfOffsetChange($event)"
+            />
+          </tx-form-field>
+          <p class="jwt-tool__field-hint">Adds nbf = now + delay. Use 0 to omit.</p>
+        </div>
+      </div>
+      <div class="jwt-tool__toggles">
+        <label class="jwt-tool__toggle">
+          <tx-toggle [ngModel]="profile.includeIat" (ngModelChange)="patchProfile({ includeIat: $event })" />
+          <span>
+            <strong>Issued at (iat)</strong>
+            <small>Timestamp when the token is created</small>
+          </span>
+        </label>
+        <label class="jwt-tool__toggle">
+          <tx-toggle [ngModel]="profile.includeJti" (ngModelChange)="patchProfile({ includeJti: $event })" />
+          <span>
+            <strong>JWT ID (jti)</strong>
+            <small>Fresh UUID on each generate</small>
+          </span>
+        </label>
+      </div>
+    </section>
+
+    <section class="jwt-tool__card jwt-tool__card--preview" aria-labelledby="jwt-preview-heading">
+      <div class="jwt-tool__card-head">
+        <h3 id="jwt-preview-heading" class="jwt-tool__card-title">Payload extras &amp; preview</h3>
+        <p class="jwt-tool__card-desc">
+          Add custom claims as JSON. The preview merges them with the standard claims above (jti shows as a
+          placeholder until you generate).
+        </p>
+      </div>
+      @if (preview()?.error) {
+        <tx-banner variant="warning" [title]="preview()!.error!" />
+      }
+      <div class="jwt-tool__preview-grid">
+        <div class="jwt-tool__pane">
+          <span class="jwt-tool__pane-label">Extra claims (JSON)</span>
+          <div class="jwt-tool__editor">
+            <tx-code-editor
+              language="json"
+              [framed]="true"
+              [ngModel]="profile.extraClaimsJson"
+              (ngModelChange)="patchProfile({ extraClaimsJson: $event })"
+            />
+          </div>
+        </div>
+        <div class="jwt-tool__pane">
+          <span class="jwt-tool__pane-label">Header preview</span>
+          <div class="jwt-tool__editor">
+            <tx-code-editor
+              language="json"
+              [readOnly]="true"
+              [hideToolbar]="true"
+              [ngModel]="preview()?.headerJson ?? ''"
+            />
+          </div>
+        </div>
+        <div class="jwt-tool__pane">
+          <span class="jwt-tool__pane-label">Payload preview</span>
+          <div class="jwt-tool__editor">
+            <tx-code-editor
+              language="json"
+              [readOnly]="true"
+              [hideToolbar]="true"
+              [ngModel]="preview()?.payloadJson ?? ''"
+            />
+          </div>
+        </div>
+      </div>
+    </section>
+  }
+
+  <!-- Validate -->
+  @if (state().mode === 'validate' && activeProfile(); as profile) {
+    <section class="jwt-tool__card" aria-labelledby="jwt-validate-token-heading">
+      <div class="jwt-tool__card-head">
+        <h3 id="jwt-validate-token-heading" class="jwt-tool__card-title">Token to validate</h3>
+        <p class="jwt-tool__card-desc">Paste a compact JWT (three base64url segments separated by dots).</p>
+      </div>
+      <tx-form-field label="JWT" controlId="jwt-validate-token">
+        <tx-textarea
+          controlId="jwt-validate-token"
+          [rows]="4"
+          [monospace]="true"
+          [ngModel]="state().token"
+          (ngModelChange)="state.update((s) => ({ ...s, token: $event }))"
+        />
+      </tx-form-field>
+    </section>
+
+    <section class="jwt-tool__card" aria-labelledby="jwt-rules-heading">
+      <div class="jwt-tool__card-head">
+        <h3 id="jwt-rules-heading" class="jwt-tool__card-title">Validation rules</h3>
+        <p class="jwt-tool__card-desc">
+          Optional checks beyond the signature. Empty issuer/audience fields mean “do not enforce”. Expiry and
+          not-before are always checked when present on the token.
+        </p>
+      </div>
+      <div class="jwt-tool__grid">
+        <div class="jwt-tool__field">
+          <tx-form-field label="Expected issuer (iss)" controlId="jwt-expect-iss">
+            <tx-input
+              controlId="jwt-expect-iss"
+              [ngModel]="profile.expectIss"
+              (ngModelChange)="patchProfile({ expectIss: $event })"
+            />
+          </tx-form-field>
+        </div>
+        <div class="jwt-tool__field">
+          <tx-form-field label="Expected audience (aud)" controlId="jwt-expect-aud">
+            <tx-input
+              controlId="jwt-expect-aud"
+              [ngModel]="profile.expectAud"
+              (ngModelChange)="patchProfile({ expectAud: $event })"
+            />
+          </tx-form-field>
+        </div>
+        <div class="jwt-tool__field">
+          <tx-form-field label="Required claims" controlId="jwt-required-claims">
+            <tx-input
+              controlId="jwt-required-claims"
+              placeholder="sub, scope"
+              [ngModel]="requiredClaimsText()"
+              (ngModelChange)="handleRequiredClaimsChange($event)"
+            />
+          </tx-form-field>
+          <p class="jwt-tool__field-hint">Comma-separated claim names that must exist.</p>
+        </div>
+        <div class="jwt-tool__field">
+          <tx-form-field label="Clock tolerance (seconds)" controlId="jwt-clock-tol">
+            <tx-input
+              controlId="jwt-clock-tol"
+              type="number"
+              [ngModel]="'' + profile.clockToleranceSec"
+              (ngModelChange)="handleClockToleranceChange($event)"
+            />
+          </tx-form-field>
+          <p class="jwt-tool__field-hint">Allowed skew for exp / nbf / iat checks.</p>
+        </div>
+      </div>
+    </section>
+  }
+
+  <!-- Decode -->
+  @if (state().mode === 'decode') {
+    <section class="jwt-tool__card" aria-labelledby="jwt-decode-token-heading">
+      <div class="jwt-tool__card-head">
+        <h3 id="jwt-decode-token-heading" class="jwt-tool__card-title">Token to decode</h3>
+        <p class="jwt-tool__card-desc">No key required. This only base64url-decodes the header and payload.</p>
+      </div>
+      <tx-form-field label="JWT" controlId="jwt-decode-token">
+        <tx-textarea
+          controlId="jwt-decode-token"
+          [rows]="4"
+          [monospace]="true"
+          [ngModel]="state().token"
+          (ngModelChange)="state.update((s) => ({ ...s, token: $event }))"
+        />
+      </tx-form-field>
+    </section>
+
+    @if (state().token.trim() && !decoded().error) {
+      <section class="jwt-tool__card" aria-labelledby="jwt-decode-result-heading">
+        <div class="jwt-tool__card-head">
+          <h3 id="jwt-decode-result-heading" class="jwt-tool__card-title">Decoded contents</h3>
+          <p class="jwt-tool__card-desc">Header metadata and payload claims from the token.</p>
+        </div>
+        <app-dev-tool-stat-strip>
+          @if (decoded().algorithm) {
+            <tx-tag>alg {{ decoded().algorithm }}</tx-tag>
+          }
+          @if (decoded().kid) {
+            <tx-tag>kid {{ decoded().kid }}</tx-tag>
+          }
+          @if (decoded().issuedAt) {
+            <tx-tag>iat {{ decoded().issuedAt }}</tx-tag>
+          }
+          @if (decoded().notBefore) {
+            <tx-tag>nbf {{ decoded().notBefore }}</tx-tag>
+          }
+          @if (decoded().expiresAt) {
+            <tx-tag>exp {{ decoded().expiresAt }}</tx-tag>
+          }
+          @if (decoded().expired) {
+            <tx-tag>expired</tx-tag>
+          }
+        </app-dev-tool-stat-strip>
+        <div class="jwt-tool__preview-grid jwt-tool__preview-grid--two">
+          <div class="jwt-tool__pane">
+            <span class="jwt-tool__pane-label">Header</span>
+            <div class="jwt-tool__editor">
+              <tx-code-editor
+                language="json"
+                [readOnly]="true"
+                [hideToolbar]="true"
+                [ngModel]="decoded().headerJson"
+              />
+            </div>
+          </div>
+          <div class="jwt-tool__pane">
+            <span class="jwt-tool__pane-label">Payload</span>
+            <div class="jwt-tool__editor">
+              <tx-code-editor
+                language="json"
+                [readOnly]="true"
+                [hideToolbar]="true"
+                [ngModel]="decoded().payloadJson"
+              />
+            </div>
+          </div>
+        </div>
+      </section>
+    }
+  }
+</app-dev-tool-layout>

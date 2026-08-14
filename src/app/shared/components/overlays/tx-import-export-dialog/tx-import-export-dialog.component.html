@@ -1,0 +1,119 @@
+@if (open()) {
+  <tx-modal
+    [open]="open()"
+    [title]="state()?.mode === 'export' ? 'Export workspace' : 'Import preview'"
+    [ariaLabel]="state()?.mode === 'export' ? 'Export workspace' : 'Import preview'"
+    layer="stacked"
+    cardSize="wide"
+    (closed)="handleClose()"
+  >
+    <div class="tx-iexp">
+      <header class="tx-iexp__header">
+        <p class="tx-iexp__source">
+          <strong>Source:</strong> {{ state()?.sourceLabel }}
+        </p>
+        <span class="tx-iexp__badge">{{ formatBadge() }}</span>
+      </header>
+
+      <div class="tx-iexp__toolbar">
+        <button type="button" class="tx-iexp__link" (click)="handleSelectAll()">Select all</button>
+        <span class="tx-iexp__toolbar-sep" aria-hidden="true"></span>
+        <button type="button" class="tx-iexp__link" (click)="handleClearAll()">Clear</button>
+      </div>
+
+      <div class="tx-iexp__tree-wrap">
+        @if (tree().length === 0) {
+          <p class="tx-iexp__empty" role="status">Nothing to export in this selection.</p>
+        } @else {
+          <div class="tx-iexp__tree-surface" role="tree">
+            <ul class="tx-iexp__tree tx-iexp__tree--root">
+              @for (node of tree(); track node.id) {
+                <ng-container *ngTemplateOutlet="nodeTpl; context: { $implicit: node, depth: 0 }" />
+              }
+            </ul>
+          </div>
+        }
+      </div>
+
+      @if (state()?.mode === 'import') {
+        <fieldset class="tx-iexp__mode">
+          <legend>Import mode</legend>
+          <label class="tx-iexp__radio">
+            <input type="radio" name="mergeMode" [ngModel]="mergeMode()" (ngModelChange)="mergeMode.set('merge')" value="merge" />
+            <span><strong>Merge</strong> · keep existing items, overwrite by id</span>
+          </label>
+          <label class="tx-iexp__radio">
+            <input type="radio" name="mergeMode" [ngModel]="mergeMode()" (ngModelChange)="mergeMode.set('replace')" value="replace" />
+            <span><strong>Replace</strong> · wipe each section before importing</span>
+          </label>
+        </fieldset>
+      }
+
+      <footer class="tx-iexp__actions">
+        <tx-button variant="secondary" [disabled]="busy()" (pressed)="handleClose()">Cancel</tx-button>
+        <tx-button variant="primary" [disabled]="busy()" (pressed)="handleConfirm()">
+          {{ state()?.mode === 'export' ? 'Save export…' : 'Import selected' }}
+        </tx-button>
+      </footer>
+    </div>
+  </tx-modal>
+}
+
+<ng-template #nodeTpl let-node let-depth="depth">
+  <li
+    class="tx-iexp__node"
+    [class.tx-iexp__node--root]="depth === 0"
+    [class.tx-iexp__node--has-children]="node.children.length > 0"
+    role="treeitem"
+    [attr.aria-expanded]="node.children.length ? isExpanded(node) : null"
+  >
+    <div
+      class="tx-iexp__row"
+      [class.tx-iexp__row--section]="node.payload.kind === 'group'"
+      [class.tx-iexp__row--leaf]="node.children.length === 0"
+      [style.--tx-iexp-depth]="depth"
+    >
+      @if (node.children.length > 0) {
+        <button
+          type="button"
+          class="tx-iexp__twisty"
+          [class.is-expanded]="isExpanded(node)"
+          [attr.aria-label]="isExpanded(node) ? 'Collapse' : 'Expand'"
+          (click)="handleToggleExpand(node); $event.stopPropagation()"
+        >
+          <tx-icon name="chevronRight" class="tx-iexp__chevron" />
+        </button>
+      } @else {
+        <span class="tx-iexp__twisty tx-iexp__twisty--spacer" aria-hidden="true"></span>
+      }
+
+      @if (node.checkable) {
+        <label class="tx-iexp__check" (click)="$event.stopPropagation()">
+          <input
+            type="checkbox"
+            [checked]="checkState(node) === 'on'"
+            [indeterminate]="checkState(node) === 'partial'"
+            (change)="handleToggle(node)"
+          />
+        </label>
+      } @else {
+        <span class="tx-iexp__check tx-iexp__check--spacer" aria-hidden="true"></span>
+      }
+
+      <div class="tx-iexp__row-text">
+        <span class="tx-iexp__label" [class.is-group]="node.payload.kind === 'group'">{{ node.label }}</span>
+        @if (node.hint) {
+          <span class="tx-iexp__hint">{{ node.hint }}</span>
+        }
+      </div>
+    </div>
+
+    @if (node.children.length > 0 && isExpanded(node)) {
+      <ul class="tx-iexp__tree tx-iexp__children" role="group">
+        @for (child of node.children; track child.id) {
+          <ng-container *ngTemplateOutlet="nodeTpl; context: { $implicit: child, depth: depth + 1 }" />
+        }
+      </ul>
+    }
+  </li>
+</ng-template>

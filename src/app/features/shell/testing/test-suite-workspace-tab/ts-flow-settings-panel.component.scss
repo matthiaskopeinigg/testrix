@@ -1,0 +1,68 @@
+:host {
+  display: block;
+  width: 100%;
+  min-width: 0;
+}
+
+.ts-flow-settings {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.75rem;
+  width: 100%;
+  min-width: 0;
+}
+
+.ts-flow-settings__tags {
+  width: 100%;
+  min-width: 0;
+
+  ::ng-deep .tx-tags-input--compact {
+    width: 100%;
+    min-width: 0;
+  }
+
+  ::ng-deep .tx-tags-input__compact-row {
+    align-items: center;
+    justify-content: flex-start;
+  }
+
+  ::ng-deep .tx-tags-input__compact-chips {
+    flex: 0 1 auto;
+    min-width: 0;
+  }
+
+  ::ng-deep .tx-tags-input__compact-chips .tx-tag {
+    max-width: min(14rem, 100%);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  ::ng-deep .tx-tags-input__add-btn {
+    flex-shrink: 0;
+  }
+}
+
+.ts-flow-settings__toggles {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.35rem 0.75rem;
+  min-width: 0;
+}
+
+.ts-flow-settings__toggle {
+  flex-shrink: 0;
+
+  ::ng-deep .tx-toggle {
+    gap: 0.4rem;
+  }
+
+  ::ng-deep .tx-toggle__label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+}

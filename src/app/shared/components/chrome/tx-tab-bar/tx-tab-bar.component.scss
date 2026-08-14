@@ -1,0 +1,26 @@
+:host {
+  display: block;
+  min-width: 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--tx-border-0) 85%, transparent);
+  background: color-mix(in srgb, var(--tx-surface-1) 45%, var(--tx-surface-0));
+}
+
+.tx-tab-bar__scroll {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  min-height: 36px;
+  padding: 4px 6px 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+
+  &::-webkit-scrollbar {
+    height: 4px;
+  }
+}
+
+:host.tx-tab-bar-host--drag-over .tx-tab-bar__scroll {
+  outline: 1px dashed color-mix(in srgb, var(--tx-secondary) 55%, transparent);
+  outline-offset: -2px;
+}

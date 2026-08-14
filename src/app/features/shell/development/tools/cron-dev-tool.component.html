@@ -1,0 +1,52 @@
+<app-dev-tool-layout toolId="cron">
+  <app-dev-tool-toolbar devToolToolbar>
+    <div leading>
+      <tx-dropdown
+        label="Preset"
+        [options]="presetOptions"
+        [ngModel]="state().presetId"
+        (ngModelChange)="handlePreset($event)"
+      />
+    </div>
+    <div trailing>
+      <tx-button variant="secondary" (click)="handleCopy()">Copy expression</tx-button>
+    </div>
+  </app-dev-tool-toolbar>
+
+  <app-dev-tool-stat-strip>
+    <tx-tag>{{ description() }}</tx-tag>
+  </app-dev-tool-stat-strip>
+
+  <div class="dev-tool-tab__options">
+    <tx-form-field label="Minute">
+      <tx-input [ngModel]="state().minute" (ngModelChange)="updateField('minute', $event)" />
+    </tx-form-field>
+    <tx-form-field label="Hour">
+      <tx-input [ngModel]="state().hour" (ngModelChange)="updateField('hour', $event)" />
+    </tx-form-field>
+    <tx-form-field label="Day">
+      <tx-input [ngModel]="state().dayOfMonth" (ngModelChange)="updateField('dayOfMonth', $event)" />
+    </tx-form-field>
+    <tx-form-field label="Month">
+      <tx-input [ngModel]="state().month" (ngModelChange)="updateField('month', $event)" />
+    </tx-form-field>
+    <tx-form-field label="Weekday">
+      <tx-input [ngModel]="state().dayOfWeek" (ngModelChange)="updateField('dayOfWeek', $event)" />
+    </tx-form-field>
+  </div>
+
+  <tx-form-field label="Expression">
+    <tx-input [ngModel]="expression()" (ngModelChange)="handleExpressionInput($event)" />
+  </tx-form-field>
+
+  <div class="dev-tool-tab__pane">
+    <span class="dev-tool-tab__pane-label">Next runs</span>
+    <ul class="dev-tool-tab__stack-list">
+      @for (run of nextRuns(); track $index) {
+        <li>{{ run }}</li>
+      } @empty {
+        <li class="dev-tool-tab__lede">Enter a valid expression to see upcoming runs.</li>
+      }
+    </ul>
+  </div>
+</app-dev-tool-layout>

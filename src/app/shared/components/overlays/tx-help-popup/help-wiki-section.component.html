@@ -1,0 +1,36 @@
+<div class="help-wiki-section">
+  <header class="help-wiki-section__header">
+    <h2 class="help-wiki-section__title">{{ section().title }}</h2>
+    <p class="help-wiki-section__description">{{ section().description }}</p>
+  </header>
+
+  <div class="help-wiki-section__body">
+    @for (block of section().blocks; track $index) {
+      @switch (block.type) {
+        @case ('paragraph') {
+          <p class="help-wiki-section__paragraph">{{ block.text }}</p>
+        }
+        @case ('subheading') {
+          <h3 class="help-wiki-section__subheading">{{ block.text }}</h3>
+        }
+        @case ('list') {
+          <ul class="help-wiki-section__list">
+            @for (item of block.items; track item) {
+              <li>{{ item }}</li>
+            }
+          </ul>
+        }
+        @case ('tip') {
+          <tx-banner variant="info" [title]="block.title ?? 'Tip'">
+            {{ block.text }}
+          </tx-banner>
+        }
+        @case ('note') {
+          <tx-banner variant="warning" [title]="block.title ?? 'Note'">
+            {{ block.text }}
+          </tx-banner>
+        }
+      }
+    }
+  </div>
+</div>

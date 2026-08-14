@@ -1,0 +1,230 @@
+@use './dev-tool-layout';
+
+:host {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.jwt-tool__mode-intro {
+  margin: 0 0 0.35rem;
+}
+
+.jwt-tool__mode-title {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--tx-text-0);
+}
+
+.jwt-tool__mode-desc {
+  margin: 0.25rem 0 0;
+  max-width: 52rem;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--tx-text-2);
+}
+
+.jwt-tool__card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 0.15rem;
+  padding: 0.85rem 0.95rem;
+  border: 1px solid color-mix(in srgb, var(--tx-border-0) 55%, transparent);
+  border-radius: var(--tx-radius-sm, 8px);
+  background: color-mix(in srgb, var(--tx-surface-elevated) 88%, transparent);
+}
+
+.jwt-tool__card-head {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.jwt-tool__card-title {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--tx-text-0);
+}
+
+.jwt-tool__card-desc {
+  margin: 0;
+  max-width: 48rem;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: var(--tx-text-2);
+}
+
+.jwt-tool__row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: 0.75rem;
+  align-items: end;
+}
+
+.jwt-tool__row--profile {
+  grid-template-columns: minmax(11rem, 1.1fr) minmax(11rem, 1fr) minmax(11rem, 1fr) auto;
+}
+
+@media (max-width: 900px) {
+  .jwt-tool__row--profile {
+    grid-template-columns: 1fr;
+  }
+}
+
+.jwt-tool__inline-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-items: center;
+  padding-bottom: 0.1rem;
+}
+
+.jwt-tool__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(13.5rem, 1fr));
+  gap: 0.75rem 0.85rem;
+}
+
+.jwt-tool__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.jwt-tool__field-hint {
+  margin: 0;
+  font-size: 0.6875rem;
+  line-height: 1.4;
+  color: var(--tx-text-2);
+}
+
+.jwt-tool__file-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: end;
+}
+
+.jwt-tool__file-row tx-form-field {
+  flex: 1 1 16rem;
+}
+
+.jwt-tool__toggles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem 1.5rem;
+  padding-top: 0.15rem;
+}
+
+.jwt-tool__toggle {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  max-width: 18rem;
+  cursor: pointer;
+
+  span {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+  }
+
+  strong {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--tx-text-0);
+  }
+
+  small {
+    font-size: 0.6875rem;
+    line-height: 1.35;
+    color: var(--tx-text-2);
+  }
+
+  code {
+    font-family: var(--tx-font-mono, ui-monospace, monospace);
+    font-size: 0.65rem;
+  }
+}
+
+.jwt-tool__toggle--compact {
+  max-width: 28rem;
+  margin-bottom: 0.15rem;
+}
+
+.jwt-tool__preview-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+  min-height: 14rem;
+}
+
+.jwt-tool__preview-grid--two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (max-width: 960px) {
+  .jwt-tool__preview-grid,
+  .jwt-tool__preview-grid--two {
+    grid-template-columns: 1fr;
+  }
+}
+
+.jwt-tool__pane {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 0;
+  min-height: 0;
+}
+
+.jwt-tool__pane-label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--tx-text-2);
+}
+
+.jwt-tool__editor {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 11rem;
+  overflow: hidden;
+  border-radius: var(--tx-radius-sm, 8px);
+  border: 1px solid color-mix(in srgb, var(--tx-border-0) 50%, transparent);
+  background: var(--tx-surface-0, transparent);
+}
+
+.jwt-tool__token {
+  margin: 0;
+  padding: 0.75rem 0.85rem;
+  overflow: auto;
+  border-radius: var(--tx-radius-sm, 8px);
+  border: 1px solid color-mix(in srgb, var(--tx-border-0) 50%, transparent);
+  background: var(--tx-surface-0, transparent);
+  font-family: var(--tx-font-mono, ui-monospace, monospace);
+  font-size: 0.75rem;
+  line-height: 1.45;
+  word-break: break-all;
+  color: var(--tx-text-0);
+  white-space: pre-wrap;
+}
+
+.jwt-tool__empty {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--tx-text-2);
+}
+
+.jwt-tool__issue-list {
+  margin: 0.35rem 0 0;
+  padding-left: 1.1rem;
+  font-size: 0.8125rem;
+}

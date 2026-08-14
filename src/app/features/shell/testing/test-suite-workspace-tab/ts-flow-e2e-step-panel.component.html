@@ -1,0 +1,98 @@
+<div class="request-panel ts-flow-step-panel">
+  <h2 class="request-panel__title">Browser (E2E)</h2>
+
+  <tx-form-field label="Action" controlId="ts-e2e-action">
+    <tx-dropdown
+      controlId="ts-e2e-action"
+      [options]="e2eActionOptions"
+      [ngModel]="cfg().action"
+      (ngModelChange)="patch({ action: $event })"
+    />
+  </tx-form-field>
+
+  @if (fields().pageUrl) {
+    <tx-form-field label="Page URL" controlId="ts-e2e-page-url">
+      <tx-variable-input
+        controlId="ts-e2e-page-url"
+        [catalog]="variableCatalog()"
+        [ngModel]="cfg().value"
+        (ngModelChange)="patch({ value: $event })"
+        placeholder="https://example.com/path"
+      />
+    </tx-form-field>
+  }
+
+  @if (fields().selector) {
+    <div class="ts-flow-step-panel__selector-row">
+      <tx-form-field
+        class="ts-flow-step-panel__grow"
+        [label]="selectorLabel()"
+        controlId="ts-e2e-sel"
+      >
+        <tx-input
+          controlId="ts-e2e-sel"
+          [ngModel]="cfg().selector"
+          (ngModelChange)="patch({ selector: $event })"
+          placeholder="CSS selector or XPath"
+        />
+      </tx-form-field>
+      @if (fields().selectorPick) {
+        <tx-button
+          variant="secondary"
+          ariaLabel="Pick element on page"
+          [loading]="picking()"
+          loadingLabel="Picking…"
+          (click)="handlePickOnPage()"
+        >
+          Pick on page
+        </tx-button>
+      }
+    </div>
+  }
+
+  @if (fields().text) {
+    <tx-form-field label="Text to type" controlId="ts-e2e-text">
+      <tx-variable-input
+        controlId="ts-e2e-text"
+        [catalog]="variableCatalog()"
+        [ngModel]="cfg().value"
+        (ngModelChange)="patch({ value: $event })"
+        placeholder="Text to enter in the element"
+      />
+    </tx-form-field>
+  }
+
+  @if (fields().expectedUrl) {
+    <tx-form-field [label]="expectedUrlLabel()" controlId="ts-e2e-expected-url">
+      <tx-variable-input
+        controlId="ts-e2e-expected-url"
+        [catalog]="variableCatalog()"
+        [ngModel]="cfg().value"
+        (ngModelChange)="patch({ value: $event })"
+        placeholder="https://example.com/expected"
+      />
+    </tx-form-field>
+  }
+
+  @if (fields().screenshotFileName) {
+    <tx-form-field label="File name" controlId="ts-e2e-screenshot-name">
+      <tx-input
+        controlId="ts-e2e-screenshot-name"
+        [ngModel]="cfg().screenshotFileName ?? ''"
+        (ngModelChange)="patch({ screenshotFileName: $event })"
+        placeholder="screenshot.png"
+      />
+    </tx-form-field>
+  }
+
+  @if (fields().timeout) {
+    <tx-form-field label="Timeout (ms)" controlId="ts-e2e-timeout">
+      <tx-input
+        controlId="ts-e2e-timeout"
+        type="number"
+        [ngModel]="cfg().timeout"
+        (ngModelChange)="patch({ timeout: toNumber($event) })"
+      />
+    </tx-form-field>
+  }
+</div>

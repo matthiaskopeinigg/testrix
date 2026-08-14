@@ -1,0 +1,70 @@
+@if (isVisible()) {
+  <div
+    class="tx-help tx-overlay-dialog disable-select"
+    [class.tx-overlay-dialog--shown]="isShown()"
+    role="presentation"
+    (click)="handleBackdropClick($event)"
+  >
+    <div
+      class="tx-help__popup tx-overlay-dialog__popup"
+      [class.tx-overlay-dialog__popup--shown]="isShown()"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="tx-help-title"
+      (click)="$event.stopPropagation()"
+    >
+      <button type="button" class="tx-overlay-dialog__close" aria-label="Close help" (click)="handleClose()">
+        <tx-icon name="close" [size]="18" />
+      </button>
+
+      <div class="tx-help__main">
+        <aside class="tx-help__sidebar" aria-label="Help topics">
+          <header class="tx-help__brand">
+            <span class="tx-help__brand-mark" aria-hidden="true">
+              <tx-icon name="help" [size]="18" />
+            </span>
+            <div class="tx-help__brand-text">
+              <span id="tx-help-title" class="tx-help__brand-title">Help</span>
+              <span class="tx-help__brand-sub">Guide to Testrix features</span>
+            </div>
+          </header>
+
+          <div class="tx-help__search">
+            <tx-input
+              controlId="tx-help-search"
+              [ngModel]="searchQuery()"
+              (ngModelChange)="handleSearchChange($event)"
+              placeholder="Search help…"
+              aria-label="Search help topics"
+            />
+          </div>
+
+          <div class="tx-help__sidebar-body">
+            @for (group of filteredSidebarGroups(); track group.title) {
+              <div class="tx-help__sidebar-group">
+                <div class="tx-help__sidebar-group-title">{{ group.title }}</div>
+                @for (item of group.items; track item.id) {
+                  <button
+                    type="button"
+                    class="tx-help__sidebar-item"
+                    [class.is-active]="isSectionActive(item.id)"
+                    (click)="selectSection(item.id)"
+                  >
+                    <span class="tx-help__sidebar-item-icon" aria-hidden="true">
+                      <tx-icon [name]="iconName(item.icon)" [size]="16" />
+                    </span>
+                    <span class="tx-help__sidebar-item-label">{{ item.label }}</span>
+                  </button>
+                }
+              </div>
+            }
+          </div>
+        </aside>
+
+        <div class="tx-help__content">
+          <help-wiki-section [section]="activeSection()" />
+        </div>
+      </div>
+    </div>
+  </div>
+}

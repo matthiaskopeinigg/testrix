@@ -1,0 +1,142 @@
+<header
+  class="tx-titlebar disable-select"
+  [class.tx-titlebar--darwin]="isDarwin()"
+  [class.tx-titlebar--native-frame]="useNativeFrame()"
+  (mousedown)="handleTitlebarMouseDown($event)"
+  (dblclick)="handleTitlebarDoubleClick($event)"
+>
+  <div class="tx-titlebar__lead">
+    @if (!useNativeFrame()) {
+      <div class="tx-titlebar__brand">
+        <tx-brand-logo [size]="24" />
+        <span class="tx-titlebar__product">Testrix</span>
+        @if (showDevToolkit()) {
+          <span
+            class="tx-titlebar__dev-badge"
+            txTooltip="Development build (npm run dev)"
+            txTooltipPosition="bottom"
+          >Dev</span>
+        }
+      </div>
+    } @else if (showDevToolkit()) {
+      <span class="tx-titlebar__dev-badge tx-titlebar__dev-badge--native" title="Development build">Dev</span>
+    }
+
+    @if (showProfilePicker()) {
+      @if (!useNativeFrame()) {
+        <span class="tx-titlebar__sep" aria-hidden="true"></span>
+      }
+      <div class="tx-titlebar__profile" aria-label="Workspace profile">
+        @if (profileSwitching()) {
+          <tx-spinner
+            class="tx-titlebar__profile-spinner"
+            size="sm"
+            [ariaLabel]="profileSwitchingTitle()"
+          />
+        } @else {
+          <tx-icon
+            class="tx-titlebar__profile-icon"
+            name="users"
+            [size]="15"
+            aria-hidden="true"
+          />
+        }
+        <tx-dropdown
+          class="tx-titlebar__profile-dropdown"
+          [options]="profileOptions()"
+          [disabled]="profileSwitching()"
+          [selectedValue]="activeProfileId()"
+          (valueChange)="handleProfileChange($event)"
+          panelActionLabel="Manage profiles"
+          panelActionIcon="settings"
+          (panelAction)="handleOpenProfileManager()"
+          ariaLabel="Workspace profile"
+          placeholder="Profile"
+          placement="bottom-start"
+          hint="Team profiles sync with Git while active. Local profiles stay on this machine."
+          hintPosition="bottom"
+        />
+      </div>
+    }
+  </div>
+
+  @if (!useNativeFrame()) {
+    <div class="tx-titlebar__drag" aria-hidden="true"></div>
+  }
+
+  <nav class="tx-titlebar__trailing" aria-label="Window chrome">
+    <button
+      type="button"
+      class="tx-titlebar-btn tx-titlebar-btn--chrome"
+      txTooltip="Cookie jar"
+      txTooltipPosition="bottom"
+      aria-label="Open cookie jar"
+      (click)="handleOpenCookies()"
+    >
+      <tx-icon name="box" [size]="16" />
+    </button>
+    <button
+      type="button"
+      class="tx-titlebar-btn tx-titlebar-btn--chrome tx-titlebar-btn--teams"
+      [class.tx-titlebar-btn--teams-synced]="teamIndicatorStatus() === 'synced'"
+      [class.tx-titlebar-btn--teams-syncing]="teamIndicatorStatus() === 'syncing'"
+      [class.tx-titlebar-btn--teams-offline]="teamIndicatorStatus() === 'offline'"
+      [class.tx-titlebar-btn--teams-failed]="teamIndicatorStatus() === 'failed'"
+      [class.tx-titlebar-btn--teams-conflict]="teamIndicatorStatus() === 'conflict'"
+      [class.tx-titlebar-btn--teams-dirty]="teamIndicatorStatus() === 'dirty'"
+      [class.tx-titlebar-btn--teams-idle]="teamIndicatorStatus() === 'idle'"
+      [class.tx-titlebar-btn--teams-paused]="teamIndicatorStatus() === 'paused'"
+      [class.tx-titlebar-btn--teams-not-configured]="teamIndicatorStatus() === 'not-configured'"
+      [txTooltip]="teamAriaLabel()"
+      txTooltipPosition="bottom"
+      [attr.aria-label]="teamAriaLabel()"
+      (click)="handleOpenTeams()"
+    >
+      <tx-icon name="users" [size]="16" />
+      <span class="tx-titlebar-btn__status-dot" aria-hidden="true"></span>
+    </button>
+    <button
+      type="button"
+      class="tx-titlebar-btn tx-titlebar-btn--chrome"
+      txTooltip="Settings"
+      txTooltipPosition="bottom"
+      aria-label="Open settings"
+      (click)="handleOpenSettings()"
+    >
+      <tx-icon name="settingsGear" [size]="16" />
+    </button>
+
+    @if (hasChromeBridge()) {
+      <div class="tx-titlebar__window-controls" aria-label="Window controls">
+        <button
+          type="button"
+          class="tx-titlebar-btn tx-titlebar-btn--window"
+          (click)="handleMinimize()"
+          aria-label="Minimize window"
+        >
+          <tx-icon name="minimize" [size]="13" />
+        </button>
+        <button
+          type="button"
+          class="tx-titlebar-btn tx-titlebar-btn--window"
+          (click)="handleMaximizeToggle()"
+          aria-label="Toggle maximize"
+        >
+          <tx-icon name="maximize" [size]="13" />
+        </button>
+        <button
+          type="button"
+          class="tx-titlebar-btn tx-titlebar-btn--window tx-titlebar-btn--close"
+          (click)="handleClose()"
+          aria-label="Close window"
+        >
+          <tx-icon name="close" [size]="13" />
+        </button>
+      </div>
+    }
+  </nav>
+</header>
+
+<tx-cookie-manager [open]="cookiesOpen()" (closed)="handleCloseCookies()" />
+
+<tx-profile-manager-modal [open]="profileManagerOpen()" (closed)="handleCloseProfileManager()" />

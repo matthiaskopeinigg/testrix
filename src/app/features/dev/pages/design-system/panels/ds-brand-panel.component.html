@@ -1,0 +1,35 @@
+@switch (sectionId()) {
+  @case ('brand-identity') {
+    <section class="ds-panel">
+      <h2>Product identity</h2>
+      <p class="ds-lede"><strong>Testrix</strong> — Angular + Electron desktop shell for API testing workflows.</p>
+      <p>Use <code>tx-brand-logo</code> for product marks; do not embed raw SVG in features.</p>
+    </section>
+  }
+  @case ('brand-logo') {
+    <section class="ds-panel">
+      <h2>Logo &amp; assets</h2>
+      <p class="ds-lede">
+        Canonical SVG: <code>assets/brand/logo.svg</code> · synced to <code>/brand/</code> via
+        <code>npm run sync:brand</code>.
+      </p>
+      <div class="ds-demo">
+        <tx-brand-logo variant="default" />
+        <tx-brand-logo variant="dark" />
+      </div>
+    </section>
+  }
+  @case ('brand-voice') {
+    <section class="ds-panel">
+      <h2>Voice &amp; naming</h2>
+      <ul class="ds-token-list">
+        <li>Buttons: verb-first labels (Save, Reload config, Close)</li>
+        <li>Errors: short title + actionable detail in <code>tx-error-banner</code></li>
+        <li>Avoid jargon in user-facing copy; reserve technical terms for Developer section</li>
+      </ul>
+    </section>
+  }
+  @default {
+    <section class="ds-panel"><p>Unknown brand section.</p></section>
+  }
+}

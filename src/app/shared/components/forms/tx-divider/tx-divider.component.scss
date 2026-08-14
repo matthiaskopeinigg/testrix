@@ -1,0 +1,20 @@
+:host {
+  display: block;
+  width: 100%;
+  padding: 0.35rem 0;
+}
+
+.tx-divider {
+  height: 1px;
+  width: 100%;
+  margin: 0;
+  border: none;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    color-mix(in srgb, var(--tx-border-0) 95%, transparent) 12%,
+    color-mix(in srgb, var(--tx-border-strong) 80%, transparent) 50%,
+    color-mix(in srgb, var(--tx-border-0) 95%, transparent) 88%,
+    transparent 100%
+  );
+}

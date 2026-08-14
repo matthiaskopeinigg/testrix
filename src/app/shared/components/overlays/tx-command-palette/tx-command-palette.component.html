@@ -1,0 +1,65 @@
+@if (open()) {
+  <div
+    class="tx-command-palette__overlay"
+    role="presentation"
+    (click)="handleBackdropClick()"
+  >
+    <div
+      class="tx-command-palette"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Command palette"
+      (click)="handleShellClick($event)"
+    >
+      <div class="tx-command-palette__input-row" #searchHost>
+        <tx-icon name="search" [size]="16" class="tx-command-palette__search-icon" aria-hidden="true" />
+        <tx-input
+          class="tx-command-palette__input"
+          type="search"
+          [ngModel]="query()"
+          (ngModelChange)="handleQueryChange($event)"
+          placeholder="Type a command or search…"
+          ariaLabel="Command palette search"
+          [clearable]="false"
+        />
+        <kbd class="tx-command-palette__kbd">Esc</kbd>
+      </div>
+
+      <ul class="tx-command-palette__list" role="listbox">
+        @for (result of results(); track result.command.id; let i = $index) {
+          <li
+            class="tx-command-palette__item"
+            role="option"
+            [attr.aria-selected]="i === activeIndex()"
+            [class.tx-command-palette__item--active]="i === activeIndex()"
+            (mouseenter)="handleItemHover(i)"
+            (click)="handleItemClick(i)"
+          >
+            <div class="tx-command-palette__item-main">
+              <span class="tx-command-palette__label">{{ result.command.label }}</span>
+              @if (result.command.hint) {
+                <span class="tx-command-palette__hint">{{ result.command.hint }}</span>
+              }
+            </div>
+            <div class="tx-command-palette__item-meta">
+              @if (result.command.category) {
+                <tx-tag [casing]="'normal'">{{ result.command.category }}</tx-tag>
+              }
+              @if (result.command.shortcut) {
+                <kbd class="tx-command-palette__kbd">{{ result.command.shortcut }}</kbd>
+              }
+            </div>
+          </li>
+        } @empty {
+          <li class="tx-command-palette__empty">
+            @if (query()) {
+              No commands match “{{ query() }}”.
+            } @else {
+              No commands registered yet.
+            }
+          </li>
+        }
+      </ul>
+    </div>
+  </div>
+}

@@ -1,0 +1,83 @@
+@if (loading()) {
+  <div class="tx-team-commit-diff__loading">
+    <tx-spinner size="sm" />
+    <span>Loading changes…</span>
+  </div>
+} @else if (detail(); as commit) {
+  <header class="tx-team-commit-diff__header">
+    <tx-team-author-card
+      [name]="commit.authorName"
+      [email]="commit.authorEmail"
+      [committedAt]="commit.committedAt"
+      [currentAuthorEmail]="currentAuthorEmail()"
+    />
+
+    <div class="tx-team-commit-diff__title-row">
+      <h3 class="tx-team-commit-diff__message">{{ commit.message }}</h3>
+      <code class="tx-team-commit-diff__hash">{{ commit.shortHash }}</code>
+    </div>
+
+    <div class="tx-team-commit-diff__stats">
+      <span class="tx-team-commit-diff__stat tx-team-commit-diff__stat--add">+{{ commit.additions }}</span>
+      <span class="tx-team-commit-diff__stat tx-team-commit-diff__stat--del">−{{ commit.deletions }}</span>
+      <span class="tx-team-commit-diff__stat">{{ commit.files.length }} file{{ commit.files.length === 1 ? '' : 's' }}</span>
+    </div>
+  </header>
+
+  @if (commit.files.length === 0) {
+    <p class="tx-team-commit-diff__empty">No file changes in this commit.</p>
+  } @else {
+    <div class="tx-team-commit-diff__files" role="tablist" aria-label="Changed files">
+      @for (file of commit.files; track file.path) {
+        <button
+          type="button"
+          class="tx-team-commit-diff__file-btn"
+          role="tab"
+          [class.tx-team-commit-diff__file-btn--active]="selectedFile()?.path === file.path"
+          [attr.aria-selected]="selectedFile()?.path === file.path"
+          (click)="handleSelectFile(file.path)"
+        >
+          <span class="tx-team-commit-diff__file-name">{{ file.path }}</span>
+          <span class="tx-team-commit-diff__file-meta">
+            <tx-tag [variant]="fileStatusVariant(file.status)">{{ fileStatusLabel(file.status) }}</tx-tag>
+            @if (file.additions > 0 || file.deletions > 0) {
+              <span class="tx-team-commit-diff__file-counts">
+                @if (file.additions > 0) {
+                  <span class="tx-team-commit-diff__stat tx-team-commit-diff__stat--add">+{{ file.additions }}</span>
+                }
+                @if (file.deletions > 0) {
+                  <span class="tx-team-commit-diff__stat tx-team-commit-diff__stat--del">−{{ file.deletions }}</span>
+                }
+              </span>
+            }
+          </span>
+        </button>
+      }
+    </div>
+
+    @if (selectedFile(); as file) {
+      <div class="tx-team-commit-diff__viewer" role="tabpanel">
+        <div class="tx-team-commit-diff__viewer-head">
+          <tx-icon name="file" [size]="14" aria-hidden="true" />
+          <span>{{ file.path }}</span>
+        </div>
+        @if (diffLines().length === 0) {
+          <p class="tx-team-commit-diff__empty">No diff available for this file.</p>
+        } @else {
+          <pre class="tx-team-commit-diff__code"><code>@for (line of diffLines(); track $index) {
+<span
+  class="tx-team-commit-diff__line"
+  [class.tx-team-commit-diff__line--add]="line.kind === 'add'"
+  [class.tx-team-commit-diff__line--remove]="line.kind === 'remove'"
+  [class.tx-team-commit-diff__line--context]="line.kind === 'context'"
+  [class.tx-team-commit-diff__line--hunk]="line.kind === 'hunk'"
+  [class.tx-team-commit-diff__line--meta]="line.kind === 'meta'"
+>{{ line.kind === 'add' ? '+' : line.kind === 'remove' ? '-' : line.kind === 'context' ? ' ' : '' }}{{ line.text }}</span>
+}</code></pre>
+        }
+      </div>
+    }
+  }
+} @else {
+  <p class="tx-team-commit-diff__empty">Select a commit to inspect its changes.</p>
+}

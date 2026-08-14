@@ -1,0 +1,95 @@
+<div class="ws-overview">
+  <header class="ws-overview__hero">
+    <div class="ws-overview__hero-main">
+      <h2 class="ws-overview__title">Overview</h2>
+      <p class="ws-overview__subtitle">
+        WebSocket metadata, connection status, and quick access to configuration.
+      </p>
+    </div>
+    <div class="ws-overview__endpoint" aria-label="WebSocket endpoint">
+      <tx-icon name="zap" [size]="14" aria-hidden="true" />
+      <code class="ws-overview__url">{{ wsPath() || '—' }}</code>
+    </div>
+  </header>
+
+  @if (parentPath()) {
+    <p class="ws-overview__path">
+      <tx-icon name="chevronRight" [size]="10" aria-hidden="true" />
+      {{ parentPath() }}
+    </p>
+  }
+
+  <div class="ws-overview__layout">
+    <section class="ws-overview-card ws-overview-card--about" aria-label="About this WebSocket">
+      <h3 class="ws-overview-card__title">About</h3>
+      <tx-form-field label="Description" controlId="ws-description">
+        <tx-textarea
+          id="ws-description"
+          [ngModel]="description()"
+          (ngModelChange)="descriptionChange.emit($event)"
+          placeholder="Short notes about this WebSocket"
+        />
+      </tx-form-field>
+
+      <tx-form-field label="Tags" controlId="ws-tags">
+        <tx-tags-input
+          controlId="ws-tags"
+          [compact]="true"
+          placeholder="Add a tag"
+          [ngModel]="tags()"
+          (ngModelChange)="tagsChange.emit($event)"
+        />
+      </tx-form-field>
+
+      <p class="ws-overview__env">
+        <tx-icon name="globe" [size]="12" aria-hidden="true" />
+        Environment: <strong>{{ environmentName() }}</strong>
+      </p>
+    </section>
+
+    <section class="ws-overview-card ws-overview-card--connection" aria-label="Connection">
+      <div class="ws-overview-card__head">
+        <h3 class="ws-overview-card__title">Connection</h3>
+        <tx-tag [variant]="connectionTagVariant()" casing="normal">{{ connectionLabel() }}</tx-tag>
+      </div>
+
+      @if (connectionState() === 'connected') {
+        <p class="ws-overview-connection__hint">
+          Connected to this endpoint. Message sending will be available in a future release.
+        </p>
+      } @else {
+        <div class="ws-overview-empty">
+          <span class="ws-overview-empty__icon" aria-hidden="true">
+            <tx-icon name="zap" [size]="18" />
+          </span>
+          <p class="ws-overview-empty__title">Not connected</p>
+          <p class="ws-overview-empty__hint">
+            Use Connect in the toolbar to open a WebSocket when connection support is enabled.
+          </p>
+        </div>
+      }
+    </section>
+  </div>
+
+  <section class="ws-overview-config" aria-label="Configuration summary">
+    <div class="ws-overview-config__head">
+      <h3 class="ws-overview-card__title">Configuration</h3>
+      <p class="ws-overview-config__hint">Jump to a section to edit settings.</p>
+    </div>
+
+    <div class="ws-overview-config__grid">
+      @for (card of configCards(); track card.section) {
+        <button type="button" class="ws-overview-config-card" (click)="sectionSelect.emit(card.section)">
+          <span class="ws-overview-config-card__icon" aria-hidden="true">
+            <tx-icon [name]="card.icon" [size]="16" />
+          </span>
+          <span class="ws-overview-config-card__body">
+            <span class="ws-overview-config-card__label">{{ card.label }}</span>
+            <span class="ws-overview-config-card__value">{{ card.value }}</span>
+          </span>
+          <tx-icon class="ws-overview-config-card__chevron" name="chevronRight" [size]="14" aria-hidden="true" />
+        </button>
+      }
+    </div>
+  </section>
+</div>

@@ -1,0 +1,26 @@
+@use '../workspace/workspace-sidebar-tree' as sidebar-tree;
+
+:host {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  width: 100%;
+}
+
+.environment-tree-panel {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  width: 100%;
+}
+
+.environment-tree-panel__body {
+  @include sidebar-tree.workspace-sidebar-panel-body;
+}
+
+.environment-tree-panel__tree {
+  @include sidebar-tree.workspace-sidebar-tree-host;
+}

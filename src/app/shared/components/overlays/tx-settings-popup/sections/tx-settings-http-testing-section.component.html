@@ -1,0 +1,23 @@
+<div class="tx-entrance-stagger__block">
+  <h2 class="tx-settings__tab-title">Testing</h2>
+  <p class="tx-settings__tab-description">
+    Paths and options for automated and end-to-end test runs.
+  </p>
+</div>
+
+<div class="tx-entrance-stagger__block">
+  <h3 class="tx-settings__section-heading">E2E</h3>
+  <tx-form-field label="Screenshot folder" controlId="tx-settings-http-e2e-folder">
+    <tx-input
+      controlId="tx-settings-http-e2e-folder"
+      [ngModel]="testing().e2eScreenshotFolder"
+      (ngModelChange)="emit({ e2eScreenshotFolder: $event })"
+      placeholder="Choose a folder for E2E screenshots"
+    />
+  </tx-form-field>
+  <div class="tx-settings__action-row">
+    <tx-button variant="secondary" [disabled]="!canPickDirectory()" (pressed)="handleBrowse()">
+      Browse
+    </tx-button>
+  </div>
+</div>

@@ -1,0 +1,50 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+  width: 100%;
+}
+
+.request-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+  flex: 1 1 auto;
+}
+
+.request-panel__title {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--tx-text-0);
+}
+
+.request-panel__hint {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--tx-text-2);
+  line-height: 1.45;
+}
+
+.ms-response {
+  max-width: 56rem;
+  min-height: 0;
+}
+
+.ms-response__meta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+  flex-shrink: 0;
+}
+
+:host ::ng-deep app-request-tab-body-panel {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 12rem;
+  min-width: 0;
+}

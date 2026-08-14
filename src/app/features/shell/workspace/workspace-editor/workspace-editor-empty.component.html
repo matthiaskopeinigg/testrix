@@ -1,0 +1,13 @@
+<div class="workspace-editor-empty" role="status">
+  <p class="workspace-editor-empty__title">No open tabs in this pane</p>
+  <p class="workspace-editor-empty__hint">
+    Select a request or WebSocket from Collections to open a tab here.
+  </p>
+  @if (showPaneActions()) {
+    <div class="workspace-editor-empty__actions">
+      <tx-button variant="secondary" (pressed)="resetLayout.emit()">Reset to single pane</tx-button>
+      <tx-button variant="secondary" (pressed)="closePane.emit()">Close this pane</tx-button>
+    </div>
+    <p class="workspace-editor-empty__menu-hint">Or right-click this area for the same options.</p>
+  }
+</div>

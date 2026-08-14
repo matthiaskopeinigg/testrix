@@ -1,0 +1,167 @@
+import { ChangeDetectionStrategy, Component, computed, inject, input, output, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+
+import { ProfileService } from '@app/core/profile/profile.service';
+import { TeamSyncService } from '@app/core/collaboration/team-sync.service';
+import { TeamsPanelService } from '@app/core/collaboration/teams-panel.service';
+import { TxNotificationService } from '@app/core/notifications/tx-notification.service';
+
+import { TxButtonComponent } from '../../forms/tx-button/tx-button.component';
+import { TxConfirmDialogComponent } from '../tx-confirm-dialog/tx-confirm-dialog.component';
+import { TxFormFieldComponent } from '../../forms/tx-form-field/tx-form-field.component';
+import { TxIconComponent } from '../../forms/tx-icon/tx-icon.component';
+import { TxInputComponent } from '../../forms/tx-input/tx-input.component';
+import { TxModalComponent } from '../tx-modal/tx-modal.component';
+import { TxTagComponent } from '../../forms/tx-tag/tx-tag.component';
+
+@Component({
+  selector: 'tx-profile-manager-modal',
+  standalone: true,
+  imports: [
+    FormsModule,
+    TxButtonComponent,
+    TxConfirmDialogComponent,
+    TxFormFieldComponent,
+    TxIconComponent,
+    TxInputComponent,
+    TxModalComponent,
+    TxTagComponent,
+  ],
+  templateUrl: './tx-profile-manager-modal.component.html',
+  styleUrl: './tx-profile-manager-modal.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+export class TxProfileManagerModalComponent {
+  readonly open = input(false);
+
+  readonly closed = output<void>();
+
+  private readonly profiles = inject(ProfileService);
+  private readonly teamSync = inject(TeamSyncService);
+  private readonly teamsPanel = inject(TeamsPanelService);
+  private readonly notifications = inject(TxNotificationService);
+
+  protected readonly localProfiles = this.profiles.localProfiles;
+  protected readonly teamProfiles = this.profiles.teamProfiles;
+  protected readonly activeProfileId = this.profiles.activeProfileId;
+  protected readonly profileSwitching = this.profiles.switching;
+  protected readonly totalProfileCount = computed(() => this.profiles.profiles().length);
+  protected readonly isTeamConnected = computed(() => Boolean(this.teamSync.config()?.enabled));
+
+  protected readonly newProfileModalOpen = signal(false);
+  protected readonly newProfileName = signal('New profile');
+  protected readonly renameProfileOpen = signal(false);
+  protected readonly renameProfileTargetId = signal<string | null>(null);
+  protected readonly renameProfileDraftName = signal('');
+  protected readonly deleteConfirmOpen = signal(false);
+  protected readonly deleteTargetId = signal<string | null>(null);
+  protected readonly deleteTargetName = signal('');
+
+  protected handleClose(): void {
+    this.closed.emit();
+  }
+
+  protected handleAddProfile(): void {
+    if (this.profileSwitching()) {
+      return;
+    }
+    this.newProfileName.set('New profile');
+    this.newProfileModalOpen.set(true);
+  }
+
+  protected handleCloseNewProfileModal(): void {
+    this.newProfileModalOpen.set(false);
+  }
+
+  protected handleConfirmNewProfile(): void {
+    const name = this.newProfileName().trim();
+    if (!name || this.profileSwitching()) {
+      return;
+    }
+    this.newProfileModalOpen.set(false);
+    void this.profiles.createProfile(name).then(() => {
+      this.notifications.showSuccess('Profile created');
+    });
+  }
+
+  protected handleRenameProfile(profileId: string): void {
+    const entry = this.profiles.profiles().find((profile) => profile.id === profileId);
+    if (!entry) {
+      return;
+    }
+    this.renameProfileTargetId.set(profileId);
+    this.renameProfileDraftName.set(entry.name);
+    this.renameProfileOpen.set(true);
+  }
+
+  protected handleCloseRenameProfile(): void {
+    this.renameProfileOpen.set(false);
+    this.renameProfileTargetId.set(null);
+  }
+
+  protected async handleConfirmRenameProfile(): Promise<void> {
+    const profileId = this.renameProfileTargetId();
+    const name = this.renameProfileDraftName().trim();
+    if (!profileId || !name) {
+      return;
+    }
+    this.renameProfileOpen.set(false);
+    this.renameProfileTargetId.set(null);
+    await this.profiles.renameProfile(profileId, name);
+    this.notifications.showSuccess('Profile renamed');
+  }
+
+  protected handleDeleteProfile(profileId: string): void {
+    const entry = this.profiles.profiles().find((profile) => profile.id === profileId);
+    if (!entry) {
+      return;
+    }
+    if (profileId === this.activeProfileId()) {
+      this.notifications.showError('Switch to another profile before deleting the active one');
+      return;
+    }
+    this.deleteTargetId.set(profileId);
+    this.deleteTargetName.set(entry.name);
+    this.deleteConfirmOpen.set(true);
+  }
+
+  protected handleCloseDeleteConfirm(): void {
+    this.deleteConfirmOpen.set(false);
+    this.deleteTargetId.set(null);
+    this.deleteTargetName.set('');
+  }
+
+  protected async handleConfirmDeleteProfile(): Promise<void> {
+    const profileId = this.deleteTargetId();
+    if (!profileId) {
+      return;
+    }
+    this.deleteConfirmOpen.set(false);
+    this.deleteTargetId.set(null);
+    this.deleteTargetName.set('');
+    await this.profiles.deleteProfile(profileId);
+    this.notifications.showSuccess('Profile deleted');
+  }
+
+  protected handleOpenTeamsPanel(): void {
+    this.teamsPanel.show();
+  }
+
+  protected async handlePublishToTeam(profileId: string): Promise<void> {
+    try {
+      await this.teamSync.publishLocalProfile(profileId);
+      this.notifications.showSuccess('Profile published to team');
+    } catch {
+      this.notifications.showError('Could not publish profile — connect to a team remote first');
+    }
+  }
+
+  protected async handleUnpublishProfile(profileId: string): Promise<void> {
+    try {
+      await this.teamSync.unpublishProfile(profileId);
+      this.notifications.showSuccess('Profile is now local only');
+    } catch {
+      this.notifications.showError('Could not unpublish profile');
+    }
+  }
+}

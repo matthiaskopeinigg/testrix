@@ -1,0 +1,49 @@
+<tx-modal
+  [open]="open()"
+  title="Code snippet"
+  ariaLabel="Generate request code snippet"
+  layer="stacked"
+  cardSize="wide"
+  (closed)="handleClose()"
+>
+  <div class="request-code-snippet-modal__content">
+  <p class="request-code-snippet-modal__hint">
+    Generated from the current method, URL, headers, auth, and body. Placeholders such as
+    <code ngNonBindable>{{variable}}</code> are left as-is — resolve them in your client or shell.
+  </p>
+
+  <tx-form-field
+    class="request-code-snippet-modal__format"
+    label="Language"
+    controlId="request-code-snippet-format"
+  >
+    <tx-dropdown
+      id="request-code-snippet-format"
+      [options]="formatOptions"
+      [ngModel]="formatId()"
+      (ngModelChange)="handleFormatChange($event)"
+      ariaLabel="Snippet language"
+    />
+  </tx-form-field>
+
+  <div class="request-code-snippet-modal__editor">
+    <tx-code-editor
+      [language]="editorLanguage()"
+      [languageBadgeLabel]="editorBadge()"
+      [readOnly]="true"
+      [hideToolbarActions]="true"
+      [framed]="true"
+      [autoFormat]="false"
+      [ngModel]="snippetText()"
+    />
+  </div>
+
+  <div class="request-code-snippet-modal__actions">
+    <tx-button variant="secondary" (pressed)="handleClose()">Close</tx-button>
+    <tx-button variant="primary" (pressed)="handleCopy()">
+      <tx-icon name="copy" [size]="14" aria-hidden="true" />
+      {{ copyState() === 'copied' ? 'Copied' : 'Copy' }}
+    </tx-button>
+  </div>
+  </div>
+</tx-modal>

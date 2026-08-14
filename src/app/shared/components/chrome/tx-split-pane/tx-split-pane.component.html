@@ -1,0 +1,56 @@
+@switch (layout().type) {
+  @case ('leaf') {
+    @if (leafNode(); as leaf) {
+      <div
+        class="tx-split-pane__leaf"
+        [class.tx-split-pane__pane--enter]="motion.isPaneEntering(leaf.groupId)"
+      >
+        <ng-container *ngTemplateOutlet="leafTemplate(); context: leafOutletContext(leaf)" />
+      </div>
+    }
+  }
+  @case ('split') {
+    @if (splitNode(); as split) {
+      <div
+        class="tx-split-pane__split"
+        [class.tx-split-pane__split--horizontal]="split.direction === 'horizontal'"
+        [class.tx-split-pane__split--vertical]="split.direction === 'vertical'"
+      >
+        <div
+          [class]="'tx-split-pane__pane tx-split-pane__pane--first ' + (paneMotionClass(0) ?? '')"
+          [style.flex]="split.ratio + ' 1 0'"
+          [style.minWidth.px]="split.direction === 'horizontal' ? minPaneSizePx() : null"
+          [style.minHeight.px]="split.direction === 'vertical' ? minPaneSizePx() : null"
+        >
+          <tx-split-pane
+            [layout]="split.first"
+            [leafTemplate]="leafTemplate()"
+            [path]="childPath(0)"
+            [minPaneSizePx]="minPaneSizePx()"
+            (ratioChange)="ratioChange.emit($event)"
+          />
+        </div>
+        <div
+          class="tx-split-pane__divider"
+          role="separator"
+          [attr.aria-orientation]="split.direction === 'horizontal' ? 'vertical' : 'horizontal'"
+          (pointerdown)="handleResizeStart($event)"
+        ></div>
+        <div
+          [class]="'tx-split-pane__pane tx-split-pane__pane--second ' + (paneMotionClass(1) ?? '')"
+          [style.flex]="1 - split.ratio + ' 1 0'"
+          [style.minWidth.px]="split.direction === 'horizontal' ? minPaneSizePx() : null"
+          [style.minHeight.px]="split.direction === 'vertical' ? minPaneSizePx() : null"
+        >
+          <tx-split-pane
+            [layout]="split.second"
+            [leafTemplate]="leafTemplate()"
+            [path]="childPath(1)"
+            [minPaneSizePx]="minPaneSizePx()"
+            (ratioChange)="ratioChange.emit($event)"
+          />
+        </div>
+      </div>
+    }
+  }
+}

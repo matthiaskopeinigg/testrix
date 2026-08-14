@@ -1,0 +1,140 @@
+@switch (sectionId()) {
+  @case ('sg-typography') {
+    <section class="ds-panel ds-panel--typography">
+      <p class="ds-lede">
+        Fonts from <code>src/styles.scss</code>: <code>--tx-font-heading</code> (Outfit),
+        <code>--tx-font-body</code> (Inter), <code>--tx-font-mono</code> (Cascadia Code / Fira Code).
+        Body copy uses <code>--tx-text-1</code>.
+      </p>
+      <div class="ds-type-ramp" aria-label="Type scale samples">
+        <h3 class="ds-sample-h1">Heading 1 — Testrix</h3>
+        <h4 class="ds-sample-h2">Heading 2 — Section title</h4>
+        <p class="ds-sample-body">Body text for descriptions, hints, and form labels.</p>
+        <p class="ds-sample-mono">Monospace — <code>GET /api/v1/users</code></p>
+      </div>
+    </section>
+  }
+  @case ('sg-colors') {
+    <section class="ds-panel">
+      <h2>Color &amp; tokens</h2>
+      <div class="ds-swatch-grid">
+        @for (t of tokens; track t.cssVar) {
+          @if (t.category === 'color') {
+            <div class="ds-swatch">
+              <div class="ds-swatch__chip" [style.background]="'var(' + t.cssVar + ')'"></div>
+              <div class="ds-swatch__meta">
+                <strong>{{ t.name }}</strong>
+                <code>{{ t.cssVar }}</code>
+              </div>
+            </div>
+          }
+        }
+      </div>
+    </section>
+  }
+  @case ('sg-spacing') {
+    <section class="ds-panel">
+      <h2>Spacing &amp; layout</h2>
+      <ul class="ds-token-list">
+        @for (t of tokens; track t.cssVar) {
+          @if (t.category === 'radius' || t.category === 'layout') {
+            <li><code>{{ t.cssVar }}</code> — {{ t.name }}@if (t.description) { · {{ t.description }} }</li>
+          }
+        }
+      </ul>
+    </section>
+  }
+  @case ('sg-animations') {
+    <app-ds-animations-panel />
+  }
+  @case ('sg-themes') {
+    <section class="ds-panel ds-panel--themes">
+      <h2>Themes</h2>
+      <p class="ds-lede">
+        {{ themeCount }} palettes via <code>ThemeService</code> (persisted in settings). Generated
+        <code>body.theme-*</code> blocks in <code>src/styles/_themes.scss</code>.
+      </p>
+      <label class="ds-theme-search">
+        Filter themes
+        <input
+          type="search"
+          [value]="themeFilter()"
+          placeholder="Search by name or id…"
+          (input)="handleThemeFilterInput($event)"
+        />
+      </label>
+      @for (group of themeUiGroups(); track group.id) {
+        <h3 class="ds-theme-group-heading">{{ group.label }}</h3>
+        <div class="ds-theme-grid ds-theme-grid--group">
+          @for (themeId of group.themes; track themeId) {
+            @if (paletteFor(themeId); as th) {
+              <button
+                type="button"
+                class="ds-theme-card"
+                [class.is-active]="activeTheme() === th.id"
+                (click)="applyTheme(th.id)"
+              >
+                <tx-theme-layout-preview class="ds-theme-card__layout" [palette]="th" [compact]="true" />
+                <span class="ds-theme-card__label">{{ th.label }}</span>
+                <ul class="ds-theme-card__legend" aria-label="Theme color tokens">
+                  <li><code>primary</code> {{ th.primary }}</li>
+                  <li><code>secondary</code> {{ th.secondary }}</li>
+                  <li><code>accent</code> {{ th.accent }}</li>
+                </ul>
+              </button>
+            }
+          }
+        </div>
+      }
+    </section>
+  }
+  @case ('sg-icons') {
+    <section class="ds-panel">
+      <h2>Icons</h2>
+      <p class="ds-lede">SVG sources in <code>assets/icons/</code>, served at <code>/icons/</code>, loaded by <code>tx-icon</code>.</p>
+      <label>
+        Filter
+        <input type="search" [value]="iconFilter()" (input)="handleIconFilterInput($event)" />
+      </label>
+      <ul class="ds-icon-grid">
+        @for (icon of filteredIcons(); track icon) {
+          <li>
+            <tx-icon [name]="icon" [size]="22" />
+            <span>{{ icon }}</span>
+          </li>
+        }
+      </ul>
+    </section>
+  }
+  @case ('sg-foundations') {
+    <section class="ds-panel">
+      <h2>Foundations</h2>
+      <p class="ds-lede">Token layering: <strong>foundation</strong> (<code>_tokens.scss</code>) → <strong>themes</strong> (<code>_themes.scss</code>) → <strong>components</strong> (co-located SCSS).</p>
+      <ul class="ds-token-list">
+        <li>Global box-sizing and focus-visible rings in <code>src/styles.scss</code></li>
+        <li>Links use <code>--tx-link</code></li>
+        <li>Features compose with <code>color-mix(in srgb, var(--tx-*) …)</code></li>
+      </ul>
+    </section>
+  }
+  @case ('sg-developer') {
+    <section class="ds-panel">
+      <h2>Developer</h2>
+      <p class="ds-lede">Available under <code>npm run dev</code> (<code>TESTRIX_DEV=1</code>).</p>
+      <dl class="ds-meta">
+        <dt>Bridge</dt>
+        <dd>{{ bridgeLine() }}</dd>
+        <dt>Config directory</dt>
+        <dd><code>{{ configDir() }}</code></dd>
+        <dt>Icon registry</dt>
+        <dd>{{ iconNames.length }} glyphs</dd>
+      </dl>
+      <tx-button variant="secondary" (pressed)="handleHydrateConfig()">Reload config</tx-button>
+    </section>
+  }
+  @default {
+    <section class="ds-panel">
+      <p>Unknown style-guide section.</p>
+    </section>
+  }
+}

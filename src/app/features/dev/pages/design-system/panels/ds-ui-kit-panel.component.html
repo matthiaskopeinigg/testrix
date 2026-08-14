@@ -1,0 +1,47 @@
+@switch (sectionId()) {
+  @case ('kit-shell') {
+    <section class="ds-panel">
+      <h2>Shell chrome</h2>
+      <p class="ds-lede">Production shell: <code>tx-window-titlebar</code>, ribbon, <code>tx-error-banner</code>, <code>router-outlet</code>.</p>
+      <div class="ds-kit-shell">
+        <div class="ds-kit-shell__bar">Titlebar · minimize · maximize · close</div>
+        <div class="ds-kit-shell__ribbon">Ribbon · scaffold copy · Design System link</div>
+        <div class="ds-kit-shell__body">Main outlet</div>
+      </div>
+    </section>
+  }
+  @case ('kit-home') {
+    <section class="ds-panel">
+      <h2>Home / empty state</h2>
+      <div class="ds-kit-empty">
+        <tx-icon name="home" [size]="28" />
+        <h3>Welcome to Testrix</h3>
+        <p>Placeholder content using semantic tokens only.</p>
+        <tx-button variant="cta">Get started</tx-button>
+      </div>
+    </section>
+  }
+  @case ('kit-dialog') {
+    <section class="ds-panel">
+      <h2>Dialog flow</h2>
+      <tx-button variant="primary" (pressed)="openModal()">Confirm action</tx-button>
+      <tx-modal [open]="modalOpen()" title="Confirm" (closed)="closeModal()">
+        <p>Save changes before leaving?</p>
+        <div class="ds-demo">
+          <tx-button variant="secondary" (pressed)="closeModal()">Cancel</tx-button>
+          <tx-button variant="primary" (pressed)="closeModal()">Save</tx-button>
+        </div>
+      </tx-modal>
+    </section>
+  }
+  @case ('kit-error') {
+    <section class="ds-panel">
+      <h2>Error state</h2>
+      <p class="ds-lede">Triggers the shell <code>tx-error-banner</code> with danger token styling.</p>
+      <tx-button variant="secondary" (pressed)="showError()">Simulate API error</tx-button>
+    </section>
+  }
+  @default {
+    <section class="ds-panel"><p>Unknown UI kit section.</p></section>
+  }
+}

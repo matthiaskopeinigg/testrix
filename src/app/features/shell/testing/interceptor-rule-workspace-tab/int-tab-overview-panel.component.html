@@ -1,0 +1,49 @@
+<div class="req-overview">
+  <header class="req-overview__hero">
+    <div class="req-overview__hero-main">
+      <h2 class="req-overview__title">Overview</h2>
+      <p class="req-overview__subtitle">
+        URL matching and request handling for this interceptor rule.
+      </p>
+    </div>
+    <div class="req-overview__endpoint" aria-label="Match pattern">
+      <span class="req-overview__method" data-method="ANY">URL</span>
+      <code class="req-overview__url">{{ rule().matchUrl || '*' }}</code>
+    </div>
+  </header>
+
+  <div class="req-overview__layout">
+    <section class="req-overview-card req-overview-card--about" aria-label="Rule status">
+      <h3 class="req-overview-card__title">Rule</h3>
+      <p class="req-overview__env">
+        <tx-icon name="interceptor" [size]="12" aria-hidden="true" />
+        Action: <strong>{{ actionLabel() }}</strong>
+      </p>
+      <p class="req-overview__env">
+        <tx-icon name="filter" [size]="12" aria-hidden="true" />
+        Interceptor engine:
+        <tx-tag [variant]="interceptorRunning() ? 'success' : 'default'" casing="normal">
+          {{ interceptorRunning() ? 'Running' : 'Stopped' }}
+        </tx-tag>
+      </p>
+    </section>
+
+    <section class="req-overview-card req-overview-card--run" aria-label="Configuration">
+      <div class="req-overview-card__head">
+        <h3 class="req-overview-card__title">Status</h3>
+        <tx-tag [variant]="enabledVariant()" casing="normal">
+          {{ rule().enabled ? 'Enabled' : 'Disabled' }}
+        </tx-tag>
+      </div>
+      <div class="req-overview-run__footer">
+        <p class="req-overview-run__history">
+          Edit match pattern and action in the sections below. Start the interceptor from the sidebar when ready.
+        </p>
+        <div class="int-overview__actions">
+          <tx-button variant="secondary" (pressed)="sectionSelect.emit('match')">Edit match</tx-button>
+          <tx-button variant="secondary" (pressed)="sectionSelect.emit('action')">Edit action</tx-button>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>

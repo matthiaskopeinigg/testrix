@@ -1,0 +1,43 @@
+<div class="tx-response-diff-panel">
+  @if (canCompare()) {
+    <div class="tx-response-diff-panel__toolbar">
+      <div class="tx-response-diff-panel__picker">
+        <span class="tx-response-diff-panel__picker-label">Compare against</span>
+        <tx-dropdown
+          class="tx-response-diff-panel__picker-select"
+          [options]="compareOptions()"
+          [selectedValue]="compareAgainstValue()"
+          (valueChange)="handleCompareChange($event)"
+        />
+      </div>
+
+      <tx-toggle
+        label="Normalize JSON"
+        [ngModel]="normalizeJson()"
+        (ngModelChange)="handleNormalizeChange($event)"
+      />
+
+      <tx-toggle
+        label="Pinned only"
+        [ngModel]="pinnedOnly()"
+        (ngModelChange)="handlePinnedOnlyChange($event)"
+      />
+
+      <tx-button variant="secondary" class="tx-response-diff-panel__refresh" (pressed)="handleRefresh()">
+        <tx-icon name="refresh" [size]="12" aria-hidden="true" />
+        Refresh
+      </tx-button>
+
+      @if (diff()) {
+        <span class="tx-response-diff-panel__summary" aria-label="Diff summary">
+          <span class="tx-response-diff-panel__stat tx-response-diff-panel__stat--add">+{{ summary().added }}</span>
+          <span class="tx-response-diff-panel__stat tx-response-diff-panel__stat--remove">−{{ summary().removed }}</span>
+          <span class="tx-response-diff-panel__stat tx-response-diff-panel__stat--equal">= {{ summary().equal }}</span>
+        </span>
+      }
+    </div>
+  } @else {
+    <p class="tx-response-diff-panel__hint">Send the request again to compare with the previous run.</p>
+  }
+  <tx-diff-view class="tx-response-diff-panel__body" [diff]="diff()" [workbenchLayout]="true" />
+</div>

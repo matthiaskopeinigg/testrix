@@ -1,0 +1,259 @@
+<div class="workspace-shell">
+  <tx-sidebar
+    [items]="sidebarMainItems"
+    [footerItems]="sidebarFooterItems()"
+    [activeId]="activeSidebarId()"
+    [panelOpen]="sidebarPanelOpen()"
+    [closePanelOnOutsideClick]="closeSidebarPanelOnOutsideClick()"
+    (activeIdChange)="handleActiveSidebarIdChange($event)"
+    (panelOpenChange)="handleSidebarPanelOpenChange($event)"
+    (itemSelect)="handleSidebarSelect($event)"
+  >
+    @if (sidebarPanelOpen() && activeSidebarId(); as panelId) {
+      @if (isSidebarPanelId(panelId)) {
+        @if (sidebarPanelComponent(panelId); as cmp) {
+          <div class="workspace-shell__panel-host">
+            <ng-container *ngComponentOutlet="cmp; inputs: sidebarPanelInputs(panelId)" />
+          </div>
+        } @else {
+          <div class="workspace-shell__panel-loading" aria-busy="true">
+            <tx-spinner label="Loading panel" />
+          </div>
+        }
+      }
+    }
+  </tx-sidebar>
+
+  <div class="workspace-shell__main">
+    @if (workspaceEditor.hasAnyTabs()) {
+      <app-workspace-editor />
+    } @else {
+  <section class="welcome" role="region" aria-label="Welcome to Testrix">
+  <div class="welcome__backdrop" aria-hidden="true">
+    <div class="welcome__bd-grid"></div>
+    <div class="welcome__bd-aurora welcome__bd-aurora--a"></div>
+    <div class="welcome__bd-aurora welcome__bd-aurora--b"></div>
+    <div class="welcome__bd-aurora welcome__bd-aurora--c"></div>
+    <div class="welcome__bd-aurora welcome__bd-aurora--d"></div>
+    <div class="welcome__bd-aurora welcome__bd-aurora--e"></div>
+    <svg class="welcome__bd-arc" viewBox="0 0 1200 600" preserveAspectRatio="none">
+      <defs>
+        <linearGradient id="welcome-arc-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="var(--tx-primary)" stop-opacity="0" />
+          <stop offset="50%" stop-color="var(--tx-primary)" stop-opacity="0.6" />
+          <stop offset="100%" stop-color="var(--tx-secondary)" stop-opacity="0" />
+        </linearGradient>
+        <linearGradient id="welcome-arc-grad-2" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="var(--tx-secondary)" stop-opacity="0" />
+          <stop offset="50%" stop-color="var(--tx-secondary)" stop-opacity="0.55" />
+          <stop offset="100%" stop-color="var(--tx-primary)" stop-opacity="0" />
+        </linearGradient>
+      </defs>
+      <path
+        d="M-50 380 Q 300 120 600 320 T 1250 240"
+        stroke="url(#welcome-arc-grad)"
+        stroke-width="1.4"
+        fill="none"
+      />
+      <path
+        d="M-50 480 Q 350 200 720 440 T 1250 360"
+        stroke="url(#welcome-arc-grad-2)"
+        stroke-width="1"
+        fill="none"
+        opacity="0.7"
+      />
+      <path
+        d="M-50 200 Q 400 360 820 180 T 1250 320"
+        stroke="url(#welcome-arc-grad)"
+        stroke-width="0.8"
+        fill="none"
+        opacity="0.5"
+      />
+    </svg>
+    <span class="welcome__bd-orb welcome__bd-orb--1"></span>
+    <span class="welcome__bd-orb welcome__bd-orb--2"></span>
+    <span class="welcome__bd-orb welcome__bd-orb--3"></span>
+    <span class="welcome__bd-orb welcome__bd-orb--4"></span>
+    <span class="welcome__bd-orb welcome__bd-orb--5"></span>
+    <span class="welcome__bd-orb welcome__bd-orb--6"></span>
+    <span class="welcome__bd-orb welcome__bd-orb--7"></span>
+    <span class="welcome__bd-orb welcome__bd-orb--8"></span>
+    <span class="welcome__bd-orb welcome__bd-orb--9"></span>
+    <span class="welcome__bd-orb welcome__bd-orb--10"></span>
+    <span class="welcome__bd-orb welcome__bd-orb--11"></span>
+    <span class="welcome__bd-orb welcome__bd-orb--12"></span>
+    <span class="welcome__bd-spark welcome__bd-spark--1"></span>
+    <span class="welcome__bd-spark welcome__bd-spark--2"></span>
+    <span class="welcome__bd-spark welcome__bd-spark--3"></span>
+    <span class="welcome__bd-spark welcome__bd-spark--4"></span>
+    <span class="welcome__bd-spark welcome__bd-spark--5"></span>
+    <span class="welcome__bd-spark welcome__bd-spark--6"></span>
+    <span class="welcome__bd-spark welcome__bd-spark--7"></span>
+    <span class="welcome__bd-spark welcome__bd-spark--8"></span>
+    <span class="welcome__bd-spark welcome__bd-spark--9"></span>
+    <span class="welcome__bd-comet welcome__bd-comet--1"></span>
+    <span class="welcome__bd-comet welcome__bd-comet--2"></span>
+    <span class="welcome__bd-comet welcome__bd-comet--3"></span>
+    <span class="welcome__bd-glyph welcome__bd-glyph--1">&#123; &#125;</span>
+    <span class="welcome__bd-glyph welcome__bd-glyph--2">&lt;/&gt;</span>
+    <span class="welcome__bd-glyph welcome__bd-glyph--3">TEST</span>
+    <span class="welcome__bd-glyph welcome__bd-glyph--4">RUN</span>
+    <span class="welcome__bd-glyph welcome__bd-glyph--5">OK</span>
+    <span class="welcome__bd-glyph welcome__bd-glyph--6">&#123;...&#125;</span>
+  </div>
+
+  <div class="welcome__viewport">
+    <div class="welcome__inner">
+      <header class="welcome__hero">
+        <div class="welcome__stage" aria-hidden="true">
+          <span class="welcome__conic"></span>
+          <span class="welcome__halo welcome__halo--outer"></span>
+          <span class="welcome__halo welcome__halo--inner"></span>
+          <span class="welcome__orbit welcome__orbit--1">
+            <span class="welcome__orbit-bead"></span>
+          </span>
+          <span class="welcome__orbit welcome__orbit--2">
+            <span class="welcome__orbit-bead"></span>
+            <span class="welcome__orbit-bead welcome__orbit-bead--alt"></span>
+          </span>
+          <span class="welcome__orbit welcome__orbit--3">
+            <span class="welcome__orbit-bead"></span>
+          </span>
+          <span class="welcome__beacon welcome__beacon--1"></span>
+          <span class="welcome__beacon welcome__beacon--2"></span>
+          <span class="welcome__beacon welcome__beacon--3"></span>
+          <span class="welcome__logo-shell">
+            <span class="welcome__logo-ring"></span>
+            <tx-brand-logo class="welcome__logo" [size]="88" />
+          </span>
+        </div>
+
+        <h1 class="welcome__title">
+          <span class="welcome__title-line">Welcome to</span>
+          <span class="welcome__title-line welcome__title-line--accent">Testrix</span>
+        </h1>
+        <p class="welcome__tagline">
+          Local-first API testing and automation — collections, environments, and testing tools on your machine.
+        </p>
+
+        <div class="welcome__cta-row">
+          <button type="button" class="welcome__btn-primary" (click)="handleCreateCollection()">
+            <span class="welcome__btn-shine" aria-hidden="true"></span>
+            <tx-icon name="plus" [size]="18" />
+            <span>Create collection</span>
+          </button>
+        </div>
+      </header>
+
+      <section class="welcome__section" aria-labelledby="welcome-start-heading">
+        <h2 id="welcome-start-heading" class="welcome__section-title">Get started</h2>
+        <ul class="welcome__action-list welcome__action-list--grid">
+          <li>
+            <button type="button" class="welcome__action" (click)="handleNewRequest()">
+              <span class="welcome__action-icon welcome__action-icon--primary" aria-hidden="true">
+                <tx-icon name="http" [size]="20" />
+              </span>
+              <span class="welcome__action-body">
+                <span class="welcome__action-title">New request</span>
+                <span class="welcome__action-desc">Create an HTTP request and start sending</span>
+              </span>
+            </button>
+          </li>
+          <li>
+            <button type="button" class="welcome__action" (click)="handleImportWorkspace()">
+              <span class="welcome__action-icon welcome__action-icon--secondary" aria-hidden="true">
+                <tx-icon name="upload" [size]="20" />
+              </span>
+              <span class="welcome__action-body">
+                <span class="welcome__action-title">Import data</span>
+                <span class="welcome__action-desc">Bring in Postman, OpenAPI, or Testrix bundles</span>
+              </span>
+            </button>
+          </li>
+          <li>
+            <button type="button" class="welcome__action" (click)="handleOpenEnvironments()">
+              <span class="welcome__action-icon welcome__action-icon--accent" aria-hidden="true">
+                <tx-icon name="globe" [size]="20" />
+              </span>
+              <span class="welcome__action-body">
+                <span class="welcome__action-title">Environments</span>
+                <span class="welcome__action-desc">Manage variables for dev, staging, and prod</span>
+              </span>
+            </button>
+          </li>
+          <li>
+            <button type="button" class="welcome__action" (click)="handleOpenHelpGuide()">
+              <span class="welcome__action-icon welcome__action-icon--muted" aria-hidden="true">
+                <tx-icon name="help" [size]="20" />
+              </span>
+              <span class="welcome__action-body">
+                <span class="welcome__action-title">Help guide</span>
+                <span class="welcome__action-desc">Walkthroughs, shortcuts, and reference</span>
+              </span>
+            </button>
+          </li>
+        </ul>
+      </section>
+
+      <section class="welcome__section" aria-labelledby="welcome-features-heading">
+        <h2 id="welcome-features-heading" class="welcome__section-title">Included</h2>
+        <dl class="welcome__pillars">
+          <div class="welcome__pillar">
+            <dt class="welcome__pillar-term">Collections</dt>
+            <dd class="welcome__pillar-desc">Organize HTTP and WebSocket requests in folders.</dd>
+          </div>
+          <div class="welcome__pillar">
+            <dt class="welcome__pillar-term">Environments</dt>
+            <dd class="welcome__pillar-desc">Stage-specific variables and secrets for each profile.</dd>
+          </div>
+          <div class="welcome__pillar">
+            <dt class="welcome__pillar-term">Testing</dt>
+            <dd class="welcome__pillar-desc">Capture traffic, mock APIs, regression, and load tests.</dd>
+          </div>
+          <div class="welcome__pillar">
+            <dt class="welcome__pillar-term">Local profiles</dt>
+            <dd class="welcome__pillar-desc">Workspace data on disk with import and export.</dd>
+          </div>
+        </dl>
+      </section>
+
+      <footer class="welcome__footer">
+        <div class="welcome__footer-row">
+          <p class="welcome__footer-hints">
+            <kbd class="welcome-kbd">Ctrl</kbd>
+            <span class="welcome__footer-sep" aria-hidden="true">+</span>
+            <kbd class="welcome-kbd">K</kbd>
+            <span class="welcome__footer-label">Command palette</span>
+            <span class="welcome__footer-dot" aria-hidden="true">·</span>
+            <kbd class="welcome-kbd">Ctrl</kbd>
+            <span class="welcome__footer-sep" aria-hidden="true">+</span>
+            <kbd class="welcome-kbd">,</kbd>
+            <span class="welcome__footer-label">Settings</span>
+          </p>
+          <nav class="welcome__footer-nav" aria-label="Project">
+            @if (showDevToolkit()) {
+              <a class="welcome__footer-link" routerLink="/home" [queryParams]="{ panel: 'debug' }">Debug</a>
+              <span class="welcome__footer-dot" aria-hidden="true">·</span>
+            }
+            <span class="welcome__footer-license">Testrix {{ appVersion() }}</span>
+          </nav>
+        </div>
+      </footer>
+    </div>
+  </div>
+
+  @if (toast(); as activeToast) {
+    <div
+      class="welcome-toast"
+      [class.is-success]="activeToast.tone === 'success'"
+      [class.is-error]="activeToast.tone === 'error'"
+      role="status"
+      aria-live="polite"
+    >
+      <span class="welcome-toast-message">{{ activeToast.message }}</span>
+    </div>
+  }
+  </section>
+    }
+  </div>
+</div>

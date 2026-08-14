@@ -1,0 +1,11 @@
+<div class="tx-field">
+  @if (dropdownContent) {
+    <span class="tx-field__label" [id]="captionElementId()">{{ label() }}</span>
+  } @else {
+    <label class="tx-field__label" [attr.for]="controlId()?.trim() || null">{{ label() }}</label>
+  }
+
+  <div class="tx-field__control">
+    <ng-content />
+  </div>
+</div>

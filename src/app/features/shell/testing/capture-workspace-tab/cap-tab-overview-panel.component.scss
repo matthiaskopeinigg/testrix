@@ -1,0 +1,128 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.req-overview {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+  max-width: 56rem;
+}
+
+.req-overview__hero {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+}
+
+.req-overview__title {
+  margin: 0;
+  font-size: 1.0625rem;
+  font-weight: 700;
+  color: var(--tx-text-0);
+}
+
+.req-overview__subtitle {
+  margin: 0.2rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--tx-text-2);
+}
+
+.req-overview__endpoint {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+.req-overview__method {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.15rem 0.4rem;
+  border-radius: var(--tx-radius-sm, 8px);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--tx-text-1);
+  background: var(--tx-surface-inset);
+  border: 1px solid color-mix(in srgb, var(--tx-border-0) 45%, transparent);
+}
+
+.req-overview__url {
+  margin: 0;
+  min-width: 0;
+  padding: 0.28rem 0.45rem;
+  border-radius: var(--tx-radius-sm, 8px);
+  font-family: var(--tx-font-mono);
+  font-size: 0.75rem;
+  color: var(--tx-text-1);
+  background: var(--tx-surface-inset);
+  border: 1px solid color-mix(in srgb, var(--tx-border-0) 45%, transparent);
+  word-break: break-all;
+}
+
+.req-overview__layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.75rem;
+}
+
+.req-overview-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  padding: 0.85rem 0.9rem;
+  border-radius: var(--tx-radius-sm, 8px);
+  border: 1px solid color-mix(in srgb, var(--tx-border-0) 55%, transparent);
+  background: var(--tx-surface-elevated);
+}
+
+.req-overview-card__title {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--tx-text-2);
+}
+
+.req-overview-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.req-overview__env {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--tx-text-2);
+}
+
+.req-overview-run__footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+}
+
+.req-overview-run__history {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--tx-text-2);
+}
+
+.cap-overview__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--tx-space-2);
+}

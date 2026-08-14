@@ -1,0 +1,18 @@
+<div class="request-panel ts-flow-step-panel">
+  <h2 class="request-panel__title">Manual input</h2>
+  <tx-form-field label="Prompt" controlId="ts-man-prompt">
+    <tx-textarea
+      controlId="ts-man-prompt"
+      [ngModel]="cfg().prompt"
+      (ngModelChange)="patch({ prompt: $event })"
+      [rows]="3"
+    />
+  </tx-form-field>
+  <tx-form-field label="Save as variable" controlId="ts-man-var">
+    <tx-input
+      controlId="ts-man-var"
+      [ngModel]="cfg().variableName"
+      (ngModelChange)="patch({ variableName: $event })"
+    />
+  </tx-form-field>
+</div>

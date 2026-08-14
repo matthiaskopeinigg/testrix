@@ -1,0 +1,62 @@
+// Typography — UI font from settings (`UiFontService`); mono stack for code.
+
+:root {
+  --tx-font-heading: 'Inter', system-ui, sans-serif;
+  --tx-font-body: 'Inter', system-ui, sans-serif;
+  /** Matches api-workbench `--aw-font-mono` (Cascadia on Windows, Fira Code when loaded). */
+  --tx-font-mono: 'Cascadia Code', 'Fira Code', 'Consolas', 'Monaco', monospace;
+}
+
+/** Monospace helper — same stack as `tx-code-editor`. */
+.tx-text-mono {
+  font-family: var(--tx-font-mono);
+}
+
+html {
+  font-family: var(--tx-font-body);
+  font-size: var(--tx-ui-font-size-root, 16px);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: var(--tx-font-body);
+  font-weight: var(--tx-ui-font-weight-body, 400);
+  line-height: var(--tx-ui-line-height, 1.5);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--tx-font-heading);
+  font-weight: var(--tx-ui-font-weight-heading, 600);
+  letter-spacing: -0.02em;
+  color: var(--tx-text-0);
+}
+
+button,
+.tx-button,
+.tx-form-field,
+.tx-dropdown-host,
+.tx-toggle,
+.tx-input,
+.tx-textarea {
+  font-weight: inherit;
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+}
+
+code,
+pre,
+kbd,
+samp {
+  font-family: var(--tx-font-mono);
+}

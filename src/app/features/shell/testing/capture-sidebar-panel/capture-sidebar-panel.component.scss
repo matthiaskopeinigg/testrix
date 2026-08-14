@@ -1,0 +1,28 @@
+@use '../../workspace/workspace-sidebar-tree' as sidebar-tree;
+
+:host {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+}
+
+.capture-sidebar-panel {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.capture-sidebar-panel__status {
+  margin: 0 var(--tx-space-3) var(--tx-space-2);
+}
+
+.capture-sidebar-panel__body {
+  @include sidebar-tree.workspace-sidebar-panel-body;
+}
+
+.capture-sidebar-panel__tree {
+  @include sidebar-tree.workspace-sidebar-tree-host;
+}

@@ -1,0 +1,51 @@
+<app-dev-tool-layout toolId="base64">
+  <app-dev-tool-toolbar devToolToolbar>
+    <div leading class="dev-tool-tab__options">
+      <app-dev-tool-mode-chip [active]="state().mode === 'encode'" (selected)="setMode('encode')">
+        Encode
+      </app-dev-tool-mode-chip>
+      <app-dev-tool-mode-chip [active]="state().mode === 'decode'" (selected)="setMode('decode')">
+        Decode
+      </app-dev-tool-mode-chip>
+      <tx-form-field label="URL-safe">
+        <tx-toggle
+          [ngModel]="state().urlSafe"
+          (ngModelChange)="state.update((s) => ({ ...s, urlSafe: $event }))"
+        />
+      </tx-form-field>
+    </div>
+    <div trailing>
+      <tx-button variant="secondary" (click)="handleSwap()">Swap</tx-button>
+      <tx-button variant="secondary" (click)="handleCopyInput()">Copy input</tx-button>
+      <tx-button variant="secondary" (click)="handleCopyOutput()">Copy output</tx-button>
+      <tx-button variant="secondary" (click)="handleClear()">Clear</tx-button>
+    </div>
+  </app-dev-tool-toolbar>
+
+  @if (result().error; as message) {
+    <tx-banner variant="error" [title]="message" />
+  }
+
+  <app-dev-tool-stat-strip>
+    <tx-tag>UTF-8</tx-tag>
+    <tx-tag>In: {{ inputBytes() }} B</tx-tag>
+    <tx-tag>Out: {{ outputBytes() }} B</tx-tag>
+  </app-dev-tool-stat-strip>
+
+  <div class="dev-tool-tab__split dev-tool-tab__split--fill">
+    <tx-form-field class="dev-tool-tab__pane dev-tool-tab__pane--fill" label="Input">
+      <tx-textarea
+        [rows]="14"
+        [monospace]="true"
+        [ngModel]="state().input"
+        (ngModelChange)="state.update((s) => ({ ...s, input: $event }))"
+      />
+    </tx-form-field>
+    <div class="dev-tool-tab__pane dev-tool-tab__pane--fill">
+      <div class="dev-tool-tab__pane-head">
+        <span class="dev-tool-tab__pane-label">Output</span>
+      </div>
+      <pre class="dev-tool-tab__output">{{ result().output }}</pre>
+    </div>
+  </div>
+</app-dev-tool-layout>

@@ -1,0 +1,52 @@
+<app-dev-tool-layout toolId="bcrypt">
+  <app-dev-tool-toolbar devToolToolbar>
+    <div leading>
+      <app-dev-tool-mode-chip [active]="state().mode === 'hash'" (selected)="setMode('hash')">Hash</app-dev-tool-mode-chip>
+      <app-dev-tool-mode-chip [active]="state().mode === 'verify'" (selected)="setMode('verify')">Verify</app-dev-tool-mode-chip>
+    </div>
+    <div trailing>
+      @if (state().mode === 'hash') {
+        <tx-button variant="primary" (click)="handleHash()">Generate</tx-button>
+      } @else {
+        <tx-button variant="primary" (click)="handleValidate()">Validate</tx-button>
+      }
+      <tx-button variant="secondary" (click)="handleCopyHash()">Copy hash</tx-button>
+      <tx-button variant="secondary" (click)="handleClearSecrets()">Clear secrets</tx-button>
+    </div>
+  </app-dev-tool-toolbar>
+
+  @if (error(); as message) {
+    <tx-banner variant="error" [title]="message" />
+  }
+  @if (verifyMessage(); as message) {
+    <tx-banner [variant]="message.includes('does not') ? 'warning' : 'success'" [title]="message" />
+  }
+
+  <app-dev-tool-stat-strip>
+    <tx-tag>Cost {{ state().rounds }}</tx-tag>
+    @if (hashCostFromStored(); as cost) {
+      <tx-tag>Hash rounds {{ cost }}</tx-tag>
+    }
+    <tx-tag>Secrets not saved</tx-tag>
+  </app-dev-tool-stat-strip>
+
+  <tx-form-field label="Password (memory only)">
+    <tx-input type="password" [ngModel]="password()" (ngModelChange)="password.set($event)" />
+  </tx-form-field>
+
+  @if (state().mode === 'hash') {
+    <tx-form-field label="Cost rounds">
+      <tx-slider
+        [min]="4"
+        [max]="15"
+        [step]="1"
+        [ngModel]="state().rounds"
+        (ngModelChange)="state.update((s) => ({ ...s, rounds: $event }))"
+      />
+    </tx-form-field>
+  }
+
+  <tx-form-field label="Bcrypt hash">
+    <tx-input [ngModel]="state().hash" (ngModelChange)="state.update((s) => ({ ...s, hash: $event }))" />
+  </tx-form-field>
+</app-dev-tool-layout>

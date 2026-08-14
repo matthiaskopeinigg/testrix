@@ -1,0 +1,25 @@
+@if (entry(); as pattern) {
+  <section class="ds-panel" [class.ds-debug]="debugEnabled()">
+    <h2>{{ pattern.label }}</h2>
+    <p class="ds-lede">{{ pattern.description }}</p>
+    @if (pattern.scssPartial) {
+      <p>SCSS: <code>{{ pattern.scssPartial }}</code></p>
+    }
+    @if (pattern.relatedComponentIds.length) {
+      <h3>Related components</h3>
+      <ul class="ds-token-list">
+        @for (id of pattern.relatedComponentIds; track id) {
+          <li>
+            @if (findComponentEntry(id); as comp) {
+              <code>{{ comp.selector }}</code>
+            } @else {
+              <code>{{ id }}</code>
+            }
+          </li>
+        }
+      </ul>
+    }
+  </section>
+} @else {
+  <section class="ds-panel"><p>Unknown pattern section.</p></section>
+}

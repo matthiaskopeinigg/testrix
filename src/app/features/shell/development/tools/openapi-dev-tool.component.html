@@ -1,0 +1,85 @@
+<app-dev-tool-layout toolId="openapi">
+  <app-dev-tool-sections devToolSections>
+    <app-dev-tool-mode-chip variant="section" [active]="state().section === 'editor'" (selected)="setSection('editor')">Editor</app-dev-tool-mode-chip>
+    <app-dev-tool-mode-chip variant="section" [active]="state().section === 'outline'" (selected)="setSection('outline')">Outline</app-dev-tool-mode-chip>
+    <app-dev-tool-mode-chip variant="section" [active]="state().section === 'validate'" (selected)="setSection('validate')">Validate</app-dev-tool-mode-chip>
+  </app-dev-tool-sections>
+
+  <app-dev-tool-toolbar devToolToolbar>
+    <div leading class="dev-tool-tab__options">
+      <app-dev-tool-mode-chip [active]="state().format === 'json'" (selected)="setFormat('json')">JSON</app-dev-tool-mode-chip>
+      <app-dev-tool-mode-chip [active]="state().format === 'yaml'" (selected)="setFormat('yaml')">YAML</app-dev-tool-mode-chip>
+    </div>
+    <div trailing>
+      <tx-button variant="secondary" (click)="handleImportPetstore()">Petstore sample</tx-button>
+      <tx-button variant="secondary" (click)="handleFormat()">Format</tx-button>
+      <tx-button variant="secondary" (click)="handleCopy()">Copy</tx-button>
+      <tx-button variant="secondary" (click)="handleClear()">Clear</tx-button>
+    </div>
+  </app-dev-tool-toolbar>
+
+  @if (formatError(); as message) {
+    <tx-banner variant="error" [title]="message" />
+  }
+  @for (err of validation().errors; track err) {
+    <tx-banner variant="error" [title]="err" />
+  }
+
+  @if (validation().summary; as info) {
+    <app-dev-tool-stat-strip>
+      <tx-tag>{{ info.title }}</tx-tag>
+      <tx-tag>v{{ info.version }}</tx-tag>
+      <tx-tag>{{ info.pathCount }} paths</tx-tag>
+      <tx-tag>{{ info.operationCount }} ops</tx-tag>
+    </app-dev-tool-stat-strip>
+  }
+
+  @switch (state().section) {
+    @case ('editor') {
+      <div class="dev-tool-tab__editor-host">
+        <tx-code-editor
+          [language]="state().format === 'yaml' ? 'plaintext' : 'json'"
+          [title]="'OpenAPI (' + state().format + ')'"
+          [framed]="true"
+          [autoFormat]="state().format === 'json'"
+          [ngModel]="state().content"
+          (ngModelChange)="state.update((s) => ({ ...s, content: $event }))"
+        />
+      </div>
+    }
+    @case ('outline') {
+      @if (validation().paths.length === 0) {
+        <p class="dev-tool-tab__lede">Parse a valid document to see operations.</p>
+      } @else {
+        <table class="dev-tool-tab__match-table">
+          <thead>
+            <tr><th>Method</th><th>Path</th><th>Summary</th></tr>
+          </thead>
+          <tbody>
+            @for (row of validation().paths; track row.path + row.method) {
+              <tr>
+                <td>{{ row.method }}</td>
+                <td>{{ row.path }}</td>
+                <td>{{ row.summary || '—' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    }
+    @case ('validate') {
+      @if (validation().summary; as info) {
+        <dl class="dev-tool-tab__viewer-dl">
+          <dt>OpenAPI</dt><dd>{{ info.openapiVersion }}</dd>
+          <dt>Title</dt><dd>{{ info.title }}</dd>
+          <dt>Version</dt><dd>{{ info.version }}</dd>
+          <dt>Paths</dt><dd>{{ info.pathCount }}</dd>
+          <dt>Operations</dt><dd>{{ info.operationCount }}</dd>
+          <dt>Servers</dt><dd>{{ info.serverCount }}</dd>
+        </dl>
+      } @else {
+        <p class="dev-tool-tab__lede">Fix errors above to see validation summary.</p>
+      }
+    }
+  }
+</app-dev-tool-layout>

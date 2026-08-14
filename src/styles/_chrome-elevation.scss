@@ -1,0 +1,18 @@
+// Shared drop shadows + scrim: chrome (titlebar, sidebar) floating above content canvas.
+
+:root {
+  --tx-chrome-shadow-down:
+    0 1px 0 color-mix(in srgb, var(--tx-text-0) 14%, transparent),
+    0 4px 10px -2px color-mix(in srgb, var(--tx-shadow-color, #000) 52%, transparent),
+    0 14px 32px -6px color-mix(in srgb, var(--tx-shadow-color, #000) 68%, transparent),
+    0 28px 56px -14px color-mix(in srgb, var(--tx-shadow-color, #000) 55%, transparent);
+  --tx-chrome-shadow-side:
+    1px 0 0 color-mix(in srgb, var(--tx-border-strong, var(--tx-border-0)) 55%, transparent),
+    6px 0 20px -4px color-mix(in srgb, var(--tx-shadow-color, #000) 58%, transparent),
+    14px 0 40px -8px color-mix(in srgb, var(--tx-shadow-color, #000) 72%, transparent);
+  --tx-chrome-scrim-height: 22px;
+  /** Frosted scrim between icon rail and open sidebar panel. */
+  --tx-sidebar-rail-backdrop-width: 14px;
+  /** Hairline at rail edge (under the backdrop). */
+  --tx-sidebar-rail-seam-width: 1px;
+}

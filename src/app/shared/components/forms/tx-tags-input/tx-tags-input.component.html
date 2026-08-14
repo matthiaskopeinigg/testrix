@@ -1,0 +1,139 @@
+@if (compact()) {
+  <div
+    class="tx-tags-input tx-tags-input--compact"
+    [class.tx-tags-input--disabled]="disabled()"
+    [class.tx-tags-input--open]="panelOpen()"
+  >
+    <div class="tx-tags-input__compact-row" role="group" aria-label="Tags">
+      <div class="tx-tags-input__compact-chips" role="list">
+        @for (tag of tags(); track tag) {
+          <tx-tag variant="default" casing="normal" [removable]="!disabled()" (removed)="handleRemoveTag(tag)">
+            {{ tag }}
+          </tx-tag>
+        }
+      </div>
+
+      @if (canAddMore()) {
+        <button
+          type="button"
+          class="tx-tags-input__add-btn"
+          [class.is-open]="panelOpen()"
+          [attr.aria-expanded]="panelOpen()"
+          aria-haspopup="dialog"
+          [attr.aria-controls]="panelOpen() ? effectiveId() + '-panel' : null"
+          [attr.aria-label]="tags().length === 0 ? 'Add tags' : 'Add another tag'"
+          [disabled]="disabled()"
+          (click)="handleTogglePanel($event)"
+        >
+          <tx-icon name="plus" [size]="14" aria-hidden="true" />
+          <span>Add tag</span>
+        </button>
+      }
+    </div>
+
+    @if (panelOpen()) {
+      <div
+        class="tx-tags-input__panel tx-tags-input__panel--fixed tx-menu-popover"
+        [id]="effectiveId() + '-panel'"
+        role="dialog"
+        aria-label="Manage tags"
+        [style.top.px]="panelCoords()?.top"
+        [style.left.px]="panelCoords()?.left"
+        [style.min-width.px]="panelCoords()?.minWidth"
+        (click)="$event.stopPropagation()"
+        (keydown)="handlePanelKeydown($event)"
+      >
+        <div class="tx-tags-input__panel-tags" role="list" aria-label="Tags">
+          @if (tags().length === 0) {
+            <p class="tx-tags-input__empty">No tags yet.</p>
+          } @else {
+            @for (tag of tags(); track tag) {
+              <tx-tag variant="default" casing="normal" [removable]="!disabled()" (removed)="handleRemoveTag(tag)">
+                {{ tag }}
+              </tx-tag>
+            }
+          }
+        </div>
+
+        @if (canAddMore()) {
+          <input
+            #draftInput
+            class="tx-tags-input__control"
+            type="text"
+            [id]="effectiveId()"
+            [value]="draft()"
+            [placeholder]="placeholder()"
+            [disabled]="disabled()"
+            (input)="handleDraftInput($event)"
+            (keydown)="handleDraftKeydown($event)"
+          />
+          <p class="tx-tags-input__hint">Press Enter to add</p>
+        } @else if (tags().length >= maxTags()) {
+          <p class="tx-tags-input__hint">Maximum of {{ maxTags() }} tags reached.</p>
+        }
+      </div>
+    }
+  </div>
+} @else {
+  <div
+    class="tx-tags-input"
+    [class.tx-tags-input--disabled]="disabled()"
+    [class.tx-tags-input--open]="panelOpen()"
+  >
+    <div class="tx-tags-input__surface">
+      <div class="tx-tags-input__chips" role="list" aria-label="Tags">
+        @if (tags().length === 0) {
+          <span class="tx-tags-input__placeholder">{{ placeholder() }}</span>
+        }
+        @for (tag of tags(); track tag) {
+          <tx-tag variant="default" casing="normal" [removable]="!disabled()" (removed)="handleRemoveTag(tag)">
+            {{ tag }}
+          </tx-tag>
+        }
+      </div>
+
+      @if (canAddMore()) {
+        <div class="tx-tags-input__add">
+          <button
+            type="button"
+            class="tx-tags-input__trigger"
+            [class.is-open]="panelOpen()"
+            [attr.aria-expanded]="panelOpen()"
+            aria-haspopup="dialog"
+            aria-label="Add tag"
+            [disabled]="disabled()"
+            (click)="handleTogglePanel($event)"
+          >
+            <tx-icon name="tag" [size]="14" aria-hidden="true" />
+          </button>
+
+          @if (panelOpen()) {
+            <div
+              class="tx-tags-input__panel tx-tags-input__panel--inline tx-tags-input__panel--fixed tx-menu-popover"
+              role="dialog"
+              aria-label="Add tag"
+              [style.top.px]="panelCoords()?.top"
+              [style.left.px]="panelCoords()?.left"
+              [style.min-width.px]="panelCoords()?.minWidth"
+              (click)="$event.stopPropagation()"
+              (keydown)="handlePanelKeydown($event)"
+            >
+              <input
+                #draftInput
+                class="tx-tags-input__control"
+                type="text"
+                [id]="effectiveId()"
+                [value]="draft()"
+                [placeholder]="placeholder()"
+                [disabled]="disabled()"
+                (input)="handleDraftInput($event)"
+                (keydown)="handleDraftKeydown($event)"
+              />
+              <p class="tx-tags-input__hint">Press Enter to add</p>
+            </div>
+          }
+        </div>
+      }
+    </div>
+  </div>
+}

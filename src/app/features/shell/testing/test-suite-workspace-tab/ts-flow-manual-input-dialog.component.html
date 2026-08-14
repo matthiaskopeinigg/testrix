@@ -1,0 +1,30 @@
+<tx-modal
+  layer="stacked"
+  [open]="prompt() !== null"
+  [title]="dialogTitle()"
+  [ariaLabel]="dialogTitle()"
+  [dismissOnBackdrop]="false"
+  (closed)="handleModalClosed()"
+>
+  @if (prompt(); as current) {
+    <p class="ts-flow-manual-input-dialog__prompt">{{ current.prompt }}</p>
+    <tx-form-field
+      [label]="'Save as {{' + current.variableName + '}}'"
+      controlId="ts-flow-manual-input-value"
+    >
+      <tx-input
+        controlId="ts-flow-manual-input-value"
+        placeholder="Enter value…"
+        [ngModel]="value()"
+        (ngModelChange)="value.set($event)"
+        txAutofocus
+        (keydown.enter)="handleContinue()"
+      />
+    </tx-form-field>
+
+    <div class="ts-flow-manual-input-dialog__actions" role="group" aria-label="Manual input actions">
+      <tx-button variant="secondary" (pressed)="handleCancel()">Cancel</tx-button>
+      <tx-button variant="primary" (pressed)="handleContinue()">Continue</tx-button>
+    </div>
+  }
+</tx-modal>

@@ -1,0 +1,54 @@
+.lt-compare-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.lt-compare-panel__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.lt-compare-panel__title {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--tx-text-0);
+}
+
+.lt-compare-panel__subtitle {
+  margin: 0.15rem 0 0;
+  font-size: 0.75rem;
+  color: var(--tx-text-2);
+}
+
+.lt-compare-panel__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.75rem;
+
+  th,
+  td {
+    padding: 0.4rem 0.5rem;
+    border-bottom: 1px solid color-mix(in srgb, var(--tx-border-0) 45%, transparent);
+    text-align: left;
+  }
+
+  thead th {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--tx-text-2);
+  }
+
+  tbody tr[data-direction='better'] td:last-child {
+    color: var(--tx-success);
+  }
+
+  tbody tr[data-direction='worse'] td:last-child {
+    color: var(--tx-danger);
+  }
+}

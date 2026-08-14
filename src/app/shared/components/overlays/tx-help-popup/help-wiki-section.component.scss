@@ -1,0 +1,61 @@
+.help-wiki-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-width: 44rem;
+}
+
+.help-wiki-section__header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.help-wiki-section__title {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--tx-text-0);
+}
+
+.help-wiki-section__description {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.55;
+  color: color-mix(in srgb, var(--tx-text-1) 90%, transparent);
+}
+
+.help-wiki-section__body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.help-wiki-section__paragraph {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: var(--tx-text-0);
+}
+
+.help-wiki-section__subheading {
+  margin: 0.25rem 0 0;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--tx-text-1) 82%, transparent);
+}
+
+.help-wiki-section__list {
+  margin: 0;
+  padding-left: 1.25rem;
+  font-size: 0.875rem;
+  line-height: 1.55;
+  color: var(--tx-text-0);
+
+  li + li {
+    margin-top: 0.35rem;
+  }
+}

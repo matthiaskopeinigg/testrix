@@ -1,0 +1,16 @@
+/**
+ * Diavolo (Figuree Studio) — landing hero display face.
+ * Licensed via 1001 Fonts: https://www.1001fonts.com/diavolo-font.html
+ * See public/fonts/diavolo/README.md
+ */
+@font-face {
+  font-family: 'Diavolo';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/diavolo/Diavolo.woff') format('woff');
+}
+
+:root {
+  --tx-font-diavolo: 'Diavolo', cursive;
+}

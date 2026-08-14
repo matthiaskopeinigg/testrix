@@ -1,0 +1,154 @@
+<app-workspace-sidebar-panel-shell
+  class="history-sidebar-panel"
+  [searchPlaceholder]="searchPlaceholder()"
+  [searchAriaLabel]="searchAriaLabel()"
+  [allFoldersExpanded]="allExpanded()"
+  [showFilterButton]="false"
+  [showSortButton]="false"
+  [useDefaultToolbarActions]="false"
+  (searchChange)="handleSearch($event)"
+  (allFoldersExpandedChange)="handleExpandAll($event)"
+>
+  <div workspacePanelToolbarActions class="history-sidebar-panel__toolbar">
+    <button
+      type="button"
+      class="workspace-panel-shell__icon-btn"
+      [class.is-pressed]="filterToolbarActive()"
+      aria-label="Filter history"
+      txTooltip="Filter history"
+      txTooltipPosition="bottom"
+      [attr.aria-expanded]="filterMenuOpen()"
+      (click)="handleFilterToolbarClick($event)"
+    >
+      <tx-icon name="filter" [size]="16" aria-hidden="true" />
+    </button>
+    <button
+      type="button"
+      class="workspace-panel-shell__icon-btn"
+      [class.is-pressed]="sortToolbarActive()"
+      aria-label="Sort history"
+      txTooltip="Sort history"
+      txTooltipPosition="bottom"
+      [attr.aria-expanded]="sortMenuOpen()"
+      (click)="handleSortToolbarClick($event)"
+    >
+      <tx-icon name="list" [size]="16" aria-hidden="true" />
+    </button>
+    <button
+      type="button"
+      class="workspace-panel-shell__icon-btn"
+      aria-label="Clear history"
+      txTooltip="Clear history"
+      txTooltipPosition="bottom"
+      [disabled]="!hasEntries()"
+      (click)="handleClearHistory()"
+    >
+      <tx-icon name="trash" [size]="16" aria-hidden="true" />
+    </button>
+  </div>
+
+  <div class="history-sidebar-panel__body" (contextmenu)="handleListAreaContextMenu($event)">
+    @if (groupedHistory().length === 0) {
+      <div class="history-sidebar-panel__empty">
+        <div class="history-sidebar-panel__empty-icon" aria-hidden="true">
+          <tx-icon name="clock" [size]="32" />
+        </div>
+        <strong>No requests yet</strong>
+        <span>Sent requests will appear here.</span>
+      </div>
+    } @else {
+      <div class="history-sidebar-panel__list">
+        @for (group of groupedHistory(); track group.dateKey) {
+          <button
+            type="button"
+            class="history-sidebar-panel__group-label"
+            (click)="handleToggleGroup(group.dateKey)"
+          >
+            <tx-icon
+              class="history-sidebar-panel__chevron"
+              [class.history-sidebar-panel__chevron--collapsed]="group.collapsed"
+              name="chevronDown"
+              [size]="10"
+              aria-hidden="true"
+            />
+            <span class="history-sidebar-panel__group-name">{{ group.displayLabel }}</span>
+            <span class="history-sidebar-panel__group-count">{{ group.entries.length }}</span>
+          </button>
+
+          @if (!group.collapsed) {
+            <ul class="history-sidebar-panel__entries">
+              @for (entry of group.entries; track entry.id) {
+                <li>
+                  <button
+                    type="button"
+                    class="history-sidebar-panel__entry"
+                    [class.history-sidebar-panel__entry--active]="activeHistoryId() === entry.id"
+                    [txTooltip]="entryUrl(entry.id)"
+                    txTooltipPosition="right"
+                    (click)="handleSelectEntry(entry.id)"
+                    (contextmenu)="handleEntryContextMenu($event, entry.id)"
+                  >
+                    <span class="history-sidebar-panel__method" [attr.data-method]="entryMethod(entry.id)">
+                      {{ entryMethod(entry.id) }}
+                    </span>
+                    <span class="history-sidebar-panel__middle">
+                      <span class="history-sidebar-panel__url">{{ entryUrl(entry.id) }}</span>
+                      <span class="history-sidebar-panel__time">
+                        {{ entryRequestedAt(entry.id) | date: 'shortTime' }}
+                        @if (entryElapsed(entry.id); as elapsed) {
+                          <small class="history-sidebar-panel__elapsed">· {{ elapsed }}</small>
+                        }
+                      </span>
+                    </span>
+                    @if (entryStatusCode(entry.id); as code) {
+                      <span
+                        class="history-sidebar-panel__status"
+                        [attr.data-tone]="entryStatusTone(entry.id)"
+                      >
+                        {{ code }}
+                      </span>
+                    }
+                  </button>
+                </li>
+              }
+            </ul>
+          }
+        }
+      </div>
+    }
+  </div>
+</app-workspace-sidebar-panel-shell>
+
+<tx-context-menu
+  [open]="contextMenuOpen()"
+  [position]="contextMenuPosition()"
+  [items]="contextMenuItems()"
+  (itemSelect)="handleContextMenuSelect($event)"
+  (closed)="handleContextMenuClosed()"
+/>
+
+<tx-context-menu
+  [open]="filterMenuOpen()"
+  [position]="filterMenuPosition()"
+  [items]="filterMenuItems()"
+  (itemSelect)="handleFilterMenuSelect($event)"
+  (closed)="handleFilterMenuClosed()"
+/>
+
+<tx-context-menu
+  [open]="sortMenuOpen()"
+  [position]="sortMenuPosition()"
+  [items]="sortMenuItems()"
+  (itemSelect)="handleSortMenuSelect($event)"
+  (closed)="handleSortMenuClosed()"
+/>
+
+<tx-confirm-dialog
+  [open]="confirmOpen()"
+  title="History"
+  [message]="confirmMessage()"
+  confirmLabel="Confirm"
+  variant="danger"
+  (confirmed)="handleConfirmConfirmed()"
+  (closed)="handleConfirmClosed()"
+/>

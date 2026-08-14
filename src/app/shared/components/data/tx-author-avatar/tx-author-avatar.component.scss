@@ -1,0 +1,45 @@
+:host {
+  --tx-author-avatar-size: 34px;
+  --tx-author-avatar-font-size: 0.72rem;
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+:host(.tx-author-avatar-host--sm) {
+  --tx-author-avatar-size: 28px;
+  --tx-author-avatar-font-size: 0.64rem;
+}
+
+:host(.tx-author-avatar-host--md) {
+  --tx-author-avatar-size: 34px;
+  --tx-author-avatar-font-size: 0.72rem;
+}
+
+:host(.tx-author-avatar-host--lg) {
+  --tx-author-avatar-size: 44px;
+  --tx-author-avatar-font-size: 0.82rem;
+}
+
+.tx-author-avatar {
+  display: grid;
+  place-items: center;
+  width: var(--tx-author-avatar-size);
+  height: var(--tx-author-avatar-size);
+  border-radius: 999px;
+  background: linear-gradient(
+    145deg,
+    hsl(calc(var(--tx-author-avatar-hue, 210)) 62% 52%),
+    hsl(calc(var(--tx-author-avatar-hue, 210) + 28) 68% 42%)
+  );
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--tx-text-0) 10%, transparent),
+    0 4px 12px -6px color-mix(in srgb, hsl(calc(var(--tx-author-avatar-hue, 210)) 70% 40%) 55%, transparent);
+}
+
+.tx-author-avatar__initials {
+  font: 700 var(--tx-author-avatar-font-size) / 1 var(--tx-font-sans);
+  letter-spacing: 0.03em;
+  color: color-mix(in srgb, #fff 92%, transparent);
+  text-transform: uppercase;
+  user-select: none;
+}

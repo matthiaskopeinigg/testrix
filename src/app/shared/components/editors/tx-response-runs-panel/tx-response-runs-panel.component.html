@@ -1,0 +1,41 @@
+<div class="tx-response-runs-panel">
+  <header class="tx-response-runs-panel__header">
+    <span>{{ runs().length }} run{{ runs().length === 1 ? '' : 's' }}</span>
+  </header>
+  <ul class="tx-response-runs-panel__list">
+    @for (run of runs(); track run.id) {
+      <li
+        class="tx-response-runs-panel__row"
+        [class.is-active]="selectedRunId() === run.id"
+        [class.is-pinned]="pinnedBaselineId() === run.id"
+      >
+        <div class="tx-response-runs-panel__meta">
+          <span class="tx-response-runs-panel__time">{{ formatLabel(run) }}</span>
+          <tx-tag [variant]="statusVariant(run.status.code)">
+            {{ run.status.code }} {{ run.status.text }}
+          </tx-tag>
+        </div>
+        <div class="tx-response-runs-panel__actions">
+          <tx-button
+            variant="secondary"
+            [class.is-active]="selectedRunId() === run.id"
+            (pressed)="handleRestore(run.id)"
+          >
+            Restore
+          </tx-button>
+          <tx-button
+            variant="secondary"
+            [class.is-pinned]="pinnedBaselineId() === run.id"
+            title="Pin as diff baseline"
+            (pressed)="handlePin(run.id)"
+          >
+            <tx-icon name="star" [size]="14" aria-hidden="true" />
+            Pin
+          </tx-button>
+        </div>
+      </li>
+    } @empty {
+      <li class="tx-response-runs-panel__empty">No runs yet.</li>
+    }
+  </ul>
+</div>

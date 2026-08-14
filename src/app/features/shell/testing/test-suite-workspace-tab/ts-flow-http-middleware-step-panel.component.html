@@ -1,0 +1,61 @@
+<div class="request-panel ts-flow-step-panel">
+  <header class="ts-flow-step-panel__hero">
+    <span class="ts-flow-step-panel__hero-icon" aria-hidden="true">
+      <tx-icon name="filter" [size]="18" />
+    </span>
+    <div>
+      <h2 class="request-panel__title">HTTP Listener</h2>
+      <p class="ts-flow-step-panel__hero-hint">Wait for a matching request or response and optionally cache it.</p>
+    </div>
+  </header>
+
+  <section class="ts-flow-step-panel__section">
+    <div class="ts-flow-step-panel__row-2">
+      <tx-form-field label="Method" controlId="ts-http-method">
+        <tx-dropdown
+          controlId="ts-http-method"
+          [options]="methodOptions"
+          [ngModel]="listenerCfg().method"
+          (ngModelChange)="patch({ method: $event })"
+        />
+      </tx-form-field>
+      <tx-form-field class="ts-flow-step-panel__grow" label="URL pattern" controlId="ts-http-url">
+        <tx-variable-input
+          controlId="ts-http-url"
+          [catalog]="variableCatalog()"
+          [ngModel]="listenerCfg().urlPattern"
+          (ngModelChange)="patch({ urlPattern: $event })"
+          placeholder="**/api/** or /webhooks/*"
+        />
+      </tx-form-field>
+    </div>
+
+    <tx-form-field label="Match phase" controlId="ts-http-phase">
+      <tx-dropdown
+        controlId="ts-http-phase"
+        [options]="phaseOptions"
+        [ngModel]="listenerCfg().matchPhase"
+        (ngModelChange)="patch({ matchPhase: $event })"
+      />
+    </tx-form-field>
+
+    <tx-form-field label="Timeout (ms)" controlId="ts-http-timeout">
+      <tx-input
+        controlId="ts-http-timeout"
+        type="number"
+        [ngModel]="listenerCfg().timeout ?? ''"
+        (ngModelChange)="patch({ timeout: $event || undefined })"
+        placeholder="30000"
+      />
+    </tx-form-field>
+
+    <tx-form-field label="Cache as variable" controlId="ts-http-var">
+      <tx-input
+        controlId="ts-http-var"
+        [ngModel]="listenerCfg().variableName ?? ''"
+        (ngModelChange)="patch({ variableName: $event || undefined })"
+        placeholder="Optional variable name"
+      />
+    </tx-form-field>
+  </section>
+</div>

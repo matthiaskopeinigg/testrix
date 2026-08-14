@@ -1,0 +1,222 @@
+@if (isMismatchTab()) {
+  @if (mismatch(); as m) {
+    <section class="ms-tab tx-workspace-tab" [attr.aria-label]="title()">
+      <div class="ms-tab__workspace">
+        <div class="ms-tab__pane tx-workspace-tab__pane">
+          <div class="request-panel tx-workspace-tab__section-shell">
+            <tx-banner variant="warning" title="No endpoint matched this request">
+              {{ m.method }} {{ m.url }} at {{ m.at }}
+            </tx-banner>
+            <dl class="ms-tab__dl">
+              <dt>Path</dt><dd>{{ m.pathname }}</dd>
+              <dt>Query</dt><dd>{{ m.query || '—' }}</dd>
+            </dl>
+            @if (m.headers.length > 0) {
+              <h3 class="ms-tab__subheading">Headers</h3>
+              <ul class="ms-tab__headers">
+                @for (h of m.headers; track h.key) {
+                  <li><strong>{{ h.key }}</strong>: {{ h.value }}</li>
+                }
+              </ul>
+            }
+            @if (m.bodyPreview) {
+              <h3 class="ms-tab__subheading">Body</h3>
+              <pre class="ms-tab__pre">{{ m.bodyPreview }}</pre>
+            }
+            <div class="ms-tab__actions">
+              <tx-button variant="primary" (pressed)="handleCreateEndpointFromMismatch()">
+                Create endpoint from request
+              </tx-button>
+              <tx-button variant="secondary" (pressed)="handleClearMismatch()">Clear from list</tx-button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  }
+} @else if (missing()) {
+  <section class="ms-tab tx-workspace-tab" [attr.aria-label]="title()">
+    <div class="ms-tab__workspace">
+      <div class="ms-tab__pane tx-workspace-tab__pane">
+        <div class="request-panel tx-workspace-tab__section-shell">
+          <tx-banner variant="warning" title="Endpoint not found">
+            This tab points to a mock endpoint that no longer exists.
+          </tx-banner>
+        </div>
+      </div>
+    </div>
+  </section>
+} @else {
+  <section
+    class="ms-tab tx-workspace-tab"
+    [class.ms-tab--titlebar]="useTitlebarLayout()"
+    [class.ms-tab--sidebar]="useSidebarLayout()"
+    [attr.aria-label]="title()"
+  >
+    <div
+      class="tx-workspace-tab__chrome tx-entrance-stagger"
+      [class.tx-entrance-stagger--play]="tabMotion.loadStaggerPlay()"
+      [class.tx-entrance-stagger--settled]="tabMotion.loadStaggerSettled()"
+    >
+      <div class="tx-entrance-stagger__block ms-tab__bar">
+        <div class="ms-tab__bar-cluster ms-tab__bar-cluster--grow">
+          <tx-form-field class="ms-tab__method-field" label="Method" controlId="ms-endpoint-method">
+            <tx-dropdown
+              id="ms-endpoint-method"
+              [options]="methodOptions"
+              [ngModel]="toolbarMethodValue()"
+              (ngModelChange)="handleToolbarMethodChange($event)"
+            />
+          </tx-form-field>
+          <tx-form-field class="ms-tab__route-field" label="Route" controlId="ms-endpoint-route">
+            <tx-input
+              id="ms-endpoint-route"
+              [ngModel]="toolbarPathValue()"
+              (ngModelChange)="handleToolbarPathChange($event)"
+              placeholder="/api/users"
+            />
+          </tx-form-field>
+        </div>
+        <div class="ms-tab__bar-cluster ms-tab__bar-cluster--trailing">
+          <tx-toggle
+            label="Enabled"
+            [ngModel]="endpoint()?.enabled ?? true"
+            (ngModelChange)="handleEnabledChange($event)"
+          />
+        </div>
+      </div>
+
+      @if (useTitlebarLayout()) {
+        <div class="tx-entrance-stagger__block ms-tab__sections-wrap">
+          <nav
+            class="ms-tab__sections-bar"
+            role="tablist"
+            aria-label="Mock endpoint sections"
+            [txWorkspaceSectionNav]="activeSection()"
+          >
+            @for (item of navItems; track item.id) {
+              <button
+                type="button"
+                class="ms-tab__section-tab"
+                role="tab"
+                [attr.aria-selected]="activeSection() === item.id"
+                [class.is-active]="activeSection() === item.id"
+                (click)="handleSectionSelect(item.id)"
+              >
+                <tx-icon [name]="$any(item.icon)" [size]="14" aria-hidden="true" />
+                <span>{{ item.label }}</span>
+              </button>
+            }
+          </nav>
+        </div>
+      }
+    </div>
+
+    <div class="ms-tab__workspace">
+      @if (useSidebarLayout()) {
+        <nav
+          class="ms-tab__nav"
+          role="tablist"
+          aria-label="Mock endpoint sections"
+          [txWorkspaceSectionNav]="activeSection()"
+        >
+          @for (item of navItems; track item.id) {
+            <button
+              type="button"
+              class="ms-tab__nav-item"
+              role="tab"
+              [attr.aria-selected]="activeSection() === item.id"
+              [class.is-active]="activeSection() === item.id"
+              (click)="handleSectionSelect(item.id)"
+            >
+              <span class="ms-tab__nav-icon">
+                <tx-icon [name]="$any(item.icon)" [size]="14" aria-hidden="true" />
+              </span>
+              <span>{{ item.label }}</span>
+            </button>
+          }
+        </nav>
+        <div class="ms-tab__divider" aria-hidden="true"></div>
+      }
+
+      <div class="ms-tab__pane tx-workspace-tab__pane">
+        @if (endpoint(); as e) {
+          @switch (activeSection()) {
+            @case ('overview') {
+              <div
+                class="tx-workspace-tab__section-shell tx-entrance-stagger"
+                [class.tx-entrance-stagger--play]="isSectionContentAnimating('overview')"
+                [class.tx-entrance-stagger--settled]="isSectionContentSettled('overview')"
+              >
+                <div class="tx-entrance-stagger__block">
+                  <app-ms-tab-overview-panel
+                    [endpoint]="e"
+                    [routeMethod]="routeMethod()"
+                    [routePath]="routePath()"
+                    (descriptionChange)="handleDescriptionChange($event)"
+                    (tagsChange)="handleTagsChange($event)"
+                    (sectionSelect)="handleSectionSelect($event)"
+                  />
+                </div>
+              </div>
+            }
+            @case ('matchers') {
+              <div
+                class="tx-workspace-tab__section-shell tx-entrance-stagger"
+                [class.tx-entrance-stagger--play]="isSectionContentAnimating('matchers')"
+                [class.tx-entrance-stagger--settled]="isSectionContentSettled('matchers')"
+              >
+                <div class="tx-entrance-stagger__block">
+                  <app-ms-tab-matchers-panel
+                    [matchers]="e.matchers"
+                    (matchersChange)="handleMatchersChange($event)"
+                    (addMatcher)="handleAddMatcher()"
+                  />
+                </div>
+              </div>
+            }
+            @case ('response') {
+              <div
+                class="tx-workspace-tab__section-shell tx-entrance-stagger ms-tab__section-shell--fill"
+                [class.tx-entrance-stagger--play]="isSectionContentAnimating('response')"
+                [class.tx-entrance-stagger--settled]="isSectionContentSettled('response')"
+              >
+                <div class="tx-entrance-stagger__block ms-tab__section-fill">
+                  <app-ms-tab-response-panel
+                    [response]="e.response"
+                    (responseChange)="handleResponseChange($event)"
+                  />
+                </div>
+              </div>
+            }
+            @case ('advanced') {
+              <div
+                class="tx-workspace-tab__section-shell tx-entrance-stagger"
+                [class.tx-entrance-stagger--play]="isSectionContentAnimating('advanced')"
+                [class.tx-entrance-stagger--settled]="isSectionContentSettled('advanced')"
+              >
+                <div class="tx-entrance-stagger__block request-panel">
+                  <h2 class="request-panel__title">Advanced</h2>
+                  <p class="request-panel__hint">
+                    Routing priority and endpoint-level options. Rename the endpoint from the sidebar tree.
+                  </p>
+                  <tx-form-field label="Priority" controlId="ms-priority">
+                    <tx-input
+                      id="ms-priority"
+                      type="number"
+                      [ngModel]="e.priority"
+                      (ngModelChange)="handlePriorityChange($event)"
+                    />
+                  </tx-form-field>
+                  <p class="request-panel__hint">
+                    Unmatched requests return HTTP 404. Use the sidebar to review mismatches and create endpoints from captured traffic.
+                  </p>
+                </div>
+              </div>
+            }
+          }
+        }
+      </div>
+    </div>
+  </section>
+}

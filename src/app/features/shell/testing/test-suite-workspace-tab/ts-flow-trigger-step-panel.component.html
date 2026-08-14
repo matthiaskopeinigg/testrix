@@ -1,0 +1,21 @@
+<div class="request-panel ts-flow-step-panel">
+  <h2 class="request-panel__title">Trigger</h2>
+  <p class="request-panel__hint">Run another flow or folder when this step executes.</p>
+  <tx-form-field label="Target type" controlId="ts-trg-type">
+    <tx-dropdown
+      controlId="ts-trg-type"
+      [options]="targetTypeOptions"
+      [ngModel]="cfg().targetType"
+      (ngModelChange)="patch({ targetType: $event, targetId: '' })"
+    />
+  </tx-form-field>
+  <tx-form-field label="Target" controlId="ts-trg-id">
+    <tx-dropdown
+      controlId="ts-trg-id"
+      [options]="targetOptions()"
+      placeholder="Select target…"
+      [ngModel]="cfg().targetId"
+      (ngModelChange)="patch({ targetId: $event })"
+    />
+  </tx-form-field>
+</div>

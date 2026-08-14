@@ -1,0 +1,64 @@
+<div class="rg-flows-panel">
+  <header class="rg-flows-panel__header">
+    <div>
+      <h2 class="request-panel__title">Linked flows</h2>
+      <p class="request-panel__hint">
+        Click flows or folders in the test-suite tree to link them. Folder clicks toggle all flows inside.
+      </p>
+    </div>
+    <div class="rg-flows-panel__summary">
+      <span class="rg-flows-panel__count">{{ linkedCount() }} linked</span>
+      <tx-button variant="secondary" [disabled]="linkedCount() === 0" (pressed)="handleClearSelection()">
+        Clear all
+      </tx-button>
+      <tx-button variant="secondary" [disabled]="displayNodes().length === 0" (pressed)="handleSelectAllVisible()">
+        Select visible
+      </tx-button>
+    </div>
+  </header>
+
+  <app-workspace-sidebar-panel-shell
+    class="rg-flows-panel__shell"
+    searchPlaceholder="Search flows and folders…"
+    searchAriaLabel="Search test suite flows"
+    [allFoldersExpanded]="allExpanded()"
+    [showFilterButton]="false"
+    [showSortButton]="false"
+    (searchChange)="handleSearch($event)"
+    (allFoldersExpandedChange)="handleExpandAll($event)"
+  >
+    <div class="rg-flows-panel__body">
+      @if (displayNodes().length === 0) {
+        <p class="rg-flows-panel__empty">{{ emptyStateMessage() }}</p>
+      } @else {
+        <tx-tree
+          class="rg-flows-panel__tree"
+          [nodes]="displayNodes()"
+          [config]="treeConfig()"
+          [expandedIds]="treeExpandedIds()"
+          [selectionIds]="treeSelectionIds()"
+          (expandedChange)="handleExpandedChange($event)"
+          (nodeClick)="handleNodeClick($event)"
+        >
+          <ng-template txTreeNode let-row>
+            <span class="rg-flows-panel__row">
+              <span
+                class="rg-flows-panel__check"
+                [class.is-checked]="rowCheckState(row.node) === 'checked'"
+                [class.is-partial]="rowCheckState(row.node) === 'partial'"
+                aria-hidden="true"
+              >
+                @if (rowCheckState(row.node) === 'checked') {
+                  <tx-icon name="check" [size]="12" />
+                } @else if (rowCheckState(row.node) === 'partial') {
+                  <tx-icon name="minus" [size]="12" />
+                }
+              </span>
+              <span class="rg-flows-panel__label">{{ row.node.label }}</span>
+            </span>
+          </ng-template>
+        </tx-tree>
+      }
+    </div>
+  </app-workspace-sidebar-panel-shell>
+</div>

@@ -1,0 +1,228 @@
+// Shared flow tab tokens and status row mixins.
+
+@mixin ts-flow-status-row($status) {
+  @if $status == 'running' {
+    background: color-mix(in srgb, var(--tx-accent) 10%, var(--tx-surface-0));
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tx-accent) 18%, transparent);
+  } @else if $status == 'waiting' {
+    background: color-mix(in srgb, var(--tx-accent) 6%, var(--tx-surface-0));
+  } @else if $status == 'passed' {
+    background: color-mix(in srgb, var(--tx-success) 10%, var(--tx-surface-0));
+    animation: ts-flow-status-success 420ms var(--tx-ease-out-expo, ease-out);
+  } @else if $status == 'failed' {
+    background: color-mix(in srgb, var(--tx-error) 10%, var(--tx-surface-0));
+    animation: ts-flow-status-fail 480ms ease;
+  } @else if $status == 'skipped' {
+    background: color-mix(in srgb, var(--tx-warning) 8%, var(--tx-surface-0));
+  }
+}
+
+@mixin ts-flow-status-dot($status) {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 999px;
+  flex-shrink: 0;
+
+  @if $status == 'running' {
+    background: var(--tx-accent);
+    animation: ts-flow-status-pulse 1.2s ease-in-out infinite;
+  } @else if $status == 'waiting' {
+    background: color-mix(in srgb, var(--tx-accent) 70%, var(--tx-text-2));
+    animation: ts-flow-status-wait 1.4s ease-in-out infinite;
+  } @else if $status == 'passed' {
+    background: var(--tx-success);
+  } @else if $status == 'failed' {
+    background: var(--tx-error);
+  } @else if $status == 'skipped' {
+    background: var(--tx-warning);
+  }
+}
+
+@mixin ts-flow-status-tag-indicator($status) {
+  ::ng-deep .tx-tag::before {
+    @if $status == 'waiting' {
+      animation: ts-flow-status-wait 1.4s ease-in-out infinite;
+    } @else if $status == 'running' {
+      width: 7px;
+      height: 7px;
+      border: 1.5px solid color-mix(in srgb, var(--tx-link) 35%, transparent);
+      border-top-color: var(--tx-link);
+      background: transparent;
+      border-radius: 50%;
+      animation: ts-flow-status-spin 0.75s linear infinite;
+    } @else if $status == 'passed' {
+      animation: ts-flow-status-pop 420ms var(--tx-ease-out-expo, ease-out);
+    } @else if $status == 'failed' {
+      animation: ts-flow-status-shake 480ms ease;
+    }
+  }
+}
+
+@mixin ts-flow-status-tag-modifiers {
+  .ts-flow-status-tag--waiting {
+    @include ts-flow-status-tag-indicator('waiting');
+  }
+
+  .ts-flow-status-tag--running {
+    @include ts-flow-status-tag-indicator('running');
+  }
+
+  .ts-flow-status-tag--passed {
+    @include ts-flow-status-tag-indicator('passed');
+  }
+
+  .ts-flow-status-tag--failed {
+    @include ts-flow-status-tag-indicator('failed');
+  }
+}
+
+@keyframes ts-flow-status-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.55;
+    transform: scale(0.85);
+  }
+}
+
+@keyframes ts-flow-status-wait {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(0.92);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes ts-flow-status-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes ts-flow-status-pop {
+  0% {
+    transform: scale(0.6);
+    opacity: 0.4;
+  }
+
+  70% {
+    transform: scale(1.15);
+    opacity: 1;
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes ts-flow-status-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+
+  20%,
+  60% {
+    transform: translateX(-2px);
+  }
+
+  40%,
+  80% {
+    transform: translateX(2px);
+  }
+}
+
+@keyframes ts-flow-status-success {
+  0% {
+    box-shadow: inset 0 0 0 0 color-mix(in srgb, var(--tx-success) 0%, transparent);
+  }
+
+  40% {
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tx-success) 35%, transparent);
+  }
+
+  100% {
+    box-shadow: inset 0 0 0 0 color-mix(in srgb, var(--tx-success) 0%, transparent);
+  }
+}
+
+@keyframes ts-flow-status-fail {
+  0%,
+  100% {
+    box-shadow: inset 0 0 0 0 color-mix(in srgb, var(--tx-error) 0%, transparent);
+  }
+
+  35% {
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tx-error) 45%, transparent);
+  }
+}
+
+@mixin ts-flow-type-chip($accent-token: var(--tx-accent)) {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.28rem 0.55rem;
+  border-radius: var(--tx-radius-sm, 8px);
+  border: 1px solid color-mix(in srgb, $accent-token 28%, var(--tx-border-0));
+  background: color-mix(in srgb, $accent-token 12%, var(--tx-surface-0));
+  color: color-mix(in srgb, $accent-token 82%, var(--tx-text-0));
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+@mixin ts-flow-inline-name {
+  min-width: 8rem;
+  max-width: 20rem;
+  flex: 1 1 auto;
+
+  ::ng-deep .tx-input {
+    border-color: transparent;
+    background: transparent;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    padding-inline: 0.35rem;
+
+    &:hover {
+      border-color: color-mix(in srgb, var(--tx-border-0) 55%, transparent);
+      background: color-mix(in srgb, var(--tx-surface-0) 65%, transparent);
+    }
+
+    &:focus {
+      border-color: color-mix(in srgb, var(--tx-accent) 45%, var(--tx-border-0));
+      background: var(--tx-surface-0);
+    }
+  }
+}
+
+@mixin ts-flow-run-metrics {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.65rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--tx-text-2);
+}
+
+@mixin ts-flow-run-metrics-pass {
+  color: color-mix(in srgb, var(--tx-success) 85%, var(--tx-text-1));
+}
+
+@mixin ts-flow-run-metrics-fail {
+  color: color-mix(in srgb, var(--tx-error) 85%, var(--tx-text-1));
+}
+
+@mixin ts-flow-run-metrics-skip {
+  color: color-mix(in srgb, var(--tx-warning) 85%, var(--tx-text-1));
+}

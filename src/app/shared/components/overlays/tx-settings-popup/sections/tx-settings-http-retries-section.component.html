@@ -1,0 +1,68 @@
+<div class="tx-entrance-stagger__block">
+  <h2 class="tx-settings__tab-title">Retries</h2>
+  <p class="tx-settings__tab-description">
+    Automatic retry behavior for failed requests. Exponential backoff increases delay between attempts.
+  </p>
+</div>
+
+<div class="tx-entrance-stagger__block">
+  <h3 class="tx-settings__section-heading">Retry policy</h3>
+  <div class="tx-settings__toggle-stack">
+    <tx-toggle
+      label="Enabled"
+      [ngModel]="retries().enabled"
+      (ngModelChange)="emit({ enabled: $event })"
+    />
+    <tx-toggle
+      label="Exponential backoff"
+      [ngModel]="retries().exponentialBackoff"
+      (ngModelChange)="emit({ exponentialBackoff: $event })"
+    />
+  </div>
+  <tx-form-field label="Retry amount" controlId="tx-settings-http-retry-amount">
+    <tx-slider
+      controlId="tx-settings-http-retry-amount"
+      [min]="0"
+      [max]="10"
+      [step]="1"
+      [ngModel]="retries().maxAttempts"
+      (ngModelChange)="emit({ maxAttempts: $event })"
+    />
+  </tx-form-field>
+  <tx-form-field label="Retry delay" controlId="tx-settings-http-retry-delay">
+    <tx-slider
+      controlId="tx-settings-http-retry-delay"
+      [min]="0"
+      [max]="60000"
+      [step]="100"
+      unit=" ms"
+      [ngModel]="retries().delayMs"
+      (ngModelChange)="emit({ delayMs: $event })"
+    />
+  </tx-form-field>
+</div>
+
+<div class="tx-entrance-stagger__block">
+  <h3 class="tx-settings__section-heading">Backoff</h3>
+  <tx-form-field label="Backoff multiplier" controlId="tx-settings-http-backoff-mult">
+    <tx-slider
+      controlId="tx-settings-http-backoff-mult"
+      [min]="1"
+      [max]="10"
+      [step]="0.5"
+      [ngModel]="retries().backoffMultiplier"
+      (ngModelChange)="emit({ backoffMultiplier: $event })"
+    />
+  </tx-form-field>
+  <tx-form-field label="Max delay" controlId="tx-settings-http-max-delay">
+    <tx-slider
+      controlId="tx-settings-http-max-delay"
+      [min]="0"
+      [max]="600000"
+      [step]="1000"
+      unit=" ms"
+      [ngModel]="retries().maxDelayMs"
+      (ngModelChange)="emit({ maxDelayMs: $event })"
+    />
+  </tx-form-field>
+</div>

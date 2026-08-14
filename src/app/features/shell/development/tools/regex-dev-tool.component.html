@@ -1,0 +1,88 @@
+<app-dev-tool-layout toolId="regex">
+  <app-dev-tool-toolbar devToolToolbar>
+    <div leading class="dev-tool-tab__options">
+      <tx-dropdown
+        label="Cheatsheet"
+        [options]="cheatsheetOptions"
+        [ngModel]="state().cheatsheetId"
+        (ngModelChange)="handleCheatsheet($event)"
+      />
+      <tx-form-field label="g">
+        <tx-toggle [ngModel]="state().flags.g" (ngModelChange)="setFlag('g', $event)" />
+      </tx-form-field>
+      <tx-form-field label="i">
+        <tx-toggle [ngModel]="state().flags.i" (ngModelChange)="setFlag('i', $event)" />
+      </tx-form-field>
+      <tx-form-field label="m">
+        <tx-toggle [ngModel]="state().flags.m" (ngModelChange)="setFlag('m', $event)" />
+      </tx-form-field>
+      <tx-form-field label="s">
+        <tx-toggle [ngModel]="state().flags.s" (ngModelChange)="setFlag('s', $event)" />
+      </tx-form-field>
+      <tx-form-field label="u">
+        <tx-toggle [ngModel]="state().flags.u" (ngModelChange)="setFlag('u', $event)" />
+      </tx-form-field>
+      <tx-form-field label="y">
+        <tx-toggle [ngModel]="state().flags.y" (ngModelChange)="setFlag('y', $event)" />
+      </tx-form-field>
+    </div>
+    <div trailing>
+      <tx-button variant="secondary" (click)="handleClear()">Clear</tx-button>
+    </div>
+  </app-dev-tool-toolbar>
+
+  @if (evalResult().error; as message) {
+    <tx-banner variant="error" [title]="message" />
+  }
+
+  <app-dev-tool-stat-strip>
+    <tx-tag>{{ evalResult().matches.length }} matches</tx-tag>
+  </app-dev-tool-stat-strip>
+
+  <tx-form-field label="Pattern">
+    <tx-input
+      [ngModel]="state().pattern"
+      (ngModelChange)="state.update((s) => ({ ...s, pattern: $event }))"
+    />
+  </tx-form-field>
+
+  <div class="dev-tool-tab__split">
+    <tx-form-field class="dev-tool-tab__pane" label="Sample text">
+      <tx-textarea
+        [rows]="8"
+        [ngModel]="state().sample"
+        (ngModelChange)="state.update((s) => ({ ...s, sample: $event }))"
+      />
+    </tx-form-field>
+    <tx-form-field class="dev-tool-tab__pane" label="Replace with">
+      <tx-textarea
+        [rows]="3"
+        [ngModel]="state().replacement"
+        (ngModelChange)="state.update((s) => ({ ...s, replacement: $event }))"
+      />
+      <span class="dev-tool-tab__pane-label">Replace preview</span>
+      <pre class="dev-tool-tab__output">{{ evalResult().replacement }}</pre>
+    </tx-form-field>
+  </div>
+
+  @if (evalResult().matches.length > 0) {
+    <table class="dev-tool-tab__match-table">
+      <thead>
+        <tr>
+          <th>Index</th>
+          <th>Match</th>
+          <th>Groups</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (match of evalResult().matches; track $index) {
+          <tr>
+            <td>{{ match.index }}</td>
+            <td>{{ match.text }}</td>
+            <td>{{ match.groups.join(', ') || '—' }}</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+</app-dev-tool-layout>

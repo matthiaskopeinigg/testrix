@@ -1,0 +1,35 @@
+@use '../workspace/workspace-sidebar-tree' as sidebar-tree;
+
+:host {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+}
+
+.collections-sidebar-panel {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.collections-sidebar-panel__toolbar-actions {
+  display: contents;
+}
+
+.collections-sidebar-panel__body {
+  @include sidebar-tree.workspace-sidebar-panel-body;
+}
+
+.collections-sidebar-panel__tree {
+  @include sidebar-tree.workspace-sidebar-tree-host;
+}
+
+.collections-sidebar-panel__modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}

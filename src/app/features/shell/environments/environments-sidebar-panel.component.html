@@ -1,0 +1,86 @@
+<app-workspace-sidebar-panel-shell
+  class="environments-sidebar-panel"
+  [searchPlaceholder]="searchPlaceholder()"
+  [searchAriaLabel]="searchAriaLabel()"
+  [showFolderToggle]="false"
+  [useDefaultToolbarActions]="false"
+  (searchChange)="handleSearch($event)"
+>
+  <div workspacePanelToolbarActions class="environments-sidebar-panel__toolbar-actions">
+    <button
+      type="button"
+      class="workspace-panel-shell__icon-btn"
+      [class.is-pressed]="filterToolbarActive()"
+      aria-label="Filter environments"
+      txTooltip="Filter environments"
+      txTooltipPosition="bottom"
+      [attr.aria-expanded]="filterMenuOpen()"
+      (click)="handleFilterToolbarClick($event)"
+    >
+      <tx-icon name="filter" [size]="16" />
+    </button>
+    <button
+      type="button"
+      class="workspace-panel-shell__icon-btn"
+      [class.is-pressed]="sortToolbarActive()"
+      aria-label="Sort environments"
+      txTooltip="Sort environments"
+      txTooltipPosition="bottom"
+      [attr.aria-expanded]="sortMenuOpen()"
+      (click)="handleSortToolbarClick($event)"
+    >
+      <tx-icon name="list" [size]="16" />
+    </button>
+  </div>
+
+  <div class="environments-sidebar-panel__body" (contextmenu)="handleTreeAreaContextMenu($event)">
+    <tx-tree
+      class="environments-sidebar-panel__tree"
+      [entranceStagger]="true"
+      [emptyMessage]="emptyStateMessage()"
+      [nodes]="treeNodes()"
+      [config]="treeConfig()"
+      [selectionIds]="treeSelectionIds()"
+      [renamingNodeId]="renamingProfileId()"
+      (nodeClick)="handleNodeClick($event)"
+      (nodeDblClick)="handleNodeDblClick($event)"
+      (renameCommit)="handleRenameCommit($event)"
+      (renameCancel)="handleRenameCancel()"
+      (rowContextMenu)="handleRowContextMenu($event)"
+    />
+  </div>
+</app-workspace-sidebar-panel-shell>
+
+<tx-context-menu
+  [open]="filterMenuOpen()"
+  [position]="filterMenuPosition()"
+  [items]="filterMenuItems()"
+  (itemSelect)="handleFilterMenuSelect($event)"
+  (closed)="handleFilterMenuClosed()"
+/>
+
+<tx-context-menu
+  [open]="sortMenuOpen()"
+  [position]="sortMenuPosition()"
+  [items]="sortMenuItems()"
+  (itemSelect)="handleSortMenuSelect($event)"
+  (closed)="handleSortMenuClosed()"
+/>
+
+<tx-context-menu
+  [open]="contextMenuOpen()"
+  [position]="contextMenuPosition()"
+  [items]="contextMenuItems()"
+  (itemSelect)="handleContextMenuSelect($event)"
+  (closed)="handleContextMenuClosed()"
+/>
+
+<tx-confirm-dialog
+  [open]="deleteOpen()"
+  title="Delete environment"
+  [message]="deleteMessage()"
+  confirmLabel="Delete"
+  variant="danger"
+  (confirmed)="handleDeleteConfirmed()"
+  (closed)="handleDeleteClosed()"
+/>

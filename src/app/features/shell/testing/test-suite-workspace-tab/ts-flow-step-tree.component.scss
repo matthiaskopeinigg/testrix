@@ -1,0 +1,308 @@
+@use './ts-flow-tab.shared' as flow-shared;
+
+:host {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+
+  @include flow-shared.ts-flow-status-tag-modifiers;
+}
+
+.ts-flow-step-tree__header {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  padding: 0.55rem 0.75rem 0.45rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--tx-border-0) 48%, transparent);
+}
+
+.ts-flow-step-tree__header-main {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.ts-flow-step-tree__title {
+  margin: 0;
+  font-size: 0.6875rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--tx-text-2);
+}
+
+.ts-flow-step-tree__count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.15rem;
+  height: 1.15rem;
+  padding: 0 0.3rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--tx-text-0) 8%, transparent);
+  font-size: 0.625rem;
+  font-weight: 700;
+  color: var(--tx-text-1);
+}
+
+.ts-flow-step-tree__empty-card {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  margin: 0.75rem;
+  padding: 1.25rem 0.75rem;
+  text-align: center;
+  border-radius: var(--tx-radius-sm, 8px);
+  border: 1px dashed color-mix(in srgb, var(--tx-border-0) 55%, transparent);
+  background: color-mix(in srgb, var(--tx-surface-0) 55%, transparent);
+}
+
+.ts-flow-step-tree__empty-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 999px;
+  color: var(--tx-accent);
+  background: color-mix(in srgb, var(--tx-accent) 12%, transparent);
+}
+
+.ts-flow-step-tree__empty-title {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--tx-text-0);
+}
+
+.ts-flow-step-tree__empty-hint {
+  margin: 0;
+  max-width: 14rem;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: var(--tx-text-2);
+}
+
+.ts-flow-step-tree__tree {
+  position: relative;
+  z-index: 1;
+  flex: 1 1 auto;
+  min-height: 0;
+
+  ::ng-deep .tx-tree-row__text--custom {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  ::ng-deep .tx-tree-row {
+    align-items: center;
+    min-height: 2rem;
+    padding-block: 0.22rem;
+  }
+}
+
+.ts-flow-step-tree__scroll {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+}
+
+.ts-flow-step-tree__link-canvas {
+  position: relative;
+  min-height: 100%;
+
+  &.has-validation-links {
+    padding-inline-start: 0.625rem;
+
+    .ts-flow-step-tree__row {
+      background: var(--tx-surface-0);
+    }
+  }
+}
+
+.ts-flow-step-tree__links {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  pointer-events: none;
+  overflow: visible;
+  z-index: 0;
+}
+
+.ts-flow-step-tree__link-gradient-stop {
+  stop-color: var(--tx-primary);
+
+  &--ref {
+    stop-opacity: 0.95;
+  }
+
+  &--validation {
+    stop-opacity: 0.42;
+  }
+}
+
+.ts-flow-step-tree__link-glow {
+  fill: none;
+  stroke: color-mix(in srgb, var(--tx-primary) 24%, transparent);
+  stroke-width: 5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+  opacity: 0.55;
+
+  &.is-highlighted {
+    stroke: color-mix(in srgb, var(--tx-primary) 38%, transparent);
+    opacity: 0.85;
+  }
+}
+
+.ts-flow-step-tree__link-path {
+  fill: none;
+  stroke: url(#ts-flow-validation-link-gradient);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+  opacity: 0.88;
+
+  &.is-highlighted {
+    stroke-width: 2;
+    opacity: 1;
+  }
+}
+
+.ts-flow-step-tree__row {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 1rem 1.35rem minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 0.4rem;
+  min-width: 0;
+  width: 100%;
+  min-height: 1.75rem;
+  padding: 0.08rem 0.15rem;
+  border-radius: var(--tx-radius-sm, 8px);
+  transition: background-color 160ms ease;
+
+  &.is-status-running {
+    @include flow-shared.ts-flow-status-row('running');
+  }
+
+  &.is-status-waiting {
+    @include flow-shared.ts-flow-status-row('waiting');
+  }
+
+  &.is-status-passed {
+    @include flow-shared.ts-flow-status-row('passed');
+  }
+
+  &.is-status-failed {
+    @include flow-shared.ts-flow-status-row('failed');
+  }
+
+  &.is-status-skipped {
+    @include flow-shared.ts-flow-status-row('skipped');
+  }
+
+  &.is-disabled {
+    opacity: 0.55;
+
+    .ts-flow-step-tree__row-label {
+      text-decoration: line-through;
+    }
+  }
+
+  &.is-validation-ref {
+    .ts-flow-step-tree__type-icon {
+      box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tx-primary) 28%, transparent);
+    }
+  }
+
+  &.is-validation-target {
+    .ts-flow-step-tree__type-icon {
+      box-shadow: 0 0 0 2px color-mix(in srgb, var(--tx-primary) 22%, transparent);
+    }
+
+    .ts-flow-step-tree__index {
+      color: color-mix(in srgb, var(--tx-primary) 72%, var(--tx-text-0));
+    }
+  }
+
+  &.is-validation-link-highlight {
+    .ts-flow-step-tree__type-icon {
+      box-shadow: 0 0 0 2px color-mix(in srgb, var(--tx-primary) 38%, transparent);
+    }
+  }
+}
+
+.ts-flow-step-tree__index {
+  position: relative;
+  z-index: 2;
+  justify-self: end;
+  font-size: 0.625rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--tx-text-2);
+  font-variant-numeric: tabular-nums;
+
+  &--spacer {
+    visibility: hidden;
+  }
+}
+
+.ts-flow-step-tree__type-icon {
+  position: relative;
+  z-index: 2;
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 1.35rem;
+  height: 1.35rem;
+  border-radius: calc(var(--tx-radius-sm, 8px) - 2px);
+  color: color-mix(in srgb, var(--tx-accent) 82%, var(--tx-text-0));
+  background: color-mix(in srgb, var(--tx-accent) 12%, var(--tx-surface-0));
+}
+
+.ts-flow-step-tree__row-text {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.ts-flow-step-tree__row-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  line-height: 1.25;
+  color: var(--tx-text-0);
+}
+
+.ts-flow-step-tree__row-sub {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.6875rem;
+  line-height: 1.2;
+  color: var(--tx-text-2);
+}
+
+.ts-flow-step-tree__status {
+  flex-shrink: 0;
+  justify-self: end;
+}

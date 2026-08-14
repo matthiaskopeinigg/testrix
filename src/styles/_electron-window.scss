@@ -1,0 +1,214 @@
+// Frameless Electron window — transparent corners; visible UI only inside rounded shell.
+
+html.tx-electron-app {
+  --tx-window-radius: var(--tx-radius-lg, 14px);
+  --tx-titlebar-corner-radius: var(--tx-window-radius);
+
+  height: 100%;
+  background: transparent !important;
+  overflow: visible;
+  clip-path: none;
+
+  // Rounded surface lives on `.tx-shell` so corner pixels stay transparent (desktop shows through).
+  &:not(.tx-electron-app--edge-to-edge):not(.tx-electron-app--browser-parity) {
+    .tx-shell {
+      border-radius: var(--tx-window-radius);
+      overflow: hidden;
+    }
+  }
+
+  // macOS opaque dev (`ng serve`): native window owns outer rounding.
+  &.tx-electron-app--dev-opaque[data-platform='darwin']:not(.tx-electron-app--edge-to-edge):not(.tx-electron-app--browser-parity) {
+    --tx-titlebar-corner-radius: 8px;
+
+    app-root {
+      background: var(--tx-content-bg, var(--tx-surface-0));
+    }
+
+    .tx-shell {
+      border-radius: 0;
+    }
+  }
+
+  &[data-platform='win32'].tx-electron-app--dev-opaque {
+    background: var(--tx-content-bg, var(--tx-surface-0)) !important;
+
+    body {
+      background: var(--tx-content-bg, var(--tx-surface-0)) !important;
+    }
+
+    app-root {
+      background: var(--tx-content-bg, var(--tx-surface-0));
+    }
+  }
+
+  // Opaque Win32 window — square shell so caption-button hover fills the top-right corner.
+  &[data-platform='win32']:not(.tx-electron-app--browser-parity):not(.tx-electron-app--edge-to-edge) {
+    --tx-titlebar-corner-radius: 0;
+
+    .tx-shell {
+      border-radius: 0;
+    }
+
+    app-tx-window-titlebar .tx-titlebar {
+      border-top-left-radius: 0;
+      border-top-right-radius: 0;
+    }
+  }
+
+  &.tx-electron-app--edge-to-edge {
+    --tx-titlebar-corner-radius: 0;
+
+    .tx-shell {
+      border-radius: 0;
+    }
+
+    app-tx-window-titlebar .tx-titlebar {
+      border-top-left-radius: 0;
+      border-top-right-radius: 0;
+    }
+  }
+
+  body {
+    height: 100%;
+    margin: 0;
+    background: transparent !important;
+  }
+
+  app-root {
+    display: block;
+    height: 100%;
+    overflow: visible;
+    background: transparent;
+  }
+
+  .tx-shell {
+    box-sizing: border-box;
+    height: 100%;
+    min-height: 100%;
+    border: none;
+    outline: none;
+    overflow: hidden;
+    background: var(--tx-content-bg, var(--tx-surface-0));
+    box-shadow: none;
+  }
+
+  .tx-settings {
+    border-radius: inherit;
+    overflow: hidden;
+  }
+}
+
+// Win32: backdrop-filter breaks pointer hit-testing in Electron.
+html.tx-electron-app[data-platform='win32']:not(.tx-electron-app--browser-parity) {
+  .tx-titlebar,
+  .tx-shell__stage,
+  .tx-shell__body,
+  .workspace-shell,
+  .welcome {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  /* Welcome GPU layers (transform/will-change) can break Win32 hit-testing even with pointer-events: none. */
+  .welcome__backdrop,
+  .welcome__backdrop * {
+    pointer-events: none !important;
+  }
+
+  .welcome__viewport,
+  .welcome__inner,
+  .welcome__hero,
+  .welcome__section,
+  .welcome__action,
+  .welcome__btn-primary,
+  .welcome__pillar,
+  .tx-sidebar {
+    pointer-events: auto;
+  }
+}
+
+html.tx-electron-app[data-chrome-blur='enabled'] .tx-shell__stage::before {
+  display: none !important;
+}
+
+html.tx-electron-app[data-chrome-blur='disabled'] .tx-shell__stage::before {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html.tx-electron-app[data-chrome-blur='enabled'] .tx-shell__stage::before {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background: var(--tx-content-bg, var(--tx-surface-0));
+  }
+}
+
+html.tx-electron-app[data-platform='win32'].tx-electron-app--dev-opaque {
+  body,
+  body.theme-github-light,
+  body.theme-github-dark,
+  body.theme-one-dark {
+    background: var(--tx-content-bg, var(--tx-surface-0)) !important;
+  }
+}
+
+// Frameless titlebar drag — global styles so Angular encapsulation cannot strip `-webkit-app-region`.
+html.tx-electron-app:not(.tx-electron-app--browser-parity) {
+  app-tx-window-titlebar .tx-titlebar:not(.tx-titlebar--native-frame) {
+    -webkit-app-region: drag;
+    cursor: default;
+  }
+
+  app-tx-window-titlebar .tx-titlebar__profile,
+  app-tx-window-titlebar .tx-titlebar__trailing,
+  app-tx-window-titlebar .tx-titlebar__window-controls,
+  app-tx-window-titlebar .tx-titlebar-btn,
+  app-tx-window-titlebar .tx-titlebar__profile-dropdown,
+  app-tx-window-titlebar .tx-dropdown__trigger {
+    -webkit-app-region: no-drag;
+  }
+}
+
+// Native OS frame on Win32 — no custom window-control chrome required.
+html.tx-electron-app.tx-electron-app--native-dev-frame {
+  .tx-titlebar {
+    padding-top: 0;
+  }
+}
+
+/*
+ * Win32 Electron: same document rules as a normal browser tab (no frameless shell).
+ * Browser works; Electron failed because tx-electron-app used transparent html, overflow:hidden,
+ * and -webkit-app-region — all absent in Chrome when you open localhost directly.
+ */
+html.tx-electron-app.tx-electron-app--browser-parity {
+  background: var(--tx-surface-0) !important;
+  border-radius: 0;
+  overflow: visible;
+  clip-path: none;
+
+  body {
+    background: var(--tx-surface-0) !important;
+    overflow: visible;
+  }
+
+  app-root {
+    overflow: visible;
+    background: var(--tx-surface-0);
+  }
+
+  .tx-shell {
+    border-radius: 0;
+    overflow: visible;
+    min-height: 100%;
+    background: var(--tx-surface-0);
+  }
+
+  // Remove drag regions entirely on Win32 — do not use no-drag on <html> (still breaks input).
+  *,
+  *::before,
+  *::after {
+    -webkit-app-region: unset !important;
+  }
+}

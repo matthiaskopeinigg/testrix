@@ -1,0 +1,179 @@
+$tx-profile-accent: color-mix(in srgb, var(--tx-primary) 72%, var(--tx-secondary, var(--tx-primary)));
+
+:host {
+  display: none;
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  z-index: var(--tx-z-profile-switch, 1390);
+  opacity: 0;
+  transition: opacity var(--tx-duration-base, 180ms) var(--tx-ease-out-expo, ease);
+
+  &.tx-profile-switch-overlay-host--visible {
+    display: block;
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
+.tx-profile-switch-overlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  box-sizing: border-box;
+}
+
+.tx-profile-switch-overlay__scrim {
+  position: absolute;
+  inset: 0;
+  background: color-mix(in srgb, var(--tx-scrim, #1a1714) 72%, transparent);
+  backdrop-filter: blur(5px);
+}
+
+.tx-profile-switch-overlay__card {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 360px);
+  overflow: hidden;
+  border-radius: var(--tx-radius-lg, 14px);
+  border: 1px solid color-mix(in srgb, $tx-profile-accent, transparent 68%);
+  background-color: color-mix(in srgb, var(--tx-surface-1) 96%, var(--tx-surface-0));
+  box-shadow:
+    0 24px 64px rgba(0, 0, 0, 0.42),
+    0 0 40px color-mix(in srgb, $tx-profile-accent, transparent 92%),
+    inset 0 1px 0 color-mix(in srgb, #fff, transparent 92%);
+  animation: tx-profile-switch-card-in 0.38s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.tx-profile-switch-overlay__bg {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.tx-profile-switch-overlay__bg-grid {
+  position: absolute;
+  inset: 0;
+  opacity: 0.24;
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--tx-text-0) 6%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--tx-text-0) 6%, transparent) 1px, transparent 1px);
+  background-size: 24px 24px;
+  mask-image: radial-gradient(ellipse 80% 70% at 50% 40%, #000 0%, transparent 100%);
+}
+
+.tx-profile-switch-overlay__bg-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(48px);
+  opacity: 0.45;
+
+  &--a {
+    width: 160px;
+    height: 160px;
+    top: -36px;
+    left: -16px;
+    background: color-mix(in srgb, var(--tx-secondary, var(--tx-primary)), transparent 40%);
+  }
+
+  &--b {
+    width: 130px;
+    height: 130px;
+    right: -20px;
+    bottom: -28px;
+    background: color-mix(in srgb, $tx-profile-accent, transparent 52%);
+  }
+}
+
+.tx-profile-switch-overlay__accent {
+  position: relative;
+  height: 3px;
+  overflow: hidden;
+}
+
+.tx-profile-switch-overlay__accent-band {
+  display: block;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--tx-secondary, var(--tx-primary)), transparent 20%),
+    $tx-profile-accent,
+    color-mix(in srgb, var(--tx-primary) 80%, #fff),
+    transparent
+  );
+  animation: tx-profile-switch-accent 1.6s ease-in-out infinite;
+}
+
+.tx-profile-switch-overlay__content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 28px 24px 24px;
+  text-align: center;
+}
+
+.tx-profile-switch-overlay__icon-wrap {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  background: color-mix(in srgb, $tx-profile-accent, transparent 88%);
+  border: 1px solid color-mix(in srgb, $tx-profile-accent, transparent 62%);
+  color: $tx-profile-accent;
+}
+
+.tx-profile-switch-overlay__title {
+  margin: 0;
+  font-size: 1.0625rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--tx-text-0);
+}
+
+.tx-profile-switch-overlay__desc {
+  margin: 0;
+  max-width: 30ch;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: color-mix(in srgb, var(--tx-text-1) 90%, transparent);
+}
+
+@keyframes tx-profile-switch-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes tx-profile-switch-accent {
+  0%,
+  100% {
+    transform: translateX(-30%);
+    opacity: 0.65;
+  }
+
+  50% {
+    transform: translateX(30%);
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tx-profile-switch-overlay__card,
+  .tx-profile-switch-overlay__accent-band {
+    animation: none;
+  }
+}

@@ -1,0 +1,53 @@
+@if (hasTiming()) {
+  <div class="tx-response-timing-panel">
+    <p class="tx-response-timing-panel__total">
+      Total: <strong>{{ totalMs() }} ms</strong>
+    </p>
+
+    <div
+      class="tx-response-timing-panel__bar"
+      role="img"
+      [attr.aria-label]="'Request took ' + totalMs() + ' ms'"
+    >
+      @for (phase of phases(); track phase.id + phase.ms) {
+        <span
+          class="tx-response-timing-panel__segment"
+          [class]="'tx-response-timing-panel__segment--' + phase.id"
+          [style.flex-basis.%]="phase.widthPct"
+          [title]="phase.label + ': ' + phase.ms + ' ms'"
+        ></span>
+      }
+    </div>
+
+    <ul class="tx-response-timing-panel__legend">
+      @for (phase of phases(); track phase.id + phase.ms) {
+        <li>
+          <span
+            class="tx-response-timing-panel__swatch"
+            [class]="'tx-response-timing-panel__swatch--' + phase.id"
+          ></span>
+          <span class="tx-response-timing-panel__legend-label">{{ phase.label }}</span>
+          <span class="tx-response-timing-panel__legend-ms">{{ phase.ms }} ms</span>
+        </li>
+      }
+    </ul>
+
+    @if (redirectBars().length > 0) {
+      <h4 class="tx-response-timing-panel__heading">Redirect hops</h4>
+      <ul class="tx-response-timing-panel__redirects">
+        @for (hop of redirectBars(); track hop.label + hop.ms) {
+          <li>
+            <span
+              class="tx-response-timing-panel__redirect-bar"
+              [style.width.%]="hop.widthPct"
+            ></span>
+            <span class="tx-response-timing-panel__redirect-label">{{ hop.label }}</span>
+            <span class="tx-response-timing-panel__redirect-ms">{{ hop.ms }} ms</span>
+          </li>
+        }
+      </ul>
+    }
+  </div>
+} @else {
+  <p class="tx-response-timing-panel__empty">No timing data was captured for this response.</p>
+}

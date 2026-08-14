@@ -1,0 +1,104 @@
+<div class="req-overview">
+  <header class="req-overview__hero">
+    <div class="req-overview__hero-main">
+      <h2 class="req-overview__title">Overview</h2>
+      <p class="req-overview__subtitle">
+        Endpoint metadata, configured response, and a quick path into matchers and response settings.
+      </p>
+    </div>
+    <div class="req-overview__endpoint" aria-label="Matched route">
+      <span class="req-overview__method" [attr.data-method]="routeMethod()">{{ routeMethod() }}</span>
+      <code class="req-overview__url">{{ routePath() || '—' }}</code>
+    </div>
+  </header>
+
+  <div class="req-overview__layout">
+    <section class="req-overview-card req-overview-card--about" aria-label="About this endpoint">
+      <h3 class="req-overview-card__title">About</h3>
+      <tx-form-field label="Description" controlId="ms-endpoint-desc">
+        <tx-textarea
+          id="ms-endpoint-desc"
+          [ngModel]="description()"
+          (ngModelChange)="descriptionChange.emit($event)"
+          placeholder="Short notes about this endpoint"
+        />
+      </tx-form-field>
+
+      <tx-form-field label="Tags" controlId="ms-endpoint-tags">
+        <tx-tags-input
+          controlId="ms-endpoint-tags"
+          [compact]="true"
+          placeholder="Add a tag"
+          [ngModel]="tags()"
+          (ngModelChange)="tagsChange.emit($event)"
+        />
+      </tx-form-field>
+
+      <p class="req-overview__env">
+        <tx-icon name="api" [size]="12" aria-hidden="true" />
+        Priority: <strong>{{ priorityLabel() }}</strong>
+      </p>
+    </section>
+
+    <section class="req-overview-card req-overview-card--run" aria-label="Configured response">
+      <div class="req-overview-card__head">
+        <h3 class="req-overview-card__title">Configured response</h3>
+        <tx-tag [variant]="enabled() ? 'success' : 'warning'" casing="normal">
+          {{ enabled() ? 'Enabled' : 'Disabled' }}
+        </tx-tag>
+      </div>
+
+      <div class="req-overview-run__stats">
+        @for (stat of responseStats(); track stat.label) {
+          <article class="req-overview-run-stat">
+            <div class="req-overview-run-stat__head">
+              <span class="req-overview-run-stat__icon" aria-hidden="true">
+                <tx-icon [name]="stat.icon" [size]="14" />
+              </span>
+              <span class="req-overview-run-stat__label">{{ stat.label }}</span>
+            </div>
+            <strong class="req-overview-run-stat__value">{{ stat.value }}</strong>
+          </article>
+        }
+      </div>
+
+      <div class="req-overview-run__footer">
+        <p class="req-overview-run__history">{{ matcherSummary() }}</p>
+        <tx-button variant="secondary" (pressed)="sectionSelect.emit('response')">
+          Edit response
+        </tx-button>
+      </div>
+    </section>
+  </div>
+
+  <section class="req-overview-config" aria-label="Configuration summary">
+    <div class="req-overview-config__head">
+      <h3 class="req-overview-card__title">Configuration</h3>
+      <p class="req-overview-config__hint">Jump to a section to edit settings.</p>
+    </div>
+
+    <div class="req-overview-config__grid">
+      @for (card of configCards(); track card.section) {
+        <button
+          type="button"
+          class="req-overview-config-card"
+          (click)="sectionSelect.emit(card.section)"
+        >
+          <span class="req-overview-config-card__icon" aria-hidden="true">
+            <tx-icon [name]="card.icon" [size]="16" />
+          </span>
+          <span class="req-overview-config-card__body">
+            <span class="req-overview-config-card__label">{{ card.label }}</span>
+            <span class="req-overview-config-card__value">{{ card.value }}</span>
+          </span>
+          <tx-icon
+            class="req-overview-config-card__chevron"
+            name="chevronRight"
+            [size]="14"
+            aria-hidden="true"
+          />
+        </button>
+      }
+    </div>
+  </section>
+</div>

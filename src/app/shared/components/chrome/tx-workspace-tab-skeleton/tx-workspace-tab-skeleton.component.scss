@@ -1,0 +1,90 @@
+:host {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  min-width: 0;
+}
+
+.tx-workspace-tab-skeleton {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: var(--tx-space-3, 12px);
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  padding: var(--tx-space-3, 12px);
+  box-sizing: border-box;
+}
+
+.tx-workspace-tab-skeleton__toolbar {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--tx-space-2, 8px);
+}
+
+.tx-workspace-tab-skeleton__method {
+  flex-shrink: 0;
+  width: 5.5rem;
+  height: 2.25rem;
+  border-radius: var(--tx-radius-md, 10px);
+  background: color-mix(in srgb, var(--tx-text-0) 6%, var(--tx-surface-1));
+}
+
+.tx-workspace-tab-skeleton__url {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 2.25rem;
+  border-radius: var(--tx-radius-md, 10px);
+  background: color-mix(in srgb, var(--tx-text-0) 6%, var(--tx-surface-1));
+}
+
+.tx-workspace-tab-skeleton__action {
+  flex-shrink: 0;
+  width: 4.5rem;
+  height: 2.25rem;
+  border-radius: var(--tx-radius-md, 10px);
+  background: color-mix(in srgb, var(--tx-text-0) 6%, var(--tx-surface-1));
+}
+
+.tx-workspace-tab-skeleton__sections {
+  display: flex;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  gap: var(--tx-space-2, 8px);
+}
+
+.tx-workspace-tab-skeleton__section-tab {
+  width: 4.75rem;
+  height: 1.75rem;
+  border-radius: var(--tx-radius-sm, 8px);
+  background: color-mix(in srgb, var(--tx-text-0) 5%, var(--tx-surface-1));
+}
+
+.tx-workspace-tab-skeleton--folder .tx-workspace-tab-skeleton__section-tab {
+  width: 5.25rem;
+}
+
+.tx-workspace-tab-skeleton__body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: var(--tx-space-3, 12px);
+  min-height: 0;
+}
+
+.tx-workspace-tab-skeleton__block {
+  width: 100%;
+  min-height: 3.5rem;
+  border-radius: var(--tx-radius-md, 10px);
+  background: color-mix(in srgb, var(--tx-text-0) 5%, var(--tx-surface-1));
+
+  &--short {
+    width: 72%;
+    min-height: 2.5rem;
+  }
+}

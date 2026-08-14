@@ -1,0 +1,119 @@
+@if (visible()) {
+  <div
+    class="tx-layout-onboarding-overlay"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="tx-layout-onboarding-title"
+    aria-describedby="tx-layout-onboarding-desc"
+  >
+    <div class="tx-layout-onboarding-overlay__scrim" aria-hidden="true"></div>
+
+    <article class="tx-layout-onboarding-overlay__card">
+      <div class="tx-layout-onboarding-overlay__bg" aria-hidden="true">
+        <div class="tx-layout-onboarding-overlay__bg-grid"></div>
+        <div class="tx-layout-onboarding-overlay__bg-blob tx-layout-onboarding-overlay__bg-blob--a"></div>
+        <div class="tx-layout-onboarding-overlay__bg-blob tx-layout-onboarding-overlay__bg-blob--b"></div>
+      </div>
+
+      <div class="tx-layout-onboarding-overlay__accent" aria-hidden="true">
+        <span class="tx-layout-onboarding-overlay__accent-band"></span>
+      </div>
+
+      <div class="tx-layout-onboarding-overlay__content">
+        <tx-brand-logo class="tx-layout-onboarding-overlay__logo" [size]="36" />
+
+        <p class="tx-layout-onboarding-overlay__step-label">
+          Step {{ step() === 'theme' ? '1' : '2' }} of 2
+        </p>
+
+        @if (step() === 'theme') {
+          <h1 id="tx-layout-onboarding-title" class="tx-layout-onboarding-overlay__title">
+            Choose your theme
+          </h1>
+
+          <p id="tx-layout-onboarding-desc" class="tx-layout-onboarding-overlay__desc">
+            Pick a color theme for Testrix. You can change this anytime in Settings → Appearance.
+          </p>
+
+          <div class="tx-layout-onboarding-overlay__theme-scroll">
+            @for (group of themePickerGroups; track group.id) {
+              <tx-settings-theme-group
+                [group]="group"
+                [activeTheme]="activeTheme()"
+                (themeSelect)="handleSelectTheme($event)"
+              />
+            }
+          </div>
+
+          <tx-button variant="cta" (pressed)="handleContinueThemeStep()">
+            Continue
+          </tx-button>
+        } @else {
+          <h1 id="tx-layout-onboarding-title" class="tx-layout-onboarding-overlay__title">
+            Choose your workspace layout
+          </h1>
+
+          <p id="tx-layout-onboarding-desc" class="tx-layout-onboarding-overlay__desc">
+            Pick how section navigation appears inside workspace tabs. You can change this later in Settings.
+          </p>
+
+          <div class="tx-layout-onboarding-overlay__options" role="radiogroup" aria-label="Workspace layout">
+            <button
+              type="button"
+              class="tx-layout-onboarding-overlay__option"
+              [class.tx-layout-onboarding-overlay__option--selected]="selectedLayout() === 'sidebar'"
+              role="radio"
+              [attr.aria-checked]="selectedLayout() === 'sidebar'"
+              (click)="handleSelectLayout('sidebar')"
+            >
+              <span class="tx-layout-onboarding-overlay__option-icon" aria-hidden="true">
+                <tx-icon name="list" [size]="22" />
+              </span>
+              <span class="tx-layout-onboarding-overlay__option-body">
+                <span class="tx-layout-onboarding-overlay__option-title">Sidebar</span>
+                <span class="tx-layout-onboarding-overlay__option-text">
+                  Section list in a left panel inside each tab.
+                </span>
+              </span>
+              <span class="tx-layout-onboarding-overlay__option-preview tx-layout-onboarding-overlay__option-preview--sidebar" aria-hidden="true">
+                <span></span><span></span><span></span>
+              </span>
+            </button>
+
+            <button
+              type="button"
+              class="tx-layout-onboarding-overlay__option"
+              [class.tx-layout-onboarding-overlay__option--selected]="selectedLayout() === 'titlebar'"
+              role="radio"
+              [attr.aria-checked]="selectedLayout() === 'titlebar'"
+              (click)="handleSelectLayout('titlebar')"
+            >
+              <span class="tx-layout-onboarding-overlay__option-icon" aria-hidden="true">
+                <tx-icon name="layers" [size]="22" />
+              </span>
+              <span class="tx-layout-onboarding-overlay__option-body">
+                <span class="tx-layout-onboarding-overlay__option-title">Tabs</span>
+                <span class="tx-layout-onboarding-overlay__option-text">
+                  Postman-style section tabs under the editor bar.
+                </span>
+              </span>
+              <span class="tx-layout-onboarding-overlay__option-preview tx-layout-onboarding-overlay__option-preview--titlebar" aria-hidden="true">
+                <span></span><span></span><span></span>
+              </span>
+            </button>
+          </div>
+
+          <tx-button
+            variant="cta"
+            [disabled]="!selectedLayout()"
+            [loading]="submitting()"
+            loadingLabel="Finishing setup"
+            (pressed)="handleContinueLayoutStep()"
+          >
+            Get started
+          </tx-button>
+        }
+      </div>
+    </article>
+  </div>
+}

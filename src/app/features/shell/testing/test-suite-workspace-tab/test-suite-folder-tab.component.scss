@@ -1,0 +1,44 @@
+.test-suite-folder-tab__empty {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--tx-text-1);
+}
+
+.test-suite-folder-tab__grid {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
+}
+
+.test-suite-folder-tab__card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+  padding: 0.75rem;
+  border: 1px solid color-mix(in srgb, var(--tx-border-0) 70%, transparent);
+  border-radius: var(--tx-radius-md, 10px);
+  background: color-mix(in srgb, var(--tx-surface-2) 72%, var(--tx-surface-1));
+  color: var(--tx-text-0);
+  cursor: pointer;
+  text-align: left;
+
+  &:hover {
+    border-color: var(--tx-border-strong);
+  }
+
+  &:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--tx-focus-ring) 75%, transparent);
+    outline-offset: 2px;
+  }
+}
+
+.test-suite-folder-tab__card-name {
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.test-suite-folder-tab__card-sub {
+  font-size: 0.75rem;
+  color: var(--tx-text-1);
+}

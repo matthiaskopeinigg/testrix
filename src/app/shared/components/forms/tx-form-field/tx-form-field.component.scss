@@ -1,0 +1,19 @@
+.tx-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.tx-field__label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--tx-text-1) 92%, transparent);
+}
+
+.tx-field__control {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}

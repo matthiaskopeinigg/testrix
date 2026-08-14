@@ -1,0 +1,15 @@
+.ts-flow-manual-input-dialog__prompt {
+  margin: 0 0 1rem;
+  font-size: 0.9375rem;
+  line-height: 1.55;
+  color: color-mix(in srgb, var(--tx-text-0) 88%, transparent);
+  white-space: pre-wrap;
+}
+
+.ts-flow-manual-input-dialog__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 1.25rem;
+}

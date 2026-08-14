@@ -1,0 +1,78 @@
+.lt-latency-bars {
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.lt-latency-bars__title {
+  margin: 0 0 0.55rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--tx-text-2);
+}
+
+.lt-latency-bars__list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lt-latency-bars__row {
+  display: grid;
+  grid-template-columns: 4.5rem 1fr auto;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.lt-latency-bars__label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--tx-text-1);
+}
+
+.lt-latency-bars__track {
+  height: 0.45rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--tx-surface-0) 70%, transparent);
+  overflow: hidden;
+}
+
+.lt-latency-bars__fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--lt-bar-color, var(--tx-secondary));
+  transition: width 280ms ease;
+}
+
+.lt-latency-bars__row[data-health='good'] {
+  --lt-bar-color: var(--tx-success);
+}
+
+.lt-latency-bars__row[data-health='ok'] {
+  --lt-bar-color: var(--tx-warning);
+}
+
+.lt-latency-bars__row[data-health='bad'] {
+  --lt-bar-color: var(--tx-danger);
+}
+
+.lt-latency-bars__value {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--tx-text-0);
+  white-space: nowrap;
+}
+
+.lt-latency-bars__empty {
+  margin: 0;
+  padding: 1rem 0.5rem;
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--tx-text-2);
+}

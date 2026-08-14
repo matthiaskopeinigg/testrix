@@ -1,0 +1,22 @@
+<div
+  class="tx-workspace-tab-skeleton"
+  [class.tx-workspace-tab-skeleton--folder]="variant() === 'folder'"
+>
+  <div class="tx-workspace-tab-skeleton__toolbar">
+    @if (variant() === 'request') {
+      <div class="tx-workspace-tab-skeleton__method tx-shimmer-bar" aria-hidden="true"></div>
+    }
+    <div class="tx-workspace-tab-skeleton__url tx-shimmer-bar" aria-hidden="true"></div>
+    <div class="tx-workspace-tab-skeleton__action tx-shimmer-bar" aria-hidden="true"></div>
+  </div>
+  <div class="tx-workspace-tab-skeleton__sections">
+    @for (slot of sectionSlots(); track slot) {
+      <div class="tx-workspace-tab-skeleton__section-tab tx-shimmer-bar" aria-hidden="true"></div>
+    }
+  </div>
+  <div class="tx-workspace-tab-skeleton__body">
+    <div class="tx-workspace-tab-skeleton__block tx-shimmer-bar" aria-hidden="true"></div>
+    <div class="tx-workspace-tab-skeleton__block tx-workspace-tab-skeleton__block--short tx-shimmer-bar" aria-hidden="true"></div>
+    <div class="tx-workspace-tab-skeleton__block tx-shimmer-bar" aria-hidden="true"></div>
+  </div>
+</div>

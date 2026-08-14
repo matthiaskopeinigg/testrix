@@ -1,0 +1,135 @@
+<tx-modal
+  [open]="open()"
+  title="Manage profiles"
+  ariaLabel="Manage workspace profiles"
+  layer="stacked"
+  (closed)="handleClose()"
+>
+  <p class="tx-profile-manager__intro">
+    Local profiles stay on this machine. Team profiles sync with Git while they are active.
+  </p>
+
+  <section class="tx-profile-manager__section">
+    <div class="tx-profile-manager__section-head">
+      <h3 class="tx-profile-manager__section-title">Local profiles</h3>
+      <tx-button variant="add" [disabled]="profileSwitching()" (pressed)="handleAddProfile()">
+        <tx-icon name="plus" [size]="14" aria-hidden="true" />
+        Add local profile
+      </tx-button>
+    </div>
+
+    <ul class="tx-profile-manager__list">
+      @for (profile of localProfiles(); track profile.id) {
+        <li class="tx-profile-manager__row">
+          <span class="tx-profile-manager__name">{{ profile.name }}</span>
+          <tx-tag variant="default" [casing]="'normal'">Local</tx-tag>
+          @if (profile.id === activeProfileId()) {
+            <tx-tag variant="info" [casing]="'normal'">Active</tx-tag>
+          }
+          <div class="tx-profile-manager__actions">
+            @if (isTeamConnected()) {
+              <tx-button variant="secondary" (pressed)="handlePublishToTeam(profile.id)">Publish to team…</tx-button>
+            }
+            <tx-button variant="secondary" (pressed)="handleRenameProfile(profile.id)">Rename</tx-button>
+            <tx-button
+              variant="secondary"
+              [disabled]="profile.id === activeProfileId() || totalProfileCount() <= 1"
+              (pressed)="handleDeleteProfile(profile.id)"
+            >
+              Delete
+            </tx-button>
+          </div>
+        </li>
+      }
+    </ul>
+  </section>
+
+  <section class="tx-profile-manager__section">
+    <h3 class="tx-profile-manager__section-title">Team profiles</h3>
+    @if (teamProfiles().length === 0) {
+      <p class="tx-profile-manager__empty">No team profiles yet. Connect in Teams and import or publish a profile.</p>
+    } @else {
+      <ul class="tx-profile-manager__list">
+        @for (profile of teamProfiles(); track profile.id) {
+          <li class="tx-profile-manager__row">
+            <span class="tx-profile-manager__name">{{ profile.name }}</span>
+            <tx-tag variant="success" [casing]="'normal'">Team</tx-tag>
+            @if (profile.id === activeProfileId()) {
+              <tx-tag variant="info" [casing]="'normal'">Active</tx-tag>
+            }
+            <div class="tx-profile-manager__actions">
+              <tx-button variant="secondary" (pressed)="handleOpenTeamsPanel()">Configure sync…</tx-button>
+              <tx-button variant="secondary" (pressed)="handleRenameProfile(profile.id)">Rename</tx-button>
+              <tx-button variant="secondary" (pressed)="handleUnpublishProfile(profile.id)">Stop syncing</tx-button>
+            </div>
+          </li>
+        }
+      </ul>
+    }
+  </section>
+</tx-modal>
+
+<tx-modal
+  [open]="newProfileModalOpen()"
+  title="New workspace profile"
+  ariaLabel="New workspace profile"
+  layer="stacked"
+  (closed)="handleCloseNewProfileModal()"
+>
+  <tx-form-field label="Profile name" controlId="tx-profile-manager-new-name">
+    <tx-input
+      id="tx-profile-manager-new-name"
+      [ngModel]="newProfileName()"
+      (ngModelChange)="newProfileName.set($event)"
+      (submitted)="handleConfirmNewProfile()"
+      placeholder="e.g. Testing"
+    />
+  </tx-form-field>
+  <div class="tx-profile-manager__dialog-actions">
+    <tx-button variant="secondary" (pressed)="handleCloseNewProfileModal()">Cancel</tx-button>
+    <tx-button
+      variant="primary"
+      [disabled]="!newProfileName().trim() || profileSwitching()"
+      (pressed)="handleConfirmNewProfile()"
+    >
+      Create profile
+    </tx-button>
+  </div>
+</tx-modal>
+
+<tx-modal
+  [open]="renameProfileOpen()"
+  title="Rename profile"
+  ariaLabel="Rename workspace profile"
+  layer="stacked"
+  (closed)="handleCloseRenameProfile()"
+>
+  <tx-form-field label="Profile name" controlId="tx-profile-manager-rename-name">
+    <tx-input
+      id="tx-profile-manager-rename-name"
+      [ngModel]="renameProfileDraftName()"
+      (ngModelChange)="renameProfileDraftName.set($event)"
+      (submitted)="handleConfirmRenameProfile()"
+    />
+  </tx-form-field>
+  <div class="tx-profile-manager__dialog-actions">
+    <tx-button variant="secondary" (pressed)="handleCloseRenameProfile()">Cancel</tx-button>
+    <tx-button
+      variant="primary"
+      [disabled]="!renameProfileDraftName().trim()"
+      (pressed)="handleConfirmRenameProfile()"
+    >
+      Save
+    </tx-button>
+  </div>
+</tx-modal>
+
+<tx-confirm-dialog
+  [open]="deleteConfirmOpen()"
+  title="Delete profile?"
+  [message]="'Delete “' + deleteTargetName() + '”? This removes its workspace data from this machine.'"
+  confirmLabel="Delete"
+  confirmVariant="danger"
+  (confirmed)="handleConfirmDeleteProfile()"
+  (cancelled)="handleCloseDeleteConfirm()"
+/>

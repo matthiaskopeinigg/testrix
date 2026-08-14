@@ -1,0 +1,36 @@
+@switch (resourceId()) {
+  @case ('uuid-generator') {
+    <app-uuid-generator-dev-tool />
+  }
+  @case ('code-editor') {
+    <app-code-editor-dev-tool />
+  }
+  @case ('base64') {
+    <app-base64-dev-tool />
+  }
+  @case ('jwt') {
+    <app-jwt-dev-tool />
+  }
+  @case ('cron') {
+    <app-cron-dev-tool />
+  }
+  @case ('regex') {
+    <app-regex-dev-tool />
+  }
+  @case ('url') {
+    <app-url-dev-tool />
+  }
+  @case ('bcrypt') {
+    <app-bcrypt-dev-tool />
+  }
+  @case ('openapi') {
+    <app-openapi-dev-tool />
+  }
+  @default {
+    <div class="dev-tool-unknown">
+      <tx-banner variant="warning" title="Unknown tool">
+        No development tool is registered for “{{ resourceId() }}”.
+      </tx-banner>
+    </div>
+  }
+}

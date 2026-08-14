@@ -1,0 +1,104 @@
+<section class="ds-anim" aria-labelledby="ds-anim-title">
+  <h2 id="ds-anim-title">Animations</h2>
+  <p class="ds-anim__lede">
+    Live previews for utilities in <code>src/styles/_animations.scss</code>. Replay remounts the preview so
+    one-shot keyframes run again. Hover and press demos need pointer interaction.
+  </p>
+
+  <div class="ds-anim__tokens">
+    <h3 class="ds-anim__group-title">Motion tokens</h3>
+    <ul class="ds-anim__token-list">
+      @for (t of motionTokens; track t.cssVar) {
+        <li><code>{{ t.cssVar }}</code> — {{ t.name }}@if (t.description) { · {{ t.description }} }</li>
+      }
+    </ul>
+  </div>
+
+  @for (group of categories; track group.id) {
+    @if (demosInCategory(group.id).length > 0) {
+      <section class="ds-anim__group" [attr.aria-labelledby]="'ds-anim-cat-' + group.id">
+        <h3 class="ds-anim__group-title" [id]="'ds-anim-cat-' + group.id">{{ group.label }}</h3>
+        <div class="ds-anim__grid" role="list">
+          @for (demo of demosInCategory(group.id); track trackDemo(demo)) {
+            <article class="ds-anim__card" role="listitem">
+              <header class="ds-anim__card-head">
+                <div class="ds-anim__card-copy">
+                  <h4 class="ds-anim__card-title">{{ demo.name }}</h4>
+                  <p class="ds-anim__card-desc">{{ demo.description }}</p>
+                  <p class="ds-anim__card-source">
+                    <code>{{ demo.className ?? demo.kind }}</code>
+                    · <span>{{ demo.scssSource }}</span>
+                  </p>
+                  @if (demo.hint) {
+                    <p class="ds-anim__card-hint">{{ demo.hint }}</p>
+                  }
+                </div>
+                @if (demo.replayable) {
+                  <tx-button variant="secondary" (pressed)="handleReplay(demo)">Replay</tx-button>
+                }
+              </header>
+
+              <div class="ds-anim__stage" [attr.data-demo-id]="demo.id">
+                @if (isPreviewVisible(demo.id)) {
+                  @switch (demo.kind) {
+                    @case ('stagger') {
+                      <div class="tx-stagger ds-anim__stagger">
+                        <span class="ds-anim__stagger-item"></span>
+                        <span class="ds-anim__stagger-item"></span>
+                        <span class="ds-anim__stagger-item"></span>
+                        <span class="ds-anim__stagger-item"></span>
+                      </div>
+                    }
+                    @case ('shimmer') {
+                      <div class="tx-shimmer-bar ds-anim__shimmer" aria-hidden="true"></div>
+                    }
+                    @case ('hover-lift') {
+                      <div class="tx-hover-lift ds-anim__interactive-card" tabindex="0">Hover me</div>
+                    }
+                    @case ('press-scale') {
+                      <div class="tx-press-scale ds-anim__interactive-card" tabindex="0">Press me</div>
+                    }
+                    @case ('focus-glow') {
+                      <button
+                        #focusPreviewBtn
+                        type="button"
+                        class="tx-focus-glow ds-anim__focus-btn"
+                        [attr.data-demo-id]="demo.id"
+                      >
+                        Focus me
+                      </button>
+                    }
+                    @case ('menu-popover') {
+                      <div class="tx-menu-popover ds-anim__menu-popover" role="presentation">Filter menu</div>
+                    }
+                    @case ('workspace-fade') {
+                      <div class="tx-animate-fade ds-anim__workspace-fade">Sidebar panel</div>
+                    }
+                    @case ('dnd-deny') {
+                      <div
+                        class="ds-anim__dnd-deny"
+                        [class.tx-dnd-deny-active]="isDndDenyActive(demo.id)"
+                      >
+                        Invalid drop
+                      </div>
+                    }
+                    @case ('dnd-insert-line') {
+                      <div class="ds-anim__dnd-row">
+                        <span>Collection folder</span>
+                      </div>
+                    }
+                    @default {
+                      @if (demo.className) {
+                        <div [class]="demo.className + ' ds-anim__utility-target'">Preview</div>
+                      }
+                    }
+                  }
+                }
+              </div>
+            </article>
+          }
+        </div>
+      </section>
+    }
+  }
+</section>

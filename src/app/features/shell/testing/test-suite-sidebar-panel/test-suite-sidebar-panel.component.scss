@@ -1,0 +1,19 @@
+@use '../testing-sidebar-shared' as shared;
+@use '../../workspace/workspace-sidebar-tree' as sidebar-tree;
+
+:host {
+  @include shared.testing-sidebar-host;
+}
+
+.test-suite-sidebar-panel {
+  @include shared.testing-sidebar-shell;
+}
+
+.test-suite-sidebar-panel__body {
+  @include sidebar-tree.workspace-sidebar-panel-body;
+}
+
+.test-suite-sidebar-panel__tree {
+  @include sidebar-tree.workspace-sidebar-tree-host;
+  overflow: auto;
+}
