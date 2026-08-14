@@ -7,9 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0-beta.2] - 2026-08-14
+
+### Fixed
+
+- Electron main-process typecheck so the test gate and tagged release pack can run
+- GitHub README brand mark (committed SVG path)
+- Linux `npm ci` when optional `@emnapi/*` versions change
+
+### Changed
+
+- Patch and security dependency updates (Electron 42.9, sharp 0.35, GitHub Actions)
+
 ## [1.0.0-beta.1] - 2026-08-14
 
 Initial public beta of Testrix: local-first desktop API client (HTTP, WebSocket, collections, environments, test suites, load tests, mocks, and capture).
 
-[Unreleased]: https://github.com/matthiaskopeinigg/testrix/compare/v1.0.0-beta.1...HEAD
+[Unreleased]: https://github.com/matthiaskopeinigg/testrix/compare/v1.0.0-beta.2...HEAD
+[1.0.0-beta.2]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.0-beta.2
 [1.0.0-beta.1]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.0-beta.1
