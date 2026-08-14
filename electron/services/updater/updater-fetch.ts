@@ -81,15 +81,19 @@ function readProxyCredentials(): { readonly user: string; readonly password: str
   return { user: parsed.user, password: parsed.password ?? '' };
 }
 
-function headersToRecord(headers?: HeadersInit): Record<string, string> {
+function headersToRecord(headers?: RequestInit['headers']): Record<string, string> {
   if (!headers) {
     return {};
   }
   if (headers instanceof Headers) {
     return Object.fromEntries(headers.entries());
   }
-  if (Array.isArray(headers)) {
-    return Object.fromEntries(headers);
+  const entries = Array.isArray(headers) ? headers : Object.entries(headers);
+  const out: Record<string, string> = {};
+  for (const [key, value] of entries) {
+    if (typeof value === 'string') {
+      out[key] = value;
+    }
   }
-  return { ...headers };
+  return out;
 }

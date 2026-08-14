@@ -8,10 +8,8 @@ const DEFAULT_DEV_ORIGIN = 'http://localhost:4720';
 
 /**
  * Matches `resolveDevServerOrigin()` in `electron/boot/wait-for-dev-server.ts`.
- *
- * @returns {string}
  */
-function resolveDevServerOrigin() {
+function resolveDevServerOrigin(): string {
   const fromUrl = process.env.TESTRIX_DEV_URL?.trim();
   if (fromUrl) {
     return fromUrl.replace(/\/$/, '');
@@ -24,10 +22,9 @@ function resolveDevServerOrigin() {
 }
 
 /**
- * @param {string} relativeFromPublic Path under Angular `public/` / packaged `resources/browser/`.
- * @returns {string}
+ * @param relativeFromPublic Path under Angular `public/` / packaged `resources/browser/`.
  */
-export function resolveStaticAssetUrl(relativeFromPublic) {
+export function resolveStaticAssetUrl(relativeFromPublic: string): string {
   const clean = String(relativeFromPublic || '')
     .replace(/\\/g, '/')
     .replace(/^\/+/, '');

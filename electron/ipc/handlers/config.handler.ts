@@ -20,6 +20,7 @@ import {
   historyFileSchema,
   readWorkspaceFileMeta,
   WORKSPACE_FILE_DESCRIPTORS,
+  type ProfilesState,
 } from '../../../shared/config';
 import {
   CAPTURE_FILE_NAME,

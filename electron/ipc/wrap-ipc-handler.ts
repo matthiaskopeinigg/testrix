@@ -49,9 +49,9 @@ export function createIpcRejection(error: unknown): Error & IpcErrorPayload {
     return error;
   }
   const payload = serializeIpcFailure(error);
-  const rejection = new Error(payload.userMessage) as Error & IpcErrorPayload;
-  rejection.code = payload.code;
-  rejection.userMessage = payload.userMessage;
-  rejection.name = payload.name ?? 'TestrixError';
-  return rejection;
+  return Object.assign(new Error(payload.userMessage), {
+    code: payload.code,
+    userMessage: payload.userMessage,
+    name: payload.name ?? 'TestrixError',
+  });
 }

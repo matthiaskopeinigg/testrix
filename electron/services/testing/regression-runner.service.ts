@@ -200,16 +200,16 @@ export class RegressionRunner {
       throw new TestrixError(ErrorCodes.REGRESSION_NOT_FOUND, 'No flows to run for the selected scope.');
     }
 
-    this.scheduledFlowIds = [...flowIds];
-
+    const scheduled = [...flowIds];
     if (this.profile.shuffleOrder) {
-      shuffleInPlace(flowIds);
+      shuffleInPlace(scheduled);
     }
+    this.scheduledFlowIds = scheduled;
 
     this.metrics = createStartingRegressionRunMetrics(
       this.regressionId,
       this.runId,
-      flowIds.length,
+      scheduled.length,
       this.thresholds.acceptancePercent,
     );
     this.startMetricsTick(sender);
@@ -222,11 +222,11 @@ export class RegressionRunner {
 
     try {
       if (this.profile.executionMode === 'parallel') {
-        await this.runParallel(flowIds, files, sender, executeOptions);
+        await this.runParallel(scheduled, files, sender, executeOptions);
       } else {
-        await this.runSequential(flowIds, files, sender, executeOptions);
+        await this.runSequential(scheduled, files, sender, executeOptions);
       }
-      await this.recordRemainingAsSkipped(flowIds, files, sender);
+      await this.recordRemainingAsSkipped(scheduled, files, sender);
     } finally {
       this.stopMetricsTick();
       this.running = false;

@@ -15,10 +15,17 @@ import { WindowChannels } from '../ipc/channels/window.channels';
 import { DbChannels } from '../ipc/channels/db.channels';
 import { TeamChannels } from '../ipc/channels/team.channels';
 
-import { resolveStaticAssetUrl } from './resolve-static-asset-url.js';
+import { resolveStaticAssetUrl } from './resolve-static-asset-url';
 
 import type { UpdaterStatus } from '../../shared/updater/updater-status.schema';
-import type { FlowRunProgressEvent } from '../../shared/testing';
+import type {
+  CaptureLogEntry,
+  CaptureRuntimeStatus,
+  FlowRunProgressEvent,
+  InterceptorHit,
+  InterceptorRuntimeStatus,
+  RegressionRunMetrics,
+} from '../../shared/testing';
 import type {
   FlowManualInputPrompt,
   FlowManualInputSubmitPayload,
@@ -208,7 +215,7 @@ const api: ElectronAPI = {
     captureClearEntries: (captureItemId) =>
       ipcRenderer.invoke(TestingChannels.captureClearEntries, captureItemId),
     onCaptureEntry: (listener) => {
-      const handler = (_event: IpcRendererEvent, payload: unknown): void => {
+      const handler = (_event: IpcRendererEvent, payload: CaptureLogEntry): void => {
         listener(payload);
       };
       ipcRenderer.on(TestingChannels.captureEntry, handler);
@@ -217,7 +224,7 @@ const api: ElectronAPI = {
       };
     },
     onCaptureStatus: (listener) => {
-      const handler = (_event: IpcRendererEvent, payload: unknown): void => {
+      const handler = (_event: IpcRendererEvent, payload: CaptureRuntimeStatus): void => {
         listener(payload);
       };
       ipcRenderer.on(TestingChannels.captureStatusEvent, handler);
@@ -231,7 +238,7 @@ const api: ElectronAPI = {
     interceptorListHits: () => ipcRenderer.invoke(TestingChannels.interceptorListHits),
     interceptorClearHits: () => ipcRenderer.invoke(TestingChannels.interceptorClearHits),
     onInterceptorHit: (listener) => {
-      const handler = (_event: IpcRendererEvent, payload: unknown): void => {
+      const handler = (_event: IpcRendererEvent, payload: InterceptorHit): void => {
         listener(payload);
       };
       ipcRenderer.on(TestingChannels.interceptorHit, handler);
@@ -240,7 +247,7 @@ const api: ElectronAPI = {
       };
     },
     onInterceptorStatus: (listener) => {
-      const handler = (_event: IpcRendererEvent, payload: unknown): void => {
+      const handler = (_event: IpcRendererEvent, payload: InterceptorRuntimeStatus): void => {
         listener(payload);
       };
       ipcRenderer.on(TestingChannels.interceptorStatusEvent, handler);
@@ -256,7 +263,7 @@ const api: ElectronAPI = {
     regressionStart: (options) => ipcRenderer.invoke(TestingChannels.regressionStart, options ?? {}),
     regressionCancel: () => ipcRenderer.invoke(TestingChannels.regressionCancel),
     onRegressionMetrics: (listener) => {
-      const handler = (_event: IpcRendererEvent, payload: unknown): void => {
+      const handler = (_event: IpcRendererEvent, payload: RegressionRunMetrics): void => {
         listener(payload);
       };
       ipcRenderer.on(TestingChannels.regressionMetrics, handler);

@@ -921,6 +921,7 @@ export class TestSuiteFlowExecutor {
       readonly environments: import('@shared/config').EnvironmentsFile;
       readonly appVersion: string;
       readonly environmentIdOverride?: string | null;
+      readonly ancestorFolders: readonly TestSuiteAncestorFolderRef[];
       readonly environmentVariableKeys: import('@shared/http/collection-execution.schema').EnvironmentVariableKeyMode;
     },
   ): Promise<void> {

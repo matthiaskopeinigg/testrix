@@ -1035,7 +1035,7 @@ export class TeamSyncEngine {
             status: 'conflict',
             lastError: pullResult.stderr,
             operation: null,
-            conflictedFiles,
+            conflictedFiles: [...conflictedFiles],
           });
           this.emitOpenPanel();
           return;

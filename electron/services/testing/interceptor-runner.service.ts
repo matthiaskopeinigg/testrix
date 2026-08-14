@@ -8,6 +8,7 @@ import type {
   InterceptorHit,
   InterceptorRule,
   InterceptorRuntimeStatus,
+  InterceptorTreeItem,
 } from '../../../shared/testing';
 import {
   interceptorHitSchema,
@@ -18,6 +19,7 @@ import { urlPatternMatches } from '../../../shared/testing/url-pattern-match';
 import { appIconBrowserWindowOptions } from '../../config/app-icon';
 
 import type { ConfigFileService } from '../config/config-file.service';
+import { buildInterceptorMockFulfill } from './interceptor-mock-fulfill';
 
 const MAX_HITS = 200;
 
@@ -30,7 +32,7 @@ export function collectEnabledInterceptorRules(
   items: InterceptorFile['items'],
 ): readonly InterceptorRule[] {
   const out: InterceptorRule[] = [];
-  const walk = (list: InterceptorFile['items']): void => {
+  const walk = (list: readonly InterceptorTreeItem[]): void => {
     for (const item of list) {
       if ('matchUrl' in item) {
         if (item.enabled) {

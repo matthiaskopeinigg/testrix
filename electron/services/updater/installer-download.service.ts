@@ -129,7 +129,7 @@ export async function downloadInstallerAsset(
   }
 
   await new Promise<void>((resolve, reject) => {
-    file.end((error) => {
+    file.end((error: Error | null) => {
       if (error) {
         reject(error);
         return;
