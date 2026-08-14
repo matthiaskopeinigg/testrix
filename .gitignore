@@ -1,0 +1,70 @@
+# See https://docs.github.com/get-started/getting-started-with-git/ignoring-files for more about ignoring files.
+
+# Compiled output
+/dist
+/tmp
+/out-tsc
+/bazel-out
+
+# Node
+/node_modules
+npm-debug.log
+yarn-error.log
+
+# IDEs and editors
+.idea/
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+
+# Visual Studio Code
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+!.vscode/mcp.json
+.history/*
+
+# Cursor (local agent rules, logs, and cache — never commit)
+.cursor/
+
+# Miscellaneous
+/.angular/cache
+.angular/
+.sass-cache/
+/connect.lock
+/coverage
+/libpeerconnection.log
+testem.log
+/typings
+__screenshots__/
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Environment / local secrets
+.env
+.env.*
+!.env.example
+
+# Release + generated branding outputs
+/release/
+
+# Custom installer shell — source is tracked; deps and synced payload are not
+/installer-shell/node_modules/
+/installer-shell/resources/payload/
+/installer-shell/resources/payload.zip
+
+# Generated build assets (icons, NSIS BMPs). Scripts under build/installer stay tracked.
+/build/icons/
+/build/installer/windows/assets/
+/build/installer/windows/staging/
+
+electron/splash/assets/
+electron/error/assets/
+public/brand/
