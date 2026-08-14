@@ -1,0 +1,433 @@
+import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron';
+
+import type { ElectronAPI } from '../electron-api-bridge';
+
+import { AppChannels } from '../ipc/channels/app.channels';
+import { ConfigChannels } from '../ipc/channels/config.channels';
+import { LoggingChannels } from '../ipc/channels/logging.channels';
+import { UpdaterChannels } from '../ipc/channels/updater.channels';
+import { ShellChannels } from '../ipc/channels/shell.channels';
+import { HttpChannels } from '../ipc/channels/http.channels';
+import { CookieChannels } from '../ipc/channels/cookie.channels';
+import { TestingChannels } from '../ipc/channels/testing.channels';
+import { E2eChannels } from '../ipc/channels/e2e.channels';
+import { WindowChannels } from '../ipc/channels/window.channels';
+import { DbChannels } from '../ipc/channels/db.channels';
+import { TeamChannels } from '../ipc/channels/team.channels';
+
+import { resolveStaticAssetUrl } from './resolve-static-asset-url.js';
+
+import type { UpdaterStatus } from '../../shared/updater/updater-status.schema';
+import type { FlowRunProgressEvent } from '../../shared/testing';
+import type {
+  FlowManualInputPrompt,
+  FlowManualInputSubmitPayload,
+} from '../../shared/testing/flow-manual-input.schema';
+import {
+  DEFAULT_APPEARANCE_THEME_ID,
+  normalizeAppearanceThemeId,
+  resolveThemeContentBackground,
+} from '../../shared/theme/theme-catalog';
+
+/**
+ * Electron runs this preload **before** the renderer loads Angular. **`contextBridge`** must publish
+ * `window.testrix` synchronously; async `expose` raced the first Angular navigation and prevented
+ * `notifyReady()`, so splash never handed off to the renderer.
+ *
+ * App semver is passed on `additionalArguments` so it is present *before* expose.
+ * `contextBridge` clones the API object — mutating `mergedVersions` afterward does not
+ * update `window.testrix.versions`. Live reads go through `getVersions()`.
+ * IPC (`AppChannels.versions`) still merges simulated updater versions into preload state.
+ */
+
+type VersionBundle = { app: string; installedApp: string; electron: string; chrome: string };
+
+function readAdditionalArg(prefix: string): string | undefined {
+  const entry = process.argv.find((arg) => arg.startsWith(prefix));
+  return entry ? entry.slice(prefix.length) : undefined;
+}
+
+/**
+ * Returns the current preload version bundle.
+ *
+ * Functions remain live across `contextBridge`; the cloned `versions` object does not.
+ *
+ * @returns A copy of the latest merged runtime versions.
+ */
+function snapshotVersions(): VersionBundle {
+  return {
+    app: mergedVersions.app,
+    installedApp: mergedVersions.installedApp,
+    electron: mergedVersions.electron,
+    chrome: mergedVersions.chrome,
+  };
+}
+
+const bootTheme = readAdditionalArg('--boot-theme=');
+const bootThemeMode = readAdditionalArg('--boot-theme-mode=') as 'light' | 'dark' | undefined;
+const bootThemeBg = bootTheme
+  ? resolveThemeContentBackground(bootTheme)
+  : resolveThemeContentBackground(DEFAULT_APPEARANCE_THEME_ID);
+const bootAppVersion = readAdditionalArg('--testrix-app-version=')?.trim() ?? '';
+
+const mergedVersions: VersionBundle = {
+  electron: process.versions.electron ?? '',
+  chrome: process.versions.chrome ?? '',
+  app: bootAppVersion,
+  installedApp: bootAppVersion,
+};
+
+function refreshMergedAppVersions(): void {
+  void ipcRenderer
+    .invoke(AppChannels.versions)
+    .then((v: unknown) => {
+      const incoming = v as VersionBundle;
+      mergedVersions.app = incoming.app ?? mergedVersions.app;
+      mergedVersions.installedApp = incoming.installedApp ?? incoming.app ?? mergedVersions.installedApp;
+    })
+    .catch(() => undefined);
+}
+
+const api: ElectronAPI = {
+  platform: process.platform,
+  devToolkit: process.env.TESTRIX_DEV === '1',
+  opaqueDevWindow:
+    process.platform === 'win32' ||
+    (process.env.TESTRIX_SERVE_RENDERER === '1' && process.platform === 'darwin'),
+  /** Persisted appearance theme applied in `index.html` before Angular boot (via `additionalArguments`). */
+  bootTheme,
+  bootThemeMode,
+  bootThemeBg,
+  nativeDevFrame: false,
+  resolveStaticAssetUrl,
+  versions: mergedVersions as ElectronAPI['versions'],
+  getVersions: snapshotVersions,
+  notifyReady: () => {
+    ipcRenderer.send(AppChannels.ready);
+    return Promise.resolve();
+  },
+  openExternal: (url) => ipcRenderer.invoke(AppChannels.openExternal, url),
+  shell: {
+    pickFile: (options) => ipcRenderer.invoke(ShellChannels.pickFile, options ?? {}),
+    pickFiles: (options) => ipcRenderer.invoke(ShellChannels.pickFiles, options ?? {}),
+    readTextFile: (filePath) => ipcRenderer.invoke(ShellChannels.readTextFile, filePath),
+    readImportFolder: (options) => ipcRenderer.invoke(ShellChannels.readImportFolder, options ?? {}),
+    saveFile: (options) => ipcRenderer.invoke(ShellChannels.saveFile, options),
+  },
+  config: {
+    getConfigDir: () => ipcRenderer.invoke(ConfigChannels.getConfigDir),
+    setConfigDir: (dir) => ipcRenderer.invoke(ConfigChannels.setConfigDir, dir),
+    getSettings: () => ipcRenderer.invoke(ConfigChannels.getSettings),
+    setSettings: (patch) => ipcRenderer.invoke(ConfigChannels.setSettings, patch),
+    getSession: () => ipcRenderer.invoke(ConfigChannels.getSession),
+    setSession: (patch) => ipcRenderer.invoke(ConfigChannels.setSession, patch),
+    getFilePaths: () => ipcRenderer.invoke(ConfigChannels.getFilePaths),
+    getWorkspaceFileInventory: () => ipcRenderer.invoke(ConfigChannels.getWorkspaceFileInventory),
+    openConfigDir: () => ipcRenderer.invoke(ConfigChannels.openConfigDir),
+    pickDirectory: () => ipcRenderer.invoke(ConfigChannels.pickDirectory),
+    exportSettings: () => ipcRenderer.invoke(ConfigChannels.exportSettings),
+    importSettings: (json) => ipcRenderer.invoke(ConfigChannels.importSettings, json),
+    resetSettings: () => ipcRenderer.invoke(ConfigChannels.resetSettings),
+    resetSession: () => ipcRenderer.invoke(ConfigChannels.resetSession),
+    getCollections: () => ipcRenderer.invoke(ConfigChannels.getCollections),
+    setCollections: (data) => ipcRenderer.invoke(ConfigChannels.setCollections, data),
+    getEnvironments: () => ipcRenderer.invoke(ConfigChannels.getEnvironments),
+    setEnvironments: (data) => ipcRenderer.invoke(ConfigChannels.setEnvironments, data),
+    getHistory: () => ipcRenderer.invoke(ConfigChannels.getHistory),
+    setHistory: (data) => ipcRenderer.invoke(ConfigChannels.setHistory, data),
+    onHistoryUpdated: (listener) => {
+      const handler = (_event: IpcRendererEvent, payload: unknown): void => {
+        listener(payload);
+      };
+      ipcRenderer.on(ConfigChannels.historyUpdated, handler);
+      return () => {
+        ipcRenderer.removeListener(ConfigChannels.historyUpdated, handler);
+      };
+    },
+    getProfiles: () => ipcRenderer.invoke(ConfigChannels.getProfiles),
+    setActiveProfile: (profileId) => ipcRenderer.invoke(ConfigChannels.setActiveProfile, profileId),
+    createProfile: (name) => ipcRenderer.invoke(ConfigChannels.createProfile, name),
+    renameProfile: (payload) => ipcRenderer.invoke(ConfigChannels.renameProfile, payload),
+    deleteProfile: (profileId) => ipcRenderer.invoke(ConfigChannels.deleteProfile, profileId),
+    linkProfileToDirectory: (payload) => ipcRenderer.invoke(ConfigChannels.linkProfileToDirectory, payload),
+    createLinkedProfile: (payload) => ipcRenderer.invoke(ConfigChannels.createLinkedProfile, payload),
+  },
+  logging: {
+    getPaths: () => ipcRenderer.invoke(LoggingChannels.getPaths),
+    tail: (options) => ipcRenderer.invoke(LoggingChannels.tail, options ?? {}),
+    clear: () => ipcRenderer.invoke(LoggingChannels.clear),
+    openLogDir: () => ipcRenderer.invoke(LoggingChannels.openLogDir),
+  },
+  http: {
+    send: (payload) => ipcRenderer.invoke(HttpChannels.send, payload),
+    cancel: (requestId) => ipcRenderer.invoke(HttpChannels.cancel, requestId),
+  },
+  database: {
+    query: (payload) => ipcRenderer.invoke(DbChannels.query, payload),
+    testConnection: (connection) => ipcRenderer.invoke(DbChannels.testConnection, connection),
+    getConnectionStatuses: () => ipcRenderer.invoke(DbChannels.getConnectionStatuses),
+  },
+  cookies: {
+    getAll: () => ipcRenderer.invoke(CookieChannels.getAll),
+    delete: (cookie) => ipcRenderer.invoke(CookieChannels.delete, cookie),
+    clearAll: () => ipcRenderer.invoke(CookieChannels.clearAll),
+    replaceFromSerialized: (payload) => ipcRenderer.invoke(CookieChannels.replaceFromSerialized, payload),
+  },
+  testing: {
+    getTestSuites: () => ipcRenderer.invoke(TestingChannels.getTestSuites),
+    setTestSuites: (data) => ipcRenderer.invoke(TestingChannels.setTestSuites, data),
+    getLoadTests: () => ipcRenderer.invoke(TestingChannels.getLoadTests),
+    setLoadTests: (data) => ipcRenderer.invoke(TestingChannels.setLoadTests, data),
+    getRegressions: () => ipcRenderer.invoke(TestingChannels.getRegressions),
+    setRegressions: (data) => ipcRenderer.invoke(TestingChannels.setRegressions, data),
+    getMockServer: () => ipcRenderer.invoke(TestingChannels.getMockServer),
+    setMockServer: (data) => ipcRenderer.invoke(TestingChannels.setMockServer, data),
+    getCapture: () => ipcRenderer.invoke(TestingChannels.getCapture),
+    setCapture: (data) => ipcRenderer.invoke(TestingChannels.setCapture, data),
+    getInterceptor: () => ipcRenderer.invoke(TestingChannels.getInterceptor),
+    setInterceptor: (data) => ipcRenderer.invoke(TestingChannels.setInterceptor, data),
+    mockStatus: () => ipcRenderer.invoke(TestingChannels.mockStatus),
+    mockStart: () => ipcRenderer.invoke(TestingChannels.mockStart),
+    mockStop: () => ipcRenderer.invoke(TestingChannels.mockStop),
+    mockListMismatches: () => ipcRenderer.invoke(TestingChannels.mockListMismatches),
+    mockClearMismatches: () => ipcRenderer.invoke(TestingChannels.mockClearMismatches),
+    onMockActivity: (listener) => {
+      const handler = (_event: IpcRendererEvent, payload: unknown): void => {
+        listener(payload);
+      };
+      ipcRenderer.on(TestingChannels.mockActivity, handler);
+      return () => {
+        ipcRenderer.removeListener(TestingChannels.mockActivity, handler);
+      };
+    },
+    captureStatus: () => ipcRenderer.invoke(TestingChannels.captureStatus),
+    captureStart: (options) => ipcRenderer.invoke(TestingChannels.captureStart, options),
+    captureStop: () => ipcRenderer.invoke(TestingChannels.captureStop),
+    captureListEntries: (captureItemId) =>
+      ipcRenderer.invoke(TestingChannels.captureListEntries, captureItemId),
+    captureClearEntries: (captureItemId) =>
+      ipcRenderer.invoke(TestingChannels.captureClearEntries, captureItemId),
+    onCaptureEntry: (listener) => {
+      const handler = (_event: IpcRendererEvent, payload: unknown): void => {
+        listener(payload);
+      };
+      ipcRenderer.on(TestingChannels.captureEntry, handler);
+      return () => {
+        ipcRenderer.removeListener(TestingChannels.captureEntry, handler);
+      };
+    },
+    onCaptureStatus: (listener) => {
+      const handler = (_event: IpcRendererEvent, payload: unknown): void => {
+        listener(payload);
+      };
+      ipcRenderer.on(TestingChannels.captureStatusEvent, handler);
+      return () => {
+        ipcRenderer.removeListener(TestingChannels.captureStatusEvent, handler);
+      };
+    },
+    interceptorStatus: () => ipcRenderer.invoke(TestingChannels.interceptorStatus),
+    interceptorStart: (options) => ipcRenderer.invoke(TestingChannels.interceptorStart, options),
+    interceptorStop: () => ipcRenderer.invoke(TestingChannels.interceptorStop),
+    interceptorListHits: () => ipcRenderer.invoke(TestingChannels.interceptorListHits),
+    interceptorClearHits: () => ipcRenderer.invoke(TestingChannels.interceptorClearHits),
+    onInterceptorHit: (listener) => {
+      const handler = (_event: IpcRendererEvent, payload: unknown): void => {
+        listener(payload);
+      };
+      ipcRenderer.on(TestingChannels.interceptorHit, handler);
+      return () => {
+        ipcRenderer.removeListener(TestingChannels.interceptorHit, handler);
+      };
+    },
+    onInterceptorStatus: (listener) => {
+      const handler = (_event: IpcRendererEvent, payload: unknown): void => {
+        listener(payload);
+      };
+      ipcRenderer.on(TestingChannels.interceptorStatusEvent, handler);
+      return () => {
+        ipcRenderer.removeListener(TestingChannels.interceptorStatusEvent, handler);
+      };
+    },
+    loadTestStatus: () => ipcRenderer.invoke(TestingChannels.loadTestStatus),
+    loadTestMetrics: () => ipcRenderer.invoke(TestingChannels.loadTestMetrics),
+    loadTestStart: (options) => ipcRenderer.invoke(TestingChannels.loadTestStart, options ?? {}),
+    loadTestCancel: () => ipcRenderer.invoke(TestingChannels.loadTestCancel),
+    regressionStatus: () => ipcRenderer.invoke(TestingChannels.regressionStatus),
+    regressionStart: (options) => ipcRenderer.invoke(TestingChannels.regressionStart, options ?? {}),
+    regressionCancel: () => ipcRenderer.invoke(TestingChannels.regressionCancel),
+    onRegressionMetrics: (listener) => {
+      const handler = (_event: IpcRendererEvent, payload: unknown): void => {
+        listener(payload);
+      };
+      ipcRenderer.on(TestingChannels.regressionMetrics, handler);
+      return () => {
+        ipcRenderer.removeListener(TestingChannels.regressionMetrics, handler);
+      };
+    },
+    onRegressionRunProgress: (listener) => {
+      const handler = (_event: IpcRendererEvent, payload: unknown): void => {
+        listener(payload);
+      };
+      ipcRenderer.on(TestingChannels.regressionRunProgress, handler);
+      return () => {
+        ipcRenderer.removeListener(TestingChannels.regressionRunProgress, handler);
+      };
+    },
+    e2eExecuteFlow: (flowId) => ipcRenderer.invoke(TestingChannels.e2eExecuteFlow, flowId),
+    e2eCancel: () => ipcRenderer.invoke(TestingChannels.e2eCancel),
+    onFlowRunProgress: (listener) => {
+      const handler = (_event: IpcRendererEvent, payload: FlowRunProgressEvent): void => {
+        listener(payload);
+      };
+      ipcRenderer.on(TestingChannels.flowRunProgress, handler);
+      return () => {
+        ipcRenderer.removeListener(TestingChannels.flowRunProgress, handler);
+      };
+    },
+    onFlowManualInputPrompt: (listener) => {
+      const handler = (_event: IpcRendererEvent, payload: FlowManualInputPrompt): void => {
+        listener(payload);
+      };
+      ipcRenderer.on(TestingChannels.flowManualInputPrompt, handler);
+      return () => {
+        ipcRenderer.removeListener(TestingChannels.flowManualInputPrompt, handler);
+      };
+    },
+    flowManualInputSubmit: (payload) =>
+      ipcRenderer.invoke(TestingChannels.flowManualInputSubmit, payload),
+    e2eExecute: (payload) => ipcRenderer.invoke(E2eChannels.execute, payload),
+    e2eSignalCancel: () => ipcRenderer.send(E2eChannels.signalCancel),
+    clearE2eRunnerSession: () => ipcRenderer.invoke(E2eChannels.clearRunnerSession),
+    e2ePickElement: (payload) =>
+      ipcRenderer.invoke(E2eChannels.pickElementStart, payload && typeof payload === 'object' ? payload : {}),
+  },
+  windowControls: {
+    minimize: () => ipcRenderer.invoke(WindowChannels.minimize),
+    maximizeToggle: () => ipcRenderer.invoke(WindowChannels.maximizeToggle),
+    close: () => ipcRenderer.invoke(WindowChannels.close),
+    focus: () => ipcRenderer.invoke(WindowChannels.focus),
+    getChromeState: () =>
+      ipcRenderer.invoke(WindowChannels.getChromeState) as Promise<{ readonly edgeToEdge: boolean }>,
+    onChromeStateChange: (listener: (state: { readonly edgeToEdge: boolean }) => void) => {
+      const handler = (_event: IpcRendererEvent, state: { readonly edgeToEdge: boolean }): void => {
+        listener(state);
+      };
+      ipcRenderer.on(WindowChannels.chromeStateChanged, handler);
+      return () => {
+        ipcRenderer.removeListener(WindowChannels.chromeStateChanged, handler);
+      };
+    },
+    dragStart: (offset: { readonly offsetX: number; readonly offsetY: number }) =>
+      ipcRenderer.send(WindowChannels.dragStart, { x: offset.offsetX, y: offset.offsetY }),
+    dragMove: (position: { readonly screenX: number; readonly screenY: number }) =>
+      ipcRenderer.send(WindowChannels.dragMove, position),
+    dragEnd: () => ipcRenderer.send(WindowChannels.dragEnd),
+  },
+  updater: {
+    getStatus: () => ipcRenderer.invoke(UpdaterChannels.getStatus) as Promise<UpdaterStatus>,
+    check: () => ipcRenderer.invoke(UpdaterChannels.check) as Promise<UpdaterStatus>,
+    checkAsVersion: async (version?: string) => {
+      const status = (await ipcRenderer.invoke(
+        UpdaterChannels.checkAsVersion,
+        version,
+      )) as UpdaterStatus;
+      refreshMergedAppVersions();
+      return status;
+    },
+    setDevSimulatedVersion: async (version?: string) => {
+      const status = (await ipcRenderer.invoke(
+        UpdaterChannels.setDevSimulatedVersion,
+        version,
+      )) as UpdaterStatus;
+      refreshMergedAppVersions();
+      return status;
+    },
+    download: () => ipcRenderer.invoke(UpdaterChannels.download) as Promise<UpdaterStatus>,
+    install: () => ipcRenderer.invoke(UpdaterChannels.install) as Promise<void>,
+    setChannel: (channel) => ipcRenderer.invoke(UpdaterChannels.setChannel, channel) as Promise<void>,
+    onStatus: (listener) => {
+      const handler = (_event: IpcRendererEvent, status: UpdaterStatus): void => {
+        listener(status);
+      };
+      ipcRenderer.on(UpdaterChannels.status, handler);
+      return () => {
+        ipcRenderer.removeListener(UpdaterChannels.status, handler);
+      };
+    },
+  },
+  team: {
+    getStatus: () => ipcRenderer.invoke(TeamChannels.getStatus),
+    getConfig: () => ipcRenderer.invoke(TeamChannels.getConfig),
+    setConfig: (patch) => ipcRenderer.invoke(TeamChannels.setConfig, patch),
+    getGitSetup: () => ipcRenderer.invoke(TeamChannels.getGitSetup),
+    setRemote: (url, token) => ipcRenderer.invoke(TeamChannels.setRemote, { url, token: token ?? null }),
+    syncNow: () => ipcRenderer.invoke(TeamChannels.syncNow),
+    onFocus: () => ipcRenderer.invoke(TeamChannels.onFocus),
+    getHistory: (options) => ipcRenderer.invoke(TeamChannels.getHistory, options ?? {}),
+    getCommitDiff: (hash) => ipcRenderer.invoke(TeamChannels.getCommitDiff, hash),
+    getCommitDetail: (hash) => ipcRenderer.invoke(TeamChannels.getCommitDetail, hash),
+    listBranches: () => ipcRenderer.invoke(TeamChannels.listBranches),
+    createBranch: (name) => ipcRenderer.invoke(TeamChannels.createBranch, name),
+    switchBranch: (name) => ipcRenderer.invoke(TeamChannels.switchBranch, name),
+    deleteBranch: (name) => ipcRenderer.invoke(TeamChannels.deleteBranch, name),
+    resolveConflict: (resolution) => ipcRenderer.invoke(TeamChannels.resolveConflict, resolution),
+    linkWorkspace: () => ipcRenderer.invoke(TeamChannels.linkWorkspace),
+    disconnect: () => ipcRenderer.invoke(TeamChannels.disconnect),
+    listRepoDirectories: () => ipcRenderer.invoke(TeamChannels.listRepoDirectories),
+    fetchRemoteCatalog: (options?: import('@shared/collaboration').TeamFetchRemoteCatalogOptions) =>
+      ipcRenderer.invoke(TeamChannels.fetchRemoteCatalog, options),
+    importProfiles: (profileIds) => ipcRenderer.invoke(TeamChannels.importProfiles, profileIds),
+    publishLocalProfile: (profileId) => ipcRenderer.invoke(TeamChannels.publishLocalProfile, profileId),
+    createTeamProfile: (name) => ipcRenderer.invoke(TeamChannels.createTeamProfile, name),
+    unpublishProfile: (profileId) => ipcRenderer.invoke(TeamChannels.unpublishProfile, profileId),
+    onStatusChanged: (listener) => {
+      const handler = (_event: IpcRendererEvent, payload: unknown): void => {
+        listener(payload as import('../../shared/collaboration').TeamSyncStatus);
+      };
+      ipcRenderer.on(TeamChannels.statusChanged, handler);
+      return () => {
+        ipcRenderer.removeListener(TeamChannels.statusChanged, handler);
+      };
+    },
+    onOpenPanel: (listener) => {
+      const handler = (): void => {
+        listener();
+      };
+      ipcRenderer.on(TeamChannels.openPanel, handler);
+      return () => {
+        ipcRenderer.removeListener(TeamChannels.openPanel, handler);
+      };
+    },
+    onExternalFileChanged: (listener) => {
+      const handler = (_event: IpcRendererEvent, payload: unknown): void => {
+        listener(payload);
+      };
+      ipcRenderer.on(TeamChannels.externalFileChanged, handler);
+      return () => {
+        ipcRenderer.removeListener(TeamChannels.externalFileChanged, handler);
+      };
+    },
+    onProfilesMerged: (listener) => {
+      const handler = (_event: IpcRendererEvent, payload: unknown): void => {
+        listener(payload as { readonly addedProfileIds: readonly string[] });
+      };
+      ipcRenderer.on(TeamChannels.profilesMerged, handler);
+      return () => {
+        ipcRenderer.removeListener(TeamChannels.profilesMerged, handler);
+      };
+    },
+  },
+};
+
+contextBridge.exposeInMainWorld('testrix', api);
+
+void ipcRenderer
+  .invoke(AppChannels.versions)
+  .then((v: unknown) => {
+    const incoming = v as ElectronAPI['versions'];
+    mergedVersions.app = incoming.app ?? '';
+    mergedVersions.installedApp = incoming.installedApp ?? incoming.app ?? '';
+    mergedVersions.electron = incoming.electron || mergedVersions.electron;
+    mergedVersions.chrome = incoming.chrome || mergedVersions.chrome;
+  })
+  .catch(() => undefined);
