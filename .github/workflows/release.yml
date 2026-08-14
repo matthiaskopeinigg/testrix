@@ -47,7 +47,7 @@ jobs:
         if: ${{ contains(env.RELEASE_TAG, '-') }}
         run: npm run electron:build:win
       - name: Upload Windows installer
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: windows-installer
           path: release/Testrix Setup.exe
@@ -65,7 +65,7 @@ jobs:
       - name: Build Linux installer
         run: npm run electron:build:linux
       - name: Upload Linux installer
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: linux-installer
           path: release/Testrix Setup.AppImage
@@ -83,7 +83,7 @@ jobs:
       - name: Build macOS installer
         run: npm run electron:build:mac
       - name: Upload macOS installer
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: mac-installer
           path: release/Testrix Setup.dmg
