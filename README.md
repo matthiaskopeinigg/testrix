@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="public/brand/logo.svg" alt="Testrix" width="160" />
+  <img src="assets/brand/logo.svg" alt="Testrix" width="160" />
 </p>
 
 # Testrix
