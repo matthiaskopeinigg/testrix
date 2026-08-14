@@ -9,10 +9,32 @@ updates:
       interval: weekly
       day: monday
     open-pull-requests-limit: 15
+    ignore:
+      - dependency-name: electron
+        update-types: ['version-update:semver-major']
+      - dependency-name: sharp
+        update-types: ['version-update:semver-major']
+      - dependency-name: ioredis
+        update-types: ['version-update:semver-major']
+      - dependency-name: typescript
+        update-types: ['version-update:semver-major']
+      - dependency-name: esbuild
+        update-types: ['version-update:semver-major']
+      - dependency-name: diff
+        update-types: ['version-update:semver-major']
+      - dependency-name: '@angular/*'
+        update-types: ['version-update:semver-major']
+      - dependency-name: jsdom
+        update-types: ['version-update:semver-major']
+      - dependency-name: concurrently
+        update-types: ['version-update:semver-major']
     groups:
       angular:
         patterns:
           - '@angular/*'
+        update-types:
+          - minor
+          - patch
       electron-builder:
         patterns:
           - electron-builder
@@ -34,6 +56,9 @@ updates:
           - wait-on
           - jsdom
           - esbuild
+        update-types:
+          - minor
+          - patch
 
   - package-ecosystem: npm
     directory: /installer-shell
@@ -41,6 +66,9 @@ updates:
       interval: weekly
       day: monday
     open-pull-requests-limit: 10
+    ignore:
+      - dependency-name: electron
+        update-types: ['version-update:semver-major']
     groups:
       electron-builder:
         patterns:
