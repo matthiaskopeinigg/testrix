@@ -555,6 +555,7 @@ export class DatabaseWorkspaceTabComponent {
     if (!target?.schema) {
       return;
     }
+    // Warm one schema at a time — never fan out across hundreds of selected schemas.
     await this.catalog.loadSchema(connection, target.schema);
     if (target.table) {
       await this.catalog.loadTable(connection, target.schema, target.table);

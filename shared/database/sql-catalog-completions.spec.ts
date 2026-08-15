@@ -34,6 +34,42 @@ describe('mergeDatabaseQueryCompletions', () => {
     expect(detectSqlCompletionContext('SELECT * FROM ', 16).kind).toBe('table-ref');
   });
 
+  it('does not dump hundreds of schema names after a bare FROM', () => {
+    const huge = {
+      schemas: Array.from({ length: 500 }, (_, index) => ({
+        name: `SCHEMA_${index}`,
+        system: false,
+      })),
+      tables: [{ schema: 'SCHEMA_0', name: 't', kind: 'table' as const }],
+      columnsByTable: {},
+    };
+    const items = mergeDatabaseQueryCompletions('oracle', huge, 'SELECT * FROM ', 16);
+    const schemaItems = items.filter((item) => item.detail === 'Schema');
+    expect(schemaItems.length).toBe(0);
+    expect(items.some((item) => item.label.includes('SCHEMA_0.t') || item.insert.includes('t'))).toBe(
+      true,
+    );
+    expect(items.length).toBeLessThan(80);
+  });
+
+  it('filters schemas by typed prefix after FROM', () => {
+    const huge = {
+      schemas: [
+        { name: 'HR', system: false },
+        { name: 'APP', system: false },
+        ...Array.from({ length: 200 }, (_, index) => ({
+          name: `OTHER_${index}`,
+          system: false,
+        })),
+      ],
+      tables: [],
+      columnsByTable: {},
+    };
+    const items = mergeDatabaseQueryCompletions('oracle', huge, 'SELECT * FROM HR', 18);
+    expect(items.some((item) => item.label === 'HR' && item.detail === 'Schema')).toBe(true);
+    expect(items.filter((item) => item.detail === 'Schema').length).toBeLessThanOrEqual(48);
+  });
+
   it('suggests tables after a schema qualifier', () => {
     const items = mergeDatabaseQueryCompletions('postgresql', catalog, 'SELECT * FROM app.', 18);
     expect(items[0]?.insert).toBe('app.orders');
@@ -58,5 +94,6 @@ describe('mergeDatabaseQueryCompletions', () => {
       schema: 'public',
       table: 'users',
     });
+    expect(catalogPrefetchTarget('SELECT * FROM ', 16, catalog)).toEqual({ schema: 'public' });
   });
 });

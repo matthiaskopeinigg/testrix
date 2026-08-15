@@ -65,18 +65,16 @@ export class DatabaseCatalogService {
         : catalog.schemas.map((schema) => schema.name);
     const allowed = new Set(allowedNames.map((name) => name.toLowerCase()));
 
+    // Prefer catalog rows that match the selection; fall back to seed names.
     const fromCatalog = catalog.schemas.filter((schema) => allowed.has(schema.name.toLowerCase()));
+    const seed = connection ? seedCatalogSchemaItems(connection) : [];
     const schemas =
       fromCatalog.length > 0
         ? fromCatalog
-        : connection
-          ? seedCatalogSchemaItems(connection).filter((schema) =>
-              allowed.has(schema.name.toLowerCase()),
-            )
-          : [];
+        : seed.filter((schema) => allowed.size === 0 || allowed.has(schema.name.toLowerCase()));
 
     const tables = Object.entries(catalog.tablesBySchema)
-      .filter(([schema]) => allowed.has(schema.toLowerCase()))
+      .filter(([schema]) => allowed.size === 0 || allowed.has(schema.toLowerCase()))
       .flatMap(([, schemaTables]) => schemaTables);
 
     const columnsByTable: Record<string, readonly DatabaseCatalogColumn[]> = {};
