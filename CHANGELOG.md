@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0-beta.8] - 2026-08-15
+
+### Changed
+
+- Table data cells truncate long values to a fixed max width (full text on hover)
+- Cell editors follow the column type: booleans are true/false only, integers accept digits, decimals accept one point, and json must parse
+
 ## [1.0.0-beta.7] - 2026-08-15
 
 ### Changed
@@ -91,7 +98,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Initial public beta of Testrix: local-first desktop API client (HTTP, WebSocket, collections, environments, test suites, load tests, mocks, and capture).
 
-[Unreleased]: https://github.com/matthiaskopeinigg/testrix/compare/v1.0.0-beta.7...HEAD
+[Unreleased]: https://github.com/matthiaskopeinigg/testrix/compare/v1.0.0-beta.8...HEAD
+[1.0.0-beta.8]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.0-beta.8
 [1.0.0-beta.7]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.0-beta.7
 [1.0.0-beta.6]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.0-beta.6
 [1.0.0-beta.5]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.0-beta.5

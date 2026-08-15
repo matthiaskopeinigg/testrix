@@ -121,11 +121,31 @@ describe('TxDataGridComponent', () => {
     expect(document.activeElement).toBe(input);
   });
 
-  it('marks primary keys and keeps a sort affordance on every header', () => {
-    fixture.componentRef.setInput('primaryKeyColumns', ['id']);
+  it('truncates long displayed cells and keeps the full value on title', () => {
+    fixture.componentRef.setInput('columns', ['password']);
+    fixture.componentRef.setInput('rows', [['a'.repeat(80)]]);
     fixture.detectChanges();
-    const host = fixture.nativeElement as HTMLElement;
-    expect(host.querySelector('.tx-data-grid__pk')?.textContent).toBe('PK');
-    expect(host.querySelectorAll('.tx-data-grid__sort').length).toBe(TX_DATA_GRID_DEMO_COLUMNS.length);
+    const text = (fixture.nativeElement as HTMLElement).querySelector(
+      '.tx-data-grid__cell-text',
+    ) as HTMLElement;
+    expect(text.title.length).toBe(80);
+    expect(text.classList.contains('tx-data-grid__cell-text')).toBe(true);
+  });
+
+  it('edits boolean columns with a true/false select', () => {
+    fixture.componentRef.setInput('editable', true);
+    fixture.componentRef.setInput('columns', ['is_active']);
+    fixture.componentRef.setInput('columnTypes', ['bool']);
+    fixture.componentRef.setInput('rows', [['true']]);
+    fixture.detectChanges();
+    const cell = (fixture.nativeElement as HTMLElement).querySelector('tbody td') as HTMLTableCellElement;
+    cell.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+    fixture.detectChanges();
+    const select = (fixture.nativeElement as HTMLElement).querySelector(
+      '.tx-data-grid__bool-select',
+    ) as HTMLSelectElement;
+    expect(select).not.toBeNull();
+    expect([...select.options].map((option) => option.value).filter(Boolean)).toEqual(['true', 'false']);
+    expect((fixture.nativeElement as HTMLElement).querySelector('tx-inline-rename-input')).toBeNull();
   });
 });

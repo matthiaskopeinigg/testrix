@@ -16,14 +16,18 @@ import {
   nextDatabaseQuerySort,
   normalizeDatabaseQueryCellRange,
   sortDatabaseQueryRows,
+  classifySqlColumnType,
+  normalizeSqlBooleanValue,
   type DatabaseQueryCellRange,
   type DatabaseQuerySortState,
+  type SqlColumnEditKind,
 } from '@shared/database';
 
 import { TxContextMenuComponent } from '../../overlays/tx-context-menu/tx-context-menu.component';
 import type { TxContextMenuItem, TxContextMenuPosition } from '../../overlays/tx-context-menu/tx-context-menu.types';
 import { TxIconComponent } from '../../forms/tx-icon/tx-icon.component';
 import { TxInlineRenameInputComponent } from '../../forms/tx-inline-rename-input/tx-inline-rename-input.component';
+import { TxAutofocusDirective } from '../../../directives/tx-autofocus.directive';
 
 import type {
   TxDataGridCell,
@@ -39,7 +43,7 @@ import type {
 @Component({
   selector: 'tx-data-grid',
   standalone: true,
-  imports: [TxContextMenuComponent, TxIconComponent, TxInlineRenameInputComponent],
+  imports: [TxContextMenuComponent, TxIconComponent, TxInlineRenameInputComponent, TxAutofocusDirective],
   templateUrl: './tx-data-grid.component.html',
   styleUrl: './tx-data-grid.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -314,12 +318,39 @@ export class TxDataGridComponent {
     this.hostRef.nativeElement.focus();
   }
 
+  protected columnEditKind(index: number): SqlColumnEditKind {
+    return classifySqlColumnType(this.columnType(index));
+  }
+
+  protected booleanDraft(): string {
+    return normalizeSqlBooleanValue(this.editing()?.value) ?? '';
+  }
+
+  protected handleBoolChange(event: Event): void {
+    const value = (event.target as HTMLSelectElement).value;
+    if (value !== 'true' && value !== 'false') {
+      return;
+    }
+    this.handleEditCommitted(value);
+  }
+
+  protected handleBoolKeydown(event: KeyboardEvent): void {
+    event.stopPropagation();
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      this.handleEditCancel();
+    }
+  }
+
   private beginEdit(row: number, col: number): void {
     if (!this.editable() || this.rowKind(row) === 'deleted') {
       return;
     }
     const cell = this.displayedRows()[row]?.[col];
-    this.editing.set({ row, col, value: cell ?? '' });
+    const kind = this.columnEditKind(col);
+    const value =
+      kind === 'boolean' ? (normalizeSqlBooleanValue(cell) ?? '') : (cell ?? '');
+    this.editing.set({ row, col, value });
   }
 
   /**
@@ -384,6 +415,10 @@ export class TxDataGridComponent {
   }
 
   private selectCell(row: number, col: number, extend: boolean): void {
+    const editing = this.editing();
+    if (editing && (editing.row !== row || editing.col !== col)) {
+      this.editing.set(null);
+    }
     this.hostRef.nativeElement.focus();
     if (!extend || !this.anchor()) {
       this.anchor.set({ row, col });

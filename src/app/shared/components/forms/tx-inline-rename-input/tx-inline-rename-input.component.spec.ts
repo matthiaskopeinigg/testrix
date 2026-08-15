@@ -51,4 +51,33 @@ describe('TxInlineRenameInputComponent', () => {
 
     expect(committed).toEqual(['']);
   });
+
+  it('blocks non-integer characters when sqlType is int4', async () => {
+    await TestBed.configureTestingModule({
+      imports: [TxInlineRenameInputComponent],
+    }).compileComponents();
+
+    const fixture = TestBed.createComponent(TxInlineRenameInputComponent);
+    fixture.componentRef.setInput('value', '12');
+    fixture.componentRef.setInput('sqlType', 'int4');
+    fixture.detectChanges();
+
+    const input = fixture.nativeElement.querySelector('input') as HTMLInputElement;
+    input.setSelectionRange(2, 2);
+    const blocked = new InputEvent('beforeinput', {
+      bubbles: true,
+      cancelable: true,
+      data: 'a',
+      inputType: 'insertText',
+    });
+    expect(input.dispatchEvent(blocked)).toBe(false);
+
+    const allowed = new InputEvent('beforeinput', {
+      bubbles: true,
+      cancelable: true,
+      data: '3',
+      inputType: 'insertText',
+    });
+    expect(input.dispatchEvent(allowed)).toBe(true);
+  });
 });

@@ -17,3 +17,4 @@ export * from './database-introspect.schema';
 export * from './database-introspect.mappers';
 export * from './sql-catalog-completions';
 export * from './sort-query-table';
+export * from './sql-column-edit';

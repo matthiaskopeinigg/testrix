@@ -57,6 +57,7 @@ td {
 th:not(.tx-data-grid__gutter),
 td:not(.tx-data-grid__gutter) {
   min-width: 6.5rem;
+  max-width: 18rem;
 }
 
 tbody td,
@@ -166,6 +167,33 @@ tbody tr:hover .tx-data-grid__gutter {
   color: var(--tx-text-1);
   font-style: italic;
   opacity: 0.8;
+}
+
+.tx-data-grid__cell-text {
+  display: block;
+  max-width: 18rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tx-data-grid__bool-select {
+  box-sizing: border-box;
+  display: block;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: var(--tx-data-grid-cell-padding-y) var(--tx-data-grid-cell-padding-x);
+  border: 0;
+  border-radius: 0;
+  background: var(--tx-surface-0);
+  color: var(--tx-text-0);
+  font: inherit;
+  line-height: calc(
+    var(--tx-data-grid-row-height) - 2 * var(--tx-data-grid-cell-padding-y)
+  );
+  outline: none;
+  appearance: auto;
 }
 
 .tx-data-grid__cell--dirty {

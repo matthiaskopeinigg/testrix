@@ -63,19 +63,39 @@
                 (dblclick)="handleCellDblClick($event, r, c)"
               >
                 @if (isEditing(r, c)) {
-                  <tx-inline-rename-input
-                    [value]="editing()!.value"
-                    density="cell"
-                    [allowEmpty]="true"
-                    [trimValue]="false"
-                    ariaLabel="Edit cell"
-                    (committed)="handleEditCommitted($event)"
-                    (cancelled)="handleEditCancel()"
-                  />
+                  @if (columnEditKind(c) === 'boolean') {
+                    <select
+                      class="tx-data-grid__bool-select"
+                      aria-label="Edit boolean cell"
+                      txAutofocus
+                      [value]="booleanDraft()"
+                      (click)="$event.stopPropagation()"
+                      (pointerdown)="$event.stopPropagation()"
+                      (change)="handleBoolChange($event)"
+                      (keydown)="handleBoolKeydown($event)"
+                    >
+                      @if (booleanDraft() === '') {
+                        <option value="" disabled hidden></option>
+                      }
+                      <option value="true">true</option>
+                      <option value="false">false</option>
+                    </select>
+                  } @else {
+                    <tx-inline-rename-input
+                      [value]="editing()!.value"
+                      density="cell"
+                      [allowEmpty]="true"
+                      [trimValue]="false"
+                      [sqlType]="columnType(c)"
+                      ariaLabel="Edit cell"
+                      (committed)="handleEditCommitted($event)"
+                      (cancelled)="handleEditCancel()"
+                    />
+                  }
                 } @else if (cell === null) {
                   <span class="tx-data-grid__null">&lt;null&gt;</span>
                 } @else {
-                  {{ cell }}
+                  <span class="tx-data-grid__cell-text" [title]="cell">{{ cell }}</span>
                 }
               </td>
             }

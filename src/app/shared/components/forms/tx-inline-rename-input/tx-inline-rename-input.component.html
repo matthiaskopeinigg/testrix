@@ -2,9 +2,12 @@
   #inputEl
   class="tx-inline-rename-input"
   type="text"
+  spellcheck="false"
   [attr.size]="density() === 'cell' ? 1 : null"
+  [attr.inputmode]="inputMode()"
   [attr.aria-label]="ariaLabel()"
   [value]="draft()"
+  (beforeinput)="handleBeforeInput($event)"
   (input)="handleInput($event)"
   (focus)="handleFocus($event)"
   (mousedown)="handleMouseDown($event)"
