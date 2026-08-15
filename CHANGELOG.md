@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.1-beta.8] - 2026-08-15
+
+### Changed
+
+- Database query (and test-suite) connection dropdown shows folder path prefixes (`Prod/Primary (oracle)`) so identically named connections in different folders are distinguishable
+
 ## [1.0.1-beta.7] - 2026-08-15
 
 ### Fixed
@@ -155,7 +161,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Initial public beta of Testrix: local-first desktop API client (HTTP, WebSocket, collections, environments, test suites, load tests, mocks, and capture).
 
-[Unreleased]: https://github.com/matthiaskopeinigg/testrix/compare/v1.0.1-beta.7...HEAD
+[Unreleased]: https://github.com/matthiaskopeinigg/testrix/compare/v1.0.1-beta.8...HEAD
+[1.0.1-beta.8]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.1-beta.8
 [1.0.1-beta.7]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.1-beta.7
 [1.0.1-beta.6]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.1-beta.6
 [1.0.1-beta.5]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.1-beta.5

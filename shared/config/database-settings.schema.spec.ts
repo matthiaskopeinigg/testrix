@@ -7,8 +7,10 @@ import {
   databaseConnectionTreeItemSchema,
   databaseSettingsSchema,
   defaultPortForDatabaseType,
+  findDatabaseConnectionFolderPath,
   findDatabaseConnectionParentId,
   flattenDatabaseConnections,
+  formatDatabaseConnectionPickerLabel,
   normalizeDatabaseSettings,
 } from './database-settings.schema';
 import { createDefaultSettings } from './defaults';
@@ -183,5 +185,13 @@ describe('database-settings.schema', () => {
     ]);
     expect(findDatabaseConnectionParentId(nodes, 'c1')).toBe('f2');
     expect(findDatabaseConnectionParentId(nodes, 'f1')).toBeNull();
+    expect(findDatabaseConnectionFolderPath(nodes, 'c1')).toEqual(['Prod', 'EU']);
+    expect(
+      formatDatabaseConnectionPickerLabel(nodes, {
+        id: 'c1',
+        name: 'Primary',
+        type: 'oracle',
+      }),
+    ).toBe('Prod/EU/Primary (oracle)');
   });
 });

@@ -14,6 +14,7 @@ import {
   type DatabaseStepConfig,
   type FlowDatabaseStepQuerySource,
 } from '@shared/testing';
+import { formatDatabaseConnectionPickerLabel } from '@shared/config';
 
 import { ConfigService } from '@app/core/config/config.service';
 import { DatabaseQueriesService } from '@app/core/database/database-queries.service';
@@ -59,10 +60,11 @@ export class TsFlowDatabaseStepPanelComponent {
   protected readonly querySource = computed(() => resolveDatabaseStepQuerySource(this.cfg()));
 
   protected readonly connectionOptions = computed(() => {
-    const connections = this.configService.settings()?.databases?.connections ?? [];
-    return connections.map((conn) => ({
+    const databases = this.configService.settings()?.databases;
+    const nodes = databases?.nodes ?? [];
+    return (databases?.connections ?? []).map((conn) => ({
       value: conn.id,
-      label: `${conn.name} (${conn.type})`,
+      label: formatDatabaseConnectionPickerLabel(nodes, conn),
     }));
   });
 

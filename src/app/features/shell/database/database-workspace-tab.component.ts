@@ -65,7 +65,7 @@ import {
   type DatabaseQueryExportFormat,
   type DatabaseQueryTable,
 } from '@shared/database';
-import { resolveDatabaseQueryTabSession } from '@shared/config';
+import { resolveDatabaseQueryTabSession, formatDatabaseConnectionPickerLabel } from '@shared/config';
 
 import { DatabaseConnectionEditorComponent } from './database-connection-editor.component';
 import { DatabaseTableDataTabComponent } from './database-table-data-tab.component';
@@ -154,12 +154,14 @@ export class DatabaseWorkspaceTabComponent {
     return id ? this.queries.find(id) : null;
   });
 
-  protected readonly connectionOptions = computed(() =>
-    (this.config.settings()?.databases?.connections ?? []).map((conn) => ({
+  protected readonly connectionOptions = computed(() => {
+    const databases = this.config.settings()?.databases;
+    const nodes = databases?.nodes ?? [];
+    return (databases?.connections ?? []).map((conn) => ({
       value: conn.id,
-      label: `${conn.name} (${conn.type})`,
-    })),
-  );
+      label: formatDatabaseConnectionPickerLabel(nodes, conn),
+    }));
+  });
 
   protected readonly selectedConnection = computed(() => {
     const connectionId = this.saved()?.connectionId;

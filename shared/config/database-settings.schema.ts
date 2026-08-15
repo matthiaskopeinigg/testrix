@@ -226,6 +226,54 @@ export function collectDatabaseConnectionFolders(
   return out;
 }
 
+/**
+ * Ancestor folder names from the tree root to the connection’s parent.
+ * Empty when the connection is at the root or missing.
+ *
+ * @param nodes Connection folder tree.
+ * @param connectionId Connection id.
+ */
+export function findDatabaseConnectionFolderPath(
+  nodes: readonly DatabaseConnectionTreeItem[],
+  connectionId: string,
+): string[] {
+  const walk = (
+    items: readonly DatabaseConnectionTreeItem[],
+    ancestors: readonly string[],
+  ): string[] | null => {
+    for (const item of items) {
+      if (isDatabaseConnectionLeaf(item) && item.id === connectionId) {
+        return [...ancestors];
+      }
+      if (isDatabaseConnectionFolder(item)) {
+        const found = walk(item.children, [...ancestors, item.name]);
+        if (found) {
+          return found;
+        }
+      }
+    }
+    return null;
+  };
+  return walk(nodes, []) ?? [];
+}
+
+/**
+ * Dropdown label for a connection, including folder path when nested.
+ *
+ * Example: `Prod/EU/Primary (oracle)` or `Primary (postgresql)` at the root.
+ *
+ * @param nodes Connection folder tree.
+ * @param connection Connection to label.
+ */
+export function formatDatabaseConnectionPickerLabel(
+  nodes: readonly DatabaseConnectionTreeItem[],
+  connection: Pick<DatabaseConnection, 'id' | 'name' | 'type'>,
+): string {
+  const folders = findDatabaseConnectionFolderPath(nodes, connection.id);
+  const path = [...folders, connection.name].join('/');
+  return `${path} (${connection.type})`;
+}
+
 /** Maps every node, replacing items that match. */
 export function mapDatabaseConnectionTree(
   nodes: readonly DatabaseConnectionTreeItem[],
