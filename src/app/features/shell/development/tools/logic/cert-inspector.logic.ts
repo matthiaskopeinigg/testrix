@@ -11,6 +11,19 @@ function bytesToHex(bytes: Uint8Array): string {
   return [...bytes].map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
+/**
+ * Copies DER bytes into a buffer Web Crypto accepts in both Chromium and jsdom/Node.
+ */
+function toSubtleCryptoData(bytes: Uint8Array): BufferSource {
+  const BufferCtor = (globalThis as { Buffer?: { from(data: Uint8Array): Uint8Array } }).Buffer;
+  if (typeof BufferCtor?.from === 'function') {
+    return BufferCtor.from(bytes) as BufferSource;
+  }
+  const copy = new Uint8Array(bytes.length);
+  copy.set(bytes);
+  return copy;
+}
+
 function decodePemBody(body: string): Uint8Array | null {
   const compact = body.replace(/\s+/g, '');
   try {
@@ -40,9 +53,7 @@ export async function inspectPem(pem: string): Promise<readonly PemBlockSummary[
       match = PEM_RE.exec(pem);
       continue;
     }
-    const derCopy = new ArrayBuffer(der.byteLength);
-    new Uint8Array(derCopy).set(der);
-    const digest = await globalThis.crypto.subtle.digest('SHA-256', derCopy);
+    const digest = await globalThis.crypto.subtle.digest('SHA-256', toSubtleCryptoData(der));
     summaries.push({
       label,
       derBytes: der.length,

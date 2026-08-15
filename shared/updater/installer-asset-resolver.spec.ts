@@ -4,14 +4,14 @@ import { matchInstallerAsset } from './installer-asset-resolver';
 
 describe('installer-asset-resolver', () => {
   it('matches exact asset names per platform', () => {
-    const assets = [{ name: 'Testrix Setup.exe', browser_download_url: 'https://example.com/a.exe', size: 10 }];
-    expect(matchInstallerAsset(assets, 'win32')?.name).toBe('Testrix Setup.exe');
+    const assets = [{ name: 'Testrix-Setup.exe', browser_download_url: 'https://example.com/a.exe', size: 10 }];
+    expect(matchInstallerAsset(assets, 'win32')?.name).toBe('Testrix-Setup.exe');
   });
 
-  it('falls back to fuzzy Testrix Setup asset names', () => {
+  it('falls back to hyphen, space, or dotted Testrix Setup asset names', () => {
     const assets = [
       {
-        name: 'artifacts/Testrix Setup.exe',
+        name: 'artifacts/Testrix-Setup.exe',
         browser_download_url: 'https://example.com/nested.exe',
         size: 20,
       },
@@ -19,7 +19,7 @@ describe('installer-asset-resolver', () => {
     expect(matchInstallerAsset(assets, 'win32')?.downloadUrl).toBe('https://example.com/nested.exe');
   });
 
-  it('matches GitHub dotted asset names', () => {
+  it('matches GitHub dotted asset names from older releases', () => {
     const assets = [
       {
         name: 'Testrix.Setup.exe',

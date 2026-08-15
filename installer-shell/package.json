@@ -42,7 +42,7 @@
     "asar": true,
     "afterPack": "./installer-after-pack.cjs",
     "portable": {
-      "artifactName": "${productName}.${ext}",
+      "artifactName": "Testrix-Setup.${ext}",
       "unpackDirName": "TestrixSetup"
     },
     "win": {
@@ -66,7 +66,7 @@
           ]
         }
       ],
-      "artifactName": "${productName}.${ext}",
+      "artifactName": "Testrix-Setup.${ext}",
       "category": "Development",
       "icon": "../build/icons/icon-1024.png"
     },
@@ -80,7 +80,7 @@
           ]
         }
       ],
-      "artifactName": "${productName}.${ext}",
+      "artifactName": "Testrix-Setup.${ext}",
       "icon": "../build/icons/icon-1024.png",
       "identity": null
     }

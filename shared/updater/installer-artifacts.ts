@@ -1,13 +1,19 @@
 /** Electron/Node platform slugs that ship a Testrix Setup installer. */
 export type UpdaterPlatform = 'win32' | 'linux' | 'darwin';
 
-/** Shipped installer basename uploaded to GitHub Releases (see `scripts/installer-release-paths.mjs`). */
+/** Display name of the setup shell (window title, .app bundle). */
 export const INSTALLER_PRODUCT_NAME = 'Testrix Setup';
 
+/**
+ * GitHub release asset stem. Spaces become dots on github.com (`Testrix.Setup`),
+ * so shipped files use a hyphen instead (`Testrix-Setup.exe`).
+ */
+export const INSTALLER_ARTIFACT_NAME = 'Testrix-Setup';
+
 const INSTALLER_ASSET_BY_PLATFORM: Readonly<Record<UpdaterPlatform, string>> = {
-  win32: `${INSTALLER_PRODUCT_NAME}.exe`,
-  linux: `${INSTALLER_PRODUCT_NAME}.AppImage`,
-  darwin: `${INSTALLER_PRODUCT_NAME}.dmg`,
+  win32: `${INSTALLER_ARTIFACT_NAME}.exe`,
+  linux: `${INSTALLER_ARTIFACT_NAME}.AppImage`,
+  darwin: `${INSTALLER_ARTIFACT_NAME}.dmg`,
 };
 
 /**

@@ -1,9 +1,9 @@
 /**
  * Creates a single-file installer: thin setup shell + appended payload.zip.
  *
- * - Windows: portable `.exe` + append → `release/Testrix Setup.exe`
- * - Linux: AppImage + append → `release/Testrix Setup.AppImage`
- * - macOS: append to setup `.app` binary, then `hdiutil` → `release/Testrix Setup.dmg`
+ * - Windows: portable `.exe` + append → `release/Testrix-Setup.exe`
+ * - Linux: AppImage + append → `release/Testrix-Setup.AppImage`
+ * - macOS: append to setup `.app` binary, then `hdiutil` → `release/Testrix-Setup.dmg`
  */
 import { cpSync, existsSync, readFileSync, rmSync, statSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';

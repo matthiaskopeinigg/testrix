@@ -351,7 +351,7 @@ function resolvePayloadMissingMessage() {
   const host = process.env.PORTABLE_EXECUTABLE_FILE || process.env.APPIMAGE || null;
   if (app.isPackaged && host && !readAppendedPayloadMeta(host)) {
     return (
-      'Application payload missing from this installer file. Use release/Testrix Setup.exe ' +
+      'Application payload missing from this installer file. Use release/Testrix-Setup.exe ' +
       '(run npm run electron:build:win to rebuild), not the thin setup-shell-build artifact.'
     );
   }
@@ -1123,7 +1123,7 @@ async function launchInstalledApp(exePath) {
     return {
       ok: false,
       message:
-        'Installation is incomplete (missing Electron runtime files such as icudtl.dat). Uninstall and reinstall using a freshly built Testrix Setup.exe.',
+        'Installation is incomplete (missing Electron runtime files such as icudtl.dat). Uninstall and reinstall using a freshly built Testrix-Setup.exe.',
     };
   }
 
@@ -1256,7 +1256,7 @@ ipcMain.handle('setup:launchApp', async (_e, exePath) => {
     return {
       ok: false,
       message:
-        'Installation is incomplete (missing Electron runtime files such as icudtl.dat). Uninstall and reinstall using a freshly built Testrix Setup.exe.',
+        'Installation is incomplete (missing Electron runtime files such as icudtl.dat). Uninstall and reinstall using a freshly built Testrix-Setup.exe.',
     };
   }
 

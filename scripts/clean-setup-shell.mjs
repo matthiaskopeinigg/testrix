@@ -10,7 +10,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const setupShellDir = join(root, 'release', 'setup-shell-build');
 
 if (process.platform === 'win32') {
-  for (const imageName of ['Testrix Setup.exe', 'Testrix.exe']) {
+  for (const imageName of ['Testrix-Setup.exe', 'Testrix Setup.exe', 'Testrix.exe']) {
     try {
       execFileSync('taskkill', ['/F', '/IM', imageName, '/T'], { stdio: 'ignore' });
     } catch {
@@ -23,7 +23,7 @@ if (!existsSync(setupShellDir)) {
   process.exit(0);
 }
 
-for (const name of ['win-unpacked', 'Testrix Setup.exe']) {
+for (const name of ['win-unpacked', 'Testrix-Setup.exe', 'Testrix Setup.exe']) {
   try {
     rmSync(join(setupShellDir, name), { recursive: true, force: true });
   } catch (err) {

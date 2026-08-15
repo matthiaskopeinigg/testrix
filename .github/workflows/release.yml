@@ -50,7 +50,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: windows-installer
-          path: release/Testrix Setup.exe
+          path: release/Testrix-Setup.exe
 
   pack-linux:
     name: Pack Linux
@@ -68,7 +68,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: linux-installer
-          path: release/Testrix Setup.AppImage
+          path: release/Testrix-Setup.AppImage
 
   pack-macos:
     name: Pack macOS
@@ -86,7 +86,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: mac-installer
-          path: release/Testrix Setup.dmg
+          path: release/Testrix-Setup.dmg
 
   publish-release:
     name: Publish GitHub Release

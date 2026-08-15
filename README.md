@@ -25,9 +25,9 @@ Download the latest installer from [GitHub Releases](https://github.com/matthias
 
 | OS | Artifact |
 | --- | --- |
-| Windows | `Testrix Setup.exe` |
-| macOS | `Testrix Setup.dmg` |
-| Linux | `Testrix Setup.AppImage` |
+| Windows | `Testrix-Setup.exe` |
+| macOS | `Testrix-Setup.dmg` |
+| Linux | `Testrix-Setup.AppImage` |
 
 Prerelease tags (for example `v1.0.0-beta.*`) publish unsigned or lighter Windows builds; stable tags (`vX.Y.Z` without a hyphen) may include signed Windows installers when secrets are configured.
 

@@ -88,8 +88,8 @@ function platformExtension(platform: UpdaterPlatform): string {
   return '.dmg';
 }
 
-/** Matches GitHub assets named `Testrix Setup.*` or `Testrix.Setup.*`. */
+/** Matches GitHub assets named `Testrix-Setup.*`, `Testrix Setup.*`, or `Testrix.Setup.*`. */
 function matchesInstallerProductName(name: string): boolean {
-  const normalized = name.replace(/\./g, ' ');
-  return normalized.includes(INSTALLER_PRODUCT_NAME);
+  const normalized = name.replace(/[.\-_]/g, ' ').toLowerCase();
+  return normalized.includes(INSTALLER_PRODUCT_NAME.toLowerCase());
 }

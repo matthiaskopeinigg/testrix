@@ -9,6 +9,9 @@ const root = join(fileURLToPath(new URL('.', import.meta.url)), '..');
 
 export const INSTALLER_PRODUCT_NAME = 'Testrix Setup';
 
+/** GitHub/release file stem. Hyphen avoids GitHub rewriting spaces to dots. */
+export const INSTALLER_ARTIFACT_NAME = 'Testrix-Setup';
+
 export function resolveSetupShellDir() {
   return join(root, 'release', 'setup-shell-build');
 }
@@ -23,28 +26,28 @@ export function resolveReleaseDir() {
 
 /** @returns {string} */
 export function resolveShippedWindowsInstaller() {
-  return join(resolveReleaseDir(), `${INSTALLER_PRODUCT_NAME}.exe`);
+  return join(resolveReleaseDir(), `${INSTALLER_ARTIFACT_NAME}.exe`);
 }
 
 /** @returns {string} */
 export function resolveShippedLinuxInstaller() {
-  return join(resolveReleaseDir(), `${INSTALLER_PRODUCT_NAME}.AppImage`);
+  return join(resolveReleaseDir(), `${INSTALLER_ARTIFACT_NAME}.AppImage`);
 }
 
 /** @returns {string} */
 export function resolveShippedMacInstaller() {
-  return join(resolveReleaseDir(), `${INSTALLER_PRODUCT_NAME}.dmg`);
+  return join(resolveReleaseDir(), `${INSTALLER_ARTIFACT_NAME}.dmg`);
 }
 
 /** Thin portable exe (Windows, shell only). */
 export function resolveThinWindowsPortable() {
-  return join(resolveSetupShellDir(), `${INSTALLER_PRODUCT_NAME}.exe`);
+  return join(resolveSetupShellDir(), `${INSTALLER_ARTIFACT_NAME}.exe`);
 }
 
 /** Thin AppImage before payload append. */
 export function resolveThinLinuxAppImage() {
   const dir = resolveSetupShellDir();
-  const preferred = join(dir, `${INSTALLER_PRODUCT_NAME}.AppImage`);
+  const preferred = join(dir, `${INSTALLER_ARTIFACT_NAME}.AppImage`);
   if (existsSync(preferred)) {
     return preferred;
   }

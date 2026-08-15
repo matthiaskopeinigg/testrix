@@ -1,5 +1,5 @@
 /**
- * Embeds `build/icons/icon.ico` into the setup-shell `Testrix Setup.exe` (dir build).
+ * Embeds `build/icons/icon.ico` into the setup-shell `Testrix-Setup.exe` (dir build).
  *
  * electron-builder `afterPack` (`installer-shell/installer-after-pack.cjs`) stamps the unpacked
  * binary during pack; this script is for manual re-runs when needed.

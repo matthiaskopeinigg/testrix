@@ -43,7 +43,7 @@ function stopPackagedTestrixProcesses() {
   if (process.platform !== 'win32') {
     return;
   }
-  for (const imageName of ['Testrix.exe', 'Testrix Setup.exe']) {
+  for (const imageName of ['Testrix.exe', 'Testrix-Setup.exe', 'Testrix Setup.exe']) {
     try {
       execFileSync('taskkill', ['/F', '/IM', imageName, '/T'], { stdio: 'ignore' });
     } catch {
