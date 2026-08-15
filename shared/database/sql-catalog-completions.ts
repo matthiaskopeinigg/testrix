@@ -200,22 +200,20 @@ export function catalogPrefetchTarget(
   }
   if (ctx.kind === 'table-ref') {
     const token = completionToken(source, caret);
-    if (token) {
-      const schemaHit = (catalog.schemas ?? []).find(
-        (entry) => !entry.system && entry.name.toLowerCase().startsWith(token.toLowerCase()),
-      );
-      if (schemaHit) {
-        return { schema: schemaHit.name };
-      }
-      const table = resolveTable(catalog, ctx.fromTable) ?? resolveTable(catalog, token);
-      if (table) {
-        return { schema: table.schema, table: table.name };
-      }
+    // Require a typed prefix before loading schema tables — bare FROM must not
+    // trigger Oracle all_tables (can be thousands of rows and freezes the UI).
+    if (token.length < 2) {
+      return null;
     }
-    // Bare FROM/JOIN: warm the first selected schema so table names can appear.
-    const firstSchema = (catalog.schemas ?? []).find((entry) => !entry.system);
-    if (firstSchema) {
-      return { schema: firstSchema.name };
+    const schemaHit = (catalog.schemas ?? []).find(
+      (entry) => !entry.system && entry.name.toLowerCase().startsWith(token.toLowerCase()),
+    );
+    if (schemaHit) {
+      return { schema: schemaHit.name };
+    }
+    const table = resolveTable(catalog, ctx.fromTable) ?? resolveTable(catalog, token);
+    if (table) {
+      return { schema: table.schema, table: table.name };
     }
   }
   return null;

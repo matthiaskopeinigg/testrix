@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.1-beta.6] - 2026-08-15
+
+### Fixed
+
+- SQL query autocomplete no longer freezes the app: broke a catalog prefetch → revision → ghost refresh loop, debounced schema loads, and capped tables/columns fed into suggestions
+
 ## [1.0.1-beta.5] - 2026-08-15
 
 ### Fixed
@@ -143,7 +149,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Initial public beta of Testrix: local-first desktop API client (HTTP, WebSocket, collections, environments, test suites, load tests, mocks, and capture).
 
-[Unreleased]: https://github.com/matthiaskopeinigg/testrix/compare/v1.0.1-beta.5...HEAD
+[Unreleased]: https://github.com/matthiaskopeinigg/testrix/compare/v1.0.1-beta.6...HEAD
+[1.0.1-beta.6]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.1-beta.6
 [1.0.1-beta.5]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.1-beta.5
 [1.0.1-beta.4]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.1-beta.4
 [1.0.1-beta.3]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.1-beta.3

@@ -94,6 +94,8 @@ describe('mergeDatabaseQueryCompletions', () => {
       schema: 'public',
       table: 'users',
     });
-    expect(catalogPrefetchTarget('SELECT * FROM ', 16, catalog)).toEqual({ schema: 'public' });
+    // Bare FROM must not prefetch (Oracle all_tables can freeze the UI).
+    expect(catalogPrefetchTarget('SELECT * FROM ', 16, catalog)).toBeNull();
+    expect(catalogPrefetchTarget('SELECT * FROM ap', 18, catalog)).toEqual({ schema: 'app' });
   });
 });

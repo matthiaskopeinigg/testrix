@@ -53,6 +53,7 @@ import {
   formatDatabaseConnectionError,
   formatDatabaseQueryResult,
   catalogPrefetchTarget,
+  databaseQueryEditorCompletions,
   isFullDatabaseQuerySelection,
   mergeDatabaseQueryCompletions,
   normalizeDatabaseQueryResult,
@@ -139,6 +140,8 @@ export class DatabaseWorkspaceTabComponent {
   protected readonly loadAllOpen = signal(false);
   private lastExecutedQuery = '';
   private lastExplain = false;
+  private prefetchTimer: ReturnType<typeof setTimeout> | null = null;
+  private lastPrefetchKey = '';
   protected readonly gridSelection = signal<DatabaseQueryCellRange | null>(null);
   protected readonly exportMenuOpen = signal(false);
   protected readonly exportMenuPosition = signal<TxContextMenuPosition>({ x: 0, y: 0 });
@@ -178,18 +181,12 @@ export class DatabaseWorkspaceTabComponent {
     databaseQueryEditorPlaceholder(this.selectedConnection()?.type),
   );
 
-  protected readonly editorCompletions = computed((): readonly TxCodeEditorCompletionItem[] => {
-    // Keep a static fallback for tools that read the catalog without a caret.
-    const connection = this.selectedConnection();
-    const query = this.saved()?.query ?? '';
-    void this.catalog.revision();
-    return mergeDatabaseQueryCompletions(
-      connection?.type,
-      connection ? this.catalog.completionSource(connection.id, connection) : null,
-      query,
-      query.length,
-    );
-  });
+  protected readonly editorCompletions = computed((): readonly TxCodeEditorCompletionItem[] =>
+    // Keywords only — catalog rows come from completionProvider at the caret.
+    // Binding revision-reactive catalog merges here froze the editor (prefetch → revision →
+    // new array → ghost refresh → prefetch loop).
+    databaseQueryEditorCompletions(this.selectedConnection()?.type),
+  );
 
   protected readonly editorCompletionProvider = (ctx: {
     readonly value: string;
@@ -198,7 +195,7 @@ export class DatabaseWorkspaceTabComponent {
     const connection = this.selectedConnection();
     void this.catalog.revision();
     const source = connection ? this.catalog.completionSource(connection.id, connection) : null;
-    void this.prefetchCatalogForCompletion(ctx.value, ctx.caret);
+    this.schedulePrefetchCatalogForCompletion(ctx.value, ctx.caret);
     return mergeDatabaseQueryCompletions(connection?.type, source, ctx.value, ctx.caret);
   };
 
@@ -338,6 +335,10 @@ export class DatabaseWorkspaceTabComponent {
       if (this.resultPanelHeightSaveTimer !== null) {
         clearTimeout(this.resultPanelHeightSaveTimer);
       }
+      if (this.prefetchTimer !== null) {
+        clearTimeout(this.prefetchTimer);
+        this.prefetchTimer = null;
+      }
     });
   }
 
@@ -354,6 +355,7 @@ export class DatabaseWorkspaceTabComponent {
     if (!id) {
       return;
     }
+    this.lastPrefetchKey = '';
     this.queries.patchQuery(id, { connectionId });
   }
 
@@ -545,6 +547,17 @@ export class DatabaseWorkspaceTabComponent {
     return true;
   }
 
+  private schedulePrefetchCatalogForCompletion(source: string, caret: number): void {
+    if (this.prefetchTimer !== null) {
+      clearTimeout(this.prefetchTimer);
+    }
+    // Debounce so typing does not kick off Oracle all_tables on every keystroke.
+    this.prefetchTimer = setTimeout(() => {
+      this.prefetchTimer = null;
+      void this.prefetchCatalogForCompletion(source, caret);
+    }, 400);
+  }
+
   private async prefetchCatalogForCompletion(source: string, caret: number): Promise<void> {
     const connection = this.selectedConnection();
     if (!connection) {
@@ -555,7 +568,12 @@ export class DatabaseWorkspaceTabComponent {
     if (!target?.schema) {
       return;
     }
-    // Warm one schema at a time — never fan out across hundreds of selected schemas.
+    const key = `${connection.id}:${target.schema}:${target.table ?? ''}`;
+    if (key === this.lastPrefetchKey) {
+      return;
+    }
+    this.lastPrefetchKey = key;
+    // Warm one schema/table — never fan out across hundreds of selected schemas.
     await this.catalog.loadSchema(connection, target.schema);
     if (target.table) {
       await this.catalog.loadTable(connection, target.schema, target.table);

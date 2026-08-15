@@ -22,6 +22,12 @@ import {
   type ConnectionCatalogTableDetail,
 } from './database-catalog.types';
 
+/** Hard caps so autocomplete stays cheap even after a large schema load. */
+const MAX_COMPLETION_SCHEMAS = 128;
+const MAX_COMPLETION_TABLES = 64;
+const MAX_COMPLETION_COLUMN_TABLES = 16;
+const MAX_COMPLETION_COLUMNS_PER_TABLE = 48;
+
 /**
  * In-memory live catalog for Database sidebar object explorer (not written to settings.json).
  */
@@ -42,6 +48,7 @@ export class DatabaseCatalogService {
   /**
    * Catalog slice for SQL autocomplete. Only selected / default schemas — never the
    * full schema directory (Oracle `all_users` can be 200+ and freezes the editor).
+   * Tables/columns are hard-capped so a loaded schema with thousands of objects stays cheap.
    *
    * @param connectionId Connection id.
    * @param connection Profile used to resolve which schemas may appear in suggestions.
@@ -68,22 +75,40 @@ export class DatabaseCatalogService {
     // Prefer catalog rows that match the selection; fall back to seed names.
     const fromCatalog = catalog.schemas.filter((schema) => allowed.has(schema.name.toLowerCase()));
     const seed = connection ? seedCatalogSchemaItems(connection) : [];
-    const schemas =
+    const schemasRaw =
       fromCatalog.length > 0
         ? fromCatalog
         : seed.filter((schema) => allowed.size === 0 || allowed.has(schema.name.toLowerCase()));
+    const schemas = schemasRaw.slice(0, MAX_COMPLETION_SCHEMAS);
 
-    const tables = Object.entries(catalog.tablesBySchema)
-      .filter(([schema]) => allowed.size === 0 || allowed.has(schema.toLowerCase()))
-      .flatMap(([, schemaTables]) => schemaTables);
+    const tables: DatabaseCatalogTable[] = [];
+    for (const [schema, schemaTables] of Object.entries(catalog.tablesBySchema)) {
+      if (allowed.size > 0 && !allowed.has(schema.toLowerCase())) {
+        continue;
+      }
+      for (const table of schemaTables) {
+        tables.push(table);
+        if (tables.length >= MAX_COMPLETION_TABLES) {
+          break;
+        }
+      }
+      if (tables.length >= MAX_COMPLETION_TABLES) {
+        break;
+      }
+    }
 
     const columnsByTable: Record<string, readonly DatabaseCatalogColumn[]> = {};
+    let columnTables = 0;
     for (const [key, detail] of Object.entries(catalog.detailsByTable)) {
       const schemaPart = key.includes('.') ? key.slice(0, key.indexOf('.')) : key;
       if (allowed.size > 0 && !allowed.has(schemaPart.toLowerCase())) {
         continue;
       }
-      columnsByTable[key] = detail.columns;
+      columnsByTable[key] = detail.columns.slice(0, MAX_COMPLETION_COLUMNS_PER_TABLE);
+      columnTables += 1;
+      if (columnTables >= MAX_COMPLETION_COLUMN_TABLES) {
+        break;
+      }
     }
 
     return {

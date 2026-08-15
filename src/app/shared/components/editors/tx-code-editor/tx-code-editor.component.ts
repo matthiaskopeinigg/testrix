@@ -336,8 +336,14 @@ export class TxCodeEditorComponent implements ControlValueAccessor, AfterViewIni
     });
 
     effect(() => {
-      // Parent catalog loads update this input; refresh ghost/popup at the live caret.
+      // When a live completionProvider is set (SQL catalog), it is the source of truth at the
+      // caret. Do not refresh on extraCompletionItems identity changes — that loops with
+      // catalog.revision bumps from prefetch/loadSchema and freezes the editor.
+      const provider = this.completionProvider();
       this.extraCompletionItems();
+      if (provider) {
+        return;
+      }
       if (this.inlineGhost() || this.completionOpen()) {
         queueMicrotask(() => this.refreshCompletionFilter());
       }
