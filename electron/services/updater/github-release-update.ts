@@ -4,7 +4,8 @@ import {
   matchInstallerAsset,
   type InstallerAssetCandidate,
 } from '../../../shared/updater/installer-asset-resolver';
-import { isReleaseVersionNewer, normalizeReleaseTag } from '../../../shared/updater/release-version';
+import { isPrereleaseVersion, isReleaseVersionNewer, normalizeReleaseTag } from '../../../shared/updater/release-version';
+import { selectNewestReleaseForChannel } from '../../../shared/updater/select-github-release';
 
 import { GITHUB_REPOSITORY } from '../../config/repository';
 import { updaterNetFetch } from './updater-fetch';
@@ -40,32 +41,20 @@ export { isReleaseVersionNewer, normalizeReleaseTag };
 /**
  * Resolves the newest GitHub release for the selected update channel.
  *
- * @param channel Stable uses `/releases/latest`; beta uses the newest prerelease.
+ * Both channels scan `/releases` and pick by semver. `/releases/latest` only
+ * tracks GitHub's Latest badge, which is never a prerelease.
+ *
+ * @param channel Installed update channel.
  */
 export async function fetchLatestGitHubRelease(
   channel: UpdateChannel,
 ): Promise<GitHubReleaseSummary | null> {
-  if (channel === 'beta') {
-    try {
-      const releases = await fetchGitHubJson<GitHubReleaseJson[]>(
-        githubApiUrl('/releases?per_page=30'),
-      );
-      const candidate = releases.find((release) => release.prerelease && !release.draft);
-      return candidate ? mapRelease(candidate) : null;
-    } catch (error: unknown) {
-      if (error instanceof GitHubApiError && error.status === 404) {
-        return null;
-      }
-      throw error;
-    }
-  }
-
   try {
-    const latest = await fetchGitHubJson<GitHubReleaseJson>(githubApiUrl('/releases/latest'));
-    if (latest.draft || latest.prerelease) {
-      return null;
-    }
-    return mapRelease(latest);
+    const releases = await fetchGitHubJson<GitHubReleaseJson[]>(
+      githubApiUrl('/releases?per_page=100'),
+    );
+    const candidate = selectNewestReleaseForChannel(releases, channel);
+    return candidate ? mapRelease(candidate) : null;
   } catch (error: unknown) {
     if (error instanceof GitHubApiError && error.status === 404) {
       return null;
@@ -148,7 +137,7 @@ function mapRelease(release: GitHubReleaseJson): GitHubReleaseSummary {
     version: normalizeReleaseTag(tagName),
     tagName,
     releasePageUrl: release.html_url ?? buildReleasePageUrl(tagName),
-    prerelease: release.prerelease === true,
+    prerelease: isPrereleaseVersion(tagName) || release.prerelease === true,
     assetNames,
     installerAsset: matched
       ? {

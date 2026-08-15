@@ -7,11 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.0.0-beta.10] - 2026-08-15
+## [1.0.1-beta.1] - 2026-08-15
 
 ### Fixed
 
 - Oracle connections that work in DataGrip but fail in Thin mode with password verifier 0x939: load Instant Client (Thick mode) when it is on PATH or set on the connection, and support SID URLs
+- In-app updates pick the highest semver beta instead of GitHub's list order
 
 ## [1.0.0-beta.9] - 2026-08-15
 
@@ -110,8 +111,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Initial public beta of Testrix: local-first desktop API client (HTTP, WebSocket, collections, environments, test suites, load tests, mocks, and capture).
 
-[Unreleased]: https://github.com/matthiaskopeinigg/testrix/compare/v1.0.0-beta.10...HEAD
-[1.0.0-beta.10]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.0-beta.10
+[Unreleased]: https://github.com/matthiaskopeinigg/testrix/compare/v1.0.1-beta.1...HEAD
+[1.0.1-beta.1]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.1-beta.1
 [1.0.0-beta.9]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.0-beta.9
 [1.0.0-beta.8]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.0-beta.8
 [1.0.0-beta.7]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.0-beta.7
