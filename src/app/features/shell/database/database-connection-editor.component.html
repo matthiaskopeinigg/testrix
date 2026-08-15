@@ -142,7 +142,7 @@
       </div>
       @if (conn.type === 'oracle') {
         <tx-toggle
-          label="Use SID (same as DataGrip SID mode)"
+          label="Use SID (off = DataGrip Service name / SERVICE_NAME)"
           [ngModel]="conn.useSid ?? false"
           (ngModelChange)="handlePatch({ useSid: $event })"
         />

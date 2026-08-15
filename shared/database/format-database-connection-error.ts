@@ -49,6 +49,19 @@ export function formatDatabaseConnectionError(error: unknown): string {
       'set Instant Client folder on the connection (the folder that contains oci.dll), and test again.'
     );
   }
+  if (/ORA-12505/i.test(message)) {
+    return (
+      'ORA-12505: the listener cannot resolve that SID. In Connection settings, either turn off ' +
+      '“Use SID” and enter the service name (DataGrip URL with /service), or keep Use SID on and ' +
+      'enter the exact SID from DataGrip’s @host:port:SID URL — not the service name.'
+    );
+  }
+  if (/ORA-12514/i.test(message)) {
+    return (
+      'ORA-12514: the listener does not know that service name. Check the Service name field ' +
+      '(or turn on Use SID if DataGrip connects with @host:port:SID).'
+    );
+  }
   if (lower.includes('timeout expired') || lower.includes('timed out')) {
     return message.includes('connect')
       ? 'Connection timed out. Is the server running and reachable?'

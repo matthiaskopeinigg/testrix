@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.1-beta.7] - 2026-08-15
+
+### Fixed
+
+- Oracle service-name connections match DataGrip JDBC more closely (TNS `SERVICE_NAME` instead of Easy Connect), with clearer ORA-12505 / ORA-12514 guidance and JDBC URL paste support
+
 ## [1.0.1-beta.6] - 2026-08-15
 
 ### Fixed
@@ -149,7 +155,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Initial public beta of Testrix: local-first desktop API client (HTTP, WebSocket, collections, environments, test suites, load tests, mocks, and capture).
 
-[Unreleased]: https://github.com/matthiaskopeinigg/testrix/compare/v1.0.1-beta.6...HEAD
+[Unreleased]: https://github.com/matthiaskopeinigg/testrix/compare/v1.0.1-beta.7...HEAD
+[1.0.1-beta.7]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.1-beta.7
 [1.0.1-beta.6]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.1-beta.6
 [1.0.1-beta.5]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.1-beta.5
 [1.0.1-beta.4]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.1-beta.4

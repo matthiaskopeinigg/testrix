@@ -46,4 +46,15 @@ describe('formatDatabaseConnectionError', () => {
     expect(message).toMatch(/Instant Client/i);
     expect(message).toMatch(/password is fine/i);
   });
+
+  it('explains ORA-12505 SID vs service name', () => {
+    const message = formatDatabaseConnectionError(
+      new Error(
+        'ORA-12505: TNS:listener does not currently know of SID given in connect descriptor',
+      ),
+    );
+    expect(message).toMatch(/ORA-12505/);
+    expect(message).toMatch(/Use SID/i);
+    expect(message).toMatch(/service name/i);
+  });
 });
