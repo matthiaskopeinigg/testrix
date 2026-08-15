@@ -1,13 +1,17 @@
 import type { ConnectionTreeNode } from './connection-tree.types';
 
-/** Filters the connection tree by name or subtitle, keeping ancestors of matches. */
+/**
+ * Filters the connection tree by name or subtitle, keeping ancestors of matches.
+ *
+ * An empty query returns the same array reference so the tree can skip a refresh.
+ */
 export function filterConnectionTree(
   nodes: readonly ConnectionTreeNode[],
   query: string,
 ): ConnectionTreeNode[] {
   const q = query.trim().toLowerCase();
   if (!q) {
-    return [...nodes];
+    return nodes as ConnectionTreeNode[];
   }
 
   const filterNodes = (list: readonly ConnectionTreeNode[]): ConnectionTreeNode[] => {

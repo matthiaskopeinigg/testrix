@@ -81,6 +81,7 @@ describe('TxSuggestInputComponent Enter', () => {
     const submitted: number[] = [];
     fixture.componentInstance.submitted.subscribe(() => submitted.push(1));
     const input = fixture.nativeElement.querySelector('input') as HTMLInputElement;
+    input.focus();
     input.dispatchEvent(new Event('input', { bubbles: true }));
     fixture.detectChanges();
 
@@ -92,6 +93,7 @@ describe('TxSuggestInputComponent Enter', () => {
     expect(input.value).toBe('');
     expect(submitted).toEqual([1]);
     expect(fixture.nativeElement.querySelector('.tx-suggest-input__completion')).toBeNull();
+    expect(document.activeElement).toBe(input);
   });
 
   it('applies the highlighted suggestion on Enter when the field has a token', () => {
@@ -104,5 +106,50 @@ describe('TxSuggestInputComponent Enter', () => {
     fixture.detectChanges();
 
     expect(input.value).toBe('name');
+  });
+});
+
+describe('TxSuggestInputComponent inline completion', () => {
+  let fixture: ComponentFixture<TxSuggestInputComponent>;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [TxSuggestInputComponent],
+      providers: [
+        {
+          provide: TxIconService,
+          useValue: { loadIconInner: () => Promise.resolve('<path d="M0 0"/>') },
+        },
+      ],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(TxSuggestInputComponent);
+    fixture.componentRef.setInput('suggestions', ['users', 'email']);
+    fixture.componentRef.setInput('matchMode', 'token');
+    fixture.componentRef.setInput('completionStyle', 'inline');
+    fixture.detectChanges();
+  });
+
+  it('previews the remainder as ghost text instead of a popup', () => {
+    const input = fixture.nativeElement.querySelector('input') as HTMLInputElement;
+    input.value = 'u';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('.tx-suggest-input__completion')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.tx-suggest-input__ghost')?.textContent).toBe('sers');
+  });
+
+  it('accepts the preview on Tab', () => {
+    const input = fixture.nativeElement.querySelector('input') as HTMLInputElement;
+    input.value = 'u';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    fixture.detectChanges();
+
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true }));
+    fixture.detectChanges();
+
+    expect(input.value).toBe('users');
+    expect(fixture.nativeElement.querySelector('.tx-suggest-input__ghost')).toBeNull();
   });
 });

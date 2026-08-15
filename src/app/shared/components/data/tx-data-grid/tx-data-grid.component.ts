@@ -56,6 +56,8 @@ export class TxDataGridComponent {
   readonly columns = input<readonly string[]>([]);
   readonly rows = input<readonly (readonly (string | null)[])[]>([]);
   readonly columnTypes = input<readonly string[]>([]);
+  /** Column names that should show a primary-key marker in the header. */
+  readonly primaryKeyColumns = input<readonly string[]>([]);
   readonly emptyLabel = input('Query returned no rows.');
   readonly editable = input(false);
   readonly sortDisabled = input(false);
@@ -352,6 +354,17 @@ export class TxDataGridComponent {
 
   protected columnType(index: number): string {
     return this.columnTypes()[index] ?? '';
+  }
+
+  /** True when this column is listed as a primary key. */
+  protected isPrimaryKey(index: number): boolean {
+    const name = this.columns()[index];
+    return Boolean(name && this.primaryKeyColumns().includes(name));
+  }
+
+  /** True when PK metadata is present so headers can show column glyphs. */
+  protected showColumnGlyphs(): boolean {
+    return this.primaryKeyColumns().length > 0;
   }
 
   protected sortDirection(index: number): 'asc' | 'desc' | null {

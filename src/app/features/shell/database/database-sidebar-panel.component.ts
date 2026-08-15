@@ -4,7 +4,6 @@ import {
   Component,
   computed,
   DestroyRef,
-  afterNextRender,
   effect,
   inject,
   input,
@@ -17,6 +16,8 @@ import { DATABASE_CONNECTION_MAX_FOLDER_DEPTH } from '@shared/config';
 import {
   databaseConnectionTabResourceId,
   databaseTableTabResourceId,
+  parseDatabaseConnectionTabResourceId,
+  parseDatabaseTableTabResourceId,
   qualifySqlTableName,
   SAVED_QUERY_MAX_FOLDER_DEPTH,
   type DatabaseConnectionStatusMap,
@@ -28,8 +29,6 @@ import { DatabaseConnectionsService } from '@app/core/database/database-connecti
 import { DatabaseQueriesService } from '@app/core/database/database-queries.service';
 import { ElectronService } from '@app/core/electron/electron.service';
 import { TxNotificationService } from '@app/core/notifications/tx-notification.service';
-import { startEntranceStaggerAnimation } from '@app/core/ui/entrance-stagger';
-import { UiPreferencesService } from '@app/core/ui/ui-preferences.service';
 import { WorkspaceEditorService } from '@app/core/workspace/workspace-editor.service';
 import { collectFolderAncestorIds } from '@app/features/shell/workspace/workspace-sidebar-selection';
 import { WorkspacePanelToolbarActionsDirective } from '@app/features/shell/workspace/workspace-panel-toolbar-actions.directive';
@@ -52,8 +51,8 @@ import {
   buildConnectionNodeContextMenu,
   buildEmptyConnectionContextMenu,
 } from './connection-context-menu';
-import { attachCatalogToConnectionTree } from './connection-catalog.attach';
-import { parseConnectionCatalogId } from './connection-catalog.ids';
+import { ConnectionCatalogAttachCache } from './connection-catalog.attach';
+import { connectionCatalogId, parseConnectionCatalogId } from './connection-catalog.ids';
 import { fromConnectionTreeNodesWithExisting, toConnectionTreeNodes } from './connection-tree.adapter';
 import { connectionCanDrop, remapConnectionDropTarget } from './connection-tree.drop';
 import {
@@ -95,6 +94,7 @@ import { applyDatabaseTreeView } from './database-tree.view';
 type SidebarMenuTarget = 'queries' | 'connections';
 
 const SESSION_PREF_DEBOUNCE_MS = 300;
+const SEARCH_DEBOUNCE_MS = 100;
 
 @Component({
   selector: 'app-database-sidebar-panel',
@@ -122,15 +122,12 @@ export class DatabaseSidebarPanelComponent {
   private readonly notifications = inject(TxNotificationService);
   private readonly config = inject(ConfigService);
   private readonly workspaceEditor = inject(WorkspaceEditorService);
-  private readonly uiPreferences = inject(UiPreferencesService);
-
-  protected readonly entranceStaggerPlay = signal(false);
-  protected readonly entranceStaggerSettled = signal(false);
 
   readonly searchPlaceholder = input('Search connections and queries…');
   readonly searchAriaLabel = input('Search database connections and queries');
 
   protected readonly navFilter = signal('');
+  private readonly navFilterDebounced = signal('');
   protected readonly kindFilter = signal<DatabaseSidebarFilter>(DEFAULT_DATABASE_SIDEBAR_FILTER);
   protected readonly sortBy = signal<DatabaseSidebarSortBy>(DEFAULT_DATABASE_SIDEBAR_SORT_BY);
   protected readonly connectionsExpanded = signal(true);
@@ -141,6 +138,8 @@ export class DatabaseSidebarPanelComponent {
   protected readonly connectionStatuses = signal<DatabaseConnectionStatusMap>({});
   protected readonly allExpanded = signal(false);
   protected readonly renamingNodeId = signal<string | null>(null);
+  /** Last connection-tree click when no matching workspace tab is active. */
+  private readonly connectionFocusNodeId = signal<string | null>(null);
 
   protected readonly filterMenuOpen = signal(false);
   protected readonly sortMenuOpen = signal(false);
@@ -162,7 +161,9 @@ export class DatabaseSidebarPanelComponent {
   private readonly connectionTree = viewChild<TxTreeComponent>('connectionTree');
 
   private sessionSaveTimer: ReturnType<typeof setTimeout> | null = null;
+  private searchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
   private skipNextSessionHydrate = false;
+  private readonly catalogAttachCache = new ConnectionCatalogAttachCache();
 
   protected readonly connectionCount = computed(() => this.connections.connections().length);
   protected readonly queryCount = computed(() => this.queries.queries().length);
@@ -173,33 +174,34 @@ export class DatabaseSidebarPanelComponent {
     toConnectionTreeNodes(this.connections.nodes()),
   );
 
-  protected readonly connectionTreeNodes = computed(() => {
-    void this.catalog.revision();
-    return attachCatalogToConnectionTree(
+  protected readonly connectionTreeNodes = computed(() =>
+    this.catalogAttachCache.attach(
       this.persistedConnectionNodes(),
       (id) => this.catalog.snapshot(id),
       this.connectionStatuses(),
       this.showSystemObjects(),
-    );
-  });
+    ),
+  );
 
   protected readonly hasFolders = computed(
     () =>
       collectDatabaseFolderIdsFromNodes(this.treeNodes()).length > 0 ||
-      collectConnectionFolderIdsFromNodes(this.connectionTreeNodes()).length > 0,
+      collectConnectionFolderIdsFromNodes(this.persistedConnectionNodes()).length > 0,
   );
 
   protected readonly filteredNodes = computed(() =>
     applyDatabaseTreeView(this.treeNodes(), {
-      query: this.navFilter(),
+      query: this.navFilterDebounced(),
       kindFilter: this.kindFilter(),
       sortBy: this.sortBy(),
     }),
   );
 
   protected readonly filteredConnectionNodes = computed(() =>
-    filterConnectionTree(this.connectionTreeNodes(), this.navFilter()),
+    filterConnectionTree(this.connectionTreeNodes(), this.navFilterDebounced()),
   );
+
+  private readonly connectionDragEnabled = computed(() => this.navFilter().trim().length === 0);
 
   protected readonly filterMenuItems = computed(() =>
     buildDatabaseFilterMenuItems(this.kindFilter(), this.showSystemObjects()),
@@ -224,6 +226,7 @@ export class DatabaseSidebarPanelComponent {
         maxDepth: SAVED_QUERY_MAX_FOLDER_DEPTH,
         canDrop: (ctx) => databaseCanDrop(ctx),
       },
+      visual: { indentPx: 12 },
     }),
   );
 
@@ -237,13 +240,14 @@ export class DatabaseSidebarPanelComponent {
         remapDropTarget: (ctx) => remapConnectionDropTarget(ctx),
       },
       drag: {
-        enabled: this.navFilter().trim().length === 0,
+        enabled: this.connectionDragEnabled(),
         canDrag: (ctx) =>
           ctx.node.data?.kind === 'folder' ||
           ctx.node.data?.kind === 'connection' ||
           ctx.node.kind === 'folder' ||
           ctx.node.kind === 'connection',
       },
+      visual: { indentPx: 12, animateExpand: false },
     }),
   );
 
@@ -257,10 +261,29 @@ export class DatabaseSidebarPanelComponent {
 
   protected readonly connectionSelectionIds = computed(() => {
     const tab = this.workspaceEditor.activeTab();
-    if (tab?.kind !== 'database' || !tab.resourceId.startsWith('dbc:')) {
-      return [];
+    if (tab?.kind === 'database') {
+      const table = parseDatabaseTableTabResourceId(tab.resourceId);
+      if (table) {
+        return [
+          connectionCatalogId(table.connectionId, 'table', {
+            schema: table.schema,
+            table: table.table,
+            name: table.table,
+          }),
+          connectionCatalogId(table.connectionId, 'view', {
+            schema: table.schema,
+            table: table.table,
+            name: table.table,
+          }),
+        ];
+      }
+      const connectionId = parseDatabaseConnectionTabResourceId(tab.resourceId);
+      if (connectionId) {
+        return [connectionId];
+      }
     }
-    return [tab.resourceId.slice(4)];
+    const focus = this.connectionFocusNodeId();
+    return focus ? [focus] : [];
   });
 
   protected readonly showConnectionList = computed(
@@ -275,7 +298,7 @@ export class DatabaseSidebarPanelComponent {
     if (this.treeNodes().length === 0) {
       return 'No saved queries yet. Right-click to add a folder or query.';
     }
-    if (this.navFilter().trim() || this.kindFilter() !== DEFAULT_DATABASE_SIDEBAR_FILTER) {
+    if (this.navFilterDebounced().trim() || this.kindFilter() !== DEFAULT_DATABASE_SIDEBAR_FILTER) {
       return 'No queries match your search.';
     }
     return 'No queries.';
@@ -285,7 +308,7 @@ export class DatabaseSidebarPanelComponent {
     if (this.connectionTreeNodes().length === 0) {
       return 'No connections yet. Right-click to add a folder or connection.';
     }
-    if (this.navFilter().trim()) {
+    if (this.navFilterDebounced().trim()) {
       return 'No connections match your search.';
     }
     return 'No connections.';
@@ -305,15 +328,11 @@ export class DatabaseSidebarPanelComponent {
         void this.ensureCatalogForExpanded(id);
       }
     });
-    afterNextRender(() => {
-      startEntranceStaggerAnimation(this.entranceStaggerPlay, this.entranceStaggerSettled, {
-        enabled: () => this.uiPreferences.entranceStaggerEnabled(),
-        destroyRef: this.destroyRef,
-        childCount: () =>
-          Math.max(1, this.filteredConnectionNodes().length + this.filteredNodes().length),
-      });
-    });
     this.destroyRef.onDestroy(() => {
+      if (this.searchDebounceTimer !== null) {
+        clearTimeout(this.searchDebounceTimer);
+        this.searchDebounceTimer = null;
+      }
       if (this.sessionSaveTimer !== null) {
         clearTimeout(this.sessionSaveTimer);
         this.sessionSaveTimer = null;
@@ -324,6 +343,14 @@ export class DatabaseSidebarPanelComponent {
 
   protected handleSearch(query: string): void {
     this.navFilter.set(query);
+    if (this.searchDebounceTimer !== null) {
+      clearTimeout(this.searchDebounceTimer);
+    }
+    this.searchDebounceTimer = setTimeout(() => {
+      this.searchDebounceTimer = null;
+      this.navFilterDebounced.set(query);
+      this.cdr.markForCheck();
+    }, SEARCH_DEBOUNCE_MS);
     this.cdr.markForCheck();
   }
 
@@ -402,16 +429,22 @@ export class DatabaseSidebarPanelComponent {
     if (!loc) {
       return;
     }
+    this.connectionFocusNodeId.set(event.nodeId);
     if (isConnectionFolderNode(loc.node)) {
       this.toggleConnectionFolderExpanded(event.nodeId);
       return;
     }
     if (isConnectionLeafNode(loc.node)) {
-      this.openConnection(event.nodeId);
+      this.setConnectionFolderExpanded(event.nodeId, true);
+      void this.ensureCatalogForExpanded(event.nodeId);
       return;
     }
     const kind = loc.node.data?.kind ?? loc.node.kind;
-    if (kind === 'table' || kind === 'view' || kind === 'schema' || kind === 'group') {
+    if (kind === 'table' || kind === 'view') {
+      this.openTableData(event.nodeId);
+      return;
+    }
+    if (kind === 'schema' || kind === 'group') {
       this.toggleConnectionFolderExpanded(event.nodeId);
     }
   }
@@ -705,6 +738,7 @@ export class DatabaseSidebarPanelComponent {
           void this.showTableDdl(nodeId);
         }
         break;
+      case 'show-structure':
       case 'expand':
         if (nodeId) {
           this.setConnectionFolderExpanded(nodeId, true);
@@ -801,7 +835,7 @@ export class DatabaseSidebarPanelComponent {
     }
     this.connectionsExpanded.set(true);
     this.renamingNodeId.set(nodeId);
-    const ancestors = collectFolderAncestorIds(this.connectionTreeNodes(), nodeId, (list, id) => {
+    const ancestors = collectFolderAncestorIds(this.persistedConnectionNodes(), nodeId, (list, id) => {
       const loc = findConnectionNode(list, id);
       return loc ? { parent: loc.parent } : null;
     });
@@ -919,7 +953,7 @@ export class DatabaseSidebarPanelComponent {
 
   private syncAllExpandedFlag(): void {
     const queryFolders = collectDatabaseFolderIdsFromNodes(this.treeNodes());
-    const connectionFolders = collectConnectionFolderIdsFromNodes(this.connectionTreeNodes());
+    const connectionFolders = collectConnectionFolderIdsFromNodes(this.persistedConnectionNodes());
     if (queryFolders.length === 0 && connectionFolders.length === 0) {
       this.allExpanded.set(false);
       return;

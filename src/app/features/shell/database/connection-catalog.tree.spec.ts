@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { emptyConnectionCatalogState } from '@app/core/database/database-catalog.types';
 
-import { buildConnectionCatalogChildren } from './connection-catalog.tree';
+import { buildConnectionCatalogChildren, createConnectionCatalogBuildMemo } from './connection-catalog.tree';
 
 describe('buildConnectionCatalogChildren', () => {
   it('omits empty Views and does not leave a loading child id', () => {
@@ -19,7 +19,7 @@ describe('buildConnectionCatalogChildren', () => {
     expect(schema?.children?.map((child) => child.label)).toEqual(['Tables']);
     expect(schema?.children?.some((child) => child.label.includes('Loading'))).toBe(false);
     const table = schema?.children?.[0]?.children?.[0];
-    expect(table?.subtitle).toBe('Loading…');
+    expect(table?.subtitle).toBeUndefined();
     expect(table?.children ?? []).toEqual([]);
   });
 
@@ -44,5 +44,37 @@ describe('buildConnectionCatalogChildren', () => {
       false,
     );
     expect(nodes).toEqual([]);
+  });
+
+  it('reuses unchanged table nodes when another table detail is patched', () => {
+    const tables = [
+      { schema: 'public', name: 'users', kind: 'table' as const },
+      { schema: 'public', name: 'orders', kind: 'table' as const },
+    ];
+    const catalog = {
+      ...emptyConnectionCatalogState(),
+      state: 'ready' as const,
+      schemas: [{ name: 'public', system: false }],
+      tablesBySchema: { public: tables },
+    };
+    const memo = createConnectionCatalogBuildMemo();
+    const first = buildConnectionCatalogChildren('c1', 'postgresql', catalog, false, memo);
+    const users = first[0]?.children?.[0]?.children?.[0];
+    const patched = {
+      ...catalog,
+      detailsByTable: {
+        'public.orders': {
+          state: 'ready' as const,
+          columns: [{ name: 'id', type: 'int', nullable: false, primaryKey: true }],
+          indexes: [],
+          foreignKeys: [],
+        },
+      },
+    };
+    const second = buildConnectionCatalogChildren('c1', 'postgresql', patched, false, memo);
+    expect(second[0]?.children?.[0]?.children?.[0]).toBe(users);
+    expect(second[0]?.children?.[0]?.children?.[1]?.children?.some((child) => child.label === 'Columns')).toBe(
+      true,
+    );
   });
 });

@@ -120,4 +120,12 @@ describe('TxDataGridComponent', () => {
     expect(host.querySelector('tx-inline-rename-input')).not.toBeNull();
     expect(document.activeElement).toBe(input);
   });
+
+  it('marks primary keys and keeps a sort affordance on every header', () => {
+    fixture.componentRef.setInput('primaryKeyColumns', ['id']);
+    fixture.detectChanges();
+    const host = fixture.nativeElement as HTMLElement;
+    expect(host.querySelector('.tx-data-grid__pk')?.textContent).toBe('PK');
+    expect(host.querySelectorAll('.tx-data-grid__sort').length).toBe(TX_DATA_GRID_DEMO_COLUMNS.length);
+  });
 });

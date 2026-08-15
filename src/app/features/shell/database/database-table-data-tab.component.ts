@@ -27,7 +27,7 @@ import { TxBannerComponent } from '@app/shared/components/feedback/tx-banner/tx-
 import { TxSpinnerComponent } from '@app/shared/components/feedback/tx-spinner/tx-spinner.component';
 import { TxButtonComponent } from '@app/shared/components/forms/tx-button/tx-button.component';
 import { TxDropdownComponent } from '@app/shared/components/forms/tx-dropdown/tx-dropdown.component';
-import { TxFormFieldComponent } from '@app/shared/components/forms/tx-form-field/tx-form-field.component';
+import { TxIconComponent } from '@app/shared/components/forms/tx-icon/tx-icon.component';
 import { TxSuggestInputComponent } from '@app/shared/components/forms/tx-suggest-input/tx-suggest-input.component';
 import { TxConfirmDialogComponent } from '@app/shared/components/overlays/tx-confirm-dialog/tx-confirm-dialog.component';
 import { TxContextMenuComponent } from '@app/shared/components/overlays/tx-context-menu/tx-context-menu.component';
@@ -52,6 +52,7 @@ import {
   normalizeDatabaseQueryResult,
   normalizeTableDataWhereFilter,
   parseDatabaseTableTabResourceId,
+  qualifySqlTableName,
   refuseTableDml,
   tableDataPkIndexes,
   tableDataWhereFilterError,
@@ -76,7 +77,7 @@ import {
     TxBannerComponent,
     TxButtonComponent,
     TxDropdownComponent,
-    TxFormFieldComponent,
+    TxIconComponent,
     TxSuggestInputComponent,
     TxSpinnerComponent,
     TxDataGridComponent,
@@ -209,7 +210,15 @@ export class DatabaseTableDataTabComponent {
     label: String(size),
   }));
 
-  protected readonly resultMeta = computed(() => {
+  protected readonly qualifiedName = computed(() => {
+    const target = this.target();
+    if (!target) {
+      return '';
+    }
+    return qualifySqlTableName(target.schema, target.table, this.connection()?.type);
+  });
+
+  protected readonly rowRangeLabel = computed(() => {
     const table = this.table();
     if (!table) {
       return '';
@@ -217,15 +226,23 @@ export class DatabaseTableDataTabComponent {
     const from = table.rows.length === 0 ? 0 : this.pageOffset() + 1;
     const to = this.pageOffset() + table.rows.length;
     const total = table.hasMore ? `${to}+` : String(to);
-    const range = table.rows.length === 0 ? 'No rows' : `Showing ${from}–${to} of ${total}`;
-    const duration = this.durationMs() != null ? ` · ${this.durationMs()} ms` : '';
-    const filtered = this.whereApplied().trim() ? ' · WHERE' : '';
-    return `${range}${filtered}${duration}`;
+    return table.rows.length === 0 ? '0 of 0' : `${from}–${to} of ${total}`;
   });
+
+  protected readonly durationLabel = computed(() => {
+    const ms = this.durationMs();
+    return ms == null ? '' : `${ms} ms`;
+  });
+
+  protected readonly whereActive = computed(() => this.whereApplied().trim().length > 0);
 
   protected readonly canGoPrev = computed(() => this.pageOffset() > 0 && !this.running());
 
   protected readonly canGoNext = computed(() => Boolean(this.table()?.hasMore) && !this.running());
+
+  protected readonly canDeleteSelected = computed(
+    () => this.editable() && this.gridSelection() !== null && !this.running() && !this.submitting(),
+  );
 
   protected readonly exportMenuItems = computed((): readonly TxContextMenuItem[] => {
     const table = this.table();
@@ -288,6 +305,18 @@ export class DatabaseTableDataTabComponent {
       return;
     }
     this.pageOffset.update((offset) => Math.max(0, offset - this.pageSize()));
+    void this.reload();
+  }
+
+  protected handleFirstPage(): void {
+    if (!this.canGoPrev()) {
+      return;
+    }
+    this.pageOffset.set(0);
+    void this.reload();
+  }
+
+  protected handleRefresh(): void {
     void this.reload();
   }
 
@@ -381,6 +410,13 @@ export class DatabaseTableDataTabComponent {
       return;
     }
     this.draft.update((draft) => addTableDataInsertRow(draft, table.columns.length));
+  }
+
+  protected handleDeleteSelectedRow(): void {
+    const selection = this.gridSelection();
+    if (selection) {
+      this.handleDeleteRow(selection.startRow);
+    }
   }
 
   protected handleDeleteRow(rowIndex: number): void {

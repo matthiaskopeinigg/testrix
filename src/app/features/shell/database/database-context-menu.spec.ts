@@ -14,4 +14,20 @@ describe('database sidebar context menus', () => {
     const items = buildDatabaseNodeContextMenu('folder', false);
     expect(items.map((item) => item.id)).toContain('new-folder');
   });
+
+  it('opens connection settings from the context menu, not as Open catalog', () => {
+    const items = buildConnectionNodeContextMenu('connection', true);
+    const ids = items.map((item) => item.id);
+    expect(ids).toContain('edit');
+    expect(items.find((item) => item.id === 'edit')?.label).toBe('Connection settings');
+    expect(ids).toContain('open');
+  });
+
+  it('offers table information without requiring a click on the table row', () => {
+    const items = buildConnectionNodeContextMenu('table', false);
+    const ids = items.map((item) => item.id);
+    expect(ids).toContain('show-structure');
+    expect(ids).toContain('open-data');
+    expect(items.find((item) => item.id === 'show-structure')?.label).toBe('Table information');
+  });
 });

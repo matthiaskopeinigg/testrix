@@ -33,6 +33,7 @@ interface NodeLocation<TMeta> {
  */
 export class TxTreeModel<TMeta = unknown> {
   private nodes: MutableTxTreeNode<TMeta>[] = [];
+  private inputNodes: readonly TxTreeNode<TMeta>[] | null = null;
   private expandedIds = new Set<string>();
   private config: TxTreeConfig<TMeta>;
 
@@ -49,15 +50,28 @@ export class TxTreeModel<TMeta = unknown> {
     return this.config;
   }
 
-  /** Replaces the nested tree and optionally seeds expansion. */
-  setNodes(nodes: readonly TxTreeNode<TMeta>[], options?: { resetExpansion?: boolean }): void {
-    this.nodes = cloneNodes(nodes);
-    if (options?.resetExpansion ?? false) {
+  /**
+   * Replaces the nested tree and optionally seeds expansion.
+   *
+   * @returns `false` when `nodes` is the same reference as the last input and
+   * expansion was not reset, so callers can skip visible-row rebuilds.
+   */
+  setNodes(nodes: readonly TxTreeNode<TMeta>[], options?: { resetExpansion?: boolean }): boolean {
+    const resetExpansion = options?.resetExpansion ?? false;
+    if (nodes === this.inputNodes && !resetExpansion) {
+      return false;
+    }
+    if (nodes !== this.inputNodes) {
+      this.nodes = cloneNodesPreserving(nodes, this.inputNodes ?? undefined, this.nodes);
+      this.inputNodes = nodes;
+    }
+    if (resetExpansion) {
       this.expandedIds = new Set();
       if (this.config.expansion.defaultExpanded) {
         this.collectExpandableIds(this.nodes, this.expandedIds);
       }
     }
+    return true;
   }
 
   getNodes(): TxTreeNode<TMeta>[] {
@@ -564,6 +578,46 @@ function cloneNodes<TMeta>(nodes: readonly TxTreeNode<TMeta>[]): MutableTxTreeNo
     ...node,
     children: node.children ? cloneNodes(node.children) : undefined,
   }));
+}
+
+function mapNodesById<T extends { readonly id: string }>(
+  nodes: readonly T[] | undefined,
+): Map<string, T> {
+  const map = new Map<string, T>();
+  if (!nodes) {
+    return map;
+  }
+  for (const node of nodes) {
+    map.set(node.id, node);
+  }
+  return map;
+}
+
+/**
+ * Deep-clones `nodes` while reusing previous clones for input nodes that kept
+ * the same object identity (or whose `children` array did).
+ */
+function cloneNodesPreserving<TMeta>(
+  nodes: readonly TxTreeNode<TMeta>[],
+  prevInput: readonly TxTreeNode<TMeta>[] | undefined,
+  prevClone: readonly MutableTxTreeNode<TMeta>[] | undefined,
+): MutableTxTreeNode<TMeta>[] {
+  const prevInById = mapNodesById(prevInput);
+  const prevOutById = mapNodesById(prevClone);
+  return nodes.map((node) => {
+    const prevIn = prevInById.get(node.id);
+    const prevOut = prevOutById.get(node.id);
+    if (node === prevIn && prevOut) {
+      return prevOut;
+    }
+    const children =
+      node.children === prevIn?.children && prevOut?.children
+        ? prevOut.children
+        : node.children
+          ? cloneNodesPreserving(node.children, prevIn?.children, prevOut?.children)
+          : undefined;
+    return { ...node, children };
+  });
 }
 
 function findLocation<TMeta>(

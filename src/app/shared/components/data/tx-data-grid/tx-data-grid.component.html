@@ -14,10 +14,19 @@
               [attr.aria-sort]="sortDirection($index) === 'asc' ? 'ascending' : sortDirection($index) === 'desc' ? 'descending' : 'none'"
             >
               <span class="tx-data-grid__header">
-                <span class="tx-data-grid__header-label">{{ col }}</span>
-                @if (sortDirection($index); as dir) {
-                  <tx-icon [name]="dir === 'asc' ? 'chevronUp' : 'chevronDown'" [size]="12" aria-hidden="true" />
+                @if (isPrimaryKey($index)) {
+                  <span class="tx-data-grid__pk" title="Primary key">PK</span>
+                } @else if (showColumnGlyphs()) {
+                  <tx-icon name="grid" [size]="11" class="tx-data-grid__col-icon" aria-hidden="true" />
                 }
+                <span class="tx-data-grid__header-label">{{ col }}</span>
+                <tx-icon
+                  class="tx-data-grid__sort"
+                  [class.tx-data-grid__sort--active]="sortDirection($index) !== null"
+                  [name]="sortDirection($index) === 'asc' ? 'chevronUp' : 'chevronDown'"
+                  [size]="12"
+                  aria-hidden="true"
+                />
               </span>
               @if (columnType($index); as type) {
                 <span class="tx-data-grid__header-type">{{ type }}</span>

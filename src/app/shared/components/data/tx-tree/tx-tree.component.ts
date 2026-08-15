@@ -132,7 +132,9 @@ export class TxTreeComponent<TMeta = unknown> {
         this.skipNextNodesInputSync = false;
         return;
       }
-      this.model.setNodes(nextNodes, { resetExpansion: false });
+      if (!this.model.setNodes(nextNodes, { resetExpansion: false })) {
+        return;
+      }
       this.refreshRows();
     });
 

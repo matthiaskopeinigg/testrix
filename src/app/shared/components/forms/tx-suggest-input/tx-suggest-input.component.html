@@ -1,4 +1,10 @@
 <div class="tx-suggest-input">
+  @if (inlineSuffix(); as suffix) {
+    <div #preview class="tx-suggest-input__preview" aria-hidden="true">
+      <span class="tx-suggest-input__preview-spacer">{{ value() }}</span><span class="tx-suggest-input__ghost">{{ suffix }}</span>
+    </div>
+  }
+
   <input
     #nativeInput
     class="tx-suggest-input__control"
@@ -9,14 +15,22 @@
     [placeholder]="placeholder()"
     [disabled]="disabled()"
     [attr.aria-label]="ariaLabel() || null"
-    [attr.aria-expanded]="completionOpen()"
-    [attr.aria-controls]="completionOpen() ? effectiveId() + '-completion' : null"
-    [attr.aria-autocomplete]="completionOpen() ? 'list' : null"
+    [attr.aria-expanded]="isInlineCompletion() ? null : completionOpen()"
+    [attr.aria-controls]="completionOpen() && !isInlineCompletion() ? effectiveId() + '-completion' : null"
+    [attr.aria-autocomplete]="isInlineCompletion() ? 'inline' : completionOpen() ? 'list' : null"
+    [attr.aria-describedby]="inlineSuffix() ? effectiveId() + '-ghost' : null"
     (input)="handleInput($event)"
+    (scroll)="handleScroll()"
     (focus)="handleFocus()"
+    (click)="handleClick()"
+    (keyup)="handleClick()"
     (keydown)="handleKeydown($event)"
     (blur)="handleBlur()"
   />
+
+  @if (inlineSuffix(); as suffix) {
+    <span [id]="effectiveId() + '-ghost'" class="tx-suggest-input__sr-only">Suggested completion: {{ value() }}{{ suffix }}</span>
+  }
 
   @if (showClear()) {
     <button
@@ -31,7 +45,7 @@
     </button>
   }
 
-  @if (completionOpen()) {
+  @if (completionOpen() && !isInlineCompletion()) {
     <div
       #completionPanel
       [id]="effectiveId() + '-completion'"

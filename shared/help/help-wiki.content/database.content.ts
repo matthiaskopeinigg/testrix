@@ -46,13 +46,13 @@ export const HELP_WIKI_DATABASE_SECTIONS: readonly HelpWikiSection[] = [
     blocks: [
       {
         type: 'paragraph',
-        text: 'A connection is a saved profile for PostgreSQL, MySQL, SQL Server, SQLite, or Redis. Click a connection to open its editor tab. Expand it to browse the live catalog (schemas, tables, views, columns).',
+        text: 'A connection is a saved profile for PostgreSQL, MySQL, SQL Server, SQLite, or Redis. Click a connection to expand its catalog (schemas, tables, views). Open Connection settings from the context menu to edit host, credentials, and TLS.',
       },
       {
         type: 'list',
         items: [
           'New folder / New connection — right-click the Connections list or a folder. The connection editor can also move a connection into an existing folder.',
-          'Edit — host, port, user, password, database name, SQLite file path, TLS, and timeouts.',
+          'Connection settings — host, port, user, password, database name, SQLite file path, TLS, and timeouts (context menu).',
           'Test connection — probes the server without running a query.',
           'Connect on boot — Testrix probes the connection when the app starts.',
           'Open catalog — expands schemas and objects. Refresh reloads the catalog.',
@@ -107,14 +107,14 @@ export const HELP_WIKI_DATABASE_SECTIONS: readonly HelpWikiSection[] = [
     blocks: [
       {
         type: 'paragraph',
-        text: 'Open data on a table or view (double-click the object, or use the context menu) opens a data tab. Testrix loads a paged SELECT so you can inspect and edit rows without writing SQL first.',
+        text: 'Click a table or view to open a data tab. Columns, indexes, and foreign keys stay collapsed until you choose Table information from the context menu. Testrix loads a paged SELECT so you can inspect and edit rows without writing SQL first.',
       },
       {
         type: 'list',
         items: [
           'The WHERE bar suggests column names at the start of a predicate. Press Enter on an empty filter to load all rows.',
           'Double-click a cell to edit it. Submit writes the pending DML; Revert discards unsaved cell edits.',
-          'Use Open data from a connection when you want to pick a table from the catalog first.',
+          'Table information on a table or view expands Columns, Indexes, and related objects.',
           'Show DDL on a table or view copies or displays the object definition when the driver supports it.',
         ],
       },

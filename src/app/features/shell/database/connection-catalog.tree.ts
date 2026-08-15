@@ -14,50 +14,90 @@ import type { ConnectionTreeNode } from './connection-tree.types';
 
 export type { ConnectionCatalogState, ConnectionCatalogTableDetail } from '@app/core/database/database-catalog.types';
 
+const EMPTY_CATALOG_CHILDREN: ConnectionTreeNode[] = [];
+
+/**
+ * Per-connection memo so a table-detail patch reuses unchanged schema/table nodes.
+ */
+export interface ConnectionCatalogBuildMemo {
+  readonly nodes: Map<string, ConnectionTreeNode>;
+  readonly tableDetails: Map<string, ConnectionCatalogTableDetail | undefined>;
+  readonly schemaTables: Map<string, readonly DatabaseCatalogTable[] | undefined>;
+}
+
+/** Creates an empty {@link ConnectionCatalogBuildMemo}. */
+export function createConnectionCatalogBuildMemo(): ConnectionCatalogBuildMemo {
+  return {
+    nodes: new Map(),
+    tableDetails: new Map(),
+    schemaTables: new Map(),
+  };
+}
 
 /**
  * Builds live object-explorer children under a connection row.
+ *
+ * When `memo` is provided, schema/table nodes are reused while their catalog
+ * inputs keep the same object identity.
  */
 export function buildConnectionCatalogChildren(
   connectionId: string,
   type: DatabaseType | undefined,
   catalog: ConnectionCatalogState | undefined,
   showSystemObjects: boolean,
+  memo?: ConnectionCatalogBuildMemo,
 ): ConnectionTreeNode[] {
   if (type === 'redis') {
-    return [
-      {
-        id: connectionCatalogId(connectionId, 'keys', { name: 'keys' }),
-        label: 'Keys',
-        kind: 'keys',
-        icon: 'hash',
-        subtitle: 'Use Redis commands in a query tab',
-        draggable: false,
-        droppable: false,
-        data: { kind: 'keys', connectionId },
-      },
-    ];
+    const id = connectionCatalogId(connectionId, 'keys', { name: 'keys' });
+    const prev = memo?.nodes.get(id);
+    if (prev) {
+      return [prev];
+    }
+    const keys: ConnectionTreeNode = {
+      id,
+      label: 'Keys',
+      kind: 'keys',
+      icon: 'hash',
+      subtitle: 'Use Redis commands in a query tab',
+      draggable: false,
+      droppable: false,
+      data: { kind: 'keys', connectionId },
+    };
+    memo?.nodes.set(id, keys);
+    return [keys];
   }
   if (!catalog || catalog.state === 'idle' || catalog.state === 'loading') {
-    return [];
+    memo?.nodes.clear();
+    memo?.tableDetails.clear();
+    memo?.schemaTables.clear();
+    return EMPTY_CATALOG_CHILDREN;
   }
   if (catalog.state === 'error') {
     return [statusNode(connectionId, 'Could not load objects', catalog.error)];
   }
   if (type === 'sqlite') {
     const tables = filterTables(catalog.tablesBySchema['main'] ?? flattenTables(catalog.tablesBySchema), true);
-    return buildTableGroups(connectionId, 'main', tables, catalog);
+    return buildTableGroups(connectionId, 'main', tables, catalog, memo);
   }
   const schemas = catalog.schemas.filter((schema) => showSystemObjects || !schema.system);
   if (schemas.length === 0) {
     return [statusNode(connectionId, 'No schemas')];
   }
   return schemas.map((schema) => {
+    const id = connectionCatalogId(connectionId, 'schema', { schema: schema.name, name: schema.name });
     const schemaTables = catalog.tablesBySchema[schema.name];
     const tables = filterTables(schemaTables, showSystemObjects);
     const loadingSchema = schemaTables === undefined;
-    return {
-      id: connectionCatalogId(connectionId, 'schema', { schema: schema.name, name: schema.name }),
+    const prev = memo?.nodes.get(id);
+    if (
+      prev &&
+      memo?.schemaTables.get(id) === schemaTables &&
+      (loadingSchema || schemaTableDetailsUnchanged(connectionId, tables, catalog, memo))
+    ) {
+      return prev;
+    }
+    const node: ConnectionTreeNode = {
+      id,
       label: schema.name,
       kind: 'schema',
       icon: 'layers' as TxIconName,
@@ -67,8 +107,11 @@ export function buildConnectionCatalogChildren(
       data: { kind: 'schema', connectionId, schema: schema.name },
       children: loadingSchema
         ? [statusNode(connectionId, 'Loading tables…', undefined, schema.name)]
-        : buildTableGroups(connectionId, schema.name, tables, catalog),
+        : buildTableGroups(connectionId, schema.name, tables, catalog, memo),
     };
+    memo?.nodes.set(id, node);
+    memo?.schemaTables.set(id, schemaTables);
+    return node;
   });
 }
 
@@ -85,22 +128,54 @@ function filterTables(
   return (tables ?? []).filter((table) => showSystemObjects || !isSystemSchemaName(table.schema));
 }
 
+function schemaTableDetailsUnchanged(
+  connectionId: string,
+  tables: readonly DatabaseCatalogTable[],
+  catalog: ConnectionCatalogState,
+  memo: ConnectionCatalogBuildMemo,
+): boolean {
+  for (const table of tables) {
+    const kind = table.kind === 'view' ? 'view' : 'table';
+    const id = connectionCatalogId(connectionId, kind, {
+      schema: table.schema,
+      table: table.name,
+      name: table.name,
+    });
+    if (memo.tableDetails.get(id) !== catalog.detailsByTable[catalogTableKey(table.schema, table.name)]) {
+      return false;
+    }
+  }
+  return true;
+}
+
 function buildTableGroups(
   connectionId: string,
   schema: string,
   tables: readonly DatabaseCatalogTable[],
   catalog: ConnectionCatalogState,
+  memo?: ConnectionCatalogBuildMemo,
 ): ConnectionTreeNode[] {
   const baseTables = tables.filter((table) => table.kind === 'table');
   const views = tables.filter((table) => table.kind === 'view');
   const groups: ConnectionTreeNode[] = [];
   if (baseTables.length > 0) {
-    groups.push(groupNode(connectionId, schema, 'tables', 'Tables', baseTables, catalog, 'list'));
+    groups.push(groupNode(connectionId, schema, 'tables', 'Tables', baseTables, catalog, 'list', memo));
   }
   if (views.length > 0) {
-    groups.push(groupNode(connectionId, schema, 'views', 'Views', views, catalog, 'fileText'));
+    groups.push(groupNode(connectionId, schema, 'views', 'Views', views, catalog, 'fileText', memo));
   }
   return groups;
+}
+
+function sameChildList(
+  previous: readonly ConnectionTreeNode[] | undefined,
+  next: readonly ConnectionTreeNode[],
+): boolean {
+  return (
+    !!previous &&
+    previous.length === next.length &&
+    previous.every((child, index) => child === next[index])
+  );
 }
 
 function groupNode(
@@ -111,42 +186,54 @@ function groupNode(
   tables: readonly DatabaseCatalogTable[],
   catalog: ConnectionCatalogState,
   icon: TxIconName,
+  memo?: ConnectionCatalogBuildMemo,
 ): ConnectionTreeNode {
-  return {
-    id: connectionCatalogId(connectionId, 'group', { schema, group, name: group }),
+  const id = connectionCatalogId(connectionId, 'group', { schema, group, name: group });
+  const children = tables.map((table) => tableNode(connectionId, table, catalog, memo));
+  const subtitle = String(tables.length);
+  const prev = memo?.nodes.get(id);
+  if (prev && prev.subtitle === subtitle && sameChildList(prev.children, children)) {
+    return prev;
+  }
+  const node: ConnectionTreeNode = {
+    id,
     label,
     kind: 'group',
     icon,
-    subtitle: String(tables.length),
+    subtitle,
     draggable: false,
     droppable: false,
     data: { kind: 'group', connectionId, schema, group },
-    children: tables.map((table) => tableNode(connectionId, table, catalog)),
+    children,
   };
+  memo?.nodes.set(id, node);
+  return node;
 }
 
 function tableNode(
   connectionId: string,
   table: DatabaseCatalogTable,
   catalog: ConnectionCatalogState,
+  memo?: ConnectionCatalogBuildMemo,
 ): ConnectionTreeNode {
   const kind = table.kind === 'view' ? 'view' : 'table';
+  const id = connectionCatalogId(connectionId, kind, {
+    schema: table.schema,
+    table: table.name,
+    name: table.name,
+  });
   const detail = catalog.detailsByTable[catalogTableKey(table.schema, table.name)];
+  const prev = memo?.nodes.get(id);
+  if (prev && memo?.tableDetails.get(id) === detail) {
+    return prev;
+  }
   const loadingDetail = !detail || detail.state === 'idle' || detail.state === 'loading';
-  return {
-    id: connectionCatalogId(connectionId, kind, {
-      schema: table.schema,
-      table: table.name,
-      name: table.name,
-    }),
+  const node: ConnectionTreeNode = {
+    id,
     label: table.name,
     kind,
     icon: kind === 'view' ? 'fileText' : 'database',
-    subtitle: loadingDetail
-      ? 'Loading…'
-      : detail.state === 'ready'
-        ? String(detail.columns.length)
-        : undefined,
+    subtitle: detail?.state === 'loading' ? 'Loading…' : undefined,
     draggable: false,
     droppable: false,
     data: {
@@ -155,8 +242,11 @@ function tableNode(
       schema: table.schema,
       table: table.name,
     },
-    children: loadingDetail ? [] : tableDetailChildren(connectionId, table, detail),
+    children: loadingDetail ? EMPTY_CATALOG_CHILDREN : tableDetailChildren(connectionId, table, detail),
   };
+  memo?.nodes.set(id, node);
+  memo?.tableDetails.set(id, detail);
+  return node;
 }
 
 function tableDetailChildren(

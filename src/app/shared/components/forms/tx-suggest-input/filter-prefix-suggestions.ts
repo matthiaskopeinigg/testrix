@@ -23,3 +23,16 @@ export function filterPrefixSuggestions(
   }
   return matches;
 }
+
+/**
+ * Remainder of {@link suggestion} after a typed {@link query} prefix, for inline ghost text.
+ */
+export function inlineCompletionSuffix(query: string, suggestion: string): string {
+  if (!query || query.length >= suggestion.length) {
+    return '';
+  }
+  if (!suggestion.toLowerCase().startsWith(query.toLowerCase())) {
+    return '';
+  }
+  return suggestion.slice(query.length);
+}

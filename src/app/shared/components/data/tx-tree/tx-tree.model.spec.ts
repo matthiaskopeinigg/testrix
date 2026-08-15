@@ -471,4 +471,26 @@ describe('TxTreeModel', () => {
     const parent = result!.nodes.find((n) => n.id === 'parent');
     expect(parent?.children?.map((n) => n.id)).toEqual(['nested', 'req']);
   });
+
+  it('skips cloning when setNodes receives the same root reference', () => {
+    const model = new TxTreeModel(mergeTxTreeConfig());
+    expect(model.setNodes(SAMPLE)).toBe(true);
+    model.expand('root');
+    const firstClone = model.getNodes();
+    expect(model.setNodes(SAMPLE)).toBe(false);
+    expect(model.getNodes()).toBe(firstClone);
+    expect(model.isExpanded('root')).toBe(true);
+  });
+
+  it('reuses cloned subtrees when input node identity is unchanged', () => {
+    const model = new TxTreeModel(mergeTxTreeConfig());
+    const child: TxTreeNode = { id: 'a', label: 'A', kind: 'leaf' };
+    const first: TxTreeNode[] = [{ id: 'root', label: 'Root', kind: 'folder', children: [child] }];
+    model.setNodes(first);
+    const clonedChild = model.getNodes()[0]?.children?.[0];
+    const second: TxTreeNode[] = [{ id: 'root', label: 'Root 2', kind: 'folder', children: [child] }];
+    expect(model.setNodes(second)).toBe(true);
+    expect(model.getNodes()[0]?.label).toBe('Root 2');
+    expect(model.getNodes()[0]?.children?.[0]).toBe(clonedChild);
+  });
 });

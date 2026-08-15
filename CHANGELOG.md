@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0-beta.7] - 2026-08-15
+
+### Changed
+
+- Database sidebar: click a connection to expand its catalog; Connection settings is on the context menu
+- Click a table or view to open data; Table information / View information expands structure
+- Compact connection tree rows and a tighter table-data toolbar with a full-width WHERE row
+- WHERE column suggestions complete inline (ghost remainder) instead of a popup
+- Local Postgres seed includes larger sample tables (`actors`, `films`, `customer_profiles`)
+
+### Fixed
+
+- Database sidebar stuttering while catalogs and table details load
+- WHERE field losing focus after Enter
+- Typed WHERE text turning gray while a suggestion remainder is shown
+- Table data grid clipping horizontal scroll
+
 ## [1.0.0-beta.6] - 2026-08-15
 
 ### Changed
@@ -74,7 +91,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Initial public beta of Testrix: local-first desktop API client (HTTP, WebSocket, collections, environments, test suites, load tests, mocks, and capture).
 
-[Unreleased]: https://github.com/matthiaskopeinigg/testrix/compare/v1.0.0-beta.6...HEAD
+[Unreleased]: https://github.com/matthiaskopeinigg/testrix/compare/v1.0.0-beta.7...HEAD
+[1.0.0-beta.7]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.0-beta.7
 [1.0.0-beta.6]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.0-beta.6
 [1.0.0-beta.5]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.0-beta.5
 [1.0.0-beta.4]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.0-beta.4

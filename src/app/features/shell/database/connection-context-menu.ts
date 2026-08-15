@@ -13,6 +13,7 @@ export type ConnectionContextMenuAction =
   | 'open-data'
   | 'copy-name'
   | 'show-ddl'
+  | 'show-structure'
   | 'rename'
   | 'duplicate'
   | 'delete'
@@ -55,7 +56,7 @@ export function buildConnectionNodeContextMenu(
       { id: 'new-query', label: 'New query', icon: 'fileText' },
       { id: 'refresh', label: 'Refresh', icon: 'refresh' },
       { id: 'test', label: 'Test connection', icon: 'play' },
-      { id: 'edit', label: 'Edit', icon: 'edit' },
+      { id: 'edit', label: 'Connection settings', icon: 'settings' },
       { id: 'sep-1', label: '', separator: true },
       { id: 'rename', label: 'Rename', icon: 'edit' },
       { id: 'duplicate', label: 'Duplicate', icon: 'copy' },
@@ -78,6 +79,7 @@ export function buildConnectionNodeContextMenu(
   if (kind === 'table') {
     return [
       { id: 'open-data', label: 'Open data', icon: 'play' },
+      { id: 'show-structure', label: 'Table information', icon: 'info' },
       { id: 'new-query', label: 'New query', icon: 'fileText' },
       { id: 'refresh', label: 'Refresh', icon: 'refresh' },
       { id: 'show-ddl', label: 'Show DDL', icon: 'fileText' },
@@ -88,6 +90,7 @@ export function buildConnectionNodeContextMenu(
   if (kind === 'view') {
     return [
       { id: 'open-data', label: 'Open data', icon: 'play' },
+      { id: 'show-structure', label: 'View information', icon: 'info' },
       { id: 'new-query', label: 'New query', icon: 'fileText' },
       { id: 'show-ddl', label: 'Show DDL', icon: 'fileText' },
       { id: 'copy-name', label: 'Copy name', icon: 'copy' },

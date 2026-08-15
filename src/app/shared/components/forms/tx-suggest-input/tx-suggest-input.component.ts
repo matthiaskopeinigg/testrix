@@ -22,7 +22,7 @@ import {
   type TxCompletionPlacement,
 } from '../tx-completion-popup/tx-completion-popup-placement';
 
-import { filterPrefixSuggestions } from './filter-prefix-suggestions';
+import { filterPrefixSuggestions, inlineCompletionSuffix } from './filter-prefix-suggestions';
 import {
   resolveSuggestInputAutoClose,
   resolveSuggestInputAutoCloseBackspace,
@@ -40,6 +40,7 @@ import { canSuggestSqlColumn, lastIdentifierToken } from './tx-suggest-input-tok
   host: {
     class: 'tx-suggest-input-host',
     '[class.tx-suggest-input-host--clearable]': 'showClear()',
+    '[class.tx-suggest-input-host--ghost]': '!!inlineSuffix()',
   },
   providers: [
     {
@@ -61,6 +62,8 @@ export class TxSuggestInputComponent implements ControlValueAccessor {
   readonly completionLabel = input('Suggestions');
   /** `token` completes the identifier at the caret instead of the whole value. */
   readonly matchMode = input<'full' | 'token'>('full');
+  /** `inline` shows a gray remainder after the caret instead of a popup list. */
+  readonly completionStyle = input<'popup' | 'inline'>('popup');
   /** When true, `'` / `"` / `(` insert a matching closer. */
   readonly autoClose = input(false);
   readonly clearable = input(false);
@@ -76,10 +79,11 @@ export class TxSuggestInputComponent implements ControlValueAccessor {
   private readonly hostEl = inject(ElementRef<HTMLElement>);
   private readonly nativeInput = viewChild<ElementRef<HTMLInputElement>>('nativeInput');
   private readonly completionPanel = viewChild<ElementRef<HTMLElement>>('completionPanel');
+  private readonly previewEl = viewChild<ElementRef<HTMLElement>>('preview');
 
   constructor() {
     const onScroll = (): void => {
-      if (this.completionOpen()) {
+      if (this.completionOpen() && !this.isInlineCompletion()) {
         this.positionCompletion();
       }
     };
@@ -99,17 +103,37 @@ export class TxSuggestInputComponent implements ControlValueAccessor {
   );
   protected readonly completionItems = signal<readonly string[]>([]);
   protected readonly completionIndex = signal(0);
+  private readonly caret = signal(0);
 
   protected readonly showClear = computed(
     () => this.clearable() && this.value().length > 0 && !this.disabled(),
   );
 
+  protected readonly isInlineCompletion = computed(() => this.completionStyle() === 'inline');
+
+  /** Gray remainder shown after the typed token in inline mode. */
+  protected readonly inlineSuffix = computed(() => {
+    if (!this.isInlineCompletion() || !this.completionOpen()) {
+      return '';
+    }
+    const item = this.completionItems()[this.completionIndex()];
+    if (!item) {
+      return '';
+    }
+    const token = lastIdentifierToken(this.value(), this.caret());
+    if (!token.text || this.caret() !== token.end || token.end !== this.value().length) {
+      return '';
+    }
+    return inlineCompletionSuffix(token.text, item);
+  });
+
+  private skipNextFocusRefresh = false;
   private onChange: (value: string) => void = () => {};
   private onTouched: () => void = () => {};
 
   @HostListener('window:resize')
   onWindowResize(): void {
-    if (this.completionOpen()) {
+    if (this.completionOpen() && !this.isInlineCompletion()) {
       this.positionCompletion();
     }
   }
@@ -131,13 +155,33 @@ export class TxSuggestInputComponent implements ControlValueAccessor {
   }
 
   protected handleInput(event: Event): void {
-    const raw = (event.target as HTMLInputElement).value;
-    this.value.set(raw);
-    this.onChange(raw);
+    const el = event.target as HTMLInputElement;
+    this.value.set(el.value);
+    this.caret.set(el.selectionStart ?? el.value.length);
+    this.onChange(el.value);
     this.refreshCompletion();
   }
 
+  protected handleScroll(): void {
+    const inputEl = this.nativeInput()?.nativeElement;
+    const preview = this.previewEl()?.nativeElement;
+    if (!inputEl || !preview) {
+      return;
+    }
+    preview.scrollLeft = inputEl.scrollLeft;
+  }
+
   protected handleFocus(): void {
+    this.syncCaret();
+    if (this.skipNextFocusRefresh) {
+      this.skipNextFocusRefresh = false;
+      return;
+    }
+    this.refreshCompletion();
+  }
+
+  protected handleClick(): void {
+    this.syncCaret();
     this.refreshCompletion();
   }
 
@@ -163,7 +207,9 @@ export class TxSuggestInputComponent implements ControlValueAccessor {
 
     if (ev.key === 'Enter' && !this.completionOpen()) {
       ev.preventDefault();
+      ev.stopPropagation();
       this.submitted.emit();
+      this.keepInputFocused();
       return;
     }
 
@@ -187,24 +233,30 @@ export class TxSuggestInputComponent implements ControlValueAccessor {
       this.completionIndex.update((index) => Math.max(index - 1, 0));
       return;
     }
+    if (ev.key === 'ArrowRight' && this.inlineSuffix()) {
+      const inputEl = this.nativeInput()?.nativeElement;
+      if (inputEl && inputEl.selectionStart === this.value().length) {
+        ev.preventDefault();
+        this.acceptActiveCompletion();
+      }
+      return;
+    }
     if (ev.key === 'Enter') {
       ev.preventDefault();
+      ev.stopPropagation();
       if (this.value().trim() !== '') {
-        const item = this.completionItems()[this.completionIndex()];
-        if (item) {
-          this.applyCompletion(item);
+        if (this.acceptActiveCompletion()) {
           return;
         }
       }
       this.closeCompletion();
       this.submitted.emit();
+      this.keepInputFocused();
       return;
     }
     if (ev.key === 'Tab') {
-      const item = this.completionItems()[this.completionIndex()];
-      if (item) {
+      if (this.acceptActiveCompletion()) {
         ev.preventDefault();
-        this.applyCompletion(item);
       }
     }
   }
@@ -229,6 +281,18 @@ export class TxSuggestInputComponent implements ControlValueAccessor {
         : { value: item, caret: item.length };
     this.commitValue(next.value, next.caret);
     this.closeCompletion();
+  }
+
+  private acceptActiveCompletion(): boolean {
+    const item = this.completionItems()[this.completionIndex()];
+    if (!item) {
+      return false;
+    }
+    if (this.isInlineCompletion() && !this.inlineSuffix()) {
+      return false;
+    }
+    this.applyCompletion(item);
+    return true;
   }
 
   writeValue(value: unknown): void {
@@ -298,6 +362,35 @@ export class TxSuggestInputComponent implements ControlValueAccessor {
     inputEl.focus({ preventScroll: true });
     const pos = Math.max(0, Math.min(caret, next.length));
     inputEl.setSelectionRange(pos, pos);
+    this.caret.set(pos);
+  }
+
+  /** Keeps the caret in the field after Enter submits a search. */
+  private keepInputFocused(): void {
+    const restore = (): void => {
+      const inputEl = this.nativeInput()?.nativeElement;
+      if (!inputEl || inputEl.disabled) {
+        return;
+      }
+      if (document.activeElement !== inputEl) {
+        this.skipNextFocusRefresh = true;
+        const start = inputEl.selectionStart;
+        const end = inputEl.selectionEnd;
+        inputEl.focus({ preventScroll: true });
+        if (start !== null && end !== null) {
+          inputEl.setSelectionRange(start, end);
+        }
+      }
+    };
+    queueMicrotask(restore);
+    requestAnimationFrame(restore);
+  }
+
+  private syncCaret(): void {
+    const inputEl = this.nativeInput()?.nativeElement;
+    if (inputEl) {
+      this.caret.set(inputEl.selectionStart ?? this.value().length);
+    }
   }
 
   private refreshCompletion(caretOverride?: number): void {
@@ -316,16 +409,21 @@ export class TxSuggestInputComponent implements ControlValueAccessor {
       return;
     }
     const items = filterPrefixSuggestions(query, this.suggestions(), this.maxSuggestions());
-    if (items.length === 0) {
+    if (items.length === 0 || (this.isInlineCompletion() && !query.trim())) {
       this.closeCompletion();
       return;
     }
     this.completionItems.set(items);
     this.completionIndex.set(0);
-    this.completionPositioned.set(false);
+    this.caret.set(caret);
     this.completionOpen.set(true);
+    if (this.isInlineCompletion()) {
+      this.completionPositioned.set(true);
+      return;
+    }
+    this.completionPositioned.set(false);
     scheduleFixedCompletionPosition(() => {
-      if (this.completionOpen()) {
+      if (this.completionOpen() && !this.isInlineCompletion()) {
         this.positionCompletion();
       }
     });

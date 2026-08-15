@@ -92,4 +92,11 @@ describe('connection-tree', () => {
     expect(filtered).toHaveLength(1);
     expect(filtered[0]?.children?.[0]?.label).toBe('Primary');
   });
+
+  it('returns the same array when the search query is empty', () => {
+    const created = createConnectionTreeNode([], null, 'connection', 'Primary');
+    expect(created).not.toBeNull();
+    expect(filterConnectionTree(created!.nodes, '')).toBe(created!.nodes);
+    expect(filterConnectionTree(created!.nodes, '   ')).toBe(created!.nodes);
+  });
 });

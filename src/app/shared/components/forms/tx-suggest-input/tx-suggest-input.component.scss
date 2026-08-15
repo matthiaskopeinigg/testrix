@@ -19,13 +19,68 @@
   position: relative;
   display: block;
   width: 100%;
+  --tx-suggest-pad-y: 0.5rem;
+  --tx-suggest-pad-x: 0.75rem;
+}
+
+.tx-suggest-input__preview {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  padding: var(--tx-suggest-pad-y) var(--tx-suggest-pad-x);
+  font: inherit;
+  font-size: 0.875rem;
+  line-height: 1.4;
+  white-space: pre;
+  pointer-events: none;
+}
+
+.tx-suggest-input:has(.tx-suggest-input__control--with-clear) .tx-suggest-input__preview {
+  padding-right: 2.15rem;
+}
+
+.tx-suggest-input__preview-spacer {
+  color: transparent;
+}
+
+.tx-suggest-input__ghost {
+  color: var(--tx-text-1);
+}
+
+:host.tx-suggest-input-host--ghost .tx-suggest-input {
+  @include surface.control-surface;
+}
+
+:host.tx-suggest-input-host--ghost .tx-suggest-input__control {
+  position: relative;
+  z-index: 2;
+  color: var(--tx-text-0);
+  caret-color: var(--tx-text-0);
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.tx-suggest-input__sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .tx-suggest-input__control {
   box-sizing: border-box;
   width: 100%;
   min-height: var(--tx-control-height-md, 36px);
-  padding: 0.5rem 0.75rem;
+  padding: var(--tx-suggest-pad-y) var(--tx-suggest-pad-x);
   font: inherit;
   font-size: 0.875rem;
   line-height: 1.4;
