@@ -23,4 +23,17 @@ describe('resolveOracleConnectString', () => {
   it('defaults to XE when the service name is empty', () => {
     expect(resolveOracleConnectString({ host: 'localhost' })).toBe('localhost:1521/XE');
   });
+
+  it('builds a TNS SID descriptor like DataGrip SID mode', () => {
+    expect(
+      resolveOracleConnectString({
+        host: 'db.example',
+        port: 1521,
+        database: 'ORCL',
+        useSid: true,
+      }),
+    ).toBe(
+      '(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=db.example)(PORT=1521))(CONNECT_DATA=(SID=ORCL)))',
+    );
+  });
 });

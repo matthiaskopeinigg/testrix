@@ -23,9 +23,9 @@ import type {
 import {
   databaseNameFieldLabel,
   databaseNameFieldPlaceholder,
+  formatDatabaseConnectionError,
   parseDatabaseConnectionTabResourceId,
 } from '@shared/database';
-import { unwrapIpcInvokeError } from '@shared/errors';
 
 import { DatabaseConnectionsService } from '@app/core/database/database-connections.service';
 import { ElectronService } from '@app/core/electron/electron.service';
@@ -98,6 +98,8 @@ export class DatabaseConnectionEditorComponent {
 
   protected readonly canPickFile = computed(() => Boolean(this.electron.bridge()?.shell?.pickFile));
 
+  protected readonly canPickDirectory = computed(() => Boolean(this.electron.bridge()?.config?.pickDirectory));
+
   protected readonly folderOptions = computed(() => {
     const folders = collectDatabaseConnectionFolders(this.connections.nodes());
     return [
@@ -140,12 +142,18 @@ export class DatabaseConnectionEditorComponent {
     return DATABASE_TYPE_OPTIONS.find((entry) => entry.value === type)?.label ?? type ?? 'Unknown';
   }
 
-  protected databaseFieldLabel(type: DatabaseType | undefined): string {
-    return databaseNameFieldLabel(type);
+  protected databaseFieldLabel(conn: DatabaseConnection): string {
+    if (conn.type === 'oracle') {
+      return conn.useSid ? 'SID' : 'Service name';
+    }
+    return databaseNameFieldLabel(conn.type);
   }
 
-  protected databaseFieldPlaceholder(type: DatabaseType | undefined): string {
-    return databaseNameFieldPlaceholder(type);
+  protected databaseFieldPlaceholder(conn: DatabaseConnection): string {
+    if (conn.type === 'oracle') {
+      return conn.useSid ? 'ORCL' : 'XEPDB1 or ORCL';
+    }
+    return databaseNameFieldPlaceholder(conn.type);
   }
 
   protected statusFor(conn: DatabaseConnection): DatabaseConnectionStatus | null {
@@ -217,6 +225,14 @@ export class DatabaseConnectionEditorComponent {
     this.handlePatch({ filePath: picked.filePath });
   }
 
+  protected async handlePickOracleClient(): Promise<void> {
+    const picked = await this.electron.bridge()?.config?.pickDirectory();
+    if (!picked) {
+      return;
+    }
+    this.handlePatch({ clientPath: picked });
+  }
+
   protected async handleTestConnection(): Promise<void> {
     const conn = this.connection();
     const bridge = this.electron.bridge();
@@ -242,8 +258,7 @@ export class DatabaseConnectionEditorComponent {
       if (this.connectionId() !== requestId || !this.connections.find(requestId)) {
         return;
       }
-      const ipc = unwrapIpcInvokeError(err);
-      const message = ipc?.userMessage ?? (err instanceof Error ? err.message : 'Connection failed.');
+      const message = formatDatabaseConnectionError(err);
       this.testOutcome.set({ kind: 'error', message });
       this.statusById.update((map) => ({
         ...map,
@@ -275,6 +290,8 @@ export class DatabaseConnectionEditorComponent {
         password: latest.password,
         database: latest.database,
         filePath: latest.filePath,
+        clientPath: latest.clientPath,
+        useSid: latest.useSid,
         tls: latest.tls,
         connectTimeoutMs: latest.connectTimeoutMs,
         commandTimeoutMs: latest.commandTimeoutMs,

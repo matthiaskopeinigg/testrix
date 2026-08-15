@@ -37,4 +37,13 @@ describe('formatDatabaseConnectionError', () => {
       formatDatabaseConnectionError(new Error('database "testrix" does not exist')),
     ).toBe('Database does not exist. Check the database name or create it first.');
   });
+
+  it('explains Oracle Thin-mode 10G password verifiers', () => {
+    const message = formatDatabaseConnectionError(
+      new Error('NJS-116: password verifier type 0x939 is not supported by node-oracledb in Thin mode'),
+    );
+    expect(message).toMatch(/DataGrip/i);
+    expect(message).toMatch(/Instant Client/i);
+    expect(message).toMatch(/password is fine/i);
+  });
 });

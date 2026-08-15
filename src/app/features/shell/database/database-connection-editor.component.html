@@ -104,13 +104,13 @@
       </div>
       <div class="db-conn__grid">
         <tx-form-field
-          [label]="databaseFieldLabel(conn.type)"
+          [label]="databaseFieldLabel(conn)"
           controlId="db-conn-database"
         >
           <tx-input
             id="db-conn-database"
             [ngModel]="conn.database ?? ''"
-            [placeholder]="databaseFieldPlaceholder(conn.type)"
+            [placeholder]="databaseFieldPlaceholder(conn)"
             (ngModelChange)="handlePatch({ database: $event || undefined })"
           />
         </tx-form-field>
@@ -140,6 +140,26 @@
           />
         </tx-form-field>
       </div>
+      @if (conn.type === 'oracle') {
+        <tx-toggle
+          label="Use SID (same as DataGrip SID mode)"
+          [ngModel]="conn.useSid ?? false"
+          (ngModelChange)="handlePatch({ useSid: $event })"
+        />
+        <tx-form-field label="Instant Client folder" controlId="db-conn-oracle-client">
+          <div class="db-conn__file-row">
+            <tx-input
+              id="db-conn-oracle-client"
+              [ngModel]="conn.clientPath ?? ''"
+              (ngModelChange)="handlePatch({ clientPath: $event || undefined })"
+              placeholder="Folder with oci.dll — required when DataGrip works but Thin mode fails"
+            />
+            @if (canPickDirectory()) {
+              <tx-button variant="secondary" (pressed)="handlePickOracleClient()">Browse</tx-button>
+            }
+          </div>
+        </tx-form-field>
+      }
     }
 
     <div class="db-conn__actions">

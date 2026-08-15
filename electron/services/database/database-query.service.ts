@@ -21,6 +21,7 @@ import { resolveOracleConnectString } from '../../../shared/database/oracle-conn
 import { resolveMongoConnectionUri } from '../../../shared/database/mongo-connection-uri';
 import { parseMongoShellQuery } from '../../../shared/database/mongo-shell-query';
 import { logError, logInfo } from '../../errors/logger';
+import { findOracleInstantClientDir } from './find-oracle-instant-client';
 
 export interface DatabaseQueryOptions {
   readonly stepTimeoutMs?: number;
@@ -385,7 +386,7 @@ export class DatabaseQueryService {
   }
 
   private async getOraclePool(conn: DatabaseConnection): Promise<OraclePool> {
-    ensureOracleDefaults();
+    ensureOracleDefaults(conn.clientPath);
     const id = conn.id || `oracle:${conn.host}:${conn.port}:${conn.database ?? ''}`;
     const fingerprint = [
       conn.host,
@@ -393,6 +394,8 @@ export class DatabaseQueryService {
       conn.user,
       conn.password,
       conn.database,
+      conn.clientPath ?? '',
+      conn.useSid ? 'sid' : 'service',
       conn.tls ? '1' : '0',
     ].join('\0');
     const existing = this.oraclePools.get(id);
@@ -791,14 +794,40 @@ function mapMysqlColumnTypes(fields: unknown): string[] | undefined {
 }
 
 let oracleDefaultsApplied = false;
+let oracleThickEnabled = false;
+let oracleThickAttemptKey: string | null = null;
 
-function ensureOracleDefaults(): void {
-  if (oracleDefaultsApplied) {
+function ensureOracleDefaults(clientPath?: string): void {
+  if (!oracleDefaultsApplied) {
+    oracledb.outFormat = oracledb.OUT_FORMAT_OBJECT;
+    oracledb.fetchAsString = [oracledb.CLOB];
+    oracleDefaultsApplied = true;
+  }
+  if (oracleThickEnabled) {
     return;
   }
-  oracledb.outFormat = oracledb.OUT_FORMAT_OBJECT;
-  oracledb.fetchAsString = [oracledb.CLOB];
-  oracleDefaultsApplied = true;
+  const libDir = findOracleInstantClientDir(clientPath);
+  const attemptKey = libDir || '*path*';
+  if (oracleThickAttemptKey === attemptKey) {
+    return;
+  }
+  oracleThickAttemptKey = attemptKey;
+  try {
+    if (libDir) {
+      oracledb.initOracleClient({ libDir });
+    } else {
+      oracledb.initOracleClient();
+    }
+    oracleThickEnabled = true;
+    logInfo(`Oracle Instant Client loaded (Thick mode)${libDir ? `: ${libDir}` : ''}`);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (/already been initialized|already initialized/i.test(message)) {
+      oracleThickEnabled = true;
+      return;
+    }
+    logInfo(`Oracle Thin mode: Instant Client not loaded (${message})`);
+  }
 }
 
 function mapOracleRow(row: unknown): Record<string, unknown> {

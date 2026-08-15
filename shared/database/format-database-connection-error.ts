@@ -42,6 +42,13 @@ export function formatDatabaseConnectionError(error: unknown): string {
   if (lower.includes('password authentication failed')) {
     return 'Authentication failed. Check the username and password.';
   }
+  if (/password verifier type 0x939|njs-116/i.test(message)) {
+    return (
+      'The password is fine — DataGrip works because JDBC supports this account’s old 10G password hash. ' +
+      'Testrix’s built-in Oracle driver (Thin mode) does not. Install Oracle Instant Client, ' +
+      'set Instant Client folder on the connection (the folder that contains oci.dll), and test again.'
+    );
+  }
   if (lower.includes('timeout expired') || lower.includes('timed out')) {
     return message.includes('connect')
       ? 'Connection timed out. Is the server running and reachable?'

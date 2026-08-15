@@ -69,7 +69,7 @@ export const HELP_WIKI_DATABASE_SECTIONS: readonly HelpWikiSection[] = [
       {
         type: 'note',
         title: 'Oracle and MongoDB',
-        text: 'Oracle uses Easy Connect: host, port 1521, and a service name or SID such as XEPDB1. Instant Client is not required. For MongoDB Atlas, paste a mongodb+srv:// URI into Host.',
+        text: 'Oracle uses Easy Connect: host, port 1521, and a service name (or enable Use SID to match DataGrip SID URLs). DataGrip’s JDBC driver accepts old 10G password hashes; Testrix’s Thin driver does not. For those accounts, install Oracle Instant Client and set Instant Client folder (oci.dll). For MongoDB Atlas, paste a mongodb+srv:// URI into Host.',
       },
     ],
   }),

@@ -27,6 +27,12 @@ declare module 'oracledb' {
     readonly metaData?: readonly { readonly dbTypeName?: string }[];
   }
 
+  export function initOracleClient(options?: {
+    readonly libDir?: string;
+    readonly configDir?: string;
+  }): void;
+  export let thin: boolean;
+
   export function createPool(options: {
     readonly user?: string;
     readonly password?: string;
@@ -42,6 +48,8 @@ declare module 'oracledb' {
     CLOB: number;
     outFormat: number;
     fetchAsString: number[];
+    thin: boolean;
+    initOracleClient: typeof initOracleClient;
     createPool: typeof createPool;
   };
 

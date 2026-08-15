@@ -36,6 +36,10 @@ export const databaseConnectionSchema = z.object({
   database: z.string().optional(),
   /** SQLite file path (when `type` is `sqlite`); if set, host/port are ignored. */
   filePath: z.string().optional(),
+  /** Oracle Instant Client directory for Thick mode (10G password verifiers). */
+  clientPath: z.string().optional(),
+  /** When true, Oracle `database` is a SID (DataGrip `@host:port:SID`) not a service name. */
+  useSid: z.boolean().optional(),
   tls: z.boolean().optional(),
   connectTimeoutMs: z.number().int().optional(),
   commandTimeoutMs: z.number().int().optional(),
