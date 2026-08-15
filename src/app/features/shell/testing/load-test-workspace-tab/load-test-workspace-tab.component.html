@@ -136,8 +136,12 @@
               >
                 <div class="tx-entrance-stagger__block lt-tab__target-section">
                   <app-lt-tab-target-panel
+                    [targetSource]="artifact()?.targetSource ?? 'collection'"
                     [targetRequestId]="artifact()?.targetRequestId"
+                    [manualTarget]="artifact()?.manualTarget"
+                    (targetSourceChange)="handleTargetSourceChange($event)"
                     (targetRequestIdChange)="handleTargetChange($event)"
+                    (manualTargetChange)="handleManualTargetChange($event)"
                     (openRequest)="handleOpenTargetRequest()"
                   />
                 </div>

@@ -1,8 +1,11 @@
 import { buildOutgoingRequest } from '../../../shared/http/build-outgoing-request';
+import { buildManualOutgoingRequest } from '../../../shared/http/build-manual-outgoing-request';
 import type { SendHttpRequestPayload } from '../../../shared/http/outgoing-request.schema';
 import type { HttpResponseSnapshot } from '../../../shared/http/outgoing-request.schema';
 import { sendHttpRequestPayloadSchema } from '../../../shared/http/outgoing-request.schema';
+import type { SettingsFile } from '../../../shared/config';
 import { TestrixError, ErrorCodes } from '../../../shared/errors';
+import { createDefaultLoadTestManualTarget } from '../../../shared/testing/load-test-target.schema';
 import { computeLatencySnapshot } from '../../../shared/testing/load-test-metrics-aggregate';
 import {
   createIdleLoadTestRunMetrics,
@@ -41,13 +44,14 @@ function sleep(ms: number): Promise<void> {
 }
 
 /**
- * Executes real HTTP load against a collection request with virtual users and ramp-up.
+ * Executes real HTTP load against a collection or manual target with virtual users and ramp-up.
  */
 export class LoadTestRunner {
   private cancelled = false;
   private running = false;
   private startedAt = 0;
   private options: LoadTestStartOptions = loadTestStartOptionsSchema.parse({
+    loadTestId: 'pending',
     targetRequestId: 'missing',
     virtualUsers: 1,
     durationSec: 1,
@@ -69,7 +73,7 @@ export class LoadTestRunner {
     return this.metrics;
   }
 
-  /** Starts an HTTP load test run against the target collection request. */
+  /** Starts an HTTP load test run against the configured target. */
   async start(options: unknown, files: ConfigFileService, appVersion: string): Promise<LoadTestRunMetrics> {
     if (this.running) {
       throw new TestrixError(ErrorCodes.LOAD_TEST_ALREADY_RUNNING, 'A load test is already running.');
@@ -78,43 +82,11 @@ export class LoadTestRunner {
     const parsed = loadTestStartOptionsSchema.parse(options ?? {});
     const runId = `load-test-${Date.now()}`;
     const settings = await files.readSettings();
-
-    const [collections, environments] = await Promise.all([
-      files.readCollections(),
-      files.readEnvironments(),
-    ]);
-    const built = buildOutgoingRequest({
-      requestId: parsed.targetRequestId,
-      nodes: collections.nodes,
-      http: settings.http,
-      environments,
-      appVersion,
-      runScope: { runId },
-      environmentVariableKeys: {
-        useFolderPathInKeys: settings.environments.useFolderPathInKeys,
-      },
-    });
-    if (!built) {
-      throw new TestrixError(
-        ErrorCodes.LOAD_TEST_TARGET_NOT_FOUND,
-        'Target request was not found in collections.',
-      );
-    }
-
-    const payloadCheck = sendHttpRequestPayloadSchema.safeParse({
-      ...built.outgoing,
-      runScope: { runId },
-    });
-    if (!payloadCheck.success) {
-      throw new TestrixError(
-        ErrorCodes.CONFIG_VALIDATION_FAILED,
-        'Target request could not be prepared for load testing.',
-      );
-    }
+    const basePayload = await this.resolveStartPayload(parsed, files, appVersion, runId, settings);
 
     this.resetState();
     this.options = parsed;
-    this.basePayload = payloadCheck.data;
+    this.basePayload = basePayload;
     this.running = true;
     this.cancelled = false;
     this.startedAt = Date.now();
@@ -147,6 +119,76 @@ export class LoadTestRunner {
     });
 
     return this.snapshot();
+  }
+
+  /**
+   * Builds the HTTP payload used by every virtual user for this run.
+   */
+  private async resolveStartPayload(
+    parsed: LoadTestStartOptions,
+    files: ConfigFileService,
+    appVersion: string,
+    runId: string,
+    settings: SettingsFile,
+  ): Promise<SendHttpRequestPayload> {
+    if (parsed.targetSource === 'manual') {
+      const built = buildManualOutgoingRequest({
+        loadTestId: parsed.loadTestId ?? runId,
+        manual: parsed.manualTarget ?? createDefaultLoadTestManualTarget(),
+        http: settings.http,
+      });
+      if (!built) {
+        throw new TestrixError(
+          ErrorCodes.LOAD_TEST_TARGET_NOT_FOUND,
+          'Manual load test target needs a URL.',
+        );
+      }
+      const payloadCheck = sendHttpRequestPayloadSchema.safeParse({
+        ...built.outgoing,
+        runScope: { runId },
+      });
+      if (!payloadCheck.success) {
+        throw new TestrixError(
+          ErrorCodes.CONFIG_VALIDATION_FAILED,
+          'Manual target could not be prepared for load testing.',
+        );
+      }
+      return payloadCheck.data;
+    }
+
+    const [collections, environments] = await Promise.all([
+      files.readCollections(),
+      files.readEnvironments(),
+    ]);
+    const built = buildOutgoingRequest({
+      requestId: parsed.targetRequestId ?? '',
+      nodes: collections.nodes,
+      http: settings.http,
+      environments,
+      appVersion,
+      runScope: { runId },
+      environmentVariableKeys: {
+        useFolderPathInKeys: settings.environments.useFolderPathInKeys,
+      },
+    });
+    if (!built) {
+      throw new TestrixError(
+        ErrorCodes.LOAD_TEST_TARGET_NOT_FOUND,
+        'Target request was not found in collections.',
+      );
+    }
+
+    const payloadCheck = sendHttpRequestPayloadSchema.safeParse({
+      ...built.outgoing,
+      runScope: { runId },
+    });
+    if (!payloadCheck.success) {
+      throw new TestrixError(
+        ErrorCodes.CONFIG_VALIDATION_FAILED,
+        'Target request could not be prepared for load testing.',
+      );
+    }
+    return payloadCheck.data;
   }
 
   /** Cancels the active run and returns final metrics. */

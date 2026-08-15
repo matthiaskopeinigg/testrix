@@ -1,3 +1,6 @@
+@use '../../workspace/workspace-tab-chrome' as tab-chrome;
+@use '../../workspace/request-workspace-tab/request-tab-panels';
+
 :host {
   display: flex;
   flex: 1 1 auto;
@@ -5,23 +8,37 @@
   min-height: 0;
   min-width: 0;
   width: 100%;
+  height: 100%;
 }
 
 .lt-target-panel {
   display: flex;
   flex: 1 1 auto;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 0.45rem;
   min-height: 0;
   min-width: 0;
+}
+
+.lt-target-panel--manual {
+  flex: 0 1 auto;
+}
+
+:host ::ng-deep .lt-target-panel--manual .tx-field {
+  gap: 0.22rem;
 }
 
 .lt-target-panel__header {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-start;
+  align-items: flex-end;
   justify-content: space-between;
-  gap: 0.75rem;
+  gap: 0.45rem 1rem;
+}
+
+.lt-target-panel__heading {
+  min-width: 0;
+  flex: 1 1 12rem;
 }
 
 .lt-target-panel__title {
@@ -32,10 +49,106 @@
 }
 
 .lt-target-panel__hint {
-  margin: 0.2rem 0 0;
-  font-size: 0.8125rem;
-  line-height: 1.45;
+  margin: 0.15rem 0 0;
+  font-size: 0.75rem;
+  line-height: 1.35;
   color: var(--tx-text-2);
+}
+
+.lt-target-panel__source {
+  flex: 0 1 15rem;
+  max-width: 15rem;
+}
+
+.lt-target-panel__bar {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  flex-shrink: 0;
+  padding: 0;
+}
+
+.lt-target-panel__bar-cluster {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  min-width: 0;
+  padding: 0;
+
+  &--grow {
+    flex: 1 1 12rem;
+  }
+}
+
+.lt-target-panel__method-field {
+  flex: 0 0 auto;
+  width: 5.5rem;
+  min-width: 5.5rem;
+  max-width: 6rem;
+
+  @include tab-chrome.workspace-tab-toolbar-dropdown;
+
+  ::ng-deep .tx-dropdown-host {
+    min-width: 0;
+  }
+
+  ::ng-deep .tx-dropdown__trigger {
+    min-width: 0;
+    padding-inline: 0.5rem 0.4rem;
+  }
+
+  ::ng-deep .tx-dropdown__value {
+    font-weight: 700;
+    letter-spacing: 0.03em;
+  }
+}
+
+.lt-target-panel__url-field {
+  flex: 1 1 auto;
+  min-width: 8rem;
+}
+
+.lt-target-panel__sections-wrap {
+  flex-shrink: 0;
+  padding: 0;
+}
+
+.lt-target-panel__sections-bar {
+  @include tab-chrome.workspace-tab-sections-bar;
+  width: 100%;
+}
+
+.lt-target-panel__section-tab {
+  @include tab-chrome.workspace-tab-section-tab;
+}
+
+.lt-target-panel__header,
+.lt-target-panel__source,
+.lt-target-panel__bar,
+.lt-target-panel__sections-wrap {
+  flex-shrink: 0;
+}
+
+.lt-target-panel__manual-pane {
+  display: flex;
+  flex: 0 1 auto;
+  flex-direction: column;
+  min-width: 0;
+  padding-bottom: 0.75rem;
+}
+
+.lt-target-panel--manual .lt-target-panel__manual-pane {
+  overflow: visible;
+}
+
+.lt-target-panel__body-editor {
+  display: flex;
+  flex: 0 1 auto;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 10rem;
 }
 
 .lt-target-panel__selection {
@@ -87,4 +200,38 @@
   display: inline-flex;
   align-items: center;
   gap: 0.2rem;
+}
+
+:host ::ng-deep .lt-target-panel__body-editor app-request-tab-body-panel {
+  display: flex;
+  flex: 0 1 auto;
+  flex-direction: column;
+  min-width: 0;
+  width: 100%;
+}
+
+:host ::ng-deep .lt-target-panel__manual-pane .request-panel {
+  gap: 0.5rem;
+}
+
+:host ::ng-deep .lt-target-panel__body-editor .request-panel__editor,
+:host ::ng-deep .lt-target-panel__body-editor .request-panel__graphql {
+  flex: 0 1 auto;
+  min-height: 10rem;
+}
+
+:host ::ng-deep .lt-target-panel__body-editor .request-panel__editor tx-code-editor,
+:host ::ng-deep .lt-target-panel__body-editor tx-code-editor,
+:host ::ng-deep .lt-target-panel__body-editor .tx-code-editor-host {
+  flex: 0 1 auto;
+  height: auto;
+  min-height: 10rem;
+  max-height: 16rem;
+  overflow: auto;
+}
+
+:host ::ng-deep .lt-target-panel__body-editor .tx-code-editor__body {
+  min-height: 8rem;
+  max-height: 14rem;
+  overflow: auto;
 }

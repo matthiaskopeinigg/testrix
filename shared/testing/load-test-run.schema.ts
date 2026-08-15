@@ -1,12 +1,39 @@
 import { z } from 'zod';
 
-export const loadTestStartOptionsSchema = z.object({
-  targetRequestId: z.string().min(1),
-  loadTestId: z.string().min(1).optional(),
-  virtualUsers: z.number().int().min(1).max(10_000).default(10),
-  durationSec: z.number().int().min(1).max(86_400).default(60),
-  rampUpSec: z.number().int().min(0).default(0),
-});
+import {
+  LOAD_TEST_TARGET_SOURCE_IDS,
+  loadTestManualTargetSchema,
+} from './load-test-target.schema';
+
+export const loadTestStartOptionsSchema = z
+  .object({
+    targetRequestId: z.string().min(1).optional(),
+    targetSource: z.enum(LOAD_TEST_TARGET_SOURCE_IDS).default('collection'),
+    manualTarget: loadTestManualTargetSchema.optional(),
+    loadTestId: z.string().min(1),
+    virtualUsers: z.number().int().min(1).max(10_000).default(10),
+    durationSec: z.number().int().min(1).max(86_400).default(60),
+    rampUpSec: z.number().int().min(0).default(0),
+  })
+  .superRefine((value, ctx) => {
+    if (value.targetSource === 'manual') {
+      if (!value.manualTarget?.url?.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Manual load test target requires a URL.',
+          path: ['manualTarget', 'url'],
+        });
+      }
+      return;
+    }
+    if (!value.targetRequestId?.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Collection load test target requires a request id.',
+        path: ['targetRequestId'],
+      });
+    }
+  });
 
 export type LoadTestStartOptions = z.infer<typeof loadTestStartOptionsSchema>;
 

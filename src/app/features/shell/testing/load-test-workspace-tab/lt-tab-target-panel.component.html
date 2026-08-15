@@ -1,73 +1,176 @@
-<div class="lt-target-panel">
+<div class="lt-target-panel" [class.lt-target-panel--manual]="isManual()">
   <header class="lt-target-panel__header">
-    <div>
+    <div class="lt-target-panel__heading">
       <h2 class="lt-target-panel__title">Target request</h2>
-      <p class="lt-target-panel__hint">
-        Pick an existing collection request to run this load test against.
-      </p>
+      <p class="lt-target-panel__hint">{{ sourceHint() }}</p>
     </div>
+    <tx-form-field class="lt-target-panel__source" label="Request source" controlId="lt-target-source">
+      <tx-dropdown
+        controlId="lt-target-source"
+        [options]="targetSourceOptions"
+        [ngModel]="targetSource()"
+        (ngModelChange)="handleTargetSourceChange($event)"
+      />
+    </tx-form-field>
   </header>
 
-  @if (targetRequestId()) {
-    <div class="lt-target-panel__selection">
-      <tx-banner variant="info" title="Selected target">
-        {{ selectedTargetLabel() }}
-      </tx-banner>
-      <div class="lt-target-panel__selection-actions">
-        <tx-button variant="secondary" (pressed)="openRequest.emit()">Open request tab</tx-button>
-        <tx-button variant="secondary" (pressed)="handleClearTarget()">Clear target</tx-button>
+  @if (isManual()) {
+    @if (needsManualUrl()) {
+      <tx-banner variant="warning" [compact]="true" title="Specify a URL for this load test target" />
+    }
+
+    <div class="lt-target-panel__bar">
+      <div class="lt-target-panel__bar-cluster lt-target-panel__bar-cluster--grow">
+        <tx-form-field class="lt-target-panel__method-field" label="Method" controlId="lt-req-method">
+          <tx-dropdown
+            controlId="lt-req-method"
+            [options]="httpMethodOptions"
+            [ngModel]="manual().method"
+            (ngModelChange)="patchManual({ method: $event })"
+          />
+        </tx-form-field>
+        <tx-form-field class="lt-target-panel__url-field" label="URL" controlId="lt-req-url">
+          <tx-variable-input
+            controlId="lt-req-url"
+            [ngModel]="manual().url"
+            (ngModelChange)="patchManual({ url: $event })"
+            placeholder="https://api.example.com/path"
+          />
+        </tx-form-field>
       </div>
     </div>
-  }
 
-  <app-workspace-sidebar-panel-shell
-    class="lt-target-panel__shell"
-    searchPlaceholder="Search requests…"
-    searchAriaLabel="Search collection requests"
-    [allFoldersExpanded]="allExpanded()"
-    [useDefaultToolbarActions]="false"
-    (searchChange)="handleSearch($event)"
-    (allFoldersExpandedChange)="handleExpandAll($event)"
-  >
-    <div workspacePanelToolbarActions class="lt-target-panel__toolbar-actions">
-      <button
-        type="button"
-        class="workspace-panel-shell__icon-btn"
-        [class.is-pressed]="filterToolbarActive()"
-        aria-label="Filter collection items"
-        [attr.aria-expanded]="filterMenuOpen()"
-        (click)="handleFilterToolbarClick($event)"
+    <div class="lt-target-panel__sections-wrap">
+      <nav
+        class="lt-target-panel__sections-bar workspace-tab-section-nav"
+        role="tablist"
+        aria-label="Request sections"
+        [txWorkspaceSectionNav]="activeSection()"
       >
-        <tx-icon name="filter" [size]="16" />
-      </button>
-      <button
-        type="button"
-        class="workspace-panel-shell__icon-btn"
-        [class.is-pressed]="sortToolbarActive()"
-        aria-label="Sort collection items"
-        [attr.aria-expanded]="sortMenuOpen()"
-        (click)="handleSortToolbarClick($event)"
-      >
-        <tx-icon name="list" [size]="16" />
-      </button>
+        @for (item of navItems; track item.id) {
+          <button
+            type="button"
+            class="lt-target-panel__section-tab"
+            role="tab"
+            [attr.aria-selected]="activeSection() === item.id"
+            [class.is-active]="activeSection() === item.id"
+            (click)="handleSectionSelect(item.id)"
+          >
+            <tx-icon [name]="item.icon" [size]="14" aria-hidden="true" />
+            <span>{{ item.label }}</span>
+          </button>
+        }
+      </nav>
     </div>
 
-    <div class="lt-target-panel__body">
-      @if (displayNodes().length === 0) {
-        <p class="lt-target-panel__empty">{{ emptyStateMessage() }}</p>
-      } @else {
-        <tx-tree
-          class="lt-target-panel__tree"
-          [nodes]="displayNodes()"
-          [config]="treeConfig()"
-          [expandedIds]="expandedIds()"
-          [selectionIds]="treeSelectionIds()"
-          (expandedChange)="handleExpandedChange($event)"
-          (nodeClick)="handleNodeClick($event)"
-        />
+    <div class="lt-target-panel__manual-pane">
+      @switch (activeSection()) {
+        @case ('params') {
+          <div class="request-panel" role="region" aria-label="Query parameters">
+            <tx-key-value-list
+              [compact]="true"
+              keyLabel="Key"
+              keyInput="query-params"
+              valueLabel="Value"
+              descriptionLabel="Description"
+              addLabel="Add query param"
+              valueInput="variables"
+              [showDescription]="true"
+              [maxRows]="64"
+              [rows]="queryRows()"
+              (rowsChange)="handleQueryChange($event)"
+            />
+          </div>
+        }
+        @case ('headers') {
+          <div class="request-panel" role="region" aria-label="Request headers">
+            <tx-key-value-list
+              [compact]="true"
+              keyLabel="Key"
+              keyInput="http-headers"
+              valueLabel="Value"
+              addLabel="Add header"
+              valueInput="variables"
+              [maxRows]="64"
+              [rows]="headerRows()"
+              (rowsChange)="handleHeadersChange($event)"
+            />
+          </div>
+        }
+        @case ('body') {
+          <div class="lt-target-panel__body-editor">
+            <app-request-tab-body-panel
+              [method]="manual().method"
+              [body]="collectionBody()"
+              [fillEditor]="false"
+              (bodyChange)="handleBodyChange($event)"
+            />
+          </div>
+        }
       }
     </div>
-  </app-workspace-sidebar-panel-shell>
+  } @else {
+    @if (targetRequestId()) {
+      <div class="lt-target-panel__selection">
+        <tx-banner variant="info" title="Selected target">
+          {{ selectedTargetLabel() }}
+        </tx-banner>
+        <div class="lt-target-panel__selection-actions">
+          <tx-button variant="secondary" (pressed)="openRequest.emit()">Open request tab</tx-button>
+          <tx-button variant="secondary" (pressed)="handleClearTarget()">Clear target</tx-button>
+        </div>
+      </div>
+    }
+
+    <app-workspace-sidebar-panel-shell
+      class="lt-target-panel__shell"
+      searchPlaceholder="Search requests…"
+      searchAriaLabel="Search collection requests"
+      [allFoldersExpanded]="allExpanded()"
+      [useDefaultToolbarActions]="false"
+      (searchChange)="handleSearch($event)"
+      (allFoldersExpandedChange)="handleExpandAll($event)"
+    >
+      <div workspacePanelToolbarActions class="lt-target-panel__toolbar-actions">
+        <button
+          type="button"
+          class="workspace-panel-shell__icon-btn"
+          [class.is-pressed]="filterToolbarActive()"
+          aria-label="Filter collection items"
+          [attr.aria-expanded]="filterMenuOpen()"
+          (click)="handleFilterToolbarClick($event)"
+        >
+          <tx-icon name="filter" [size]="16" />
+        </button>
+        <button
+          type="button"
+          class="workspace-panel-shell__icon-btn"
+          [class.is-pressed]="sortToolbarActive()"
+          aria-label="Sort collection items"
+          [attr.aria-expanded]="sortMenuOpen()"
+          (click)="handleSortToolbarClick($event)"
+        >
+          <tx-icon name="list" [size]="16" />
+        </button>
+      </div>
+
+      <div class="lt-target-panel__body">
+        @if (displayNodes().length === 0) {
+          <p class="lt-target-panel__empty">{{ emptyStateMessage() }}</p>
+        } @else {
+          <tx-tree
+            class="lt-target-panel__tree"
+            [nodes]="displayNodes()"
+            [config]="treeConfig()"
+            [expandedIds]="expandedIds()"
+            [selectionIds]="treeSelectionIds()"
+            (expandedChange)="handleExpandedChange($event)"
+            (nodeClick)="handleNodeClick($event)"
+          />
+        }
+      </div>
+    </app-workspace-sidebar-panel-shell>
+  }
 </div>
 
 <tx-context-menu

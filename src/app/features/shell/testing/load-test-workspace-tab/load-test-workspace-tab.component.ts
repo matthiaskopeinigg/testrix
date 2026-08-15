@@ -17,15 +17,19 @@ import {
   type WorkspaceEditorLayoutId,
 } from '@shared/config';
 import type {
+  LoadTestManualTarget,
   LoadTestProfile,
   LoadTestRunRecord,
+  LoadTestTargetSource,
   LoadTestThresholds,
 } from '@shared/testing';
 import {
+  createDefaultLoadTestManualTarget,
   createIdleLoadTestRunMetrics,
   createLoadTestRunRecord,
   createStartingLoadTestRunMetrics,
   isLoadTestTargetReady,
+  parseLoadTestIpcId,
   type LoadTestRunMetrics,
   type LoadTestStartOptions,
 } from '@shared/testing';
@@ -123,7 +127,7 @@ export class LoadTestWorkspaceTabComponent {
   protected readonly navItems = NAV_ITEMS;
   protected readonly activeSection = signal<LoadTestTabSectionId>('overview');
   protected readonly resultsPanelHeight = signal(420);
-  protected readonly resultsPanelHidden = signal(false);
+  protected readonly resultsPanelHidden = signal(true);
   protected readonly running = signal(false);
   protected readonly runActionPending = signal(false);
   protected readonly metrics = signal<LoadTestRunMetrics>(createIdleLoadTestRunMetrics());
@@ -169,6 +173,13 @@ export class LoadTestWorkspaceTabComponent {
     if (!artifact) {
       return '—';
     }
+    if (artifact.targetSource === 'manual') {
+      const url = artifact.manualTarget?.url?.trim();
+      if (!url) {
+        return 'No manual URL specified';
+      }
+      return `${artifact.manualTarget?.method ?? 'GET'} ${url}`;
+    }
     return (
       collectionRequestLabel(this.collectionsService.nodes(), artifact.targetRequestId) ||
       'No collection request selected'
@@ -210,7 +221,9 @@ export class LoadTestWorkspaceTabComponent {
       return 'Load tests require the Electron desktop app';
     }
     if (!isLoadTestTargetReady(this.artifact() ?? {})) {
-      return 'Select a collection request before starting';
+      return this.artifact()?.targetSource === 'manual'
+        ? 'Specify a URL before starting'
+        : 'Select a collection request before starting';
     }
     return 'Start load test';
   });
@@ -302,6 +315,26 @@ export class LoadTestWorkspaceTabComponent {
     this.scheduleArtifactPatch({
       targetSource: 'collection',
       targetRequestId,
+    });
+  }
+
+  /** Switches between collection picker and the inline manual request editor. */
+  protected handleTargetSourceChange(source: LoadTestTargetSource): void {
+    if (source === 'manual') {
+      this.patchArtifactNow({
+        targetSource: 'manual',
+        manualTarget: this.artifact()?.manualTarget ?? createDefaultLoadTestManualTarget(),
+      });
+      return;
+    }
+    this.patchArtifactNow({ targetSource: 'collection' });
+  }
+
+  /** Persists edits from the manual request editor. */
+  protected handleManualTargetChange(manualTarget: LoadTestManualTarget): void {
+    this.scheduleArtifactPatch({
+      targetSource: 'manual',
+      manualTarget,
     });
   }
 
@@ -446,8 +479,13 @@ export class LoadTestWorkspaceTabComponent {
 
     if (this.running()) {
       this.runCancelled = true;
+      const loadTestId = parseLoadTestIpcId(this.artifactId());
+      if (!loadTestId) {
+        this.runActionPending.set(false);
+        return;
+      }
       void api
-        .loadTestCancel()
+        .loadTestCancel(loadTestId)
         .then((snapshot) => {
           this.applyMetricsSnapshot(snapshot);
           this.finalizeRun(snapshot);
@@ -457,9 +495,15 @@ export class LoadTestWorkspaceTabComponent {
       return;
     }
 
-    if (!artifact || !isLoadTestTargetReady(artifact) || !artifact.targetRequestId) {
+    if (!artifact || !isLoadTestTargetReady(artifact)) {
       this.runActionPending.set(false);
-      this.notifier.reportUnknown(new Error('Select a collection request before starting a load test.'));
+      this.notifier.reportUnknown(
+        new Error(
+          artifact?.targetSource === 'manual'
+            ? 'Specify a URL before starting a load test.'
+            : 'Select a collection request before starting a load test.',
+        ),
+      );
       this.activeSection.set('target');
       this.scheduleTabUiPersist();
       return;
@@ -467,6 +511,8 @@ export class LoadTestWorkspaceTabComponent {
 
     const startOptions: LoadTestStartOptions = {
       targetRequestId: artifact.targetRequestId,
+      targetSource: artifact.targetSource,
+      manualTarget: artifact.manualTarget,
       loadTestId: artifact.id,
       virtualUsers: profile.virtualUsers,
       durationSec: profile.durationSec,
@@ -488,6 +534,8 @@ export class LoadTestWorkspaceTabComponent {
       .loadTestStart(startOptions)
       .then((snapshot) => {
         this.applyMetricsSnapshot(snapshot);
+        this.resultsPanelHidden.set(false);
+        this.scheduleTabUiPersist();
         this.startMetricsPolling();
       })
       .catch((error: unknown) => {
@@ -568,14 +616,18 @@ export class LoadTestWorkspaceTabComponent {
 
   private async syncRunStateFromBackend(): Promise<void> {
     const api = this.electron.bridge()?.testing;
-    if (!api) {
+    const loadTestId = parseLoadTestIpcId(this.artifactId());
+    if (!api || !loadTestId) {
       if ((this.artifact()?.runs.length ?? 0) === 0) {
         this.resetLiveMetrics();
       }
       return;
     }
 
-    const [status, snapshot] = await Promise.all([api.loadTestStatus(), api.loadTestMetrics()]);
+    const [status, snapshot] = await Promise.all([
+      api.loadTestStatus(loadTestId),
+      api.loadTestMetrics(loadTestId),
+    ]);
     this.applyMetricsSnapshot(snapshot);
     if (status.running) {
       this.startMetricsPolling();
@@ -600,11 +652,12 @@ export class LoadTestWorkspaceTabComponent {
 
   private async pollMetrics(): Promise<void> {
     const api = this.electron.bridge()?.testing;
-    if (!api) {
+    const loadTestId = parseLoadTestIpcId(this.artifactId());
+    if (!api || !loadTestId) {
       this.stopMetricsPolling();
       return;
     }
-    const snapshot = await api.loadTestMetrics();
+    const snapshot = await api.loadTestMetrics(loadTestId);
     this.applyMetricsSnapshot(snapshot);
     if (!snapshot.running) {
       this.stopMetricsPolling();
@@ -631,6 +684,19 @@ export class LoadTestWorkspaceTabComponent {
       this.artifactSaveTimer = null;
       this.loadTest.patchArtifact(id, patch);
     }, ARTIFACT_SAVE_DEBOUNCE_MS);
+  }
+
+  /** Writes an artifact patch immediately so source switches do not snap back. */
+  private patchArtifactNow(patch: Parameters<LoadTestService['patchArtifact']>[1]): void {
+    const id = this.artifactId();
+    if (!id) {
+      return;
+    }
+    if (this.artifactSaveTimer !== null) {
+      clearTimeout(this.artifactSaveTimer);
+      this.artifactSaveTimer = null;
+    }
+    this.loadTest.patchArtifact(id, patch);
   }
 
   private scheduleTabUiPersist(): void {

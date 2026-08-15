@@ -14,13 +14,18 @@ describe('load-test-tab-ui.schema', () => {
     );
   });
 
+  it('hides results by default for a new tab', () => {
+    expect(loadTestTabUiSchema.parse({}).isResultsPanelHidden).toBe(true);
+    expect(resolveLoadTestTabUi({}, 'lt:missing').isResultsPanelHidden).toBe(true);
+  });
+
   it('restores saved section and results pane geometry', () => {
     const ui = resolveLoadTestTabUi(
       {
         'lt:a1': {
           activeSection: 'profile',
           resultsPanelHeightPx: 420,
-          isResultsPanelHidden: true,
+          isResultsPanelHidden: false,
           selectedRunId: 'run-1',
           pinnedBaselineRunId: 'run-0',
           compareSelection: { a: 'run-0', b: 'run-1' },
@@ -32,7 +37,7 @@ describe('load-test-tab-ui.schema', () => {
 
     expect(ui.activeSection).toBe('profile');
     expect(ui.resultsPanelHeightPx).toBe(420);
-    expect(ui.isResultsPanelHidden).toBe(true);
+    expect(ui.isResultsPanelHidden).toBe(false);
     expect(ui.selectedRunId).toBe('run-1');
     expect(ui.pinnedBaselineRunId).toBe('run-0');
     expect(ui.compareSelection).toEqual({ a: 'run-0', b: 'run-1' });

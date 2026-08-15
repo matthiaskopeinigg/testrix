@@ -30,7 +30,7 @@ export function coerceLoadTestTabSectionId(value: unknown): LoadTestTabSectionId
 export const loadTestTabUiSchema = z.object({
   activeSection: z.enum(LOAD_TEST_TAB_SECTION_IDS).default(DEFAULT_LOAD_TEST_TAB_SECTION),
   resultsPanelHeightPx: z.number().int().min(120).max(4000).optional(),
-  isResultsPanelHidden: z.boolean().default(false),
+  isResultsPanelHidden: z.boolean().default(true),
   selectedRunId: z.string().nullable().default(null),
   pinnedBaselineRunId: z.string().nullable().default(null),
   compareSelection: z

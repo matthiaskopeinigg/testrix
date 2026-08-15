@@ -6,9 +6,11 @@ import {
   interceptorFileSchema,
   loadTestsFileSchema,
   mockServerFileSchema,
+  parseLoadTestIpcId,
   regressionsFileSchema,
   testSuitesFileSchema,
 } from '../../../shared/testing';
+import { ErrorCodes, TestrixError } from '../../../shared/errors';
 
 import type { ConfigFileService } from '../../services/config/config-file.service';
 import { TestingRuntimeService } from '../../services/testing/testing-runtime.service';
@@ -46,6 +48,15 @@ export function setTestingRuntimeMainWindow(provider: () => BrowserWindow | null
  */
 export async function tryTestingRuntimeAutoStart(files: ConfigFileService): Promise<void> {
   await getTestingRuntime(files).tryAutoStartMockServer();
+}
+
+/** Requires a non-empty load-test id for status, metrics, and cancel IPC. */
+function requireLoadTestIpcId(value: unknown): string {
+  const id = parseLoadTestIpcId(value);
+  if (!id) {
+    throw new TestrixError(ErrorCodes.CONFIG_VALIDATION_FAILED, 'Load test id is required.');
+  }
+  return id;
 }
 
 export function registerTestingHandlers(ipc: IpcMainBinder, deps: TestingHandlerDeps): void {
@@ -202,11 +213,17 @@ export function registerTestingHandlers(ipc: IpcMainBinder, deps: TestingHandler
   );
   ipc.handle(
     TestingChannels.loadTestStatus,
-    wrapInvokeHandler(TestingChannels.loadTestStatus, async () => runtime.loadTestStatus()),
+    wrapInvokeHandler(TestingChannels.loadTestStatus, async (_e, loadTestId: unknown) => {
+      const id = requireLoadTestIpcId(loadTestId);
+      return runtime.loadTestStatus(id);
+    }),
   );
   ipc.handle(
     TestingChannels.loadTestMetrics,
-    wrapInvokeHandler(TestingChannels.loadTestMetrics, async () => runtime.loadTestMetrics()),
+    wrapInvokeHandler(TestingChannels.loadTestMetrics, async (_e, loadTestId: unknown) => {
+      const id = requireLoadTestIpcId(loadTestId);
+      return runtime.loadTestMetrics(id);
+    }),
   );
   ipc.handle(
     TestingChannels.loadTestStart,
@@ -216,7 +233,10 @@ export function registerTestingHandlers(ipc: IpcMainBinder, deps: TestingHandler
   );
   ipc.handle(
     TestingChannels.loadTestCancel,
-    wrapInvokeHandler(TestingChannels.loadTestCancel, async () => runtime.loadTestCancel()),
+    wrapInvokeHandler(TestingChannels.loadTestCancel, async (_e, loadTestId: unknown) => {
+      const id = requireLoadTestIpcId(loadTestId);
+      return runtime.loadTestCancel(id);
+    }),
   );
   ipc.handle(
     TestingChannels.e2eExecuteFlow,

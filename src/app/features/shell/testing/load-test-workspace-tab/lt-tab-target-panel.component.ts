@@ -11,22 +11,47 @@ import {
   untracked,
   viewChild,
 } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+
+import type { CollectionRequestBody } from '@shared/config';
+import {
+  createDefaultLoadTestManualTarget,
+  createDefaultRequestStepConfig,
+  flowRequestStepCollectionBody,
+  patchRequestStepFromCollectionBody,
+  type LoadTestManualTarget,
+  type LoadTestTargetSource,
+} from '@shared/testing';
 
 import { CollectionsService } from '@app/core/collections/collections.service';
-import { TxBannerComponent } from '@app/shared/components/feedback/tx-banner/tx-banner.component';
-import { TxButtonComponent } from '@app/shared/components/forms/tx-button/tx-button.component';
-import { TxContextMenuComponent } from '@app/shared/components/overlays/tx-context-menu/tx-context-menu.component';
-import { TxIconComponent } from '@app/shared/components/forms/tx-icon/tx-icon.component';
-import { mergeTxTreeConfig } from '@app/shared/components/data/tx-tree/tx-tree.config';
-import { TxTreeComponent } from '@app/shared/components/data/tx-tree/tx-tree.component';
-import type { TxTreeNodeClickEvent } from '@app/shared/components/data/tx-tree/tx-tree.types';
-import { WorkspacePanelToolbarActionsDirective } from '@app/features/shell/workspace/workspace-panel-toolbar-actions.directive';
-import { WorkspaceSidebarPanelShellComponent } from '@app/features/shell/workspace/workspace-sidebar-panel-shell.component';
-import { collectFolderAncestorIds } from '@app/features/shell/workspace/workspace-sidebar-selection';
-
 import { findCollectionNode } from '@app/features/shell/collections/collection-tree.mutations';
 import { collectFolderIdsInSubtree } from '@app/features/shell/collections/collection-tree.expand';
 import type { CollectionTreeKind, CollectionTreeNode, CollectionTreeNodeMeta } from '@app/features/shell/collections/collection-tree.types';
+import { RequestTabBodyPanelComponent } from '@app/features/shell/workspace/request-workspace-tab/request-tab-body-panel.component';
+import { WorkspacePanelToolbarActionsDirective } from '@app/features/shell/workspace/workspace-panel-toolbar-actions.directive';
+import { WorkspaceSectionNavSliderDirective } from '@app/features/shell/workspace/workspace-section-nav-slider.directive';
+import { collectFolderAncestorIds } from '@app/features/shell/workspace/workspace-sidebar-selection';
+import { WorkspaceSidebarPanelShellComponent } from '@app/features/shell/workspace/workspace-sidebar-panel-shell.component';
+import { TxBannerComponent } from '@app/shared/components/feedback/tx-banner/tx-banner.component';
+import { TxButtonComponent } from '@app/shared/components/forms/tx-button/tx-button.component';
+import { TxContextMenuComponent } from '@app/shared/components/overlays/tx-context-menu/tx-context-menu.component';
+import { TxDropdownComponent } from '@app/shared/components/forms/tx-dropdown/tx-dropdown.component';
+import type { TxDropdownOption } from '@app/shared/components/forms/tx-dropdown/tx-dropdown.types';
+import { TxFormFieldComponent } from '@app/shared/components/forms/tx-form-field/tx-form-field.component';
+import { TxIconComponent } from '@app/shared/components/forms/tx-icon/tx-icon.component';
+import { TxKeyValueListComponent } from '@app/shared/components/data/tx-key-value-list/tx-key-value-list.component';
+import type { TxKeyValueRow } from '@app/shared/components/data/tx-key-value-list/tx-key-value-list.types';
+import { TxVariableInputComponent } from '@app/shared/components/editors/tx-variable-input/tx-variable-input.component';
+import { mergeTxTreeConfig } from '@app/shared/components/data/tx-tree/tx-tree.config';
+import { TxTreeComponent } from '@app/shared/components/data/tx-tree/tx-tree.component';
+import type { TxTreeNodeClickEvent } from '@app/shared/components/data/tx-tree/tx-tree.types';
+
+import {
+  FLOW_REQUEST_STEP_NAV_ITEMS,
+  type FlowRequestStepSection,
+} from '../test-suite-workspace-tab/flow-request-step-sections';
+import { FLOW_STEP_HTTP_METHOD_OPTIONS } from '../test-suite-workspace-tab/flow-step-editor-options';
+import { kvPairsToRows, rowsToKvPairs } from '../test-suite-workspace-tab/flow-step-kv';
 
 import { collectionRequestLabel } from './collect-collection-requests';
 import {
@@ -47,11 +72,18 @@ const SEARCH_DEBOUNCE_MS = 100;
   selector: 'app-lt-tab-target-panel',
   standalone: true,
   imports: [
+    FormsModule,
+    RequestTabBodyPanelComponent,
     TxBannerComponent,
     TxButtonComponent,
     TxContextMenuComponent,
+    TxDropdownComponent,
+    TxFormFieldComponent,
     TxIconComponent,
+    TxKeyValueListComponent,
     TxTreeComponent,
+    TxVariableInputComponent,
+    WorkspaceSectionNavSliderDirective,
     WorkspaceSidebarPanelShellComponent,
     WorkspacePanelToolbarActionsDirective,
   ],
@@ -65,10 +97,41 @@ export class LtTabTargetPanelComponent {
 
   private readonly tree = viewChild(TxTreeComponent);
 
+  readonly targetSource = input<LoadTestTargetSource>('collection');
   readonly targetRequestId = input<string | undefined>(undefined);
+  readonly manualTarget = input<LoadTestManualTarget | undefined>(undefined);
 
+  readonly targetSourceChange = output<LoadTestTargetSource>();
   readonly targetRequestIdChange = output<string | undefined>();
+  readonly manualTargetChange = output<LoadTestManualTarget>();
   readonly openRequest = output<void>();
+
+  protected readonly targetSourceOptions: readonly TxDropdownOption<LoadTestTargetSource>[] = [
+    { value: 'collection', label: 'Existing request' },
+    { value: 'manual', label: 'Manual request' },
+  ];
+  protected readonly httpMethodOptions = FLOW_STEP_HTTP_METHOD_OPTIONS;
+  protected readonly navItems = FLOW_REQUEST_STEP_NAV_ITEMS;
+  protected readonly activeSection = signal<FlowRequestStepSection>('params');
+
+  protected readonly isManual = computed(() => this.targetSource() === 'manual');
+
+  protected readonly sourceHint = computed(() =>
+    this.isManual()
+      ? 'Build the HTTP request this load test will send.'
+      : 'Pick an existing collection request to run this load test against.',
+  );
+
+  protected readonly needsManualUrl = computed(
+    () => this.isManual() && !this.manual().url.trim(),
+  );
+
+  protected readonly collectionBody = computed(() =>
+    flowRequestStepCollectionBody({
+      ...createDefaultRequestStepConfig(),
+      ...this.manual(),
+    }),
+  );
 
   protected readonly searchQuery = signal('');
   protected readonly searchQueryDebounced = signal('');
@@ -235,6 +298,51 @@ export class LtTabTargetPanelComponent {
 
   protected handleClearTarget(): void {
     this.targetRequestIdChange.emit(undefined);
+  }
+
+  /** Returns the current manual target, filling defaults when none is saved yet. */
+  protected manual(): LoadTestManualTarget {
+    return this.manualTarget() ?? createDefaultLoadTestManualTarget();
+  }
+
+  protected headerRows(): readonly TxKeyValueRow[] {
+    return kvPairsToRows(this.manual().headers ?? []);
+  }
+
+  protected queryRows(): readonly TxKeyValueRow[] {
+    return kvPairsToRows(this.manual().queryParams ?? []);
+  }
+
+  /** Emits a source switch so the parent can keep collection vs manual independently. */
+  protected handleTargetSourceChange(source: string): void {
+    if (source !== 'collection' && source !== 'manual') {
+      return;
+    }
+    this.targetSourceChange.emit(source);
+  }
+
+  protected handleSectionSelect(section: FlowRequestStepSection): void {
+    this.activeSection.set(section);
+  }
+
+  protected handleHeadersChange(rows: readonly TxKeyValueRow[]): void {
+    this.patchManual({ headers: rowsToKvPairs(rows) });
+  }
+
+  protected handleQueryChange(rows: readonly TxKeyValueRow[]): void {
+    this.patchManual({ queryParams: rowsToKvPairs(rows) });
+  }
+
+  protected handleBodyChange(body: CollectionRequestBody): void {
+    this.patchManual(patchRequestStepFromCollectionBody(body));
+  }
+
+  /** Merges a manual-target patch onto the current editor state. */
+  protected patchManual(patch: Partial<LoadTestManualTarget>): void {
+    this.manualTargetChange.emit({
+      ...this.manual(),
+      ...patch,
+    });
   }
 
   protected handleFilterToolbarClick(event: MouseEvent): void {

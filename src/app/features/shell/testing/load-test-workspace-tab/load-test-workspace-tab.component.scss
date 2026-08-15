@@ -96,8 +96,21 @@
   min-width: 0;
 }
 
+.lt-tab__pane {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  padding: 14px 18px 18px;
+}
+
 :host ::ng-deep .tx-workspace-tab__section-shell:has(app-lt-tab-target-panel) {
-  overflow: hidden;
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
 }
 
 :host ::ng-deep .tx-workspace-tab__section-shell > .tx-entrance-stagger__block.lt-tab__target-section {
@@ -145,14 +158,4 @@
 
 .lt-tab__divider {
   @include tab-chrome.workspace-tab-section-sidebar-divider;
-}
-
-.lt-tab__pane {
-  display: flex;
-  flex: 1 1 auto;
-  flex-direction: column;
-  min-width: 0;
-  min-height: 0;
-  overflow: auto;
-  padding: 14px 18px 18px;
 }

@@ -254,10 +254,10 @@ export interface ElectronRendererBridge {
     onInterceptorStatus: (
       listener: (status: import('@shared/testing').InterceptorRuntimeStatus) => void,
     ) => () => void;
-    loadTestStatus: () => Promise<{ readonly running: boolean }>;
-    loadTestMetrics: () => Promise<LoadTestRunMetrics>;
+    loadTestStatus: (loadTestId: string) => Promise<{ readonly running: boolean }>;
+    loadTestMetrics: (loadTestId: string) => Promise<LoadTestRunMetrics>;
     loadTestStart: (options?: LoadTestStartOptions) => Promise<LoadTestRunMetrics>;
-    loadTestCancel: () => Promise<LoadTestRunMetrics>;
+    loadTestCancel: (loadTestId: string) => Promise<LoadTestRunMetrics>;
     regressionStatus: () => Promise<RegressionRunMetrics>;
     regressionStart: (
       options?: RegressionStartOptions,

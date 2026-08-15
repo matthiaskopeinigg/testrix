@@ -1,11 +1,15 @@
 import type { HttpSettings } from '../config/http-settings.schema';
+import { httpMethodAllowsRequestBody, type HttpMethodId } from '../config/http-settings.schema';
 import { buildRequestOutgoingUrl } from '../config/request-url';
 import { normalizeOutgoingRequestUrl } from '../config/normalize-outgoing-request-url';
 import { resolveDynamicVariables } from '../dynamic-variables/dynamic-variables';
 import { resolveTemplateVariables } from '../dynamic-variables/template-variables';
+import { flowRequestStepCollectionBody } from '../testing/flow-request-body';
 import type { LoadTestManualTarget } from '../testing/load-test-target.schema';
+import { createDefaultRequestStepConfig } from '../testing/test-suite-steps.schema';
 
 import type { BuildOutgoingRequestResult } from './build-outgoing-request';
+import { encodeRequestBody, resolveEncodedBodyTemplates } from './encode-request-body';
 import { outgoingHttpRequestSchema } from './outgoing-request.schema';
 
 function resolveHeaderMap(
@@ -34,9 +38,7 @@ export function buildManualOutgoingRequest(input: {
 }): BuildOutgoingRequestResult | null {
   const variableContext = input.variableContext ?? {};
   const resolveText = (text: string): string =>
-    resolveDynamicVariables(
-      resolveTemplateVariables(text, { environment: variableContext }),
-    );
+    resolveDynamicVariables(resolveTemplateVariables(text, { environment: variableContext }));
 
   const path = resolveText(String(input.manual.url ?? '')).trim();
   if (!path) {
@@ -57,13 +59,26 @@ export function buildManualOutgoingRequest(input: {
   });
 
   const headers = resolveHeaderMap(input.manual.headers, variableContext);
+  const method = (input.manual.method ?? 'GET') as HttpMethodId;
+  const allowsBody = httpMethodAllowsRequestBody(method);
+  let body = allowsBody
+    ? encodeRequestBody(
+        flowRequestStepCollectionBody({
+          ...createDefaultRequestStepConfig(),
+          ...input.manual,
+        }),
+      )
+    : { kind: 'none' as const };
+  if (allowsBody) {
+    body = resolveEncodedBodyTemplates(body, resolveText);
+  }
 
   const outgoing = outgoingHttpRequestSchema.parse({
     requestId: input.loadTestId,
-    method: input.manual.method ?? 'GET',
+    method,
     url,
     headers,
-    body: { kind: 'none' },
+    body,
     transport: {
       timeoutMs: Number(input.manual.timeoutMs) || input.http.request.timeoutMs,
       useCookies: true,

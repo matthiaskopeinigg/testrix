@@ -3,6 +3,8 @@ import { app, type BrowserWindow, type WebContents } from 'electron';
 import {
   createIdleLoadTestRunMetrics,
   createIdleRegressionRunMetrics,
+  LoadTestRunnerSlots,
+  parseLoadTestIpcId,
   type FlowRunProgressEvent,
   type LoadTestRunMetrics,
   type LoadTestStartOptions,
@@ -35,7 +37,7 @@ import {
  * In-process testing runtimes (mock server, capture, interceptor, load test, E2E browser).
  */
 export class TestingRuntimeService {
-  private readonly loadTestRunner = new LoadTestRunner();
+  private readonly loadTestSlots = new LoadTestRunnerSlots<LoadTestRunner>();
   private readonly regressionRunner = new RegressionRunner();
   private readonly flowExecutor = new TestSuiteFlowExecutor();
   private readonly manualInputCoordinator = new FlowManualInputCoordinator();
@@ -131,21 +133,37 @@ export class TestingRuntimeService {
     this.interceptorRunner.setFile(file);
   }
 
-  loadTestStatus(): { readonly running: boolean } {
-    return { running: this.loadTestRunner.snapshot().running };
+  /** Returns whether the given load test currently has an active run. */
+  loadTestStatus(loadTestId: string): { readonly running: boolean } {
+    return this.loadTestSlots.status(loadTestId);
   }
 
-  loadTestMetrics(): LoadTestRunMetrics {
-    return this.loadTestRunner.snapshot();
+  /** Returns live metrics for one load test, or idle metrics when unknown. */
+  loadTestMetrics(loadTestId: string): LoadTestRunMetrics {
+    return this.loadTestSlots.snapshot(loadTestId);
   }
 
-  loadTestStart(options: unknown = {}): Promise<LoadTestRunMetrics> {
+  /** Starts a run for `options.loadTestId`, replacing a finished runner for that id. */
+  async loadTestStart(options: unknown = {}): Promise<LoadTestRunMetrics> {
+    const loadTestId =
+      options && typeof options === 'object' && 'loadTestId' in options
+        ? parseLoadTestIpcId((options as { loadTestId?: unknown }).loadTestId)
+        : null;
+    if (loadTestId) {
+      this.loadTestSlots.assertCanStart(loadTestId);
+    }
     const version = app.getVersion?.() ?? '0.0.0';
-    return this.loadTestRunner.start(options, this.files, version);
+    const runner = new LoadTestRunner();
+    const metrics = await runner.start(options, this.files, version);
+    if (loadTestId) {
+      this.loadTestSlots.set(loadTestId, runner);
+    }
+    return metrics;
   }
 
-  loadTestCancel(): LoadTestRunMetrics {
-    return this.loadTestRunner.cancel();
+  /** Cancels the run for `loadTestId`, or returns idle metrics when none exists. */
+  loadTestCancel(loadTestId: string): LoadTestRunMetrics {
+    return this.loadTestSlots.cancel(loadTestId);
   }
 
   regressionStatus(): RegressionRunMetrics {

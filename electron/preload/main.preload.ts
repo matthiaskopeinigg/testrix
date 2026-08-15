@@ -255,10 +255,10 @@ const api: ElectronAPI = {
         ipcRenderer.removeListener(TestingChannels.interceptorStatusEvent, handler);
       };
     },
-    loadTestStatus: () => ipcRenderer.invoke(TestingChannels.loadTestStatus),
-    loadTestMetrics: () => ipcRenderer.invoke(TestingChannels.loadTestMetrics),
+    loadTestStatus: (loadTestId) => ipcRenderer.invoke(TestingChannels.loadTestStatus, loadTestId),
+    loadTestMetrics: (loadTestId) => ipcRenderer.invoke(TestingChannels.loadTestMetrics, loadTestId),
     loadTestStart: (options) => ipcRenderer.invoke(TestingChannels.loadTestStart, options ?? {}),
-    loadTestCancel: () => ipcRenderer.invoke(TestingChannels.loadTestCancel),
+    loadTestCancel: (loadTestId) => ipcRenderer.invoke(TestingChannels.loadTestCancel, loadTestId),
     regressionStatus: () => ipcRenderer.invoke(TestingChannels.regressionStatus),
     regressionStart: (options) => ipcRenderer.invoke(TestingChannels.regressionStart, options ?? {}),
     regressionCancel: () => ipcRenderer.invoke(TestingChannels.regressionCancel),

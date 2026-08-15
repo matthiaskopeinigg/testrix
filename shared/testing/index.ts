@@ -20,6 +20,7 @@ export * from './load-test-target.schema';
 export * from './load-test-metrics-health';
 export * from './load-test-profile-presets';
 export * from './load-test-run.schema';
+export * from './load-test-runner-slots';
 export * from './load-test-run-diff';
 export * from './load-test-run-finalize';
 export * from './load-test-metrics-aggregate';
