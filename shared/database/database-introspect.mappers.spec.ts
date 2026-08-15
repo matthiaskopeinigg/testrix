@@ -51,6 +51,23 @@ describe('database-introspect mappers', () => {
     expect(indexes.find((item) => item.name === 'users_email_idx')?.columns).toEqual(['email']);
   });
 
+  it('maps Oracle uppercase aliases into schemas, tables, and columns', () => {
+    expect(mapCatalogSchemas([{ NAME: 'HR' }, { USERNAME: 'SCOTT' }])).toEqual([
+      { name: 'HR', system: false },
+      { name: 'SCOTT', system: false },
+    ]);
+    expect(
+      mapCatalogTables([
+        { TABLE_SCHEMA: 'HR', TABLE_NAME: 'EMPLOYEES', TABLE_TYPE: 'BASE TABLE' },
+      ]),
+    ).toEqual([{ schema: 'HR', name: 'EMPLOYEES', kind: 'table' }]);
+    expect(
+      mapCatalogColumns([
+        { COLUMN_NAME: 'ID', DATA_TYPE: 'NUMBER', IS_NULLABLE: 'NO', IS_PK: 1 },
+      ])[0],
+    ).toMatchObject({ name: 'ID', type: 'NUMBER', nullable: false, primaryKey: true });
+  });
+
   it('maps sqlite pragma foreign keys and reconstructs CREATE TABLE', () => {
     const fks = mapCatalogForeignKeys([
       { name: 'orders_user_id_fkey', from: 'user_id', table: 'users', to: 'id' },

@@ -12,7 +12,7 @@ describe('resolveDatabaseExecuteQuery', () => {
         selectionEnd: source.length,
         language: 'sql',
       }),
-    ).toBe('SELECT 2;');
+    ).toBe('SELECT 2');
   });
 
   it('returns the SQL statement at the caret', () => {
@@ -25,7 +25,7 @@ describe('resolveDatabaseExecuteQuery', () => {
         selectionEnd: caret,
         language: 'sql',
       }),
-    ).toBe('SELECT id FROM users;');
+    ).toBe('SELECT id FROM users');
   });
 
   it('ignores semicolons inside strings and comments', () => {
@@ -38,7 +38,7 @@ describe('resolveDatabaseExecuteQuery', () => {
         selectionEnd: caret,
         language: 'sql',
       }),
-    ).toBe('SELECT 2;');
+    ).toBe('SELECT 2');
   });
 
   it('returns the Redis line at the caret', () => {
@@ -63,6 +63,6 @@ describe('resolveDatabaseExecuteQuery', () => {
         selectionEnd: source.length,
         language: 'sql',
       }),
-    ).toBe('SELECT 2;');
+    ).toBe('SELECT 2');
   });
 });

@@ -1,6 +1,9 @@
+import { stripTrailingSqlSemicolons } from './strip-trailing-sql-semicolons';
+
 /**
  * Resolves which SQL/Redis text to execute (DataGrip-style).
  * Selection wins; otherwise the statement or line at the caret.
+ * Trailing `;` is stripped for SQL so Oracle and similar drivers do not raise ORA-00911.
  */
 export function resolveDatabaseExecuteQuery(input: {
   readonly source: string;
@@ -11,26 +14,28 @@ export function resolveDatabaseExecuteQuery(input: {
   const source = input.source;
   const start = Math.max(0, Math.min(input.selectionStart, source.length));
   const end = Math.max(start, Math.min(input.selectionEnd, source.length));
+  let resolved: string;
   if (end > start) {
-    return source.slice(start, end).trim();
-  }
-  const caret = start;
-  if (input.language === 'js') {
-    return source.trim();
-  }
-  const extracted =
-    input.language === 'redis' ? extractLineAt(source, caret) : extractSqlStatementAt(source, caret);
-  const trimmed = extracted.trim();
-  if (trimmed) {
-    return trimmed;
-  }
-  if (input.language === 'sql' && caret > 0) {
-    const previous = extractSqlStatementAt(source, caret - 1).trim();
-    if (previous) {
-      return previous;
+    resolved = source.slice(start, end).trim();
+  } else {
+    const caret = start;
+    if (input.language === 'js') {
+      resolved = source.trim();
+    } else {
+      const extracted =
+        input.language === 'redis' ? extractLineAt(source, caret) : extractSqlStatementAt(source, caret);
+      const trimmed = extracted.trim();
+      if (trimmed) {
+        resolved = trimmed;
+      } else if (input.language === 'sql' && caret > 0) {
+        const previous = extractSqlStatementAt(source, caret - 1).trim();
+        resolved = previous || source.trim();
+      } else {
+        resolved = source.trim();
+      }
     }
   }
-  return source.trim();
+  return input.language === 'sql' ? stripTrailingSqlSemicolons(resolved) : resolved;
 }
 
 function extractLineAt(source: string, caret: number): string {

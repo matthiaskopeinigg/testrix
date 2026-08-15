@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.1-beta.2] - 2026-08-15
+
+### Fixed
+
+- Oracle queries no longer fail with ORA-00911 when SQL ends with a semicolon
+- Oracle schemas and tables appear in the sidebar (uppercase driver column aliases are mapped correctly)
+
 ## [1.0.1-beta.1] - 2026-08-15
 
 ### Fixed
@@ -111,7 +118,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Initial public beta of Testrix: local-first desktop API client (HTTP, WebSocket, collections, environments, test suites, load tests, mocks, and capture).
 
-[Unreleased]: https://github.com/matthiaskopeinigg/testrix/compare/v1.0.1-beta.1...HEAD
+[Unreleased]: https://github.com/matthiaskopeinigg/testrix/compare/v1.0.1-beta.2...HEAD
+[1.0.1-beta.2]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.1-beta.2
 [1.0.1-beta.1]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.1-beta.1
 [1.0.0-beta.9]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.0-beta.9
 [1.0.0-beta.8]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.0-beta.8

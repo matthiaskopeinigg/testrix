@@ -9,19 +9,38 @@ import type {
   DatabaseCatalogTable,
 } from './database-introspect.schema';
 
-function str(row: Record<string, unknown>, ...keys: string[]): string {
+/**
+ * Reads a row field by preferred key names (case-insensitive).
+ * Oracle `OUT_FORMAT_OBJECT` returns uppercase aliases (`NAME`, `TABLE_NAME`).
+ */
+function rowValue(row: Record<string, unknown>, ...keys: string[]): unknown {
   for (const key of keys) {
-    const value = row[key];
-    if (value != null && String(value).length > 0) {
-      return String(value);
+    if (Object.prototype.hasOwnProperty.call(row, key)) {
+      return row[key];
     }
+  }
+  const entries = Object.entries(row);
+  for (const key of keys) {
+    const lower = key.toLowerCase();
+    const match = entries.find(([candidate]) => candidate.toLowerCase() === lower);
+    if (match) {
+      return match[1];
+    }
+  }
+  return undefined;
+}
+
+function str(row: Record<string, unknown>, ...keys: string[]): string {
+  const value = rowValue(row, ...keys);
+  if (value != null && String(value).length > 0) {
+    return String(value);
   }
   return '';
 }
 
 function bool(row: Record<string, unknown>, ...keys: string[]): boolean {
   for (const key of keys) {
-    const value = row[key];
+    const value = rowValue(row, key);
     if (value === true || value === 1 || value === '1' || value === 'YES' || value === 't') {
       return true;
     }
@@ -38,7 +57,7 @@ export function mapCatalogSchemas(
 ): DatabaseCatalogSchemaItem[] {
   const out: DatabaseCatalogSchemaItem[] = [];
   for (const row of rows) {
-    const name = str(row, 'name', 'nspname', 'schema_name', 'SCHEMA_NAME');
+    const name = str(row, 'name', 'nspname', 'schema_name', 'SCHEMA_NAME', 'username', 'USERNAME');
     if (!name) {
       continue;
     }
@@ -80,7 +99,7 @@ export function mapCatalogColumns(
         return null;
       }
       const type = str(row, 'type', 'data_type', 'DATA_TYPE', 'udt_name') || 'unknown';
-      const notnull = row['notnull'];
+      const notnull = rowValue(row, 'notnull', 'NOTNULL');
       const nullable =
         notnull != null
           ? Number(notnull) === 0
@@ -91,7 +110,7 @@ export function mapCatalogColumns(
         nullable,
         primaryKey:
           bool(row, 'primaryKey', 'is_pk', 'pk') ||
-          Number(row['pk'] ?? 0) > 0 ||
+          Number(rowValue(row, 'pk', 'PK') ?? 0) > 0 ||
           str(row, 'column_key', 'COLUMN_KEY') === 'PRI',
       } satisfies DatabaseCatalogColumn;
     })
@@ -187,7 +206,7 @@ export function reconstructCreateTableDdl(
 }
 
 function isUniqueIndex(row: Record<string, unknown>): boolean {
-  if (Number(row['non_unique']) === 0 || str(row, 'non_unique') === '0') {
+  if (Number(rowValue(row, 'non_unique', 'NON_UNIQUE')) === 0 || str(row, 'non_unique') === '0') {
     return true;
   }
   if (bool(row, 'unique', 'indisunique')) {

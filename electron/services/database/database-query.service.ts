@@ -20,6 +20,7 @@ import { databaseEngineFamily } from '../../../shared/database/database-engine';
 import { resolveOracleConnectString } from '../../../shared/database/oracle-connect-string';
 import { resolveMongoConnectionUri } from '../../../shared/database/mongo-connection-uri';
 import { parseMongoShellQuery } from '../../../shared/database/mongo-shell-query';
+import { stripTrailingSqlSemicolons } from '../../../shared/database/strip-trailing-sql-semicolons';
 import { logError, logInfo } from '../../errors/logger';
 import { findOracleInstantClientDir } from './find-oracle-instant-client';
 
@@ -549,12 +550,13 @@ export class DatabaseQueryService {
     queryText: string,
     stepTimeoutMs: number | undefined,
   ): Promise<DatabaseQueryEnvelope> {
+    const sql = stripTrailingSqlSemicolons(queryText);
     const pool = await this.getOraclePool(config);
     const cmdMs = this.effectiveCommandMs(config, stepTimeoutMs);
     const connection = await pool.getConnection();
     try {
       const result = await this.withOptionalTimeout(
-        connection.execute(queryText, [], {
+        connection.execute(sql, [], {
           outFormat: oracledb.OUT_FORMAT_OBJECT,
           autoCommit: false,
         }),
@@ -562,7 +564,7 @@ export class DatabaseQueryService {
         'Query',
       );
       const rows = (result.rows ?? []).map((row) => mapOracleRow(row));
-      const dml = /^\s*(insert|update|delete|merge)\b/i.test(queryText);
+      const dml = /^\s*(insert|update|delete|merge)\b/i.test(sql);
       return {
         rows,
         affectedRows: dml && typeof result.rowsAffected === 'number' ? result.rowsAffected : undefined,

@@ -14,6 +14,7 @@ export * from './database-engine';
 export * from './oracle-connect-string';
 export * from './mongo-shell-query';
 export * from './mongo-connection-uri';
+export * from './strip-trailing-sql-semicolons';
 export * from './sql-identifier';
 export * from './wrap-sql-select-page';
 export * from './wrap-sql-explain';

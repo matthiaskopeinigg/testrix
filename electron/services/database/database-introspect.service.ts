@@ -88,7 +88,13 @@ export class DatabaseIntrospectService {
       return this.rows(connection, `SELECT SCHEMA_NAME AS name FROM information_schema.SCHEMATA ORDER BY SCHEMA_NAME`);
     }
     if (family === 'oracle') {
-      return this.rows(connection, `SELECT username AS name FROM all_users ORDER BY username`);
+      return this.rows(
+        connection,
+        `SELECT username AS name FROM all_users
+         UNION
+         SELECT USER AS name FROM dual
+         ORDER BY 1`,
+      );
     }
     if (family === 'clickhouse') {
       return this.rows(connection, `SELECT name FROM system.databases ORDER BY name`);
