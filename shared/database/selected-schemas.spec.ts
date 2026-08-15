@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   defaultSelectedSchemaNames,
   filterSchemasBySelection,
+  completionSchemaNames,
   resolveVisibleDatabaseSchemas,
   seedCatalogSchemaItems,
 } from './selected-schemas';
@@ -64,5 +65,16 @@ describe('selected-schemas', () => {
         [],
       ),
     ).toEqual([]);
+  });
+
+  it('limits completion schemas to selected / default names', () => {
+    expect(completionSchemaNames({ type: 'oracle', user: 'hr' })).toEqual(['HR']);
+    expect(
+      completionSchemaNames({
+        type: 'oracle',
+        user: 'hr',
+        selectedSchemas: ['SCOTT', 'APP'],
+      }),
+    ).toEqual(['SCOTT', 'APP']);
   });
 });

@@ -10,7 +10,7 @@
   flex-wrap: wrap;
   align-items: center;
   gap: var(--tx-space-2);
-  margin: var(--tx-space-3) 0;
+  margin: var(--tx-space-3) 0 var(--tx-space-4);
 }
 
 .database-schema-picker__count {
@@ -25,6 +25,7 @@
   gap: 2px;
   max-height: min(420px, 50vh);
   overflow: auto;
+  margin-top: var(--tx-space-2);
   padding: var(--tx-space-1);
   border: 1px solid var(--tx-border-subtle);
   border-radius: var(--tx-radius-md);

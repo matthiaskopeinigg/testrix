@@ -185,7 +185,7 @@ export class DatabaseWorkspaceTabComponent {
     void this.catalog.revision();
     return mergeDatabaseQueryCompletions(
       connection?.type,
-      connection ? this.catalog.completionSource(connection.id) : null,
+      connection ? this.catalog.completionSource(connection.id, connection) : null,
       query,
       query.length,
     );
@@ -197,7 +197,7 @@ export class DatabaseWorkspaceTabComponent {
   }): readonly TxCodeEditorCompletionItem[] => {
     const connection = this.selectedConnection();
     void this.catalog.revision();
-    const source = connection ? this.catalog.completionSource(connection.id) : null;
+    const source = connection ? this.catalog.completionSource(connection.id, connection) : null;
     void this.prefetchCatalogForCompletion(ctx.value, ctx.caret);
     return mergeDatabaseQueryCompletions(connection?.type, source, ctx.value, ctx.caret);
   };
@@ -550,7 +550,7 @@ export class DatabaseWorkspaceTabComponent {
     if (!connection) {
       return;
     }
-    const catalog = this.catalog.completionSource(connection.id);
+    const catalog = this.catalog.completionSource(connection.id, connection);
     const target = catalogPrefetchTarget(source, caret, catalog);
     if (!target?.schema) {
       return;

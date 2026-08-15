@@ -7,7 +7,11 @@ import type {
   DatabaseCatalogTable,
   DatabaseCatalogCompletionSource,
 } from '@shared/database';
-import { formatDatabaseConnectionError, seedCatalogSchemaItems } from '@shared/database';
+import {
+  formatDatabaseConnectionError,
+  completionSchemaNames,
+  seedCatalogSchemaItems,
+} from '@shared/database';
 
 import { ElectronService } from '@app/core/electron/electron.service';
 
@@ -35,18 +39,57 @@ export class DatabaseCatalogService {
     return this.catalogs()[connectionId];
   }
 
-  completionSource(connectionId: string): DatabaseCatalogCompletionSource | null {
+  /**
+   * Catalog slice for SQL autocomplete. Only selected / default schemas — never the
+   * full schema directory (Oracle `all_users` can be 200+ and freezes the editor).
+   *
+   * @param connectionId Connection id.
+   * @param connection Profile used to resolve which schemas may appear in suggestions.
+   */
+  completionSource(
+    connectionId: string,
+    connection?: Pick<
+      DatabaseConnection,
+      'type' | 'user' | 'database' | 'selectedSchemas'
+    > | null,
+  ): DatabaseCatalogCompletionSource | null {
     const catalog = this.snapshot(connectionId);
     if (!catalog) {
       return null;
     }
-    const tables = Object.values(catalog.tablesBySchema).flat();
+
+    const allowedNames = connection
+      ? completionSchemaNames(connection)
+      : catalog.schemaDirectory === 'full'
+        ? []
+        : catalog.schemas.map((schema) => schema.name);
+    const allowed = new Set(allowedNames.map((name) => name.toLowerCase()));
+
+    const fromCatalog = catalog.schemas.filter((schema) => allowed.has(schema.name.toLowerCase()));
+    const schemas =
+      fromCatalog.length > 0
+        ? fromCatalog
+        : connection
+          ? seedCatalogSchemaItems(connection).filter((schema) =>
+              allowed.has(schema.name.toLowerCase()),
+            )
+          : [];
+
+    const tables = Object.entries(catalog.tablesBySchema)
+      .filter(([schema]) => allowed.has(schema.toLowerCase()))
+      .flatMap(([, schemaTables]) => schemaTables);
+
     const columnsByTable: Record<string, readonly DatabaseCatalogColumn[]> = {};
     for (const [key, detail] of Object.entries(catalog.detailsByTable)) {
+      const schemaPart = key.includes('.') ? key.slice(0, key.indexOf('.')) : key;
+      if (allowed.size > 0 && !allowed.has(schemaPart.toLowerCase())) {
+        continue;
+      }
       columnsByTable[key] = detail.columns;
     }
+
     return {
-      schemas: catalog.schemas,
+      schemas,
       tables,
       columnsByTable,
     };

@@ -169,3 +169,15 @@ function firstEligible(eligible: readonly DatabaseCatalogSchemaItem[]): string[]
   const first = eligible[0];
   return first ? [first.name] : [];
 }
+
+/**
+ * Schema names that query autocomplete may suggest (selected / default only).
+ * Never the full `all_users` directory — that freezes editors with 200+ schemas.
+ *
+ * @param connection Connection profile.
+ */
+export function completionSchemaNames(
+  connection: Pick<DatabaseConnection, 'type' | 'user' | 'database' | 'selectedSchemas'>,
+): readonly string[] {
+  return seedCatalogSchemaItems(connection).map((schema) => schema.name);
+}
