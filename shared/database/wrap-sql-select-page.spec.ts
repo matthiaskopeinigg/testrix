@@ -27,4 +27,17 @@ describe('wrapSqlSelectPage', () => {
     const sql = wrapSqlSelectPage('SELECT * FROM users', 100, 200, 'mssql');
     expect(sql).toContain('OFFSET 200 ROWS FETCH NEXT 100 ROWS ONLY');
   });
+
+  it('wraps Oracle with OFFSET/FETCH and no AS alias', () => {
+    const sql = wrapSqlSelectPage('SELECT * FROM users', 50, 10, 'oracle');
+    expect(sql).toContain('OFFSET 10 ROWS FETCH NEXT 50 ROWS ONLY');
+    expect(sql).not.toContain('AS _tx_page');
+  });
+
+  it('pages Mongo find with skip/limit', () => {
+    expect(canPageSqlSelect('db.users.find({})', 'mongodb')).toBe(true);
+    expect(wrapSqlSelectPage('db.users.find({})', 25, 5, 'mongodb')).toBe(
+      'db.users.find({}).skip(5).limit(25)',
+    );
+  });
 });

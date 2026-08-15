@@ -29,6 +29,8 @@ describe('isSystemSchemaName', () => {
     expect(isSystemSchemaName('information_schema')).toBe(true);
     expect(isSystemSchemaName('mysql')).toBe(true);
     expect(isSystemSchemaName('sys')).toBe(true);
+    expect(isSystemSchemaName('system')).toBe(true);
+    expect(isSystemSchemaName('crdb_internal')).toBe(true);
     expect(isSystemSchemaName('public')).toBe(false);
   });
 });

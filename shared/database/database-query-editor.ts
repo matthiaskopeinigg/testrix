@@ -1,6 +1,6 @@
 import type { DatabaseType } from '../config/database-settings.schema';
 
-export type DatabaseQueryEditorLanguage = 'sql' | 'redis';
+export type DatabaseQueryEditorLanguage = 'sql' | 'redis' | 'js';
 
 export type DatabaseQueryCompletionItem = {
   readonly label: string;
@@ -16,6 +16,9 @@ export function databaseQueryEditorLanguage(
   if (type === 'redis') {
     return 'redis';
   }
+  if (type === 'mongodb') {
+    return 'js';
+  }
   return 'sql';
 }
 
@@ -30,11 +33,26 @@ export function databaseQueryEditorLanguageLabel(type: DatabaseType | null | und
   if (type === 'mysql') {
     return 'MySQL';
   }
+  if (type === 'mariadb') {
+    return 'MariaDB';
+  }
   if (type === 'sqlite') {
     return 'SQLite';
   }
   if (type === 'postgresql') {
     return 'PostgreSQL';
+  }
+  if (type === 'oracle') {
+    return 'Oracle';
+  }
+  if (type === 'mongodb') {
+    return 'MongoDB';
+  }
+  if (type === 'clickhouse') {
+    return 'ClickHouse';
+  }
+  if (type === 'cockroachdb') {
+    return 'CockroachDB';
   }
   return 'SQL';
 }
@@ -43,6 +61,9 @@ export function databaseQueryEditorLanguageLabel(type: DatabaseType | null | und
 export function databaseQueryEditorPlaceholder(type: DatabaseType | null | undefined): string {
   if (type === 'redis') {
     return 'SET testrix:demo:greeting "Hello from Testrix"';
+  }
+  if (type === 'mongodb') {
+    return 'db.users.find({})';
   }
   return 'SELECT * FROM users WHERE id = {{userId}}';
 }
@@ -96,9 +117,27 @@ const REDIS_COMPLETIONS: readonly DatabaseQueryCompletionItem[] = [
   },
 ];
 
+const MONGO_COMPLETIONS: readonly DatabaseQueryCompletionItem[] = [
+  { label: 'find', insert: 'db.collection.find({})', detail: 'Find documents' },
+  { label: 'findOne', insert: 'db.collection.findOne({})', detail: 'Find one document' },
+  { label: 'insertOne', insert: 'db.collection.insertOne({ "name": "Ada" })', detail: 'Insert document' },
+  { label: 'updateOne', insert: 'db.collection.updateOne({ "_id": 1 }, { "$set": { "name": "Ada" } })', detail: 'Update one' },
+  { label: 'deleteOne', insert: 'db.collection.deleteOne({ "_id": 1 })', detail: 'Delete one' },
+  { label: 'aggregate', insert: 'db.collection.aggregate([{ "$match": {} }])', detail: 'Aggregation pipeline' },
+  { label: 'countDocuments', insert: 'db.collection.countDocuments({})', detail: 'Count documents' },
+  { label: 'show dbs', insert: 'show dbs', detail: 'List databases' },
+  { label: 'show collections', insert: 'show collections', detail: 'List collections' },
+];
+
 /** Autocomplete rows for the query editor. */
 export function databaseQueryEditorCompletions(
   type: DatabaseType | null | undefined,
 ): readonly DatabaseQueryCompletionItem[] {
-  return type === 'redis' ? REDIS_COMPLETIONS : SQL_COMPLETIONS;
+  if (type === 'redis') {
+    return REDIS_COMPLETIONS;
+  }
+  if (type === 'mongodb') {
+    return MONGO_COMPLETIONS;
+  }
+  return SQL_COMPLETIONS;
 }

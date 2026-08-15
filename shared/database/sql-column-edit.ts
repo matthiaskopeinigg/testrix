@@ -54,7 +54,14 @@ export function sqlTypeBaseName(type: string | undefined): string {
   if (!type) {
     return '';
   }
-  const trimmed = type.trim().toLowerCase();
+  let trimmed = type.trim().toLowerCase();
+  for (;;) {
+    const wrapped = trimmed.match(/^(nullable|lowcardinality|array)\((.*)\)$/i);
+    if (!wrapped?.[2]) {
+      break;
+    }
+    trimmed = wrapped[2].trim();
+  }
   const noArgs = trimmed.replace(/\(.*\)$/, '').trim();
   return noArgs.split(/\s+/)[0] ?? '';
 }
@@ -70,10 +77,10 @@ export function classifySqlColumnType(type: string | undefined): SqlColumnEditKi
   if (BOOLEAN_TYPES.has(base) || isSingleBitType(type)) {
     return 'boolean';
   }
-  if (INTEGER_TYPES.has(base)) {
+  if (INTEGER_TYPES.has(base) || /^u?int\d*$/.test(base)) {
     return 'integer';
   }
-  if (DECIMAL_TYPES.has(base)) {
+  if (DECIMAL_TYPES.has(base) || /^float\d*$/.test(base) || /^decimal\d*$/.test(base) || base === 'binary_float' || base === 'binary_double') {
     return 'decimal';
   }
   if (base === 'uuid') {

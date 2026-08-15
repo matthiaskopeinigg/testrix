@@ -22,6 +22,7 @@ const ORIGINAL = [
 describe('table-data-edits', () => {
   it('refuses Redis, views, and tables without a primary key', () => {
     expect(canEditTableData({ type: 'redis', isView: false, pkColumns: ['id'] })).toBe(false);
+    expect(canEditTableData({ type: 'mongodb', isView: false, pkColumns: ['_id'] })).toBe(false);
     expect(canEditTableData({ type: 'postgresql', isView: true, pkColumns: ['id'] })).toBe(false);
     expect(canEditTableData({ type: 'postgresql', isView: false, pkColumns: [] })).toBe(false);
     expect(canEditTableData({ type: 'postgresql', isView: false, pkColumns: ['id'] })).toBe(true);

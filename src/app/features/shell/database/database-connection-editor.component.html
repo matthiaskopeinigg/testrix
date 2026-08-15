@@ -104,12 +104,13 @@
       </div>
       <div class="db-conn__grid">
         <tx-form-field
-          [label]="conn.type === 'redis' ? 'Database index' : 'Database name'"
+          [label]="databaseFieldLabel(conn.type)"
           controlId="db-conn-database"
         >
           <tx-input
             id="db-conn-database"
             [ngModel]="conn.database ?? ''"
+            [placeholder]="databaseFieldPlaceholder(conn.type)"
             (ngModelChange)="handlePatch({ database: $event || undefined })"
           />
         </tx-form-field>

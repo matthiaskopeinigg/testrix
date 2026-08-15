@@ -237,7 +237,7 @@ export class CommandSeedsService {
         label: 'New database connection',
         category: 'Database',
         hint: 'Add a connection from the Database sidebar',
-        keywords: ['sql', 'redis', 'postgresql', 'mysql', 'sqlite', 'database'],
+        keywords: ['sql', 'redis', 'postgresql', 'mysql', 'mariadb', 'oracle', 'mongodb', 'clickhouse', 'cockroachdb', 'sqlite', 'database'],
         run: () => void this.createDatabaseConnection(),
       },
       {

@@ -6,7 +6,7 @@ export function resolveDatabaseExecuteQuery(input: {
   readonly source: string;
   readonly selectionStart: number;
   readonly selectionEnd: number;
-  readonly language: 'sql' | 'redis';
+  readonly language: 'sql' | 'redis' | 'js';
 }): string {
   const source = input.source;
   const start = Math.max(0, Math.min(input.selectionStart, source.length));
@@ -15,6 +15,9 @@ export function resolveDatabaseExecuteQuery(input: {
     return source.slice(start, end).trim();
   }
   const caret = start;
+  if (input.language === 'js') {
+    return source.trim();
+  }
   const extracted =
     input.language === 'redis' ? extractLineAt(source, caret) : extractSqlStatementAt(source, caret);
   const trimmed = extracted.trim();

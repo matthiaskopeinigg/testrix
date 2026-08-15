@@ -65,7 +65,7 @@ export function canEditTableData(options: {
   readonly isView: boolean;
   readonly pkColumns: readonly string[];
 }): boolean {
-  if (!options.type || options.type === 'redis' || options.isView) {
+  if (!options.type || options.type === 'redis' || options.type === 'mongodb' || options.isView) {
     return false;
   }
   return options.pkColumns.length > 0;

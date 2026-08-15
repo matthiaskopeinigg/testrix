@@ -1,5 +1,6 @@
 import type { DatabaseType } from '../config/database-settings.schema';
 
+import { databaseEngineFamily } from './database-engine';
 import { qualifySqlTableName, quoteSqlIdentifier } from './sql-identifier';
 import type { TableDataCell, TableDataDraft } from './table-data-edits';
 import { tableDataPkKey, tableDataPkValues } from './table-data-edits';
@@ -11,7 +12,7 @@ export interface TableDmlStatement {
 }
 
 /** Why a table cannot accept Submit DML. */
-export type TableDmlRefuseReason = 'redis' | 'view' | 'no-pk';
+export type TableDmlRefuseReason = 'redis' | 'mongodb' | 'view' | 'no-pk';
 
 /**
  * Returns a refuse reason when Submit must stay disabled, or `null` when DML is allowed.
@@ -24,6 +25,9 @@ export function refuseTableDml(options: {
   if (!options.type || options.type === 'redis') {
     return 'redis';
   }
+  if (options.type === 'mongodb') {
+    return 'mongodb';
+  }
   if (options.isView) {
     return 'view';
   }
@@ -33,18 +37,33 @@ export function refuseTableDml(options: {
   return null;
 }
 
-/** BEGIN / START TRANSACTION for the engine. */
-export function tableDmlBeginSql(type: DatabaseType | null | undefined): string {
-  return type === 'mssql' ? 'BEGIN TRANSACTION' : 'BEGIN';
+/** BEGIN / START TRANSACTION for the engine, or `null` when the engine auto-commits. */
+export function tableDmlBeginSql(type: DatabaseType | null | undefined): string | null {
+  const family = databaseEngineFamily(type);
+  if (family === 'mssql') {
+    return 'BEGIN TRANSACTION';
+  }
+  if (family === 'oracle' || family === 'clickhouse' || family === 'mongodb' || family === 'redis') {
+    return null;
+  }
+  return 'BEGIN';
 }
 
-/** COMMIT for the engine. */
-export function tableDmlCommitSql(_type: DatabaseType | null | undefined): string {
+/** COMMIT for the engine, or `null` when the engine auto-commits. */
+export function tableDmlCommitSql(type: DatabaseType | null | undefined): string | null {
+  const family = databaseEngineFamily(type);
+  if (family === 'clickhouse' || family === 'mongodb' || family === 'redis') {
+    return null;
+  }
   return 'COMMIT';
 }
 
-/** ROLLBACK for the engine. */
-export function tableDmlRollbackSql(_type: DatabaseType | null | undefined): string {
+/** ROLLBACK for the engine, or `null` when the engine auto-commits. */
+export function tableDmlRollbackSql(type: DatabaseType | null | undefined): string | null {
+  const family = databaseEngineFamily(type);
+  if (family === 'clickhouse' || family === 'mongodb' || family === 'redis') {
+    return null;
+  }
   return 'ROLLBACK';
 }
 
@@ -145,7 +164,7 @@ export function sqlLiteral(value: TableDataCell, type: DatabaseType | null | und
   if (value === null) {
     return 'NULL';
   }
-  if (type === 'mysql') {
+  if (databaseEngineFamily(type) === 'mysql' || databaseEngineFamily(type) === 'clickhouse') {
     return `'${value.replace(/\\/g, '\\\\').replace(/'/g, "''")}'`;
   }
   return `'${value.replace(/'/g, "''")}'`;
@@ -155,6 +174,8 @@ function refuseMessage(reason: TableDmlRefuseReason): string {
   switch (reason) {
     case 'redis':
       return 'Redis keys cannot be edited in the table grid.';
+    case 'mongodb':
+      return 'MongoDB collections cannot be edited in the table grid.';
     case 'view':
       return 'Views are read-only.';
     case 'no-pk':

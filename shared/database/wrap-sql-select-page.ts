@@ -1,5 +1,8 @@
 import type { DatabaseType } from '../config/database-settings.schema';
 
+import { databaseEngineFamily } from './database-engine';
+import { canPageMongoFind, wrapMongoFindPage } from './mongo-shell-query';
+
 /** Default SELECT page size for the Data query console. */
 export const DATABASE_QUERY_PAGE_SIZE_DEFAULT = 500;
 
@@ -9,7 +12,7 @@ export const DATABASE_QUERY_PAGE_SIZES = [100, 500, 1000] as const;
 export type DatabaseQueryPageSize = (typeof DATABASE_QUERY_PAGE_SIZES)[number];
 
 /**
- * True when a single SELECT/WITH statement can be wrapped for LIMIT/OFFSET paging.
+ * True when a single SELECT/WITH (or Mongo `find`) can be wrapped for paging.
  */
 export function canPageSqlSelect(
   query: string,
@@ -17,6 +20,9 @@ export function canPageSqlSelect(
 ): boolean {
   if (type === 'redis') {
     return false;
+  }
+  if (databaseEngineFamily(type) === 'mongodb') {
+    return canPageMongoFind(query);
   }
   const trimmed = stripTrailingSemicolons(query);
   if (!trimmed || trimmed.includes(';')) {
@@ -35,11 +41,18 @@ export function wrapSqlSelectPage(
   offset: number,
   type: DatabaseType | null | undefined,
 ): string {
-  const inner = stripTrailingSemicolons(query);
+  const family = databaseEngineFamily(type);
   const safeLimit = Math.max(1, Math.floor(limit));
   const safeOffset = Math.max(0, Math.floor(offset));
-  if (type === 'mssql') {
+  if (family === 'mongodb') {
+    return wrapMongoFindPage(query, safeLimit, safeOffset);
+  }
+  const inner = stripTrailingSemicolons(query);
+  if (family === 'mssql') {
     return `SELECT * FROM (\n${inner}\n) AS _tx_page ORDER BY (SELECT NULL) OFFSET ${safeOffset} ROWS FETCH NEXT ${safeLimit} ROWS ONLY`;
+  }
+  if (family === 'oracle') {
+    return `SELECT * FROM (\n${inner}\n) _tx_page OFFSET ${safeOffset} ROWS FETCH NEXT ${safeLimit} ROWS ONLY`;
   }
   return `SELECT * FROM (\n${inner}\n) AS _tx_page LIMIT ${safeLimit} OFFSET ${safeOffset}`;
 }

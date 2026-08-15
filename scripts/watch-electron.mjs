@@ -16,7 +16,7 @@ const shared = {
   target: 'node20',
   format: 'cjs',
   sourcemap: true,
-  external: ['electron'],
+  external: ['electron', 'electron-updater', 'better-sqlite3', 'ioredis', 'pg', 'mysql2', 'mssql', 'oracledb', 'mongodb', '@clickhouse/client'],
   logLevel: 'info',
 };
 

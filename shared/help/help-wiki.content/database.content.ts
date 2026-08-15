@@ -13,7 +13,7 @@ export const HELP_WIKI_DATABASE_SECTIONS: readonly HelpWikiSection[] = [
     blocks: [
       {
         type: 'paragraph',
-        text: 'The Database rail (icon labeled Database) opens a split panel: Connections on top and Queries below. Use it to save database connections, browse schemas and tables, and keep SQL or Redis queries next to the workbench.',
+        text: 'The Database rail (icon labeled Database) opens a split panel: Connections on top and Queries below. Use it to save database connections, browse schemas, tables, and collections, and keep SQL, Redis, or MongoDB queries next to the workbench.',
       },
       {
         type: 'subheading',
@@ -46,13 +46,13 @@ export const HELP_WIKI_DATABASE_SECTIONS: readonly HelpWikiSection[] = [
     blocks: [
       {
         type: 'paragraph',
-        text: 'A connection is a saved profile for PostgreSQL, MySQL, SQL Server, SQLite, or Redis. Click a connection to expand its catalog (schemas, tables, views). Open Connection settings from the context menu to edit host, credentials, and TLS.',
+        text: 'A connection is a saved profile for PostgreSQL, MySQL, MariaDB, SQL Server, Oracle, SQLite, CockroachDB, ClickHouse, MongoDB, or Redis. Click a connection to expand its catalog (schemas, tables, views, or collections). Open Connection settings from the context menu to edit host, credentials, and TLS.',
       },
       {
         type: 'list',
         items: [
           'New folder / New connection — right-click the Connections list or a folder. The connection editor can also move a connection into an existing folder.',
-          'Connection settings — host, port, user, password, database name, SQLite file path, TLS, and timeouts (context menu).',
+          'Connection settings — host, port, user, password, database name, Oracle service name / SID, SQLite file path, TLS, and timeouts (context menu).',
           'Test connection — probes the server without running a query.',
           'Connect on boot — Testrix probes the connection when the app starts.',
           'Open catalog — expands schemas and objects. Refresh reloads the catalog.',
@@ -66,6 +66,11 @@ export const HELP_WIKI_DATABASE_SECTIONS: readonly HelpWikiSection[] = [
         title: 'Local Docker databases',
         text: 'From the repo, run docker compose up -d. Add PostgreSQL on localhost:5432 (user, password, and database testrix) or Redis on localhost:6379.',
       },
+      {
+        type: 'note',
+        title: 'Oracle and MongoDB',
+        text: 'Oracle uses Easy Connect: host, port 1521, and a service name or SID such as XEPDB1. Instant Client is not required. For MongoDB Atlas, paste a mongodb+srv:// URI into Host.',
+      },
     ],
   }),
   wikiSection({
@@ -74,11 +79,11 @@ export const HELP_WIKI_DATABASE_SECTIONS: readonly HelpWikiSection[] = [
     label: 'Saved queries',
     icon: 'fileText',
     title: 'Saved queries',
-    description: 'SQL and Redis editors, run, and result export.',
+    description: 'SQL, Redis, and MongoDB editors, run, and result export.',
     blocks: [
       {
         type: 'paragraph',
-        text: 'Saved queries live in the Queries section. Click a query to open its editor. Pick a connection on the tab, then write SQL or Redis commands. Results appear in a spreadsheet-style grid below the editor.',
+        text: 'Saved queries live in the Queries section. Click a query to open its editor. Pick a connection on the tab, then write SQL, Redis commands, or MongoDB shell snippets. Results appear in a spreadsheet-style grid below the editor.',
       },
       {
         type: 'list',

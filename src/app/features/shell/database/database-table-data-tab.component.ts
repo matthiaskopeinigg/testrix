@@ -510,7 +510,7 @@ export class DatabaseTableDataTabComponent {
   }
 
   private applyWhereFilter(raw: string): void {
-    const invalid = tableDataWhereFilterError(raw);
+    const invalid = tableDataWhereFilterError(raw, this.connection()?.type);
     if (invalid) {
       this.error.set(invalid);
       return;
@@ -551,15 +551,24 @@ export class DatabaseTableDataTabComponent {
     this.submitting.set(true);
     this.error.set(null);
     try {
-      await api.query({ connection, query: tableDmlBeginSql(connection.type) });
+      const beginSql = tableDmlBeginSql(connection.type);
+      if (beginSql) {
+        await api.query({ connection, query: beginSql });
+      }
       try {
         for (const statement of statements) {
           await api.query({ connection, query: statement.sql });
         }
-        await api.query({ connection, query: tableDmlCommitSql(connection.type) });
+        const commitSql = tableDmlCommitSql(connection.type);
+        if (commitSql) {
+          await api.query({ connection, query: commitSql });
+        }
       } catch (error) {
         try {
-          await api.query({ connection, query: tableDmlRollbackSql(connection.type) });
+          const rollbackSql = tableDmlRollbackSql(connection.type);
+          if (rollbackSql) {
+            await api.query({ connection, query: rollbackSql });
+          }
         } catch {
           /* ignore rollback failure */
         }

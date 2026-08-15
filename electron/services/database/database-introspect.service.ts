@@ -1,5 +1,6 @@
 import type { DatabaseConnection, DatabaseType } from '../../../shared/config/database-settings.schema';
 import {
+  databaseEngineFamily,
   mapCatalogColumns,
   mapCatalogForeignKeys,
   mapCatalogIndexes,
@@ -27,7 +28,8 @@ export interface DatabaseIntrospectRequest {
 export class DatabaseIntrospectService {
   async introspect(request: DatabaseIntrospectRequest): Promise<DatabaseIntrospectResult> {
     const type = request.connection.type;
-    if (type === 'redis') {
+    const family = databaseEngineFamily(type);
+    if (family === 'redis') {
       if (request.level === 'schemas') {
         return { level: 'schemas', schemas: [] };
       }
@@ -75,14 +77,24 @@ export class DatabaseIntrospectService {
   }
 
   private async loadSchemas(connection: DatabaseConnection): Promise<Record<string, unknown>[]> {
-    if (connection.type === 'sqlite') {
+    const family = databaseEngineFamily(connection.type);
+    if (family === 'sqlite') {
       return [{ name: 'main' }];
     }
-    if (connection.type === 'postgresql') {
+    if (family === 'postgresql') {
       return this.rows(connection, `SELECT nspname AS name FROM pg_namespace ORDER BY nspname`);
     }
-    if (connection.type === 'mysql') {
+    if (family === 'mysql') {
       return this.rows(connection, `SELECT SCHEMA_NAME AS name FROM information_schema.SCHEMATA ORDER BY SCHEMA_NAME`);
+    }
+    if (family === 'oracle') {
+      return this.rows(connection, `SELECT username AS name FROM all_users ORDER BY username`);
+    }
+    if (family === 'clickhouse') {
+      return this.rows(connection, `SELECT name FROM system.databases ORDER BY name`);
+    }
+    if (family === 'mongodb') {
+      return this.rows(connection, 'show dbs');
     }
     return this.rows(
       connection,
@@ -94,13 +106,14 @@ export class DatabaseIntrospectService {
     connection: DatabaseConnection,
     schema: string | undefined,
   ): Promise<Record<string, unknown>[]> {
-    if (connection.type === 'sqlite') {
+    const family = databaseEngineFamily(connection.type);
+    if (family === 'sqlite') {
       return this.rows(
         connection,
         `SELECT name, type FROM sqlite_master WHERE type IN ('table','view') AND name NOT LIKE 'sqlite_%' ORDER BY type, name`,
       );
     }
-    if (connection.type === 'postgresql') {
+    if (family === 'postgresql') {
       const schemaFilter = schema
         ? `AND table_schema = ${sqlString(schema)}`
         : `AND table_schema NOT IN ('pg_catalog','information_schema')`;
@@ -108,6 +121,34 @@ export class DatabaseIntrospectService {
         connection,
         `SELECT table_schema, table_name, table_type FROM information_schema.tables WHERE table_type IN ('BASE TABLE','VIEW') ${schemaFilter} ORDER BY table_schema, table_name`,
       );
+    }
+    if (family === 'oracle') {
+      const owner = sqlString((schema || connection.user || '').toUpperCase());
+      return this.rows(
+        connection,
+        `SELECT owner AS table_schema, table_name, 'BASE TABLE' AS table_type FROM all_tables WHERE owner = ${owner}
+         UNION ALL
+         SELECT owner AS table_schema, view_name AS table_name, 'VIEW' AS table_type FROM all_views WHERE owner = ${owner}
+         ORDER BY table_name`,
+      );
+    }
+    if (family === 'clickhouse') {
+      const schemaFilter = schema ? `AND database = ${sqlString(schema)}` : '';
+      return this.rows(
+        connection,
+        `SELECT database AS table_schema, name AS table_name, engine AS table_type FROM system.tables WHERE is_temporary = 0 ${schemaFilter} ORDER BY database, name`,
+      );
+    }
+    if (family === 'mongodb') {
+      const namesQuery = schema
+        ? `db.getSiblingDB(${JSON.stringify(schema)}).getCollectionNames()`
+        : 'show collections';
+      const rows = await this.rows(connection, namesQuery);
+      return rows.map((row) => ({
+        table_schema: schema || connection.database || '',
+        table_name: row['name'] ?? row['table_name'],
+        table_type: 'BASE TABLE',
+      }));
     }
     const schemaFilter = schema
       ? `AND TABLE_SCHEMA = ${sqlString(schema)}`
@@ -124,10 +165,11 @@ export class DatabaseIntrospectService {
     table: string,
   ): Promise<Record<string, unknown>[]> {
     this.requireTable(table);
-    if (connection.type === 'sqlite') {
+    const family = databaseEngineFamily(connection.type);
+    if (family === 'sqlite') {
       return this.rows(connection, `PRAGMA table_info(${quoteSqlIdentifier(table, 'sqlite')})`);
     }
-    if (connection.type === 'postgresql') {
+    if (family === 'postgresql') {
       return this.rows(
         connection,
         `SELECT c.column_name, c.data_type, c.is_nullable,
@@ -142,6 +184,40 @@ export class DatabaseIntrospectService {
          ORDER BY c.ordinal_position`,
       );
     }
+    if (family === 'oracle') {
+      const owner = sqlString((schema || connection.user || '').toUpperCase());
+      const tableName = sqlString(table.toUpperCase());
+      return this.rows(
+        connection,
+        `SELECT c.column_name, c.data_type,
+                CASE WHEN c.nullable = 'Y' THEN 'YES' ELSE 'NO' END AS is_nullable,
+                CASE WHEN pk.column_name IS NULL THEN 0 ELSE 1 END AS is_pk
+         FROM all_tab_columns c
+         LEFT JOIN (
+           SELECT acc.column_name
+           FROM all_constraints ac
+           JOIN all_cons_columns acc
+             ON ac.owner = acc.owner AND ac.constraint_name = acc.constraint_name
+           WHERE ac.constraint_type = 'P' AND ac.owner = ${owner} AND ac.table_name = ${tableName}
+         ) pk ON pk.column_name = c.column_name
+         WHERE c.owner = ${owner} AND c.table_name = ${tableName}
+         ORDER BY c.column_id`,
+      );
+    }
+    if (family === 'clickhouse') {
+      return this.rows(
+        connection,
+        `SELECT name AS column_name, type AS data_type, 'YES' AS is_nullable,
+                0 AS is_pk
+         FROM system.columns
+         WHERE database = ${sqlString(schema || connection.database || 'default')}
+           AND table = ${sqlString(table)}
+         ORDER BY position`,
+      );
+    }
+    if (family === 'mongodb') {
+      return this.loadMongoColumns(connection, schema, table);
+    }
     const schemaSql = sqlString(schema || connection.database || '');
     return this.rows(
       connection,
@@ -152,13 +228,40 @@ export class DatabaseIntrospectService {
     );
   }
 
+  private async loadMongoColumns(
+    connection: DatabaseConnection,
+    schema: string,
+    table: string,
+  ): Promise<Record<string, unknown>[]> {
+    const dbExpr = schema.trim() ? `db.getSiblingDB(${JSON.stringify(schema)})` : 'db';
+    const docs = await this.rows(
+      connection,
+      `${dbExpr}.getCollection(${JSON.stringify(table)}).find({}).limit(20)`,
+    );
+    const types = new Map<string, string>();
+    for (const doc of docs) {
+      for (const [key, value] of Object.entries(doc)) {
+        if (!types.has(key)) {
+          types.set(key, mongoJsType(value));
+        }
+      }
+    }
+    return [...types.entries()].map(([name, dataType]) => ({
+      column_name: name,
+      data_type: dataType,
+      is_nullable: name === '_id' ? 'NO' : 'YES',
+      is_pk: name === '_id' ? 1 : 0,
+    }));
+  }
+
   private async loadIndexes(
     connection: DatabaseConnection,
     schema: string,
     table: string,
   ): Promise<Record<string, unknown>[]> {
     this.requireTable(table);
-    if (connection.type === 'sqlite') {
+    const family = databaseEngineFamily(connection.type);
+    if (family === 'sqlite') {
       const list = await this.rows(connection, `PRAGMA index_list(${quoteSqlIdentifier(table, 'sqlite')})`);
       const out: Record<string, unknown>[] = [];
       for (const item of list) {
@@ -177,7 +280,7 @@ export class DatabaseIntrospectService {
       }
       return out;
     }
-    if (connection.type === 'postgresql') {
+    if (family === 'postgresql') {
       return this.rows(
         connection,
         `SELECT i.relname AS name, ix.indisunique, a.attname
@@ -190,6 +293,53 @@ export class DatabaseIntrospectService {
          WHERE n.nspname = ${sqlString(schema || 'public')} AND t.relname = ${sqlString(table)}
          ORDER BY i.relname, k.ord`,
       );
+    }
+    if (family === 'oracle') {
+      const owner = sqlString((schema || connection.user || '').toUpperCase());
+      const tableName = sqlString(table.toUpperCase());
+      return this.rows(
+        connection,
+        `SELECT i.index_name AS name,
+                CASE WHEN i.uniqueness = 'UNIQUE' THEN 1 ELSE 0 END AS indisunique,
+                ic.column_name
+         FROM all_indexes i
+         JOIN all_ind_columns ic
+           ON i.owner = ic.index_owner AND i.index_name = ic.index_name
+         WHERE i.table_owner = ${owner} AND i.table_name = ${tableName}
+         ORDER BY i.index_name, ic.column_position`,
+      );
+    }
+    if (family === 'clickhouse') {
+      return this.rows(
+        connection,
+        `SELECT name, type AS column_name, 0 AS unique
+         FROM system.data_skipping_indices
+         WHERE database = ${sqlString(schema || connection.database || 'default')}
+           AND table = ${sqlString(table)}
+         ORDER BY name`,
+      );
+    }
+    if (family === 'mongodb') {
+      const dbExpr = schema.trim() ? `db.getSiblingDB(${JSON.stringify(schema)})` : 'db';
+      const rows = await this.rows(
+        connection,
+        `${dbExpr}.getCollection(${JSON.stringify(table)}).getIndexes()`,
+      );
+      const out: Record<string, unknown>[] = [];
+      for (const row of rows) {
+        const name = String(row['name'] ?? '');
+        const key = row['key'];
+        const columns =
+          key && typeof key === 'object' && !Array.isArray(key) ? Object.keys(key as object) : [];
+        for (const column of columns) {
+          out.push({
+            name,
+            unique: Boolean(row['unique']),
+            column_name: column,
+          });
+        }
+      }
+      return out;
     }
     return this.rows(
       connection,
@@ -207,10 +357,11 @@ export class DatabaseIntrospectService {
     table: string,
   ): Promise<Record<string, unknown>[]> {
     this.requireTable(table);
-    if (connection.type === 'sqlite') {
+    const family = databaseEngineFamily(connection.type);
+    if (family === 'sqlite') {
       return this.rows(connection, `PRAGMA foreign_key_list(${quoteSqlIdentifier(table, 'sqlite')})`);
     }
-    if (connection.type === 'postgresql') {
+    if (family === 'postgresql') {
       return this.rows(
         connection,
         `SELECT con.conname AS name,
@@ -231,6 +382,27 @@ export class DatabaseIntrospectService {
          ORDER BY con.conname, cols.ord`,
       );
     }
+    if (family === 'oracle') {
+      const owner = sqlString((schema || connection.user || '').toUpperCase());
+      const tableName = sqlString(table.toUpperCase());
+      return this.rows(
+        connection,
+        `SELECT c.constraint_name AS name, cc.column_name,
+                r.owner AS ref_schema, r.table_name AS ref_table, rc.column_name AS ref_column
+         FROM all_constraints c
+         JOIN all_cons_columns cc
+           ON c.owner = cc.owner AND c.constraint_name = cc.constraint_name
+         JOIN all_constraints r
+           ON c.r_owner = r.owner AND c.r_constraint_name = r.constraint_name
+         JOIN all_cons_columns rc
+           ON r.owner = rc.owner AND r.constraint_name = rc.constraint_name AND cc.position = rc.position
+         WHERE c.constraint_type = 'R' AND c.owner = ${owner} AND c.table_name = ${tableName}
+         ORDER BY c.constraint_name, cc.position`,
+      );
+    }
+    if (family === 'clickhouse' || family === 'mongodb') {
+      return [];
+    }
     return this.rows(
       connection,
       `SELECT CONSTRAINT_NAME AS name, COLUMN_NAME AS column_name,
@@ -246,7 +418,8 @@ export class DatabaseIntrospectService {
 
   private async loadDdl(connection: DatabaseConnection, schema: string, table: string): Promise<string> {
     this.requireTable(table);
-    if (connection.type === 'sqlite') {
+    const family = databaseEngineFamily(connection.type);
+    if (family === 'sqlite') {
       const rows = await this.rows(
         connection,
         `SELECT sql FROM sqlite_master WHERE name = ${sqlString(table)} AND sql IS NOT NULL LIMIT 1`,
@@ -256,7 +429,7 @@ export class DatabaseIntrospectService {
         return sql.endsWith(';') ? sql : `${sql};`;
       }
     }
-    if (connection.type === 'mysql') {
+    if (family === 'mysql') {
       const rows = await this.rows(
         connection,
         `SHOW CREATE TABLE ${qualify(connection.type, schema, table)}`,
@@ -265,6 +438,19 @@ export class DatabaseIntrospectService {
       if (sql) {
         return sql.endsWith(';') ? sql : `${sql};`;
       }
+    }
+    if (family === 'clickhouse') {
+      const rows = await this.rows(
+        connection,
+        `SHOW CREATE TABLE ${qualify(connection.type, schema, table)}`,
+      );
+      const sql = String(rows[0]?.['statement'] ?? rows[0]?.['create_table_query'] ?? Object.values(rows[0] ?? {})[0] ?? '').trim();
+      if (sql) {
+        return sql.endsWith(';') ? sql : `${sql};`;
+      }
+    }
+    if (family === 'mongodb') {
+      return '';
     }
     const columns = mapCatalogColumns(await this.loadColumns(connection, schema, table));
     return reconstructCreateTableDdl(schema, table, columns as DatabaseCatalogColumn[], connection.type);
@@ -292,10 +478,23 @@ function sqlString(value: string): string {
 
 function qualify(type: DatabaseType, schema: string, table: string): string {
   const quotedTable = quoteSqlIdentifier(table, type);
-  if (!schema.trim() || type === 'sqlite') {
+  if (!schema.trim() || databaseEngineFamily(type) === 'sqlite') {
     return quotedTable;
   }
   return `${quoteSqlIdentifier(schema, type)}.${quotedTable}`;
+}
+
+function mongoJsType(value: unknown): string {
+  if (value === null || value === undefined) {
+    return 'null';
+  }
+  if (Array.isArray(value)) {
+    return 'array';
+  }
+  if (value instanceof Date) {
+    return 'date';
+  }
+  return typeof value;
 }
 
 /** Shared singleton for the app session. */

@@ -20,7 +20,11 @@ import type {
   DatabaseConnectionStatus,
   DatabaseConnectionStatusMap,
 } from '@shared/database/connection-status.schema';
-import { parseDatabaseConnectionTabResourceId } from '@shared/database';
+import {
+  databaseNameFieldLabel,
+  databaseNameFieldPlaceholder,
+  parseDatabaseConnectionTabResourceId,
+} from '@shared/database';
 import { unwrapIpcInvokeError } from '@shared/errors';
 
 import { DatabaseConnectionsService } from '@app/core/database/database-connections.service';
@@ -38,9 +42,14 @@ const FOLDER_NEW = '__tx_new_folder__';
 
 const DATABASE_TYPE_OPTIONS: readonly { value: DatabaseType; label: string }[] = [
   { value: 'postgresql', label: 'PostgreSQL' },
-  { value: 'mysql', label: 'MySQL / MariaDB' },
+  { value: 'mysql', label: 'MySQL' },
+  { value: 'mariadb', label: 'MariaDB' },
   { value: 'mssql', label: 'SQL Server' },
+  { value: 'oracle', label: 'Oracle' },
   { value: 'sqlite', label: 'SQLite' },
+  { value: 'cockroachdb', label: 'CockroachDB' },
+  { value: 'clickhouse', label: 'ClickHouse' },
+  { value: 'mongodb', label: 'MongoDB' },
   { value: 'redis', label: 'Redis' },
 ];
 
@@ -129,6 +138,14 @@ export class DatabaseConnectionEditorComponent {
 
   protected typeLabel(type: DatabaseType | undefined): string {
     return DATABASE_TYPE_OPTIONS.find((entry) => entry.value === type)?.label ?? type ?? 'Unknown';
+  }
+
+  protected databaseFieldLabel(type: DatabaseType | undefined): string {
+    return databaseNameFieldLabel(type);
+  }
+
+  protected databaseFieldPlaceholder(type: DatabaseType | undefined): string {
+    return databaseNameFieldPlaceholder(type);
   }
 
   protected statusFor(conn: DatabaseConnection): DatabaseConnectionStatus | null {

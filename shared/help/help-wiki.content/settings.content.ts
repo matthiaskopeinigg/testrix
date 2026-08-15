@@ -292,7 +292,7 @@ export const HELP_WIKI_SETTINGS_SECTIONS: readonly HelpWikiSection[] = [
     blocks: [
       {
         type: 'paragraph',
-        text: 'There is no connection editor in Settings. Open the Database sidebar to add PostgreSQL, MySQL, SQL Server, SQLite, and Redis connections, organize them in folders, and browse catalogs. See Help → Database for the sidebar, saved queries, and table data.',
+        text: 'There is no connection editor in Settings. Open the Database sidebar to add PostgreSQL, MySQL, MariaDB, SQL Server, Oracle, SQLite, CockroachDB, ClickHouse, MongoDB, and Redis connections, organize them in folders, and browse catalogs. See Help → Database for the sidebar, saved queries, and table data.',
       },
     ],
   }),

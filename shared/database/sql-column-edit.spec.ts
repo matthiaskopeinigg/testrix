@@ -13,6 +13,7 @@ describe('sqlTypeBaseName', () => {
   it('strips size arguments and qualifiers', () => {
     expect(sqlTypeBaseName('varchar(255)')).toBe('varchar');
     expect(sqlTypeBaseName('INT UNSIGNED')).toBe('int');
+    expect(sqlTypeBaseName('Nullable(Int32)')).toBe('int32');
     expect(sqlTypeBaseName('')).toBe('');
   });
 });
@@ -32,6 +33,8 @@ describe('classifySqlColumnType', () => {
     expect(classifySqlColumnType('jsonb')).toBe('json');
     expect(classifySqlColumnType('text')).toBe('text');
     expect(classifySqlColumnType('varchar(255)')).toBe('text');
+    expect(classifySqlColumnType('int32')).toBe('integer');
+    expect(classifySqlColumnType('Nullable(Float64)')).toBe('decimal');
   });
 });
 

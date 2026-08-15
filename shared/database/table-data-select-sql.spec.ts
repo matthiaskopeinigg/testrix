@@ -48,4 +48,14 @@ describe('buildTableDataSelectSql', () => {
       }),
     ).toBe('SELECT * FROM users WHERE (id = 1)');
   });
+
+  it('builds a Mongo find against a collection', () => {
+    expect(
+      buildTableDataSelectSql({
+        schema: 'shop',
+        table: 'orders',
+        type: 'mongodb',
+      }),
+    ).toBe('db.getSiblingDB("shop").getCollection("orders").find({})');
+  });
 });

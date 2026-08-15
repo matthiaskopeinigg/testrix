@@ -143,7 +143,7 @@ export function mapCatalogForeignKeys(
       'REFERENCED_TABLE_NAME',
       'table',
     );
-    const refSchema = str(row, 'refSchema', 'referenced_table_schema', 'REFERENCED_TABLE_SCHEMA') || undefined;
+    const refSchema = str(row, 'refSchema', 'ref_schema', 'referenced_table_schema', 'REFERENCED_TABLE_SCHEMA') || undefined;
     const existing = byName.get(name);
     if (existing) {
       byName.set(name, {

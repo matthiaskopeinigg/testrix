@@ -17,6 +17,12 @@ describe('databaseQueryEditorLanguage', () => {
     expect(databaseQueryEditorLanguage('mysql')).toBe('sql');
     expect(databaseQueryEditorLanguage('sqlite')).toBe('sql');
     expect(databaseQueryEditorLanguage('mssql')).toBe('sql');
+    expect(databaseQueryEditorLanguage('oracle')).toBe('sql');
+    expect(databaseQueryEditorLanguage('clickhouse')).toBe('sql');
+  });
+
+  it('returns js for MongoDB connections', () => {
+    expect(databaseQueryEditorLanguage('mongodb')).toBe('js');
   });
 
   it('defaults to sql when type is unknown', () => {
@@ -30,6 +36,8 @@ describe('databaseQueryEditorLanguageLabel', () => {
     expect(databaseQueryEditorLanguageLabel('redis')).toBe('Redis');
     expect(databaseQueryEditorLanguageLabel('postgresql')).toBe('PostgreSQL');
     expect(databaseQueryEditorLanguageLabel('mysql')).toBe('MySQL');
+    expect(databaseQueryEditorLanguageLabel('oracle')).toBe('Oracle');
+    expect(databaseQueryEditorLanguageLabel('mongodb')).toBe('MongoDB');
   });
 });
 

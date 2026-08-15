@@ -6,8 +6,13 @@ export const DATABASE_TYPE_IDS = [
   'redis',
   'postgresql',
   'mysql',
+  'mariadb',
   'mssql',
   'sqlite',
+  'oracle',
+  'mongodb',
+  'clickhouse',
+  'cockroachdb',
 ] as const;
 
 export const databaseTypeSchema = z.enum(DATABASE_TYPE_IDS);
@@ -268,11 +273,20 @@ export function defaultPortForDatabaseType(type: DatabaseType): number {
     case 'postgresql':
       return 5432;
     case 'mysql':
+    case 'mariadb':
       return 3306;
     case 'mssql':
       return 1433;
     case 'sqlite':
       return 0;
+    case 'oracle':
+      return 1521;
+    case 'mongodb':
+      return 27017;
+    case 'clickhouse':
+      return 8123;
+    case 'cockroachdb':
+      return 26257;
     default:
       return 5432;
   }

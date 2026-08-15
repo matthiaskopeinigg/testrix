@@ -21,6 +21,7 @@ describe('database-settings.schema', () => {
     const conn = createDefaultDatabaseConnection('mysql');
     expect(conn.type).toBe('mysql');
     expect(conn.port).toBe(3306);
+    expect(defaultPortForDatabaseType('oracle')).toBe(1521);
     expect(databaseConnectionSchema.safeParse(conn).success).toBe(true);
   });
 

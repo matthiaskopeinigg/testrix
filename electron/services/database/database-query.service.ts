@@ -5,6 +5,9 @@ import Database from 'better-sqlite3';
 import { Pool as PgPool, Client as PgClient } from 'pg';
 import mysql from 'mysql2/promise';
 import sqlMssql from 'mssql';
+import oracledb, { type Pool as OraclePool } from 'oracledb';
+import { MongoClient } from 'mongodb';
+import { createClient, type ClickHouseClient } from '@clickhouse/client';
 
 import type { DatabaseConnection } from '../../../shared/config/database-settings.schema';
 import type { DatabaseQueryEnvelope } from '../../../shared/database/database-introspect.schema';
@@ -13,6 +16,10 @@ import {
   postgresPoolFingerprint,
   resolvePostgresDatabaseName,
 } from '../../../shared/database/resolve-postgres-database';
+import { databaseEngineFamily } from '../../../shared/database/database-engine';
+import { resolveOracleConnectString } from '../../../shared/database/oracle-connect-string';
+import { resolveMongoConnectionUri } from '../../../shared/database/mongo-connection-uri';
+import { parseMongoShellQuery } from '../../../shared/database/mongo-shell-query';
 import { logError, logInfo } from '../../errors/logger';
 
 export interface DatabaseQueryOptions {
@@ -28,6 +35,9 @@ export class DatabaseQueryService {
   private readonly pgPools = new Map<string, { fingerprint: string; pool: PgPool }>();
   private readonly mysqlPools = new Map<string, mysql.Pool>();
   private readonly mssqlPools = new Map<string, sqlMssql.ConnectionPool>();
+  private readonly oraclePools = new Map<string, { fingerprint: string; pool: OraclePool }>();
+  private readonly mongoClients = new Map<string, { fingerprint: string; client: MongoClient }>();
+  private readonly clickhouseClients = new Map<string, { fingerprint: string; client: ClickHouseClient }>();
 
   /**
    * Runs a query against the given connection profile.
@@ -41,21 +51,30 @@ export class DatabaseQueryService {
       throw new Error('Connection and query are required');
     }
     const stepMs = options.stepTimeoutMs;
-    const t = String(connection.type || '').toLowerCase();
-    if (t === 'redis') {
+    const family = databaseEngineFamily(connection.type);
+    if (family === 'redis') {
       return this.runRedis(connection, queryText, stepMs);
     }
-    if (t === 'sqlite') {
+    if (family === 'sqlite') {
       return this.runSqlite(connection, queryText);
     }
-    if (t === 'postgresql') {
+    if (family === 'postgresql') {
       return this.runPostgres(connection, queryText, stepMs);
     }
-    if (t === 'mysql') {
+    if (family === 'mysql') {
       return this.runMysql(connection, queryText, stepMs);
     }
-    if (t === 'mssql') {
+    if (family === 'mssql') {
       return this.runMssql(connection, queryText, stepMs);
+    }
+    if (family === 'oracle') {
+      return this.runOracle(connection, queryText, stepMs);
+    }
+    if (family === 'clickhouse') {
+      return this.runClickhouse(connection, queryText, stepMs);
+    }
+    if (family === 'mongodb') {
+      return this.runMongo(connection, queryText, stepMs);
     }
     throw new Error(`Unsupported database type: ${connection.type}`);
   }
@@ -65,10 +84,11 @@ export class DatabaseQueryService {
    */
   async testConnection(connection: DatabaseConnection): Promise<unknown> {
     const t = String(connection.type || '').toLowerCase();
+    const family = databaseEngineFamily(connection.type);
     const connectMs = this.connectTimeoutMs(connection);
     const commandMs = this.commandTimeoutMs(connection);
 
-    if (t === 'redis') {
+    if (family === 'redis' || t === 'redis') {
       const client = new Redis({
         host: connection.host || '127.0.0.1',
         port: Number(connection.port) || 6379,
@@ -99,11 +119,11 @@ export class DatabaseQueryService {
       }
     }
 
-    if (t === 'sqlite') {
+    if (family === 'sqlite' || t === 'sqlite') {
       return this.query(connection, 'SELECT 1 AS ok');
     }
 
-    if (t === 'postgresql') {
+    if (family === 'postgresql' || t === 'postgresql') {
       const client = new PgClient({
         host: connection.host || 'localhost',
         port: Number(connection.port) || 5432,
@@ -123,7 +143,7 @@ export class DatabaseQueryService {
       }
     }
 
-    if (t === 'mysql') {
+    if (family === 'mysql') {
       const conn = await mysql.createConnection({
         host: connection.host || 'localhost',
         port: Number(connection.port) || 3306,
@@ -142,7 +162,7 @@ export class DatabaseQueryService {
       }
     }
 
-    if (t === 'mssql') {
+    if (family === 'mssql') {
       const cfg: sqlMssql.config = {
         user: connection.user,
         password: connection.password,
@@ -168,6 +188,16 @@ export class DatabaseQueryService {
       } finally {
         await pool.close().catch(() => {});
       }
+    }
+
+    if (family === 'oracle') {
+      return this.query(connection, 'SELECT 1 AS ok FROM DUAL');
+    }
+    if (family === 'clickhouse') {
+      return this.query(connection, 'SELECT 1 AS ok');
+    }
+    if (family === 'mongodb') {
+      return this.query(connection, '{ "ping": 1 }');
     }
 
     throw new Error(`Unsupported database type: ${connection.type}`);
@@ -200,6 +230,18 @@ export class DatabaseQueryService {
       promises.push(p.close().catch(() => {}));
     }
     this.mssqlPools.clear();
+    for (const entry of this.oraclePools.values()) {
+      promises.push(entry.pool.close(0).catch(() => {}));
+    }
+    this.oraclePools.clear();
+    for (const entry of this.mongoClients.values()) {
+      promises.push(entry.client.close().catch(() => {}));
+    }
+    this.mongoClients.clear();
+    for (const entry of this.clickhouseClients.values()) {
+      promises.push(entry.client.close().catch(() => {}));
+    }
+    this.clickhouseClients.clear();
     await Promise.allSettled(promises);
   }
 
@@ -342,6 +384,79 @@ export class DatabaseQueryService {
     return this.mssqlPools.get(id)!;
   }
 
+  private async getOraclePool(conn: DatabaseConnection): Promise<OraclePool> {
+    ensureOracleDefaults();
+    const id = conn.id || `oracle:${conn.host}:${conn.port}:${conn.database ?? ''}`;
+    const fingerprint = [
+      conn.host,
+      conn.port,
+      conn.user,
+      conn.password,
+      conn.database,
+      conn.tls ? '1' : '0',
+    ].join('\0');
+    const existing = this.oraclePools.get(id);
+    if (existing?.fingerprint === fingerprint) {
+      return existing.pool;
+    }
+    if (existing) {
+      void existing.pool.close(0).catch(() => {});
+    }
+    const pool = await oracledb.createPool({
+      user: conn.user,
+      password: conn.password,
+      connectString: resolveOracleConnectString(conn),
+      poolMin: 0,
+      poolMax: 4,
+      poolIncrement: 1,
+      connectTimeout: Math.ceil(this.connectTimeoutMs(conn) / 1000),
+    });
+    this.oraclePools.set(id, { fingerprint, pool });
+    return pool;
+  }
+
+  private async getMongoClient(conn: DatabaseConnection): Promise<MongoClient> {
+    const id = conn.id || `mongo:${conn.host}:${conn.port}`;
+    const fingerprint = resolveMongoConnectionUri(conn);
+    const existing = this.mongoClients.get(id);
+    if (existing?.fingerprint === fingerprint) {
+      return existing.client;
+    }
+    if (existing) {
+      void existing.client.close().catch(() => {});
+    }
+    const client = new MongoClient(fingerprint, {
+      serverSelectionTimeoutMS: this.connectTimeoutMs(conn),
+    });
+    await client.connect();
+    this.mongoClients.set(id, { fingerprint, client });
+    return client;
+  }
+
+  private getClickhouseClient(conn: DatabaseConnection): ClickHouseClient {
+    const id = conn.id || `ch:${conn.host}:${conn.port}`;
+    const protocol = conn.tls ? 'https' : 'http';
+    const port = Number(conn.port) || 8123;
+    const url = `${protocol}://${conn.host || 'localhost'}:${port}`;
+    const fingerprint = [url, conn.user, conn.password, conn.database].join('\0');
+    const existing = this.clickhouseClients.get(id);
+    if (existing?.fingerprint === fingerprint) {
+      return existing.client;
+    }
+    if (existing) {
+      void existing.client.close().catch(() => {});
+    }
+    const client = createClient({
+      url,
+      username: conn.user || 'default',
+      password: conn.password || '',
+      database: conn.database || 'default',
+      request_timeout: this.connectTimeoutMs(conn),
+    });
+    this.clickhouseClients.set(id, { fingerprint, client });
+    return client;
+  }
+
   private runSqlite(config: DatabaseConnection, queryText: string): DatabaseQueryEnvelope {
     const db = this.getSqlite(config);
     const q = String(queryText).trim();
@@ -424,6 +539,157 @@ export class DatabaseQueryService {
       rows,
       affectedRows: dml ? affected : undefined,
     };
+  }
+
+  private async runOracle(
+    config: DatabaseConnection,
+    queryText: string,
+    stepTimeoutMs: number | undefined,
+  ): Promise<DatabaseQueryEnvelope> {
+    const pool = await this.getOraclePool(config);
+    const cmdMs = this.effectiveCommandMs(config, stepTimeoutMs);
+    const connection = await pool.getConnection();
+    try {
+      const result = await this.withOptionalTimeout(
+        connection.execute(queryText, [], {
+          outFormat: oracledb.OUT_FORMAT_OBJECT,
+          autoCommit: false,
+        }),
+        cmdMs,
+        'Query',
+      );
+      const rows = (result.rows ?? []).map((row) => mapOracleRow(row));
+      const dml = /^\s*(insert|update|delete|merge)\b/i.test(queryText);
+      return {
+        rows,
+        affectedRows: dml && typeof result.rowsAffected === 'number' ? result.rowsAffected : undefined,
+        columnTypes: mapOracleColumnTypes(result.metaData),
+      };
+    } finally {
+      await connection.close().catch(() => {});
+    }
+  }
+
+  private async runClickhouse(
+    config: DatabaseConnection,
+    queryText: string,
+    stepTimeoutMs: number | undefined,
+  ): Promise<DatabaseQueryEnvelope> {
+    const client = this.getClickhouseClient(config);
+    const cmdMs = this.effectiveCommandMs(config, stepTimeoutMs);
+    const trimmed = queryText.trim();
+    const reads = /^(select|show|describe|desc|explain|with|exists|call)\b/i.test(trimmed);
+    if (reads) {
+      const result = await this.withOptionalTimeout(
+        client.query({ query: queryText, format: 'JSONEachRow' }),
+        cmdMs,
+        'Query',
+      );
+      const rows = await result.json();
+      return { rows: Array.isArray(rows) ? rows : [] };
+    }
+    await this.withOptionalTimeout(client.command({ query: queryText }), cmdMs, 'Query');
+    return { rows: [] };
+  }
+
+  private async runMongo(
+    config: DatabaseConnection,
+    queryText: string,
+    stepTimeoutMs: number | undefined,
+  ): Promise<DatabaseQueryEnvelope> {
+    const client = await this.getMongoClient(config);
+    const cmdMs = this.effectiveCommandMs(config, stepTimeoutMs);
+    const parsed = parseMongoShellQuery(queryText, config.database);
+    const exec = this.dispatchMongo(client, parsed, config.database);
+    const rows = await this.withOptionalTimeout(exec, cmdMs, 'MongoDB command');
+    return { rows };
+  }
+
+  private async dispatchMongo(
+    client: MongoClient,
+    parsed: ReturnType<typeof parseMongoShellQuery>,
+    fallbackDatabase: string | undefined,
+  ): Promise<unknown> {
+    if (parsed.kind === 'listDatabases') {
+      const listed = await client.db().admin().listDatabases();
+      return listed.databases.map((entry) => ({ name: entry.name, sizeOnDisk: entry.sizeOnDisk }));
+    }
+    const database = parsed.kind === 'command' || parsed.kind === 'listCollections'
+      ? parsed.database || fallbackDatabase
+      : 'database' in parsed
+        ? parsed.database || fallbackDatabase
+        : fallbackDatabase;
+    const db = client.db(database || undefined);
+    if (parsed.kind === 'listCollections') {
+      const names = await db.listCollections().toArray();
+      return names.map((entry) => ({ name: entry.name, type: entry.type ?? 'collection' }));
+    }
+    if (parsed.kind === 'command') {
+      return db.command(parsed.command);
+    }
+    const collection = db.collection(parsed.collection);
+    switch (parsed.kind) {
+      case 'find': {
+        let cursor = collection.find(asFilter(parsed.filter));
+        if (parsed.projection && typeof parsed.projection === 'object') {
+          cursor = cursor.project(parsed.projection as Record<string, unknown>);
+        }
+        if (parsed.skip) {
+          cursor = cursor.skip(parsed.skip);
+        }
+        if (parsed.limit) {
+          cursor = cursor.limit(parsed.limit);
+        }
+        return cursor.toArray();
+      }
+      case 'findOne':
+        return collection.findOne(
+          asFilter(parsed.filter),
+          parsed.projection && typeof parsed.projection === 'object'
+            ? { projection: parsed.projection as Record<string, unknown> }
+            : undefined,
+        );
+      case 'aggregate':
+        return collection.aggregate(parsed.pipeline as object[]).toArray();
+      case 'insertOne': {
+        const result = await collection.insertOne(parsed.document as never);
+        return { insertedId: result.insertedId, acknowledged: result.acknowledged };
+      }
+      case 'insertMany': {
+        const result = await collection.insertMany(parsed.documents as never[]);
+        return { insertedCount: result.insertedCount, acknowledged: result.acknowledged };
+      }
+      case 'updateOne': {
+        const result = await collection.updateOne(asFilter(parsed.filter), parsed.update as never);
+        return {
+          matchedCount: result.matchedCount,
+          modifiedCount: result.modifiedCount,
+          acknowledged: result.acknowledged,
+        };
+      }
+      case 'updateMany': {
+        const result = await collection.updateMany(asFilter(parsed.filter), parsed.update as never);
+        return {
+          matchedCount: result.matchedCount,
+          modifiedCount: result.modifiedCount,
+          acknowledged: result.acknowledged,
+        };
+      }
+      case 'deleteOne': {
+        const result = await collection.deleteOne(asFilter(parsed.filter));
+        return { deletedCount: result.deletedCount, acknowledged: result.acknowledged };
+      }
+      case 'deleteMany': {
+        const result = await collection.deleteMany(asFilter(parsed.filter));
+        return { deletedCount: result.deletedCount, acknowledged: result.acknowledged };
+      }
+      case 'countDocuments':
+        return { count: await collection.countDocuments(asFilter(parsed.filter)) };
+      case 'listIndexes':
+        return collection.indexes();
+      default:
+        throw new Error('Unsupported MongoDB command');
+    }
   }
 
   private async runRedis(
@@ -522,6 +788,45 @@ function mapMysqlColumnTypes(fields: unknown): string[] | undefined {
     return MYSQL_TYPE_NAMES[typeId] ?? '';
   });
   return types.some((type) => type.length > 0) ? types : undefined;
+}
+
+let oracleDefaultsApplied = false;
+
+function ensureOracleDefaults(): void {
+  if (oracleDefaultsApplied) {
+    return;
+  }
+  oracledb.outFormat = oracledb.OUT_FORMAT_OBJECT;
+  oracledb.fetchAsString = [oracledb.CLOB];
+  oracleDefaultsApplied = true;
+}
+
+function mapOracleRow(row: unknown): Record<string, unknown> {
+  if (!row || typeof row !== 'object') {
+    return {};
+  }
+  const out: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(row as Record<string, unknown>)) {
+    out[key] = value instanceof Date && !Number.isNaN(value.getTime()) ? value.toISOString() : value;
+  }
+  return out;
+}
+
+function mapOracleColumnTypes(
+  meta: readonly { dbTypeName?: string }[] | undefined,
+): string[] | undefined {
+  if (!meta?.length) {
+    return undefined;
+  }
+  const types = meta.map((field) => field.dbTypeName ?? '');
+  return types.some((type) => type.length > 0) ? types : undefined;
+}
+
+function asFilter(value: unknown): Record<string, unknown> {
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    return value as Record<string, unknown>;
+  }
+  return {};
 }
 
 /** Shared singleton for the app session. */
