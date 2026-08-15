@@ -14,6 +14,8 @@ export type ConnectionContextMenuAction =
   | 'copy-name'
   | 'show-ddl'
   | 'show-structure'
+  | 'schemas'
+  | 'hide-schema'
   | 'rename'
   | 'duplicate'
   | 'delete'
@@ -32,6 +34,7 @@ export function buildConnectionNodeContextMenu(
   kind: ConnectionTreeKind,
   expanded: boolean,
   _hasChildren = true,
+  options: { readonly supportsSchemaSelection?: boolean } = {},
 ): TxContextMenuItem[] {
   if (kind === 'folder') {
     const items: TxContextMenuItem[] = [
@@ -50,18 +53,24 @@ export function buildConnectionNodeContextMenu(
   }
 
   if (kind === 'connection') {
-    return [
+    const items: TxContextMenuItem[] = [
       { id: 'open', label: 'Open catalog', icon: 'folderOpen' },
       { id: 'open-data', label: 'Open data', icon: 'play' },
       { id: 'new-query', label: 'New query', icon: 'fileText' },
       { id: 'refresh', label: 'Refresh', icon: 'refresh' },
       { id: 'test', label: 'Test connection', icon: 'play' },
+    ];
+    if (options.supportsSchemaSelection) {
+      items.push({ id: 'schemas', label: 'Schemas…', icon: 'layers' });
+    }
+    items.push(
       { id: 'edit', label: 'Connection settings', icon: 'settings' },
       { id: 'sep-1', label: '', separator: true },
       { id: 'rename', label: 'Rename', icon: 'edit' },
       { id: 'duplicate', label: 'Duplicate', icon: 'copy' },
       { id: 'delete', label: 'Delete', icon: 'trash', danger: true },
-    ];
+    );
+    return items;
   }
 
   if (kind === 'schema') {
@@ -69,6 +78,9 @@ export function buildConnectionNodeContextMenu(
       { id: 'refresh', label: 'Refresh', icon: 'refresh' },
       { id: 'new-query', label: 'New query', icon: 'fileText' },
       { id: 'copy-name', label: 'Copy name', icon: 'copy' },
+      { id: 'sep-1', label: '', separator: true },
+      { id: 'hide-schema', label: 'Hide schema', icon: 'eyeOff' },
+      { id: 'schemas', label: 'Schemas…', icon: 'layers' },
     ];
   }
 

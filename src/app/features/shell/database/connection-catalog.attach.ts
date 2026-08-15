@@ -1,4 +1,4 @@
-import type { DatabaseType } from '@shared/config';
+import type { DatabaseConnection, DatabaseType } from '@shared/config';
 import type { DatabaseConnectionStatusMap, DatabaseConnectionStatusState } from '@shared/database';
 
 import type { ConnectionCatalogState } from '@app/core/database/database-catalog.types';
@@ -14,6 +14,7 @@ import type { ConnectionTreeNode } from './connection-tree.types';
 interface ConnectionChildrenCacheEntry {
   catalog: ConnectionCatalogState | undefined;
   showSystemObjects: boolean;
+  selectedKey: string;
   children: readonly ConnectionTreeNode[];
   build: ConnectionCatalogBuildMemo;
 }
@@ -37,6 +38,7 @@ export class ConnectionCatalogAttachCache {
     getCatalog: (connectionId: string) => ConnectionCatalogState | undefined,
     statuses: DatabaseConnectionStatusMap,
     showSystemObjects: boolean,
+    getConnection?: (connectionId: string) => DatabaseConnection | null | undefined,
   ): ConnectionTreeNode[] {
     const liveIds = new Set<string>();
     const previousById = indexConnectionSpine(this.previous);
@@ -45,6 +47,7 @@ export class ConnectionCatalogAttachCache {
       getCatalog,
       statuses,
       showSystemObjects,
+      getConnection,
       this,
       liveIds,
       previousById,
@@ -63,32 +66,52 @@ export class ConnectionCatalogAttachCache {
 
   /**
    * Returns catalog children for a connection, reusing the previous build when
-   * the catalog object and system-object flag are unchanged.
+   * the catalog object, system-object flag, and schema selection are unchanged.
    */
   childrenFor(
     connectionId: string,
     type: DatabaseType | undefined,
     catalog: ConnectionCatalogState | undefined,
     showSystemObjects: boolean,
+    connection?: DatabaseConnection | null,
   ): readonly ConnectionTreeNode[] {
+    const selectedKey = selectedSchemasCacheKey(connection);
     const entry = this.byConnection.get(connectionId);
-    if (entry && entry.catalog === catalog && entry.showSystemObjects === showSystemObjects) {
+    if (
+      entry &&
+      entry.catalog === catalog &&
+      entry.showSystemObjects === showSystemObjects &&
+      entry.selectedKey === selectedKey
+    ) {
       return entry.children;
     }
     const build =
-      entry && entry.showSystemObjects === showSystemObjects
+      entry && entry.showSystemObjects === showSystemObjects && entry.selectedKey === selectedKey
         ? entry.build
         : createConnectionCatalogBuildMemo();
     const children = buildConnectionCatalogChildren(
       connectionId,
       type,
       catalog,
-      showSystemObjects,
+      {
+        showSystemObjects,
+        connection: connection
+          ? {
+              type: connection.type,
+              user: connection.user,
+              database: connection.database,
+              selectedSchemas: connection.selectedSchemas,
+            }
+          : type
+            ? { type }
+            : null,
+      },
       build,
     );
     this.byConnection.set(connectionId, {
       catalog,
       showSystemObjects,
+      selectedKey,
       children,
       build,
     });
@@ -105,19 +128,32 @@ export function attachCatalogToConnectionTree(
   statuses: DatabaseConnectionStatusMap,
   showSystemObjects: boolean,
   cache?: ConnectionCatalogAttachCache,
+  getConnection?: (connectionId: string) => DatabaseConnection | null | undefined,
 ): ConnectionTreeNode[] {
   if (cache) {
-    return cache.attach(nodes, getCatalog, statuses, showSystemObjects);
+    return cache.attach(nodes, getCatalog, statuses, showSystemObjects, getConnection);
   }
   return mapAttachedNodes(
     nodes,
     getCatalog,
     statuses,
     showSystemObjects,
+    getConnection,
     undefined,
     undefined,
     new Map(),
   );
+}
+
+function selectedSchemasCacheKey(connection: DatabaseConnection | null | undefined): string {
+  if (!connection) {
+    return '';
+  }
+  const selected = connection.selectedSchemas;
+  if (selected === undefined) {
+    return `auto:${connection.user ?? ''}:${connection.database ?? ''}`;
+  }
+  return `sel:${selected.map((name) => name.toLowerCase()).sort().join('\0')}`;
 }
 
 function mapAttachedNodes(
@@ -125,12 +161,22 @@ function mapAttachedNodes(
   getCatalog: (connectionId: string) => ConnectionCatalogState | undefined,
   statuses: DatabaseConnectionStatusMap,
   showSystemObjects: boolean,
+  getConnection: ((connectionId: string) => DatabaseConnection | null | undefined) | undefined,
   cache: ConnectionCatalogAttachCache | undefined,
   liveIds: Set<string> | undefined,
   previousById: ReadonlyMap<string, ConnectionTreeNode>,
 ): ConnectionTreeNode[] {
   return nodes.map((node) =>
-    attachNode(node, getCatalog, statuses, showSystemObjects, cache, liveIds, previousById),
+    attachNode(
+      node,
+      getCatalog,
+      statuses,
+      showSystemObjects,
+      getConnection,
+      cache,
+      liveIds,
+      previousById,
+    ),
   );
 }
 
@@ -139,6 +185,7 @@ function attachNode(
   getCatalog: (connectionId: string) => ConnectionCatalogState | undefined,
   statuses: DatabaseConnectionStatusMap,
   showSystemObjects: boolean,
+  getConnection: ((connectionId: string) => DatabaseConnection | null | undefined) | undefined,
   cache: ConnectionCatalogAttachCache | undefined,
   liveIds: Set<string> | undefined,
   previousById: ReadonlyMap<string, ConnectionTreeNode>,
@@ -150,6 +197,7 @@ function attachNode(
       getCatalog,
       statuses,
       showSystemObjects,
+      getConnection,
       cache,
       liveIds,
       previousById,
@@ -166,9 +214,22 @@ function attachNode(
   liveIds?.add(node.id);
   const type = node.data?.kind === 'connection' ? node.data.type : undefined;
   const catalog = getCatalog(node.id);
+  const connection = getConnection?.(node.id) ?? null;
   const children = cache
-    ? cache.childrenFor(node.id, type, catalog, showSystemObjects)
-    : buildConnectionCatalogChildren(node.id, type as DatabaseType | undefined, catalog, showSystemObjects);
+    ? cache.childrenFor(node.id, type, catalog, showSystemObjects, connection)
+    : buildConnectionCatalogChildren(node.id, type as DatabaseType | undefined, catalog, {
+        showSystemObjects,
+        connection: connection
+          ? {
+              type: connection.type,
+              user: connection.user,
+              database: connection.database,
+              selectedSchemas: connection.selectedSchemas,
+            }
+          : type
+            ? { type }
+            : null,
+      });
   const status = statuses[node.id]?.state;
   const loadingCatalog =
     type !== 'redis' && (!catalog || catalog.state === 'idle' || catalog.state === 'loading');

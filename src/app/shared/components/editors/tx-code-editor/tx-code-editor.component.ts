@@ -33,6 +33,7 @@ import { TxIconComponent } from '../../forms/tx-icon/tx-icon.component';
 import {
   filterTxCodeEditorCompletions,
   txCodeEditorCompletionContext,
+  txCodeEditorInlineGhostSuffix,
 } from './tx-code-editor-completion.logic';
 import {
   TX_CODE_EDITOR_JSON_SNIPPETS,
@@ -148,6 +149,16 @@ export class TxCodeEditorComponent implements ControlValueAccessor, AfterViewIni
   readonly jsAutocomplete = input<boolean | undefined>(undefined);
   /** Merged after built-in catalog rows (e.g. folder variable names). */
   readonly extraCompletionItems = input<readonly TxCodeEditorCompletionItem[]>([]);
+  /**
+   * Live completion catalog at the caret. When set, preferred over a static
+   * {@link extraCompletionItems} snapshot (SQL schema/table/column context).
+   */
+  readonly completionProvider = input<
+    | ((ctx: { readonly value: string; readonly caret: number }) => readonly TxCodeEditorCompletionItem[])
+    | null
+  >(null);
+  /** When true (default for sql/redis), show a gray inline ghost for the top match. */
+  readonly inlineGhostCompletions = input(false);
   /** `$` and `{{environment}}` catalog for highlight + autocomplete. */
   readonly variableCatalog = input<readonly DynamicVariableCatalogItem[]>([]);
   readonly templateVariableAutocomplete = input<boolean | undefined>(undefined);
@@ -238,6 +249,10 @@ export class TxCodeEditorComponent implements ControlValueAccessor, AfterViewIni
   protected readonly completionOpen = signal(false);
   protected readonly completionItems = signal<readonly TxCodeEditorCompletionItem[]>([]);
   protected readonly completionIndex = signal(0);
+  /** Text before the caret (spacer) + gray remainder for WHERE-style ghost text. */
+  protected readonly inlineGhost = signal<{ readonly before: string; readonly suffix: string } | null>(
+    null,
+  );
 
   protected readonly languageBadge = computed(() => {
     const override = this.languageBadgeLabel()?.trim();
@@ -317,6 +332,14 @@ export class TxCodeEditorComponent implements ControlValueAccessor, AfterViewIni
       this.completionOpen();
       if (this.fillHeight()) {
         queueMicrotask(() => this.syncFillSlotLayout());
+      }
+    });
+
+    effect(() => {
+      // Parent catalog loads update this input; refresh ghost/popup at the live caret.
+      this.extraCompletionItems();
+      if (this.inlineGhost() || this.completionOpen()) {
+        queueMicrotask(() => this.refreshCompletionFilter());
       }
     });
 
@@ -722,7 +745,7 @@ export class TxCodeEditorComponent implements ControlValueAccessor, AfterViewIni
     const offsetX = ta.scrollLeft;
     const offsetY = ta.scrollTop;
     const layers = this.hostRef.nativeElement.querySelectorAll(
-      '.tx-code-editor__mirror, .tx-code-editor__hit',
+      '.tx-code-editor__mirror, .tx-code-editor__hit, .tx-code-editor__ghost-mirror',
     );
     for (const layer of layers) {
       if (!(layer instanceof HTMLElement)) {
@@ -786,6 +809,25 @@ export class TxCodeEditorComponent implements ControlValueAccessor, AfterViewIni
 
     if (ta && !this.readOnly() && !this.applyingHistory && this.shouldRecordUndoForKey(ev)) {
       this.pendingUndoSnapshot = txCodeEditorSnapshot(this.innerValue(), ta);
+    }
+
+    if (!this.readOnly() && this.inlineGhost() && !this.completionOpen()) {
+      if (ev.key === 'Tab' || ev.key === 'ArrowRight' || ev.key === 'Enter') {
+        if (this.acceptInlineGhost()) {
+          ev.preventDefault();
+          return;
+        }
+      }
+      if (ev.key === 'Escape') {
+        ev.preventDefault();
+        this.clearInlineGhost();
+        return;
+      }
+      if (ev.key === 'ArrowDown') {
+        ev.preventDefault();
+        this.openAutocomplete();
+        return;
+      }
     }
 
     if (!this.readOnly() && this.completionOpen()) {
@@ -1085,7 +1127,7 @@ export class TxCodeEditorComponent implements ControlValueAccessor, AfterViewIni
     return !!ta && document.activeElement === ta;
   }
 
-  private catalogForLanguage(): readonly TxCodeEditorCompletionItem[] {
+  private catalogForLanguage(caret?: number): readonly TxCodeEditorCompletionItem[] {
     const lang = this.language();
     const languageSnippets: TxCodeEditorCompletionItem[] = [];
     if (lang === 'json' && this.jsonSnippetAutocompleteActive()) {
@@ -1101,20 +1143,22 @@ export class TxCodeEditorComponent implements ControlValueAccessor, AfterViewIni
       this.templateVariableAutocompleteActive() && this.variableCatalog().length > 0
         ? dynamicCatalogToCompletionItems(this.variableCatalog())
         : [];
+    const provider = this.completionProvider();
+    const ta = this.textareaRef()?.nativeElement;
+    const liveCaret = caret ?? ta?.selectionStart ?? this.innerValue().length;
+    const provided = provider
+      ? provider({ value: this.innerValue(), caret: liveCaret })
+      : this.extraCompletionItems();
     if (lang === 'js' && this.jsAutocompleteActive()) {
       return mergeCodeEditorCompletionCatalogs(
         TX_CODE_EDITOR_PM_COMPLETIONS,
         TX_CODE_EDITOR_JS_SNIPPETS,
         languageSnippets,
         variableItems,
-        this.extraCompletionItems(),
+        provided,
       );
     }
-    return mergeCodeEditorCompletionCatalogs(
-      languageSnippets,
-      variableItems,
-      this.extraCompletionItems(),
-    );
+    return mergeCodeEditorCompletionCatalogs(languageSnippets, variableItems, provided);
   }
 
   private openAutocomplete(): void {
@@ -1126,7 +1170,7 @@ export class TxCodeEditorComponent implements ControlValueAccessor, AfterViewIni
     if (this.completionOpen()) {
       return;
     }
-    if (this.catalogForLanguage().length === 0) {
+    if (this.catalogForLanguage(ta.selectionStart).length === 0) {
       return;
     }
     this.completionFromTemplateVars = false;
@@ -1158,15 +1202,67 @@ export class TxCodeEditorComponent implements ControlValueAccessor, AfterViewIni
       this.completionReplaceEnd = result.context.replaceEnd;
       this.completionItems.set(dynamicCatalogToCompletionItems(result.items));
       this.completionIndex.update((i) => Math.min(i, Math.max(0, result.items.length - 1)));
+      this.clearInlineGhost();
       return;
     }
-    const catalog = this.catalogForLanguage();
-    const ctx = txCodeEditorCompletionContext(this.innerValue(), ta.selectionStart);
+    const caret = ta.selectionStart;
+    const catalog = this.catalogForLanguage(caret);
+    const ctx = txCodeEditorCompletionContext(this.innerValue(), caret);
     this.completionReplaceStart = ctx.replaceStart;
     this.completionReplaceEnd = ctx.replaceEnd;
     const filtered = filterTxCodeEditorCompletions(catalog, ctx.needle);
     this.completionItems.set(filtered);
     this.completionIndex.update((i) => Math.min(i, Math.max(0, filtered.length - 1)));
+    this.refreshInlineGhost(ctx, filtered, caret);
+  }
+
+  private refreshInlineGhost(
+    ctx: { readonly replaceStart: number; readonly replaceEnd: number; readonly needle: string },
+    filtered: readonly TxCodeEditorCompletionItem[],
+    caret: number,
+  ): void {
+    if (!this.inlineGhostCompletions() || this.readOnly() || this.completionFromTemplateVars) {
+      this.clearInlineGhost();
+      return;
+    }
+    const value = this.innerValue();
+    const ta = this.textareaRef()?.nativeElement;
+    if (!ta || ta.selectionStart !== ta.selectionEnd || caret !== ctx.replaceEnd) {
+      this.clearInlineGhost();
+      return;
+    }
+    const token = value.slice(ctx.replaceStart, ctx.replaceEnd);
+    const top = filtered[0];
+    if (!top) {
+      this.clearInlineGhost();
+      return;
+    }
+    const suffix = txCodeEditorInlineGhostSuffix(token, top.insert);
+    if (!suffix) {
+      this.clearInlineGhost();
+      return;
+    }
+    this.inlineGhost.set({ before: value.slice(0, caret), suffix });
+  }
+
+  private clearInlineGhost(): void {
+    if (this.inlineGhost()) {
+      this.inlineGhost.set(null);
+    }
+  }
+
+  private acceptInlineGhost(): boolean {
+    const ghost = this.inlineGhost();
+    if (!ghost) {
+      return false;
+    }
+    const items = this.completionItems();
+    const item = items[this.completionIndex()] ?? items[0];
+    if (!item) {
+      return false;
+    }
+    this.applyCompletion(item);
+    return true;
   }
 
   private maybeOpenAutocompleteOnInput(event: Event): void {
@@ -1176,22 +1272,37 @@ export class TxCodeEditorComponent implements ControlValueAccessor, AfterViewIni
     const inputEvent = event as InputEvent;
     if (inputEvent.data === ' ' && this.completionOpen()) {
       this.closeCompletion();
+      this.clearInlineGhost();
       return;
     }
     const lang = this.language();
     if (lang === 'sql' || lang === 'redis') {
-      if (!inputEvent.data || !/[\w$]/.test(inputEvent.data)) {
-        return;
-      }
       const ta = this.textareaRef()?.nativeElement;
       if (!ta) {
         return;
       }
-      const ctx = txCodeEditorCompletionContext(this.innerValue(), ta.selectionStart);
-      if (ctx.needle.length < 1) {
+      if (inputEvent.data === '.') {
+        this.completionFromTemplateVars = false;
+        this.refreshCompletionFilter();
+        if (!this.inlineGhostCompletions()) {
+          this.openAutocomplete();
+        }
         return;
       }
-      this.openAutocomplete();
+      if (!inputEvent.data || !/[\w$]/.test(inputEvent.data)) {
+        this.clearInlineGhost();
+        return;
+      }
+      const ctx = txCodeEditorCompletionContext(this.innerValue(), ta.selectionStart);
+      if (ctx.needle.length < 1) {
+        this.clearInlineGhost();
+        return;
+      }
+      this.completionFromTemplateVars = false;
+      this.refreshCompletionFilter();
+      if (!this.inlineGhostCompletions()) {
+        this.openAutocomplete();
+      }
       return;
     }
     if (lang !== 'js' || !this.jsAutocompleteActive() || !this.autocompleteOnDotActive()) {
@@ -1261,6 +1372,7 @@ export class TxCodeEditorComponent implements ControlValueAccessor, AfterViewIni
     this.completionIndex.set(0);
     this.completionFromTemplateVars = false;
     this.completionAllowEmptyPrefix = false;
+    this.clearInlineGhost();
   }
 
   private findVariableSpan(target: EventTarget | null): HTMLElement | null {

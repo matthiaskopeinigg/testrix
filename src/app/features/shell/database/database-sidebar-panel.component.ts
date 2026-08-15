@@ -16,9 +16,11 @@ import { DATABASE_CONNECTION_MAX_FOLDER_DEPTH } from '@shared/config';
 import {
   databaseConnectionTabResourceId,
   databaseTableTabResourceId,
+  databaseSupportsSchemaSelection,
   parseDatabaseConnectionTabResourceId,
   parseDatabaseTableTabResourceId,
   qualifySqlTableName,
+  resolveVisibleDatabaseSchemas,
   SAVED_QUERY_MAX_FOLDER_DEPTH,
   type DatabaseConnectionStatusMap,
 } from '@shared/database';
@@ -66,6 +68,10 @@ import {
 import type { ConnectionTreeKind, ConnectionTreeNode, ConnectionTreeNodeMeta } from './connection-tree.types';
 import { filterConnectionTree } from './connection-tree.view';
 import {
+  DatabaseSchemaPickerDialogComponent,
+  type DatabaseSchemaPickerState,
+} from './database-schema-picker-dialog.component';
+import {
   buildDatabaseNodeContextMenu,
   buildEmptyDatabaseContextMenu,
 } from './database-context-menu';
@@ -107,6 +113,7 @@ const SEARCH_DEBOUNCE_MS = 100;
     TxTreeComponent,
     TxContextMenuComponent,
     TxConfirmDialogComponent,
+    DatabaseSchemaPickerDialogComponent,
   ],
   templateUrl: './database-sidebar-panel.component.html',
   styleUrl: './database-sidebar-panel.component.scss',
@@ -148,6 +155,7 @@ export class DatabaseSidebarPanelComponent {
 
   protected readonly contextMenuOpen = signal(false);
   protected readonly contextMenuPosition = signal({ x: 0, y: 0 });
+  protected readonly schemaPickerState = signal<DatabaseSchemaPickerState | null>(null);
   protected readonly contextMenuItems = signal<readonly TxContextMenuItem[]>([]);
   protected readonly contextNodeId = signal<string | null>(null);
   protected readonly sidebarMenuTarget = signal<SidebarMenuTarget>('queries');
@@ -180,6 +188,7 @@ export class DatabaseSidebarPanelComponent {
       (id) => this.catalog.snapshot(id),
       this.connectionStatuses(),
       this.showSystemObjects(),
+      (id) => this.connections.find(id),
     ),
   );
 
@@ -745,6 +754,16 @@ export class DatabaseSidebarPanelComponent {
           void this.ensureCatalogForExpanded(nodeId);
         }
         break;
+      case 'schemas':
+        if (nodeId) {
+          void this.openSchemaPicker(nodeId);
+        }
+        break;
+      case 'hide-schema':
+        if (nodeId) {
+          void this.hideSchema(nodeId);
+        }
+        break;
     }
   }
 
@@ -786,8 +805,13 @@ export class DatabaseSidebarPanelComponent {
       return;
     }
     const kind = (loc.node.data?.kind ?? loc.node.kind) as ConnectionTreeKind;
+    const connection = this.connections.find(this.connectionIdForNode(nodeId));
+    const connectionType =
+      connection?.type ?? (loc.node.data?.kind === 'connection' ? loc.node.data.type : undefined);
     this.contextMenuItems.set(
-      buildConnectionNodeContextMenu(kind, this.connectionExpandedIds().includes(nodeId), true),
+      buildConnectionNodeContextMenu(kind, this.connectionExpandedIds().includes(nodeId), true, {
+        supportsSchemaSelection: databaseSupportsSchemaSelection(connectionType),
+      }),
     );
     this.contextMenuOpen.set(true);
   }
@@ -1034,6 +1058,71 @@ export class DatabaseSidebarPanelComponent {
 
   private connectionIdForNode(nodeId: string): string {
     return parseConnectionCatalogId(nodeId)?.connectionId ?? nodeId;
+  }
+
+  private async openSchemaPicker(nodeId: string): Promise<void> {
+    this.closeAllMenus();
+    const connectionId = this.connectionIdForNode(nodeId);
+    const connection = this.connections.find(connectionId);
+    if (!connection || !databaseSupportsSchemaSelection(connection.type)) {
+      return;
+    }
+    await this.catalog.openConnection(connection);
+    await this.catalog.ensureFullSchemaDirectory(connection);
+    const snapshot = this.catalog.snapshot(connectionId);
+    if (!snapshot || snapshot.state !== 'ready') {
+      this.notifications.showError(snapshot?.error ?? 'Could not load schemas for this connection.');
+      return;
+    }
+    const visible = resolveVisibleDatabaseSchemas(
+      connection,
+      snapshot.schemas,
+      this.showSystemObjects(),
+    );
+    this.schemaPickerState.set({
+      connectionId,
+      connectionName: connection.name,
+      schemas: snapshot.schemas,
+      selectedSchemas:
+        connection.selectedSchemas ?? visible.map((schema) => schema.name),
+      showSystemObjects: this.showSystemObjects(),
+    });
+  }
+
+  private async hideSchema(nodeId: string): Promise<void> {
+    const parsed = parseConnectionCatalogId(nodeId);
+    const schemaName = parsed?.schema?.trim();
+    if (!parsed || !schemaName) {
+      return;
+    }
+    const connection = this.connections.find(parsed.connectionId);
+    if (!connection) {
+      return;
+    }
+    const snapshot = this.catalog.snapshot(connection.id);
+    const current =
+      connection.selectedSchemas ??
+      resolveVisibleDatabaseSchemas(
+        connection,
+        snapshot?.schemas ?? [],
+        this.showSystemObjects(),
+      ).map((schema) => schema.name);
+    const next = current.filter((name) => name.toLowerCase() !== schemaName.toLowerCase());
+    await this.connections.patchConnection(connection.id, { selectedSchemas: next });
+  }
+
+  protected handleSchemaPickerApplied(event: {
+    readonly connectionId: string;
+    readonly selectedSchemas: readonly string[];
+  }): void {
+    this.schemaPickerState.set(null);
+    void this.connections.patchConnection(event.connectionId, {
+      selectedSchemas: [...event.selectedSchemas],
+    });
+  }
+
+  protected handleSchemaPickerClosed(): void {
+    this.schemaPickerState.set(null);
   }
 
   private async refreshConnectionStatuses(): Promise<void> {

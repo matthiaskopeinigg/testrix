@@ -40,6 +40,11 @@ export const databaseConnectionSchema = z.object({
   clientPath: z.string().optional(),
   /** When true, Oracle `database` is a SID (DataGrip `@host:port:SID`) not a service name. */
   useSid: z.boolean().optional(),
+  /**
+   * Schemas shown under this connection in the sidebar (DataGrip-style).
+   * When omitted, Testrix defaults to the current user / public / database schema.
+   */
+  selectedSchemas: z.array(z.string().min(1).max(256)).max(500).optional(),
   tls: z.boolean().optional(),
   connectTimeoutMs: z.number().int().optional(),
   commandTimeoutMs: z.number().int().optional(),

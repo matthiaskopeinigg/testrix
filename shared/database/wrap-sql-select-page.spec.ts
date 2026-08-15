@@ -28,10 +28,11 @@ describe('wrapSqlSelectPage', () => {
     expect(sql).toContain('OFFSET 200 ROWS FETCH NEXT 100 ROWS ONLY');
   });
 
-  it('wraps Oracle with OFFSET/FETCH and no AS alias', () => {
+  it('wraps Oracle with OFFSET/FETCH using a legal alias', () => {
     const sql = wrapSqlSelectPage('SELECT * FROM users', 50, 10, 'oracle');
     expect(sql).toContain('OFFSET 10 ROWS FETCH NEXT 50 ROWS ONLY');
-    expect(sql).not.toContain('AS _tx_page');
+    expect(sql).toContain(') tx_page OFFSET');
+    expect(sql).not.toMatch(/\)\s+_tx_page\b/);
   });
 
   it('pages Mongo find with skip/limit', () => {

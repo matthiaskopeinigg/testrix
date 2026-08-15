@@ -329,7 +329,8 @@
 
 .tx-code-editor__input,
 .tx-code-editor__mirror,
-.tx-code-editor__hit {
+.tx-code-editor__hit,
+.tx-code-editor__ghost-mirror {
   position: absolute;
   inset: 0;
   margin: 0;
@@ -355,6 +356,21 @@
   pointer-events: none;
 }
 
+.tx-code-editor__ghost-mirror {
+  z-index: 1;
+  overflow: hidden;
+  pointer-events: none;
+  color: transparent;
+  background: transparent;
+}
+
+.tx-code-editor__ghost-spacer {
+  color: transparent;
+}
+
+.tx-code-editor__ghost {
+  color: var(--tx-text-1);
+}
 .tx-code-editor__hit {
   overflow: hidden;
 }

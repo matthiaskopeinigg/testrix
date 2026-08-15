@@ -97,6 +97,9 @@
           ><code [innerHTML]="highlightedHtml() | txCodeEditorHtml"></code></pre>
         }
       }
+      @if (inlineGhost(); as ghost) {
+        <pre class="tx-code-editor__ghost-mirror" aria-hidden="true"><code><span class="tx-code-editor__ghost-spacer">{{ ghost.before }}</span><span class="tx-code-editor__ghost">{{ ghost.suffix }}</span></code></pre>
+      }
     </div>
   </div>
 

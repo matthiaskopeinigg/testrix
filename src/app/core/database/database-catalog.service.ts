@@ -7,7 +7,7 @@ import type {
   DatabaseCatalogTable,
   DatabaseCatalogCompletionSource,
 } from '@shared/database';
-import { formatDatabaseConnectionError } from '@shared/database';
+import { formatDatabaseConnectionError, seedCatalogSchemaItems } from '@shared/database';
 
 import { ElectronService } from '@app/core/electron/electron.service';
 
@@ -67,6 +67,9 @@ export class DatabaseCatalogService {
     await this.refreshConnection(connection);
   }
 
+  /**
+   * Opens the catalog with only selected/default schemas (no full schema directory query).
+   */
   async refreshConnection(connection: DatabaseConnection): Promise<void> {
     await this.enqueue(`root:${connection.id}`, async () => {
       this.patch(connection.id, {
@@ -83,24 +86,61 @@ export class DatabaseCatalogService {
           const tables = await api.introspect({ connection, level: 'tables' });
           this.patch(connection.id, {
             state: 'ready',
+            schemaDirectory: 'full',
             schemas: [{ name: 'main', system: false }],
             tablesBySchema: { main: tables.level === 'tables' ? tables.tables : [] },
             detailsByTable: {},
           });
           return;
         }
-        const schemasResult = await api.introspect({ connection, level: 'schemas' });
-        const schemas: readonly DatabaseCatalogSchemaItem[] =
-          schemasResult.level === 'schemas' ? schemasResult.schemas : [];
+        // Avoid SELECT all_users / every namespace on open — that freezes large Oracle DBs.
         this.patch(connection.id, {
           state: 'ready',
-          schemas,
+          schemaDirectory: 'seed',
+          schemas: seedCatalogSchemaItems(connection),
           tablesBySchema: {},
           detailsByTable: {},
         });
       } catch (error) {
         this.patch(connection.id, {
           ...emptyConnectionCatalogState(),
+          state: 'error',
+          error: formatDatabaseConnectionError(error),
+        });
+      }
+    });
+  }
+
+  /**
+   * Loads every schema/database name for the Schemas… picker.
+   * Safe to call repeatedly; no-ops when the full directory is already cached.
+   */
+  async ensureFullSchemaDirectory(connection: DatabaseConnection): Promise<void> {
+    await this.openConnection(connection);
+    const current = this.snapshot(connection.id);
+    if (!current || current.state !== 'ready' || current.schemaDirectory === 'full') {
+      return;
+    }
+    if (connection.type === 'sqlite' || connection.type === 'redis') {
+      return;
+    }
+    await this.enqueue(`schemas:${connection.id}`, async () => {
+      const latest = this.snapshot(connection.id);
+      if (!latest || latest.state !== 'ready' || latest.schemaDirectory === 'full') {
+        return;
+      }
+      try {
+        const schemasResult = await this.api().introspect({ connection, level: 'schemas' });
+        const schemas: readonly DatabaseCatalogSchemaItem[] =
+          schemasResult.level === 'schemas' ? schemasResult.schemas : [];
+        this.patch(connection.id, {
+          ...latest,
+          schemaDirectory: 'full',
+          schemas,
+        });
+      } catch (error) {
+        this.patch(connection.id, {
+          ...latest,
           state: 'error',
           error: formatDatabaseConnectionError(error),
         });

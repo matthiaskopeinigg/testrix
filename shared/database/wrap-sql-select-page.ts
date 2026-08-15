@@ -2,6 +2,7 @@ import type { DatabaseType } from '../config/database-settings.schema';
 
 import { databaseEngineFamily } from './database-engine';
 import { canPageMongoFind, wrapMongoFindPage } from './mongo-shell-query';
+import { stripTrailingSqlSemicolons } from './strip-trailing-sql-semicolons';
 
 /** Default SELECT page size for the Data query console. */
 export const DATABASE_QUERY_PAGE_SIZE_DEFAULT = 500;
@@ -24,8 +25,8 @@ export function canPageSqlSelect(
   if (databaseEngineFamily(type) === 'mongodb') {
     return canPageMongoFind(query);
   }
-  const trimmed = stripTrailingSemicolons(query);
-  if (!trimmed || trimmed.includes(';')) {
+  const trimmed = stripTrailingSqlSemicolons(query);
+  if (!trimmed || trimmed.includes(';') || trimmed.includes('；')) {
     return false;
   }
   const head = trimmed.replace(/^\s*\(\s*/i, '');
@@ -47,16 +48,13 @@ export function wrapSqlSelectPage(
   if (family === 'mongodb') {
     return wrapMongoFindPage(query, safeLimit, safeOffset);
   }
-  const inner = stripTrailingSemicolons(query);
+  const inner = stripTrailingSqlSemicolons(query);
   if (family === 'mssql') {
-    return `SELECT * FROM (\n${inner}\n) AS _tx_page ORDER BY (SELECT NULL) OFFSET ${safeOffset} ROWS FETCH NEXT ${safeLimit} ROWS ONLY`;
+    return `SELECT * FROM (\n${inner}\n) AS tx_page ORDER BY (SELECT NULL) OFFSET ${safeOffset} ROWS FETCH NEXT ${safeLimit} ROWS ONLY`;
   }
   if (family === 'oracle') {
-    return `SELECT * FROM (\n${inner}\n) _tx_page OFFSET ${safeOffset} ROWS FETCH NEXT ${safeLimit} ROWS ONLY`;
+    // Oracle rejects unquoted identifiers that start with `_` (ORA-00911).
+    return `SELECT * FROM (\n${inner}\n) tx_page OFFSET ${safeOffset} ROWS FETCH NEXT ${safeLimit} ROWS ONLY`;
   }
-  return `SELECT * FROM (\n${inner}\n) AS _tx_page LIMIT ${safeLimit} OFFSET ${safeOffset}`;
-}
-
-function stripTrailingSemicolons(query: string): string {
-  return query.trim().replace(/;+\s*$/g, '');
+  return `SELECT * FROM (\n${inner}\n) AS tx_page LIMIT ${safeLimit} OFFSET ${safeOffset}`;
 }

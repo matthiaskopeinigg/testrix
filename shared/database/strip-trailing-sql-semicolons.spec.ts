@@ -8,6 +8,11 @@ describe('stripTrailingSqlSemicolons', () => {
     expect(stripTrailingSqlSemicolons('SELECT 1;;\n')).toBe('SELECT 1');
   });
 
+  it('removes fullwidth semicolons and a trailing SQL*Plus slash', () => {
+    expect(stripTrailingSqlSemicolons('SELECT 1；')).toBe('SELECT 1');
+    expect(stripTrailingSqlSemicolons('SELECT 1\n/\n')).toBe('SELECT 1');
+  });
+
   it('leaves internal semicolons alone', () => {
     expect(stripTrailingSqlSemicolons("SELECT ';';")).toBe("SELECT ';'");
   });

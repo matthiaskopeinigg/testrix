@@ -52,6 +52,7 @@ import {
   filterDatabaseQueryRows,
   formatDatabaseConnectionError,
   formatDatabaseQueryResult,
+  catalogPrefetchTarget,
   isFullDatabaseQuerySelection,
   mergeDatabaseQueryCompletions,
   normalizeDatabaseQueryResult,
@@ -178,6 +179,7 @@ export class DatabaseWorkspaceTabComponent {
   );
 
   protected readonly editorCompletions = computed((): readonly TxCodeEditorCompletionItem[] => {
+    // Keep a static fallback for tools that read the catalog without a caret.
     const connection = this.selectedConnection();
     const query = this.saved()?.query ?? '';
     void this.catalog.revision();
@@ -188,6 +190,17 @@ export class DatabaseWorkspaceTabComponent {
       query.length,
     );
   });
+
+  protected readonly editorCompletionProvider = (ctx: {
+    readonly value: string;
+    readonly caret: number;
+  }): readonly TxCodeEditorCompletionItem[] => {
+    const connection = this.selectedConnection();
+    void this.catalog.revision();
+    const source = connection ? this.catalog.completionSource(connection.id) : null;
+    void this.prefetchCatalogForCompletion(ctx.value, ctx.caret);
+    return mergeDatabaseQueryCompletions(connection?.type, source, ctx.value, ctx.caret);
+  };
 
   protected readonly canExplain = computed(() => canExplainSql(this.selectedConnection()?.type));
 
@@ -530,6 +543,22 @@ export class DatabaseWorkspaceTabComponent {
     }
     this.executeFromEditor();
     return true;
+  }
+
+  private async prefetchCatalogForCompletion(source: string, caret: number): Promise<void> {
+    const connection = this.selectedConnection();
+    if (!connection) {
+      return;
+    }
+    const catalog = this.catalog.completionSource(connection.id);
+    const target = catalogPrefetchTarget(source, caret, catalog);
+    if (!target?.schema) {
+      return;
+    }
+    await this.catalog.loadSchema(connection, target.schema);
+    if (target.table) {
+      await this.catalog.loadTable(connection, target.schema, target.table);
+    }
   }
 
   private executeFromEditor(options: { readonly explain?: boolean } = {}): void {

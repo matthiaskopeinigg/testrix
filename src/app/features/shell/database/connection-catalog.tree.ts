@@ -1,6 +1,6 @@
-import type { DatabaseType } from '@shared/config';
+import type { DatabaseConnection, DatabaseType } from '@shared/config';
 import type { DatabaseCatalogColumn, DatabaseCatalogIndex, DatabaseCatalogTable } from '@shared/database';
-import { isSystemSchemaName } from '@shared/database';
+import { isSystemSchemaName, resolveVisibleDatabaseSchemas } from '@shared/database';
 
 import type {
   ConnectionCatalogState,
@@ -34,6 +34,15 @@ export function createConnectionCatalogBuildMemo(): ConnectionCatalogBuildMemo {
   };
 }
 
+export interface BuildConnectionCatalogOptions {
+  readonly showSystemObjects: boolean;
+  /** Connection fields used to resolve which schemas appear in the tree. */
+  readonly connection?: Pick<
+    DatabaseConnection,
+    'type' | 'user' | 'database' | 'selectedSchemas'
+  > | null;
+}
+
 /**
  * Builds live object-explorer children under a connection row.
  *
@@ -44,9 +53,19 @@ export function buildConnectionCatalogChildren(
   connectionId: string,
   type: DatabaseType | undefined,
   catalog: ConnectionCatalogState | undefined,
-  showSystemObjects: boolean,
+  showSystemObjectsOrOptions: boolean | BuildConnectionCatalogOptions,
   memo?: ConnectionCatalogBuildMemo,
 ): ConnectionTreeNode[] {
+  const options: BuildConnectionCatalogOptions =
+    typeof showSystemObjectsOrOptions === 'boolean'
+      ? { showSystemObjects: showSystemObjectsOrOptions }
+      : showSystemObjectsOrOptions;
+  const showSystemObjects = options.showSystemObjects;
+  const connection = options.connection ?? {
+    type: type ?? 'postgresql',
+    selectedSchemas: undefined,
+  };
+
   if (type === 'redis') {
     const id = connectionCatalogId(connectionId, 'keys', { name: 'keys' });
     const prev = memo?.nodes.get(id);
@@ -79,9 +98,27 @@ export function buildConnectionCatalogChildren(
     const tables = filterTables(catalog.tablesBySchema['main'] ?? flattenTables(catalog.tablesBySchema), true);
     return buildTableGroups(connectionId, 'main', tables, catalog, memo);
   }
-  const schemas = catalog.schemas.filter((schema) => showSystemObjects || !schema.system);
+  const schemas = resolveVisibleDatabaseSchemas(
+    {
+      type: connection.type ?? type ?? 'postgresql',
+      user: connection.user,
+      database: connection.database,
+      selectedSchemas: connection.selectedSchemas,
+    },
+    catalog.schemas,
+    showSystemObjects,
+  );
   if (schemas.length === 0) {
-    return [statusNode(connectionId, 'No schemas')];
+    if (catalog.schemas.length === 0) {
+      return [statusNode(connectionId, 'No schemas')];
+    }
+    return [
+      statusNode(
+        connectionId,
+        'No schemas selected',
+        'Right-click the connection → Schemas…',
+      ),
+    ];
   }
   return schemas.map((schema) => {
     const id = connectionCatalogId(connectionId, 'schema', { schema: schema.name, name: schema.name });

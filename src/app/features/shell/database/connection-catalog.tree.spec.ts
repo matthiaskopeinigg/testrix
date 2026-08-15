@@ -46,6 +46,41 @@ describe('buildConnectionCatalogChildren', () => {
     expect(nodes).toEqual([]);
   });
 
+  it('shows only selected schemas when the connection lists them', () => {
+    const catalog = {
+      ...emptyConnectionCatalogState(),
+      state: 'ready' as const,
+      schemas: [
+        { name: 'HR', system: false },
+        { name: 'SCOTT', system: false },
+        { name: 'APP', system: false },
+      ],
+      tablesBySchema: {},
+    };
+    const nodes = buildConnectionCatalogChildren('c1', 'oracle', catalog, {
+      showSystemObjects: false,
+      connection: { type: 'oracle', user: 'hr', selectedSchemas: ['APP', 'SCOTT'] },
+    });
+    expect(nodes.map((node) => node.label)).toEqual(['SCOTT', 'APP']);
+  });
+
+  it('defaults Oracle to the connection user when selection is unset', () => {
+    const catalog = {
+      ...emptyConnectionCatalogState(),
+      state: 'ready' as const,
+      schemas: [
+        { name: 'HR', system: false },
+        { name: 'SCOTT', system: false },
+      ],
+      tablesBySchema: {},
+    };
+    const nodes = buildConnectionCatalogChildren('c1', 'oracle', catalog, {
+      showSystemObjects: false,
+      connection: { type: 'oracle', user: 'hr' },
+    });
+    expect(nodes.map((node) => node.label)).toEqual(['HR']);
+  });
+
   it('reuses unchanged table nodes when another table detail is patched', () => {
     const tables = [
       { schema: 'public', name: 'users', kind: 'table' as const },

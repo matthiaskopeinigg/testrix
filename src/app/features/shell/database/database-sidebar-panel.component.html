@@ -172,3 +172,9 @@
   (confirmed)="handleDeleteConfirmed()"
   (closed)="handleDeleteClosed()"
 />
+
+<app-database-schema-picker-dialog
+  [state]="schemaPickerState()"
+  (applied)="handleSchemaPickerApplied($event)"
+  (closed)="handleSchemaPickerClosed()"
+/>

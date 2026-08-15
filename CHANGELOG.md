@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.1-beta.3] - 2026-08-15
+
+### Fixed
+
+- Oracle SELECT paging no longer uses an `_tx_page` alias (leading `_` is ORA-00911)
+
+### Changed
+
+- Database sidebar shows only selected schemas (DataGrip-style): defaults to the current user / public schema, with Schemas… search to add more
+- Opening a connection no longer loads every schema up front (avoids freezes on databases with hundreds of schemas); the full list loads only when you open Schemas…
+- SQL query editor shows gray inline suggestions (like the WHERE filter) for schemas, tables, and columns, ranked by context (FROM, `schema.`, `table.`)
+
 ## [1.0.1-beta.2] - 2026-08-15
 
 ### Fixed
@@ -118,7 +130,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Initial public beta of Testrix: local-first desktop API client (HTTP, WebSocket, collections, environments, test suites, load tests, mocks, and capture).
 
-[Unreleased]: https://github.com/matthiaskopeinigg/testrix/compare/v1.0.1-beta.2...HEAD
+[Unreleased]: https://github.com/matthiaskopeinigg/testrix/compare/v1.0.1-beta.3...HEAD
+[1.0.1-beta.3]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.1-beta.3
 [1.0.1-beta.2]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.1-beta.2
 [1.0.1-beta.1]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.1-beta.1
 [1.0.0-beta.9]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.0-beta.9

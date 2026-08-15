@@ -24,6 +24,7 @@ export const HELP_WIKI_DATABASE_SECTIONS: readonly HelpWikiSection[] = [
         items: [
           'Connections and Queries each collapse independently. Both start expanded.',
           'Search filters connection and query names. Filter and sort menus refine the Queries list.',
+          'Right-click a connection → Schemas… to search and choose which schemas appear (useful when a database has hundreds of schemas). Only selected schemas show under the connection; Hide schema removes one from the tree.',
           'Right-click empty space in a section to create a folder or item at the root.',
           'Double-click a folder, connection, or query name to rename it inline.',
           'Drag connections to reorder them or drop them onto a folder.',
