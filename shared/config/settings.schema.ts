@@ -17,7 +17,7 @@ import { httpSettingsPatchSchema, httpSettingsSchema } from './http-settings.sch
 import { httpMethodDisplaySchema } from './http-method-display';
 import { workspaceEditorLayoutSchema } from './workspace-editor-layout.schema';
 import { workspaceTabEditorSettingsSchema } from './workspace-tab-editor-settings.schema';
-import { databaseSettingsSchema } from './database-settings.schema';
+import { databaseSettingsPatchSchema, databaseSettingsSchema } from './database-settings.schema';
 
 const metaSettingsSchema = z.object({
   createdAt: z.string(),
@@ -180,7 +180,7 @@ export const settingsPatchSchema = z
       .partial()
       .optional(),
     http: httpSettingsPatchSchema.optional(),
-    databases: databaseSettingsSchema.partial().optional(),
+    databases: databaseSettingsPatchSchema.optional(),
   })
   .strict();
 

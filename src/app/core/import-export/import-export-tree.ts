@@ -1,6 +1,14 @@
 import type { CollectionNode } from '@shared/config/collections.schema';
+import {
+  isDatabaseConnectionFolder,
+  type DatabaseConnectionTreeItem,
+} from '@shared/config/database-settings.schema';
 import type { EnvironmentDefinition, EnvironmentScopeNode } from '@shared/config/environments.schema';
 import type { SettingsFile } from '@shared/config/settings.schema';
+import {
+  isSavedQueryFolder,
+  type SavedQueryTreeItem,
+} from '@shared/database';
 import type { LoadTestTreeItem } from '@shared/testing/load-tests.schema';
 import type { MockServerTreeItem } from '@shared/testing/mock-server.schema';
 import type { RegressionTreeItem } from '@shared/testing/regressions.schema';
@@ -9,6 +17,8 @@ import { isTestSuiteFlow, isTestSuiteFolder } from '@shared/testing/test-suites.
 import {
   SETTINGS_SECTION_KEYS,
   TESTRIX_BUNDLE_SECTION_KEYS,
+  databaseSettingsHasContent,
+  liftDatabasesFromSettings,
   type SettingsSectionKey,
   type TestrixBundleSectionKey,
   type TestrixBundleV1,
@@ -27,6 +37,10 @@ export type ImportExportNodePayload =
   | { kind: 'regressionItem'; id: string }
   | { kind: 'mockItem'; id: string }
   | { kind: 'settingsSection'; key: SettingsSectionKey }
+  | { kind: 'databaseConnections' }
+  | { kind: 'databaseQueries' }
+  | { kind: 'databaseConnectionItem'; id: string }
+  | { kind: 'databaseQueryItem'; id: string }
   | { kind: 'cookies' };
 
 export interface ImportExportTreeNode {
@@ -48,6 +62,7 @@ const SECTION_LABELS: Record<TestrixBundleSectionKey, string> = {
   mockServer: 'Mock server',
   capture: 'Capture',
   interceptor: 'Interceptor',
+  databases: 'Database',
   settings: 'Settings',
   cookieJar: 'Cookies',
 };
@@ -65,7 +80,6 @@ const SETTINGS_LABELS: Record<SettingsSectionKey, string> = {
   testSuite: 'Test suite preferences',
   editor: 'Editor',
   http: 'HTTP',
-  databases: 'Databases',
 };
 
 function collectionNodes(nodes: readonly CollectionNode[]): ImportExportTreeNode[] {
@@ -254,6 +268,56 @@ function mockNodes(items: readonly MockServerTreeItem[]): ImportExportTreeNode[]
   });
 }
 
+function databaseConnectionNodes(nodes: readonly DatabaseConnectionTreeItem[]): ImportExportTreeNode[] {
+  return nodes.map((item) => {
+    if (isDatabaseConnectionFolder(item)) {
+      return {
+        id: `db-conn-${item.id}`,
+        label: item.name,
+        hint: 'Folder',
+        checkable: true,
+        expanded: true,
+        payload: { kind: 'databaseConnectionItem', id: item.id },
+        children: databaseConnectionNodes(item.children),
+      };
+    }
+    return {
+      id: `db-conn-${item.id}`,
+      label: item.name,
+      hint: item.type,
+      checkable: true,
+      expanded: false,
+      payload: { kind: 'databaseConnectionItem', id: item.id },
+      children: [],
+    };
+  });
+}
+
+function databaseQueryNodes(nodes: readonly SavedQueryTreeItem[]): ImportExportTreeNode[] {
+  return nodes.map((item) => {
+    if (isSavedQueryFolder(item)) {
+      return {
+        id: `db-query-${item.id}`,
+        label: item.name,
+        hint: 'Folder',
+        checkable: true,
+        expanded: true,
+        payload: { kind: 'databaseQueryItem', id: item.id },
+        children: databaseQueryNodes(item.children),
+      };
+    }
+    return {
+      id: `db-query-${item.id}`,
+      label: item.name,
+      hint: 'Query',
+      checkable: true,
+      expanded: false,
+      payload: { kind: 'databaseQueryItem', id: item.id },
+      children: [],
+    };
+  });
+}
+
 function settingsNodes(settings: Partial<SettingsFile>): ImportExportTreeNode[] {
   return SETTINGS_SECTION_KEYS.filter((key) => settings[key] !== undefined).map((key) => ({
     id: `settings-${key}`,
@@ -268,6 +332,7 @@ function settingsNodes(settings: Partial<SettingsFile>): ImportExportTreeNode[] 
 /** Builds the import/export preview tree from a bundle snapshot. */
 export function buildImportExportTree(bundle: TestrixBundleV1): ImportExportTreeNode[] {
   const roots: ImportExportTreeNode[] = [];
+  const snapshot = liftDatabasesFromSettings(bundle);
 
   for (const section of TESTRIX_BUNDLE_SECTION_KEYS) {
     let children: ImportExportTreeNode[] = [];
@@ -275,55 +340,81 @@ export function buildImportExportTree(bundle: TestrixBundleV1): ImportExportTree
 
     switch (section) {
       case 'collections':
-        if (bundle.collections?.nodes?.length) {
-          children = collectionNodes(bundle.collections.nodes);
+        if (snapshot.collections?.nodes?.length) {
+          children = collectionNodes(snapshot.collections.nodes);
           hasContent = true;
         }
         break;
       case 'environments':
-        if (bundle.environments?.environments?.length) {
-          children = environmentNodes(bundle.environments.environments);
+        if (snapshot.environments?.environments?.length) {
+          children = environmentNodes(snapshot.environments.environments);
           hasContent = true;
         }
         break;
       case 'testSuites':
-        if (bundle.testSuites?.suites?.length) {
-          children = testSuiteNodes(bundle.testSuites.suites);
+        if (snapshot.testSuites?.suites?.length) {
+          children = testSuiteNodes(snapshot.testSuites.suites);
           hasContent = true;
         }
         break;
       case 'loadTests':
-        if (bundle.loadTests?.items?.length) {
-          children = loadTestNodes(bundle.loadTests.items);
+        if (snapshot.loadTests?.items?.length) {
+          children = loadTestNodes(snapshot.loadTests.items);
           hasContent = true;
         }
         break;
       case 'regressions':
-        if (bundle.regressions?.items?.length) {
-          children = regressionNodes(bundle.regressions.items);
+        if (snapshot.regressions?.items?.length) {
+          children = regressionNodes(snapshot.regressions.items);
           hasContent = true;
         }
         break;
       case 'mockServer':
-        if (bundle.mockServer?.items?.length) {
-          children = mockNodes(bundle.mockServer.items);
+        if (snapshot.mockServer?.items?.length) {
+          children = mockNodes(snapshot.mockServer.items);
           hasContent = true;
         }
         break;
       case 'capture':
-        hasContent = bundle.capture != null;
+        hasContent = snapshot.capture != null;
         break;
       case 'interceptor':
-        hasContent = bundle.interceptor != null;
+        hasContent = snapshot.interceptor != null;
         break;
+      case 'databases': {
+        const connections = snapshot.databases?.connections;
+        const queries = snapshot.databases?.queries;
+        if (databaseSettingsHasContent(connections)) {
+          children.push({
+            id: 'db-connections-group',
+            label: 'Connections',
+            checkable: true,
+            expanded: true,
+            payload: { kind: 'databaseConnections' },
+            children: databaseConnectionNodes(connections!.nodes),
+          });
+        }
+        if (queries?.nodes?.length) {
+          children.push({
+            id: 'db-queries-group',
+            label: 'Queries',
+            checkable: true,
+            expanded: true,
+            payload: { kind: 'databaseQueries' },
+            children: databaseQueryNodes(queries.nodes),
+          });
+        }
+        hasContent = children.length > 0;
+        break;
+      }
       case 'settings':
-        if (bundle.settings) {
-          children = settingsNodes(bundle.settings);
+        if (snapshot.settings) {
+          children = settingsNodes(snapshot.settings);
           hasContent = children.length > 0;
         }
         break;
       case 'cookieJar':
-        hasContent = bundle.cookieJar != null;
+        hasContent = snapshot.cookieJar != null;
         if (hasContent) {
           children = [
             {

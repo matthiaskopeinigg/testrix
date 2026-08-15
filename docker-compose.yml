@@ -1,5 +1,8 @@
-# Local Redis for DATABASE steps (Settings → Databases: type Redis, host localhost, port 6379, DB index 0).
-# Redis Commander UI for seeding keys: http://localhost:8081
+# Local databases for the Data workspace.
+# Redis: type Redis, host localhost, port 6379, DB index 0.
+# Redis Commander UI: http://localhost:8081
+# PostgreSQL: type PostgreSQL, host localhost, port 5432,
+#   user testrix, password testrix, database testrix.
 # Usage: docker compose up -d
 # Stop:   docker compose down
 
@@ -30,5 +33,25 @@ services:
       redis:
         condition: service_healthy
 
+  postgres:
+    image: postgres:16-alpine
+    container_name: testrix-postgres
+    hostname: postgres
+    ports:
+      - '5432:5432'
+    environment:
+      POSTGRES_USER: testrix
+      POSTGRES_PASSWORD: testrix
+      POSTGRES_DB: testrix
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U testrix -d testrix']
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
 volumes:
   redis-data:
+  postgres-data:

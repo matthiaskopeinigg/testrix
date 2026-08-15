@@ -4,6 +4,7 @@ import {
   ENVIRONMENTS_FILE_NAME,
   LOAD_TESTS_FILE_NAME,
   MOCK_SERVER_FILE_NAME,
+  QUERIES_FILE_NAME,
   REGRESSIONS_FILE_NAME,
   SETTINGS_FILE_NAME,
   TEST_SUITES_FILE_NAME,
@@ -11,12 +12,14 @@ import {
 import { collectionsFileSchema } from '../config/collections.schema';
 import { environmentsFileSchema } from '../config/environments.schema';
 import { settingsFileSchema } from '../config/settings.schema';
+import { parseSavedQueriesFile } from '../database/saved-queries.schema';
 import { captureFileSchema } from '../testing/capture.schema';
 import { interceptorFileSchema } from '../testing/interceptor.schema';
 import { loadTestsFileSchema } from '../testing/load-tests.schema';
 import { mockServerFileSchema } from '../testing/mock-server.schema';
 import { regressionsFileSchema } from '../testing/regressions.schema';
 import { testSuitesFileSchema } from '../testing/test-suites.schema';
+import { liftDatabasesFromSettings } from './bundle-databases';
 import { createEmptyTestrixBundle, TESTRIX_BUNDLE_SCHEMA_V1, type TestrixBundleV1 } from './testrix-bundle.schema';
 
 const RAW_CONFIG_MAP: ReadonlyArray<{
@@ -83,6 +86,18 @@ const RAW_CONFIG_MAP: ReadonlyArray<{
       const result = settingsFileSchema.safeParse(parsed);
       if (result.success) {
         bundle.settings = result.data;
+        const lifted = liftDatabasesFromSettings(bundle);
+        bundle.settings = lifted.settings;
+        bundle.databases = lifted.databases;
+      }
+    },
+  },
+  {
+    fileName: QUERIES_FILE_NAME,
+    apply: (parsed, bundle) => {
+      const queries = parseSavedQueriesFile(parsed);
+      if (queries.nodes.length > 0) {
+        bundle.databases = { ...bundle.databases, queries };
       }
     },
   },
@@ -132,6 +147,7 @@ function bundleHasSectionData(bundle: TestrixBundleV1): boolean {
     bundle.mockServer != null ||
     bundle.capture != null ||
     bundle.interceptor != null ||
+    bundle.databases != null ||
     bundle.settings != null
   );
 }
@@ -145,7 +161,7 @@ export function coerceTestrixBundle(parsed: unknown, appVersion = ''): TestrixBu
   if (o['schema'] !== TESTRIX_BUNDLE_SCHEMA_V1) {
     throw new Error('Invalid bundle schema.');
   }
-  return {
+  return liftDatabasesFromSettings({
     schema: TESTRIX_BUNDLE_SCHEMA_V1,
     exportedAt: String(o['exportedAt'] ?? new Date().toISOString()),
     appVersion: String(o['appVersion'] ?? appVersion),
@@ -157,9 +173,10 @@ export function coerceTestrixBundle(parsed: unknown, appVersion = ''): TestrixBu
     mockServer: o['mockServer'] as TestrixBundleV1['mockServer'],
     capture: o['capture'] as TestrixBundleV1['capture'],
     interceptor: o['interceptor'] as TestrixBundleV1['interceptor'],
+    databases: o['databases'] as TestrixBundleV1['databases'],
     settings: o['settings'] as TestrixBundleV1['settings'],
     cookieJar: o['cookieJar'] as TestrixBundleV1['cookieJar'],
-  };
+  });
 }
 
 /** Returns true when the bundle contains at least one exportable section. */

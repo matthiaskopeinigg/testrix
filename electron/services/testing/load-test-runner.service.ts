@@ -4,8 +4,17 @@ import type { SendHttpRequestPayload } from '../../../shared/http/outgoing-reque
 import type { HttpResponseSnapshot } from '../../../shared/http/outgoing-request.schema';
 import { sendHttpRequestPayloadSchema } from '../../../shared/http/outgoing-request.schema';
 import type { SettingsFile } from '../../../shared/config';
+import {
+  collectEnvironmentVariables,
+  getEnvironmentDefinition,
+  environmentVariablesToMap,
+} from '../../../shared/config/environment-variables';
 import { TestrixError, ErrorCodes } from '../../../shared/errors';
 import { createDefaultLoadTestManualTarget } from '../../../shared/testing/load-test-target.schema';
+import {
+  loadTestEnvironmentIdOverride,
+  loadTestManualEnvironmentId,
+} from '../../../shared/testing/resolve-load-test-environment';
 import { computeLatencySnapshot } from '../../../shared/testing/load-test-metrics-aggregate';
 import {
   createIdleLoadTestRunMetrics,
@@ -131,11 +140,23 @@ export class LoadTestRunner {
     runId: string,
     settings: SettingsFile,
   ): Promise<SendHttpRequestPayload> {
+    const environments = await files.readEnvironments();
+    const keyMode = {
+      useFolderPathInKeys: settings.environments.useFolderPathInKeys,
+    };
+
     if (parsed.targetSource === 'manual') {
+      const environmentId = loadTestManualEnvironmentId(parsed.environmentId);
+      const environment = getEnvironmentDefinition(environments.environments, environmentId);
+      const variableContext = environment
+        ? environmentVariablesToMap(collectEnvironmentVariables(environment.nodes, keyMode))
+        : {};
       const built = buildManualOutgoingRequest({
         loadTestId: parsed.loadTestId ?? runId,
         manual: parsed.manualTarget ?? createDefaultLoadTestManualTarget(),
         http: settings.http,
+        variableContext,
+        environmentId,
       });
       if (!built) {
         throw new TestrixError(
@@ -156,10 +177,7 @@ export class LoadTestRunner {
       return payloadCheck.data;
     }
 
-    const [collections, environments] = await Promise.all([
-      files.readCollections(),
-      files.readEnvironments(),
-    ]);
+    const collections = await files.readCollections();
     const built = buildOutgoingRequest({
       requestId: parsed.targetRequestId ?? '',
       nodes: collections.nodes,
@@ -167,9 +185,8 @@ export class LoadTestRunner {
       environments,
       appVersion,
       runScope: { runId },
-      environmentVariableKeys: {
-        useFolderPathInKeys: settings.environments.useFolderPathInKeys,
-      },
+      environmentVariableKeys: keyMode,
+      environmentIdOverride: loadTestEnvironmentIdOverride(parsed.environmentId),
     });
     if (!built) {
       throw new TestrixError(

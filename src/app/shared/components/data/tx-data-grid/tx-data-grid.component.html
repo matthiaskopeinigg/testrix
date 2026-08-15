@@ -1,0 +1,86 @@
+@if (columns().length === 0) {
+  <p class="tx-data-grid__empty">{{ emptyLabel() }}</p>
+} @else {
+  <div class="tx-data-grid__scroll" (contextmenu)="handleContextMenu($event)">
+    <table class="tx-data-grid__table">
+      <thead>
+        <tr>
+          <th class="tx-data-grid__gutter" scope="col" aria-label="Row number"></th>
+          @for (col of columns(); track $index) {
+            <th
+              scope="col"
+              (click)="handleHeaderClick($event, $index)"
+              [class.tx-data-grid__cell--selected]="isSelected(0, $index) && isSelected(displayedRows().length - 1, $index)"
+              [attr.aria-sort]="sortDirection($index) === 'asc' ? 'ascending' : sortDirection($index) === 'desc' ? 'descending' : 'none'"
+            >
+              <span class="tx-data-grid__header">
+                <span class="tx-data-grid__header-label">{{ col }}</span>
+                @if (sortDirection($index); as dir) {
+                  <tx-icon [name]="dir === 'asc' ? 'chevronUp' : 'chevronDown'" [size]="12" aria-hidden="true" />
+                }
+              </span>
+              @if (columnType($index); as type) {
+                <span class="tx-data-grid__header-type">{{ type }}</span>
+              }
+            </th>
+          }
+        </tr>
+      </thead>
+      <tbody>
+        @for (row of displayedRows(); track $index; let r = $index) {
+          <tr
+            [class.tx-data-grid__row--inserted]="rowKind(r) === 'inserted'"
+            [class.tx-data-grid__row--deleted]="rowKind(r) === 'deleted'"
+          >
+            <th
+              class="tx-data-grid__gutter"
+              scope="row"
+              (click)="handleRowGutterClick($event, r)"
+            >
+              @if (rowKind(r) === 'inserted') {
+                *
+              } @else {
+                {{ r + 1 }}
+              }
+            </th>
+            @for (cell of row; track $index; let c = $index) {
+              <td
+                [class.tx-data-grid__cell--null]="cell === null && !isEditing(r, c)"
+                [class.tx-data-grid__cell--selected]="isSelected(r, c)"
+                [class.tx-data-grid__cell--active]="isActive(r, c)"
+                [class.tx-data-grid__cell--dirty]="isDirty(r, c)"
+                [class.tx-data-grid__cell--editing]="isEditing(r, c)"
+                (click)="handleCellClick($event, r, c)"
+                (dblclick)="handleCellDblClick($event, r, c)"
+              >
+                @if (isEditing(r, c)) {
+                  <tx-inline-rename-input
+                    [value]="editing()!.value"
+                    density="cell"
+                    [allowEmpty]="true"
+                    [trimValue]="false"
+                    ariaLabel="Edit cell"
+                    (committed)="handleEditCommitted($event)"
+                    (cancelled)="handleEditCancel()"
+                  />
+                } @else if (cell === null) {
+                  <span class="tx-data-grid__null">&lt;null&gt;</span>
+                } @else {
+                  {{ cell }}
+                }
+              </td>
+            }
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+}
+
+<tx-context-menu
+  [open]="menuOpen()"
+  [position]="menuPosition()"
+  [items]="menuItems()"
+  (itemSelect)="handleMenuSelect($event)"
+  (closed)="handleMenuClosed()"
+/>

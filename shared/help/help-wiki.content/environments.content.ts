@@ -34,7 +34,7 @@ export const HELP_WIKI_ENVIRONMENTS_SECTIONS: readonly HelpWikiSection[] = [
     blocks: [
       {
         type: 'paragraph',
-        text: 'Variables are key/value pairs with optional descriptions. Use the help icon on the Value field for hints about secrets and multiline values.',
+        text: 'Variables are key/value pairs with optional descriptions. Mark a variable as Secret to store its value in the local encrypted vault instead of environments.json.',
       },
       {
         type: 'tip',

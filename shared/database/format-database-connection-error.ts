@@ -1,5 +1,7 @@
+import { unwrapIpcInvokeError } from '../errors';
+
 /**
- * User-facing message for database connection failures (IPC / Settings test).
+ * User-facing message for database connection and query failures.
  */
 export function formatDatabaseConnectionError(error: unknown): string {
   if (error instanceof AggregateError) {
@@ -11,8 +13,9 @@ export function formatDatabaseConnectionError(error: unknown): string {
     }
   }
 
+  const ipc = unwrapIpcInvokeError(error);
   const code = readErrorCode(error);
-  const message = readErrorMessage(error);
+  const message = ipc?.userMessage ?? readErrorMessage(error);
 
   if (code === 'ECONNREFUSED') {
     const target = extractHostPortHint(message) ?? 'the server';
@@ -44,7 +47,22 @@ export function formatDatabaseConnectionError(error: unknown): string {
       ? 'Connection timed out. Is the server running and reachable?'
       : message;
   }
-  if (lower.includes('does not exist') && lower.includes('database')) {
+
+  const relationMissing = /relation ["']([^"']+)["'] does not exist/i.exec(message);
+  if (relationMissing?.[1]) {
+    return `Table or view "${relationMissing[1]}" does not exist. Check the name and schema.`;
+  }
+  const tableMissing =
+    /table ['`]([^'`]+)['`] doesn'?t exist/i.exec(message) ??
+    /table ["']([^"']+)["'] does not exist/i.exec(message) ??
+    /no such table:\s*(\S+)/i.exec(message);
+  if (tableMissing?.[1]) {
+    return `Table "${tableMissing[1]}" does not exist. Check the name and schema.`;
+  }
+  if (
+    /database ["'][^"']+["'] does not exist/i.test(message) ||
+    /unknown database ['`][^'`]+['`]/i.test(message)
+  ) {
     return 'Database does not exist. Check the database name or create it first.';
   }
   if (lower.includes('self signed certificate') || lower.includes('certificate')) {

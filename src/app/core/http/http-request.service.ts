@@ -7,7 +7,9 @@ import type {
 } from '@shared/config';
 import type { HttpResponseSnapshot } from '@shared/http/outgoing-request.schema';
 import type { ResponseDiffResult } from '@shared/http/response-diff';
-import { buildOutgoingRequest } from '@shared/http/build-outgoing-request';
+import { buildOutgoingRequest, type BuildOutgoingRequestResult } from '@shared/http/build-outgoing-request';
+import { formatResolvedRequest } from '@shared/http/format-resolved-request';
+import { extractJsonPath, formatJsonPathResult } from '@shared/testing/json-path';
 import {
   createFailedHttpResponseSnapshot,
   resolveHttpErrorMessage,
@@ -27,6 +29,7 @@ import { findCollectionNode } from '@app/features/shell/collections/collection-t
 import {
   createDefaultEnvironments,
   findCollectionRequestInTree,
+  resolveCollectionRequestAuth,
   resolveCollectionRequestEnvironmentId,
   type EnvironmentDefinition,
   type EnvironmentVariableKeyOptions,
@@ -240,6 +243,49 @@ export class HttpRequestService {
     this.refreshDiff();
   }
 
+  /**
+   * Builds the outgoing request without sending and returns a masked preview dump.
+   */
+  async previewCollectionRequest(requestId: string): Promise<string | null> {
+    const built = await this.tryBuildOutgoing(requestId, 'preview');
+    if (!built) {
+      return null;
+    }
+    return formatResolvedRequest(built.outgoing);
+  }
+
+  /**
+   * Writes a JSONPath extraction from the selected response body into the request environment.
+   */
+  captureJsonPathToEnvironment(requestId: string, path: string, variableKey: string): boolean {
+    const snapshot = this.selectedSnapshot();
+    const raw = snapshot?.body.text?.trim() ?? '';
+    if (!raw) {
+      this.notifier.reportUnknown(new Error('No response body to extract from.'));
+      return false;
+    }
+    let data: unknown;
+    try {
+      data = JSON.parse(raw);
+    } catch {
+      this.notifier.reportUnknown(new Error('Response body is not JSON.'));
+      return false;
+    }
+    const extracted = extractJsonPath(data, path);
+    if (extracted === undefined) {
+      this.notifier.reportUnknown(new Error('JSONPath did not match any value.'));
+      return false;
+    }
+    const environmentId = this.resolveEffectiveEnvironmentId(requestId);
+    if (!environmentId) {
+      this.notifier.reportUnknown(new Error('Select an environment before capturing a variable.'));
+      return false;
+    }
+    const formatted = formatJsonPathResult(extracted);
+    this.mergeSessionVariables(environmentId, { [variableKey.trim()]: formatted });
+    return this.environmentsService.upsertVariableByKey(environmentId, variableKey, formatted);
+  }
+
   async executeCollectionRequest(requestId: string): Promise<HttpResponseSnapshot | null> {
     const api = this.electron.bridge();
     if (!api?.http) {
@@ -247,28 +293,7 @@ export class HttpRequestService {
       return null;
     }
 
-    const settings = this.configService.settings();
-    const http = settings?.http;
-    if (!http) {
-      return null;
-    }
-
-    const nodes = this.collectionNodes();
-    const environmentId = this.resolveEffectiveEnvironmentId(requestId);
-    const built = buildOutgoingRequest({
-      requestId,
-      nodes,
-      http,
-      environments: this.environmentsFile(),
-      appVersion: api.versions.app || '0.0.0',
-      environmentVariableKeys: {
-        useFolderPathInKeys: settings.environments.useFolderPathInKeys,
-      },
-      runScope: {
-        runId: `run-${Date.now()}`,
-        sharedVariables: this.sessionVariableOverrides(environmentId),
-      },
-    });
+    const built = await this.tryBuildOutgoing(requestId, 'run');
 
     if (!built) {
       const loc = findCollectionNode(this.collectionsService.nodes(), requestId);
@@ -322,7 +347,7 @@ export class HttpRequestService {
       const session = this.runSession(requestId);
       const runCount = this.runsByRequest()[requestId]?.length ?? 0;
       const defaultTabOnSend =
-        settings.http.request.defaultResponseTabOnSend ?? 'body';
+        this.configService.settings()?.http.request.defaultResponseTabOnSend ?? 'body';
       const tab = resolveResponseTabAfterSend({
         currentTab: session.activeResponseTab,
         pinnedBaselineId: session.pinnedBaselineId,
@@ -352,7 +377,7 @@ export class HttpRequestService {
       const session = this.runSession(requestId);
       const runCount = this.runsByRequest()[requestId]?.length ?? 0;
       const defaultTabOnSend =
-        settings.http.request.defaultResponseTabOnSend ?? 'body';
+        this.configService.settings()?.http.request.defaultResponseTabOnSend ?? 'body';
       const tab = resolveResponseTabAfterSend({
         currentTab: session.activeResponseTab,
         pinnedBaselineId: session.pinnedBaselineId,
@@ -579,6 +604,57 @@ export class HttpRequestService {
         [requestId]: [snapshot, ...prev].slice(0, MAX_RUNS),
       };
     });
+  }
+
+  private async tryBuildOutgoing(
+    requestId: string,
+    runKind: 'run' | 'preview',
+  ): Promise<BuildOutgoingRequestResult | null> {
+    const settings = this.configService.settings();
+    const http = settings?.http;
+    if (!http) {
+      return null;
+    }
+    const api = this.electron.bridge();
+    const environmentId = this.resolveEffectiveEnvironmentId(requestId);
+    const oauthAccessToken = await this.resolveOauthAccessToken(requestId);
+    return buildOutgoingRequest({
+      requestId,
+      nodes: this.collectionNodes(),
+      http,
+      environments: this.environmentsFile(),
+      appVersion: api?.versions.app || '0.0.0',
+      environmentVariableKeys: {
+        useFolderPathInKeys: settings.environments.useFolderPathInKeys,
+      },
+      runScope: {
+        runId: `${runKind}-${Date.now()}`,
+        sharedVariables: this.sessionVariableOverrides(environmentId),
+      },
+      oauthAccessToken,
+    });
+  }
+
+  private async resolveOauthAccessToken(requestId: string): Promise<string | undefined> {
+    const loc = findCollectionRequestInTree(this.collectionNodes(), requestId);
+    if (!loc) {
+      return undefined;
+    }
+    const resolved = resolveCollectionRequestAuth(loc.request.settings.auth, loc.ancestorFolders);
+    if (resolved.auth.type !== 'oauth2') {
+      return undefined;
+    }
+    const api = this.electron.bridge();
+    if (!api?.oauth) {
+      return undefined;
+    }
+    const ownerId = resolved.folderId ?? requestId;
+    try {
+      return await api.oauth.ensureToken({ ownerId, auth: resolved.auth });
+    } catch (error) {
+      this.notifier.reportUnknown(error instanceof Error ? error : new Error('OAuth token request failed.'));
+      return undefined;
+    }
   }
 
   private collectionNodes(): CollectionNode[] {

@@ -1,0 +1,129 @@
+<section class="db-data tx-workspace-tab" aria-label="Table data">
+  @if (!connection()) {
+    <tx-banner variant="warning" title="Connection not found">
+      This tab is not linked to a saved connection. Open a table from the Database sidebar.
+    </tx-banner>
+  } @else {
+    <div class="db-data__toolbar">
+      <div>
+        <h2 class="db-data__title">{{ target()?.table }}</h2>
+        <p class="db-data__meta">{{ connection()!.name }} · {{ target()?.schema || 'default' }}</p>
+      </div>
+      <div class="db-data__actions">
+        <tx-button variant="secondary" [disabled]="!dirty() || submitting()" (pressed)="handleRevert()">
+          Revert
+        </tx-button>
+        <tx-button
+          variant="primary"
+          [loading]="submitting()"
+          [disabled]="!dirty() || !editable() || submitting() || running()"
+          (pressed)="handleSubmit()"
+        >
+          Submit
+        </tx-button>
+      </div>
+    </div>
+
+    @if (refuseReason() === 'view') {
+      <tx-banner variant="info" title="Read-only view">This view cannot be edited.</tx-banner>
+    } @else if (refuseReason() === 'no-pk') {
+      <tx-banner variant="info" title="No primary key">Editing is disabled until this table has a primary key.</tx-banner>
+    } @else if (refuseReason() === 'redis') {
+      <tx-banner variant="info" title="Redis">Use a query tab for Redis commands.</tx-banner>
+    }
+
+    <div class="db-data__result" aria-live="polite">
+        <div class="db-data__result-toolbar">
+          <p class="db-data__status">{{ resultMeta() }}</p>
+          <div class="db-data__result-actions">
+            <tx-form-field label="Page size" controlId="db-data-page-size">
+              <tx-dropdown
+                id="db-data-page-size"
+                [options]="pageSizeOptions"
+                [ngModel]="'' + pageSize()"
+                (ngModelChange)="handlePageSizeChange($event)"
+              />
+            </tx-form-field>
+            <tx-button variant="secondary" [disabled]="!canGoPrev()" (pressed)="handlePrevPage()">Previous</tx-button>
+            <tx-button variant="secondary" [disabled]="!canGoNext()" (pressed)="handleNextPage()">Next</tx-button>
+            <tx-button
+              variant="secondary"
+              [disabled]="!table() || (table()!.rows.length === 0 && !table()!.hasMore)"
+              (pressed)="handleLoadAll()"
+            >Load all</tx-button>
+            <tx-button variant="secondary" [disabled]="!table() || table()!.rows.length === 0" (pressed)="handleCopyAll()">
+              Copy all
+            </tx-button>
+            <tx-button
+              variant="secondary"
+              [disabled]="!table() || table()!.columns.length === 0"
+              (pressed)="handleExportClick($event)"
+            >Export</tx-button>
+          </div>
+        </div>
+        <tx-form-field class="db-data__where" label="WHERE" controlId="db-data-where">
+          <tx-suggest-input
+            id="db-data-where"
+            controlId="db-data-where"
+            [ngModel]="whereDraft()"
+            [suggestions]="whereSuggestions()"
+            matchMode="token"
+            completionPlacement="below"
+            [autoClose]="true"
+            [clearable]="true"
+            [disabled]="running() || submitting()"
+            completionLabel="Columns"
+            ariaLabel="SQL WHERE filter. Press Enter to run."
+            placeholder="email LIKE '%@test%' AND is_active"
+            (ngModelChange)="handleWhereDraft($event)"
+            (submitted)="handleWhereSubmit()"
+            (cleared)="handleWhereCleared()"
+          />
+        </tx-form-field>
+      @if (error(); as message) {
+        <tx-banner variant="error" [title]="message" />
+      }
+      @if (running() && !table()) {
+        <tx-spinner ariaLabel="Loading table data" />
+      } @else if (table(); as result) {
+        @if (result.columns.length === 0) {
+          <p class="db-data__empty">Table returned no columns.</p>
+        } @else {
+          <tx-data-grid
+            [columns]="gridColumns()"
+            [rows]="displayRows()"
+            [columnTypes]="result.columnTypes ?? []"
+            [editable]="editable()"
+            [sortDisabled]="dirty()"
+            [rowKinds]="rowKinds()"
+            [dirtyCells]="dirtyCells()"
+            (selectionChange)="handleGridSelection($event)"
+            (copied)="handleGridCopied()"
+            (exportRequest)="handleGridExport($event)"
+            (cellCommit)="handleCellCommit($event)"
+            (addRow)="handleAddRow()"
+            (deleteRow)="handleDeleteRow($event)"
+            (setNull)="handleSetNull($event)"
+          />
+        }
+      }
+    </div>
+  }
+</section>
+
+<tx-context-menu
+  [open]="exportMenuOpen()"
+  [position]="exportMenuPosition()"
+  [items]="exportMenuItems()"
+  (itemSelect)="handleExportMenuSelect($event)"
+  (closed)="handleExportMenuClosed()"
+/>
+
+<tx-confirm-dialog
+  [open]="loadAllOpen()"
+  title="Load all rows"
+  message="This table has more pages. Load every remaining row into the grid?"
+  confirmLabel="Load all"
+  (confirmed)="handleLoadAllConfirmed()"
+  (closed)="handleLoadAllClosed()"
+/>

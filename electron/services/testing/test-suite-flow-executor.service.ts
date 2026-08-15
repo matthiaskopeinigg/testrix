@@ -2,6 +2,7 @@ import { buildOutgoingRequest } from '../../../shared/http/build-outgoing-reques
 import { sendHttpRequestPayloadSchema } from '../../../shared/http/outgoing-request.schema';
 import { resolveTemplateVariables } from '../../../shared/dynamic-variables/template-variables';
 import type { DatabaseConnection } from '../../../shared/config/database-settings.schema';
+import type { SavedQueryTreeItem } from '../../../shared/database/saved-queries.schema';
 import {
   buildFlowEnvironmentVariableContext,
   buildHttpCaptureFromE2eData,
@@ -24,6 +25,7 @@ import {
   sanitizeValidationRulesForReferenceStepType,
   sanitizeCacheEntriesForReferenceStepType,
   resolveCacheEntryValue,
+  resolveDatabaseStepQueryBinding,
   cacheEntryExtractFailureMessage,
   validationFailureMessage,
   type FlowRunProgressEvent,
@@ -190,10 +192,11 @@ export class TestSuiteFlowExecutor {
 
     emitProgress();
 
-    const [collections, settings, environments] = await Promise.all([
+    const [collections, settings, environments, savedQueries] = await Promise.all([
       files.readCollections(),
       files.readSettings(),
       files.readEnvironments(),
+      files.readSavedQueries(),
     ]);
 
     try {
@@ -228,6 +231,7 @@ export class TestSuiteFlowExecutor {
             http: settings.http,
             environments,
             databaseConnections: settings.databases.connections,
+            savedQueryNodes: savedQueries.nodes,
             appVersion: '0.0.0',
             showBrowser,
             e2eScreenshotFolder: settings.http.testing.e2eScreenshotFolder,
@@ -295,6 +299,7 @@ export class TestSuiteFlowExecutor {
       readonly http: import('@shared/config').HttpSettings;
       readonly environments: import('@shared/config').EnvironmentsFile;
       readonly databaseConnections: readonly DatabaseConnection[];
+      readonly savedQueryNodes: readonly SavedQueryTreeItem[];
       readonly appVersion: string;
       readonly showBrowser: boolean;
       readonly e2eScreenshotFolder: string;
@@ -381,13 +386,15 @@ export class TestSuiteFlowExecutor {
     ctx: {
       readonly environments: import('@shared/config').EnvironmentsFile;
       readonly databaseConnections: readonly DatabaseConnection[];
+      readonly savedQueryNodes: readonly SavedQueryTreeItem[];
       readonly environmentIdOverride?: string | null;
       readonly ancestorFolders: readonly TestSuiteAncestorFolderRef[];
       readonly environmentVariableKeys: import('@shared/http/collection-execution.schema').EnvironmentVariableKeyMode;
     },
   ): Promise<void> {
     const cfg = step.config as DatabaseStepConfig;
-    const connectionId = String(cfg.connectionId ?? '').trim();
+    const binding = resolveDatabaseStepQueryBinding(cfg, ctx.savedQueryNodes);
+    const connectionId = binding.connectionId;
     if (!connectionId) {
       throw new Error('DATABASE step needs a connection.');
     }
@@ -398,7 +405,7 @@ export class TestSuiteFlowExecutor {
     }
 
     const query = this.resolveFlowTemplate(
-      String(cfg.query ?? ''),
+      binding.query,
       flow,
       ctx.environments,
       ctx.environmentIdOverride,

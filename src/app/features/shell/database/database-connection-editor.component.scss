@@ -1,0 +1,71 @@
+:host {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.db-conn {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 0.85rem;
+  min-height: 0;
+  padding: 0.85rem 1rem 1rem;
+  overflow: auto;
+}
+
+.db-conn__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.db-conn__title {
+  margin: 0 0 0.15rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.db-conn__meta {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--tx-text-1);
+}
+
+.db-conn__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem 0.85rem;
+  width: 100%;
+}
+
+.db-conn__file-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  width: 100%;
+
+  tx-input {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+}
+
+.db-conn__toggle-slot {
+  display: flex;
+  align-items: flex-end;
+  min-height: 100%;
+}
+
+.db-conn__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+@media (max-width: 720px) {
+  .db-conn__grid {
+    grid-template-columns: 1fr;
+  }
+}

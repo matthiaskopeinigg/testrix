@@ -56,10 +56,14 @@ const tabKindLoaders: Record<
     import('../../testing/capture-workspace-tab/capture-workspace-tab.component').then((m) => ({
       default: m.CaptureWorkspaceTabComponent,
     })),
-  'interceptor-rule': () =>
-    import('../../testing/interceptor-rule-workspace-tab/interceptor-rule-workspace-tab.component').then(
-      (m) => ({ default: m.InterceptorRuleWorkspaceTabComponent }),
-    ),
+    'interceptor-rule': () =>
+      import('../../testing/interceptor-rule-workspace-tab/interceptor-rule-workspace-tab.component').then(
+        (m) => ({ default: m.InterceptorRuleWorkspaceTabComponent }),
+      ),
+  database: () =>
+    import('../../database/database-workspace-tab.component').then((m) => ({
+      default: m.DatabaseWorkspaceTabComponent,
+    })),
 };
 
 const loadedByKind = new Map<WorkspaceTabKind, WorkspaceTabComponentType>();

@@ -28,7 +28,9 @@ import {
   INTERCEPTOR_FILE_NAME,
   LOAD_TESTS_FILE_NAME,
   MOCK_SERVER_FILE_NAME,
+  MONITORS_FILE_NAME,
   PATHS_ANCHOR_FILE_NAME,
+  QUERIES_FILE_NAME,
   REGRESSIONS_FILE_NAME,
   TEST_SUITES_FILE_NAME,
 } from '../../../shared/config/constants';
@@ -36,6 +38,7 @@ import {
 import { ErrorCodes, TestrixError } from '../../../shared/errors';
 
 import type { ConfigFileService } from '../../services/config/config-file.service';
+import { secretVaultService } from '../../services/config/secret-vault.service';
 import type { ConfigPathService } from '../../services/config/config-path.service';
 import type { ProfileConfigService } from '../../services/config/profile-config.service';
 import { setMainSettings } from '../../services/settings-runtime';
@@ -154,6 +157,13 @@ export function registerConfigHandlers(ipc: IpcMainBinder, deps: ConfigHandlerDe
     wrapInvokeHandler(ConfigChannels.setEnvironments, async (_e, data: unknown) => {
       const parsed = environmentsFileSchema.parse(data);
       return deps.files.saveEnvironments(parsed);
+    }),
+  );
+
+  ipc.handle(
+    ConfigChannels.vaultEncryptionAvailable,
+    wrapInvokeHandler(ConfigChannels.vaultEncryptionAvailable, async () => {
+      return secretVaultService.isEncryptionAvailable();
     }),
   );
 
@@ -295,6 +305,8 @@ export function registerConfigHandlers(ipc: IpcMainBinder, deps: ConfigHandlerDe
         [MOCK_SERVER_FILE_NAME]: path.join(configDir, MOCK_SERVER_FILE_NAME),
         [CAPTURE_FILE_NAME]: path.join(configDir, CAPTURE_FILE_NAME),
         [INTERCEPTOR_FILE_NAME]: path.join(configDir, INTERCEPTOR_FILE_NAME),
+        [QUERIES_FILE_NAME]: path.join(configDir, QUERIES_FILE_NAME),
+        [MONITORS_FILE_NAME]: path.join(configDir, MONITORS_FILE_NAME),
       };
 
       const entries = await Promise.all(

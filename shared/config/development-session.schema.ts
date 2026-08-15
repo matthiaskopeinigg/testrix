@@ -9,7 +9,7 @@ export const uuidGeneratorToolStateSchema = z.object({
   count: z.number().int().min(1).max(500).default(1),
   uppercase: z.boolean().default(false),
   stripHyphens: z.boolean().default(false),
-  version: z.enum(['v4']).default('v4'),
+  version: z.enum(['v4', 'v7', 'ulid', 'nanoid']).default('v4'),
   output: boundedText(64_000).default(''),
 });
 
@@ -172,6 +172,29 @@ export const openapiToolStateSchema = z.object({
   content: boundedText(512_000).default(''),
 });
 
+export const hashToolStateSchema = z.object({
+  algorithm: z.enum(['md5', 'sha-1', 'sha-256', 'sha-384', 'sha-512', 'hmac-sha256']).default('sha-256'),
+  input: boundedText(256_000).default(''),
+  key: boundedText(8_000).default(''),
+  output: boundedText(256).default(''),
+});
+
+export const jsonpathToolStateSchema = z.object({
+  json: boundedText(256_000).default('{\n  "user": { "id": 1, "name": "Ada" }\n}'),
+  path: boundedText(2_000).default('$.user.name'),
+  result: boundedText(256_000).default(''),
+});
+
+export const certInspectorToolStateSchema = z.object({
+  pem: boundedText(64_000).default(''),
+  output: boundedText(64_000).default(''),
+});
+
+export const requestDiffToolStateSchema = z.object({
+  left: boundedText(256_000).default(''),
+  right: boundedText(256_000).default(''),
+});
+
 export const developmentToolsRecordSchema = z.object({
   'uuid-generator': uuidGeneratorToolStateSchema,
   'code-editor': codeEditorToolStateSchema,
@@ -182,6 +205,10 @@ export const developmentToolsRecordSchema = z.object({
   url: urlToolStateSchema,
   bcrypt: bcryptToolStateSchema,
   openapi: openapiToolStateSchema,
+  hash: hashToolStateSchema,
+  jsonpath: jsonpathToolStateSchema,
+  'cert-inspector': certInspectorToolStateSchema,
+  'request-diff': requestDiffToolStateSchema,
 });
 
 export const workspaceDevelopmentSchema = z.object({
@@ -197,6 +224,10 @@ export type RegexToolState = z.infer<typeof regexToolStateSchema>;
 export type UrlToolState = z.infer<typeof urlToolStateSchema>;
 export type BcryptToolState = z.infer<typeof bcryptToolStateSchema>;
 export type OpenApiToolState = z.infer<typeof openapiToolStateSchema>;
+export type HashToolState = z.infer<typeof hashToolStateSchema>;
+export type JsonpathToolState = z.infer<typeof jsonpathToolStateSchema>;
+export type CertInspectorToolState = z.infer<typeof certInspectorToolStateSchema>;
+export type RequestDiffToolState = z.infer<typeof requestDiffToolStateSchema>;
 
 /** Default OpenAPI sample document (JSON). */
 export const DEFAULT_OPENAPI_SAMPLE = JSON.stringify(
@@ -233,6 +264,10 @@ export function createDefaultWorkspaceDevelopment(): WorkspaceDevelopmentState {
       url: {},
       bcrypt: {},
       openapi: { content: DEFAULT_OPENAPI_SAMPLE },
+      hash: {},
+      jsonpath: {},
+      'cert-inspector': {},
+      'request-diff': {},
     },
   });
 }

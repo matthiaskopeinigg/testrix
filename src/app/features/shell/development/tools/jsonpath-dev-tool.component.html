@@ -1,0 +1,26 @@
+<app-dev-tool-layout toolId="jsonpath">
+  <app-dev-tool-toolbar devToolToolbar>
+    <div trailing>
+      <tx-button variant="primary" (click)="handleEvaluate()">Evaluate</tx-button>
+      <tx-button variant="secondary" (click)="handleCopy()">Copy result</tx-button>
+    </div>
+  </app-dev-tool-toolbar>
+
+  <tx-form-field label="JSON">
+    <tx-textarea
+      [rows]="10"
+      [ngModel]="state().json"
+      (ngModelChange)="state.update((s) => ({ ...s, json: $event }))"
+    />
+  </tx-form-field>
+  <tx-form-field label="JSONPath">
+    <tx-input
+      [ngModel]="state().path"
+      (ngModelChange)="state.update((s) => ({ ...s, path: $event }))"
+      placeholder="$.user.name"
+    />
+  </tx-form-field>
+  <tx-form-field label="Result">
+    <tx-textarea [rows]="6" [ngModel]="state().result" [readOnly]="true" />
+  </tx-form-field>
+</app-dev-tool-layout>

@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { createDefaultSettings } from '@shared/config';
 import { CollectionsService } from '@app/core/collections/collections.service';
 import { ConfigService } from '@app/core/config/config.service';
+import { EnvironmentsService } from '@app/core/environments/environments.service';
 import { ElectronService } from '@app/core/electron/electron.service';
 import { UiPreferencesService } from '@app/core/ui/ui-preferences.service';
 import { TxIconService } from '@app/shared/icons/tx-icon.service';
@@ -22,6 +23,12 @@ describe('LtTabTargetPanelComponent', () => {
           provide: CollectionsService,
           useValue: {
             nodes: signal([]),
+          },
+        },
+        {
+          provide: EnvironmentsService,
+          useValue: {
+            environments: signal([]),
           },
         },
         {
@@ -81,5 +88,10 @@ describe('LtTabTargetPanelComponent', () => {
     fixture.componentInstance.targetSourceChange.subscribe(sourceHandler);
     fixture.componentInstance['handleTargetSourceChange']('manual');
     expect(sourceHandler).toHaveBeenCalledWith('manual');
+  });
+
+  it('shows an environment picker that inherits from the collection request', () => {
+    expect(fixture.nativeElement.textContent).toContain('Environment');
+    expect(fixture.componentInstance['environmentPlaceholder']()).toBe('Inherit from request');
   });
 });

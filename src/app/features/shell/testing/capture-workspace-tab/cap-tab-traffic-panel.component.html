@@ -32,7 +32,29 @@
       }
       <p class="cap-traffic__count" role="status">
         {{ filtered().length }} / {{ entries().length }}
+        @if (selectedCount() > 0) {
+          · {{ selectedCount() }} selected
+        }
       </p>
+      <tx-button
+        variant="secondary"
+        [disabled]="filtered().length === 0"
+        (pressed)="handleSelectFiltered()"
+      >
+        Select visible
+      </tx-button>
+      <tx-button variant="secondary" [disabled]="selectedCount() === 0" (pressed)="handleClearSelection()">
+        Clear selection
+      </tx-button>
+      <tx-button variant="secondary" [disabled]="filtered().length === 0" (pressed)="handleGenerateCollection()">
+        Collection
+      </tx-button>
+      <tx-button variant="secondary" [disabled]="filtered().length === 0" (pressed)="handleGenerateOpenApi()">
+        OpenAPI
+      </tx-button>
+      <tx-button variant="secondary" [disabled]="filtered().length === 0" (pressed)="handleGenerateMocks()">
+        Mocks
+      </tx-button>
       <tx-button variant="secondary" [disabled]="entries().length === 0" (pressed)="clearHistory.emit()">
         Clear
       </tx-button>
@@ -57,6 +79,7 @@
       <table class="cap-traffic__table">
         <thead>
           <tr>
+            <th scope="col" class="cap-traffic__col-select">Select</th>
             <th scope="col" class="cap-traffic__col-expand" aria-label="Expand"></th>
             <th scope="col">Method</th>
             <th scope="col">URL</th>
@@ -76,6 +99,15 @@
               (click)="handleRowActivate(entry, $event)"
               (keydown)="handleRowKeydown(entry, $event)"
             >
+              <td class="cap-traffic__col-select" (click)="$event.stopPropagation()">
+                <input
+                  type="checkbox"
+                  class="cap-traffic__select"
+                  [checked]="isSelected(entry.id)"
+                  [attr.aria-label]="'Select ' + entry.method + ' ' + entry.url"
+                  (change)="handleSelectChange(entry.id, $event)"
+                />
+              </td>
               <td class="cap-traffic__col-expand">
                 <tx-icon
                   [name]="isExpanded(entry.id) ? 'chevronDown' : 'chevronRight'"
@@ -102,7 +134,7 @@
             </tr>
             @if (isExpanded(entry.id)) {
               <tr class="cap-traffic__detail-row">
-                <td colspan="7">
+                <td colspan="8">
                   <div class="cap-traffic__exchange" (click)="$event.stopPropagation()">
                     <div class="cap-traffic__entry-actions">
                       <tx-button

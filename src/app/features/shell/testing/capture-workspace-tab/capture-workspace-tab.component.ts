@@ -291,6 +291,18 @@ export class CaptureWorkspaceTabComponent {
     this.captureActions.createFlowFromCapture(entry);
   }
 
+  protected handleGenerateCollection(entries: readonly CaptureLogEntry[]): void {
+    this.captureActions.generateCollectionFromCapture(entries);
+  }
+
+  protected handleGenerateOpenApi(entries: readonly CaptureLogEntry[]): void {
+    this.captureActions.generateOpenApiFromCapture(entries);
+  }
+
+  protected handleGenerateMocks(entries: readonly CaptureLogEntry[]): void {
+    void this.captureActions.generateMockEndpointsFromCapture(entries);
+  }
+
   private persistTrafficFilter(): void {
     const id = this.sessionId();
     if (!id) {

@@ -224,6 +224,36 @@
   transition: color var(--tx-duration-fast) var(--tx-ease-standard);
 }
 
+.tx-tree-row__status {
+  flex-shrink: 0;
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 999px;
+  background: var(--tx-text-1);
+  opacity: 0.55;
+
+  &[data-status='connected'] {
+    background: var(--tx-success);
+    opacity: 1;
+  }
+
+  &[data-status='error'] {
+    background: var(--tx-danger);
+    opacity: 1;
+  }
+
+  &[data-status='checking'] {
+    background: var(--tx-warning);
+    opacity: 1;
+  }
+
+  &[data-status='idle'],
+  &[data-status='unknown'] {
+    background: var(--tx-text-1);
+    opacity: 0.45;
+  }
+}
+
 .tx-tree-row__text {
   flex: 1;
   min-width: 0;

@@ -10,6 +10,8 @@ import {
   INTERCEPTOR_FILE_NAME,
   LOAD_TESTS_FILE_NAME,
   MOCK_SERVER_FILE_NAME,
+  QUERIES_FILE_NAME,
+  MONITORS_FILE_NAME,
   REGRESSIONS_FILE_NAME,
   SESSION_FILE_NAME,
   SETTINGS_FILE_NAME,
@@ -40,6 +42,10 @@ import {
   type SettingsPatch,
 } from '../../../shared/config';
 import {
+  extractEnvironmentSecrets,
+  hydrateEnvironmentSecrets,
+} from '../../../shared/config/environment-secret-vault';
+import {
   captureFileSchema,
   createDefaultCaptureFile,
   migrateCaptureFile,
@@ -63,11 +69,24 @@ import {
   type RegressionsFile,
   type TestSuitesFile,
 } from '../../../shared/testing';
+import {
+  createDefaultMonitorsFile,
+  parseMonitorsFile,
+  monitorsFileSchema,
+  type MonitorsFile,
+} from '../../../shared/testing/monitors.schema';
+import {
+  createDefaultSavedQueriesFile,
+  parseSavedQueriesFile,
+  savedQueriesFileSchema,
+  type SavedQueriesFile,
+} from '../../../shared/database/saved-queries.schema';
 
 import { ErrorCodes, TestrixError } from '../../../shared/errors';
 
 import { notifyTeamConfigFileSaved, TEAM_SYNC_FILE_NAMES } from '../collaboration/team-file-notify';
 import { getMainSettings, setMainSettings } from '../settings-runtime';
+import { secretVaultService } from './secret-vault.service';
 
 const ATOMIC_WRITE_MAX_ATTEMPTS = process.platform === 'win32' ? 8 : 3;
 const ATOMIC_WRITE_RETRY_BASE_MS = 25;
@@ -137,6 +156,14 @@ export class ConfigFileService {
     return path.join(this.getActiveProfileDir(), INTERCEPTOR_FILE_NAME);
   }
 
+  private queriesPath(): string {
+    return path.join(this.getActiveProfileDir(), QUERIES_FILE_NAME);
+  }
+
+  private monitorsPath(): string {
+    return path.join(this.getActiveProfileDir(), MONITORS_FILE_NAME);
+  }
+
   /** Ensures default workspace files exist in a profile directory (no-op if present). */
   async ensureProfileWorkspaceDefaults(profileDir: string): Promise<void> {
     await fs.mkdir(profileDir, { recursive: true });
@@ -151,6 +178,8 @@ export class ConfigFileService {
       { filePath: path.join(profileDir, MOCK_SERVER_FILE_NAME), create: createDefaultMockServerFile },
       { filePath: path.join(profileDir, CAPTURE_FILE_NAME), create: createDefaultCaptureFile },
       { filePath: path.join(profileDir, INTERCEPTOR_FILE_NAME), create: createDefaultInterceptorFile },
+      { filePath: path.join(profileDir, QUERIES_FILE_NAME), create: createDefaultSavedQueriesFile },
+      { filePath: path.join(profileDir, MONITORS_FILE_NAME), create: createDefaultMonitorsFile },
     ];
     for (const { filePath, create } of probes) {
       try {
@@ -275,17 +304,26 @@ export class ConfigFileService {
   }
 
   async readEnvironments(): Promise<EnvironmentsFile> {
-    return this.readValidated(
+    const file = await this.readValidated(
       this.environmentsPath(),
       () => createDefaultEnvironments(),
       (j: unknown) => environmentsFileSchema.parse(j),
       (d) => d,
       'environments',
     );
+    const secrets = await secretVaultService.load(this.getActiveProfileDir());
+    return hydrateEnvironmentSecrets(file, secrets);
   }
 
   async writeEnvironments(data: EnvironmentsFile): Promise<void> {
-    await this.atomicWriteJson(this.environmentsPath(), data);
+    const extracted = extractEnvironmentSecrets(data);
+    if (Object.keys(extracted.secrets).length > 0) {
+      secretVaultService.assertEncryptionAvailable();
+    }
+    const existing = await secretVaultService.load(this.getActiveProfileDir());
+    const merged: Record<string, string> = { ...existing, ...extracted.secrets };
+    await secretVaultService.save(this.getActiveProfileDir(), merged);
+    await this.atomicWriteJson(this.environmentsPath(), extracted.file);
   }
 
   async saveEnvironments(data: EnvironmentsFile): Promise<EnvironmentsFile> {
@@ -298,7 +336,7 @@ export class ConfigFileService {
     });
     await this.writeEnvironments(updated);
     notifyTeamConfigFileSaved(this.getActiveProfileDir(), TEAM_SYNC_FILE_NAMES.environments);
-    return updated;
+    return this.readEnvironments();
   }
 
   async readHistory(): Promise<HistoryFile> {
@@ -422,6 +460,42 @@ export class ConfigFileService {
   async saveInterceptor(data: InterceptorFile): Promise<InterceptorFile> {
     const updated = interceptorFileSchema.parse(data);
     await this.atomicWriteJson(this.interceptorPath(), updated);
+    return updated;
+  }
+
+  async readSavedQueries(): Promise<SavedQueriesFile> {
+    try {
+      const raw = await fs.readFile(this.queriesPath(), 'utf8');
+      return parseSavedQueriesFile(JSON.parse(raw) as unknown);
+    } catch (err: unknown) {
+      if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
+        return createDefaultSavedQueriesFile();
+      }
+      throw err;
+    }
+  }
+
+  async saveSavedQueries(data: SavedQueriesFile): Promise<SavedQueriesFile> {
+    const updated = savedQueriesFileSchema.parse(data);
+    await this.atomicWriteJson(this.queriesPath(), updated);
+    return updated;
+  }
+
+  async readMonitors(): Promise<MonitorsFile> {
+    try {
+      const raw = await fs.readFile(this.monitorsPath(), 'utf8');
+      return parseMonitorsFile(JSON.parse(raw) as unknown);
+    } catch (err: unknown) {
+      if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
+        return createDefaultMonitorsFile();
+      }
+      throw err;
+    }
+  }
+
+  async saveMonitors(data: MonitorsFile): Promise<MonitorsFile> {
+    const updated = monitorsFileSchema.parse(data);
+    await this.atomicWriteJson(this.monitorsPath(), updated);
     return updated;
   }
 

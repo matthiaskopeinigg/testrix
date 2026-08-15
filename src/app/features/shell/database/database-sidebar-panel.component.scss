@@ -1,0 +1,132 @@
+@use '../workspace/workspace-panel-chrome' as panel;
+@use '../workspace/workspace-sidebar-tree' as sidebar-tree;
+
+:host {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+}
+
+.database-sidebar-panel {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.database-sidebar-panel__toolbar-actions {
+  display: contents;
+}
+
+.database-sidebar-panel__section {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  gap: 0.35rem;
+}
+
+.database-sidebar-panel__section--connections {
+  flex: 1 1 50%;
+  min-height: 6rem;
+  padding: 0.35rem 0 0.65rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--tx-border-0) 55%, transparent);
+
+  &.is-collapsed {
+    flex: 0 0 auto;
+    min-height: 0;
+  }
+}
+
+.database-sidebar-panel__section--queries {
+  flex: 1 1 50%;
+  min-height: 6rem;
+  padding: 0.55rem 0 0;
+
+  &.is-collapsed {
+    flex: 0 0 auto;
+    min-height: 0;
+  }
+}
+
+.database-sidebar-panel__section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.database-sidebar-panel__section-toggle {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+  margin: 0;
+  padding: 0.2rem 0.3rem;
+  border: 0;
+  border-radius: var(--tx-radius-sm, 8px);
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover {
+    background: color-mix(in srgb, var(--tx-surface-2) 70%, transparent);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--tx-focus-ring, var(--tx-primary));
+    outline-offset: 2px;
+  }
+}
+
+.database-sidebar-panel__section-chevron {
+  flex-shrink: 0;
+  color: color-mix(in srgb, var(--tx-text-1) 80%, transparent);
+  transition: transform var(--tx-duration-fast, 140ms) ease;
+
+  &.is-collapsed {
+    transform: rotate(-90deg);
+  }
+}
+
+.database-sidebar-panel__section-title {
+  margin: 0;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--tx-text-1) 80%, transparent);
+}
+
+.database-sidebar-panel__section-count {
+  margin-left: 0.15rem;
+  padding: 0.05rem 0.35rem;
+  border-radius: var(--tx-radius-pill, 999px);
+  background: color-mix(in srgb, var(--tx-text-0) 8%, transparent);
+  font-size: 0.625rem;
+  font-weight: 600;
+  color: color-mix(in srgb, var(--tx-text-1) 85%, transparent);
+}
+
+.database-sidebar-panel__connection-tree {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding-top: 0.15rem;
+
+  @include panel.workspace-sidebar-tree-tokens;
+}
+
+.database-sidebar-panel__query-tree {
+  @include sidebar-tree.workspace-sidebar-panel-body;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.database-sidebar-panel__tree {
+  @include sidebar-tree.workspace-sidebar-tree-host;
+}

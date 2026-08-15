@@ -55,7 +55,8 @@
   color: var(--tx-text-2);
 }
 
-.lt-target-panel__source {
+.lt-target-panel__source,
+.lt-target-panel__env {
   flex: 0 1 15rem;
   max-width: 15rem;
 }
@@ -126,6 +127,7 @@
 
 .lt-target-panel__header,
 .lt-target-panel__source,
+.lt-target-panel__env,
 .lt-target-panel__bar,
 .lt-target-panel__sections-wrap {
   flex-shrink: 0;

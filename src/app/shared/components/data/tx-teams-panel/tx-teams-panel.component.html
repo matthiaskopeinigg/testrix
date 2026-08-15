@@ -84,13 +84,43 @@
             @if (status().conflictedFiles.length > 0) {
               <ul class="tx-teams-panel__conflict-files">
                 @for (file of status().conflictedFiles; track file) {
-                  <li><code>{{ file }}</code></li>
+                  <li>
+                    <button
+                      type="button"
+                      class="tx-teams-panel__conflict-file"
+                      [class.is-active]="selectedConflictFile() === file"
+                      (click)="handleSelectConflictFile(file)"
+                    >
+                      <code>{{ file }}</code>
+                    </button>
+                  </li>
                 }
               </ul>
             }
+            @if (loadingConflict()) {
+              <tx-spinner size="sm" />
+            } @else if (conflictPreview(); as preview) {
+              <pre class="tx-teams-panel__conflict-diff" aria-label="Conflict diff"><code>
+                @for (line of conflictDiffLines(); track $index) {
+                  <span
+                    class="tx-teams-panel__conflict-line"
+                    [class.tx-teams-panel__conflict-line--add]="line.kind === 'add'"
+                    [class.tx-teams-panel__conflict-line--remove]="line.kind === 'remove'"
+                    [class.tx-teams-panel__conflict-line--hunk]="line.kind === 'hunk'"
+                  >{{ line.kind === 'add' ? '+' : line.kind === 'remove' ? '-' : '' }}{{ line.text }}</span>
+                }
+              </code></pre>
+              <div class="tx-teams-panel__conflict-actions">
+                <tx-button variant="secondary" (pressed)="handleResolveConflictFile('ours')">Use local file</tx-button>
+                <tx-button variant="secondary" (pressed)="handleResolveConflictFile('theirs')">Use remote file</tx-button>
+                @if (preview.mergeable) {
+                  <tx-button variant="secondary" (pressed)="handleResolveConflictFile('merged')">Entity merge</tx-button>
+                }
+              </div>
+            }
             <div class="tx-teams-panel__conflict-actions">
-              <tx-button variant="secondary" (pressed)="handleResolveConflict('ours')">Use local</tx-button>
-              <tx-button variant="secondary" (pressed)="handleResolveConflict('theirs')">Use remote</tx-button>
+              <tx-button variant="secondary" (pressed)="handleResolveConflict('ours')">Use local (all)</tx-button>
+              <tx-button variant="secondary" (pressed)="handleResolveConflict('theirs')">Use remote (all)</tx-button>
               <tx-button variant="secondary" (pressed)="handleResolveConflict('abort')">Cancel sync</tx-button>
             </div>
           </tx-banner>
@@ -682,7 +712,8 @@
               </div>
 
               <p class="tx-teams-panel__hint tx-teams-panel__hint--muted">
-                Session, history, and cookies are always kept local.
+                Session, history, cookies, monitors, and the secret vault stay local. Environment secret values are not
+                synced — only keys and non-secret values. Push is blocked if inline secrets remain in JSON.
               </p>
 
               @if (canDisconnectFromGit()) {

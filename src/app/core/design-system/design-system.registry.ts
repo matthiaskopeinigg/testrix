@@ -288,6 +288,16 @@ export const DESIGN_SYSTEM_COMPONENTS: readonly DesignSystemComponentEntry[] = [
     kind: 'component',
   },
   {
+    id: 'data-grid',
+    label: 'Data grid',
+    selector: 'tx-data-grid',
+    importPath: '@app/shared/components/data/tx-data-grid/tx-data-grid.component',
+    description:
+      'Spreadsheet-style result table with a row-number gutter, NULL cells, click-to-sort headers, range selection, and TSV copy.',
+    supportsDebug: false,
+    kind: 'component',
+  },
+  {
     id: 'tree',
     label: 'Tree',
     selector: 'tx-tree',

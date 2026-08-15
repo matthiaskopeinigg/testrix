@@ -1,24 +1,29 @@
 import { Injectable, inject } from '@angular/core';
 
-import type { SettingsPatch } from '@shared/config';
+import { normalizeDatabaseSettings, type SettingsPatch } from '@shared/config';
 import {
   type BundleApplyOptions,
   type BundleSelection,
   TESTRIX_BUNDLE_SCHEMA_V1,
   type TestrixBundleV1,
+  databaseSettingsHasContent,
   filterBundle,
   mergeCollectionNodes,
+  mergeDatabaseConnectionItems,
   mergeEnvironmentDefinitions,
   mergeLoadTestItems,
   mergeMockServerItems,
   mergeRegressionItems,
+  mergeSavedQueryItems,
   mergeTestSuiteRoots,
+  omitSettingsDatabases,
   parseFileToBundle,
   type ImportFormatKind,
 } from '@shared/import-export';
 
 import { CollectionsService } from '@app/core/collections/collections.service';
 import { ConfigService } from '@app/core/config/config.service';
+import { DatabaseQueriesService } from '@app/core/database/database-queries.service';
 import { ElectronService } from '@app/core/electron/electron.service';
 import { EnvironmentsService } from '@app/core/environments/environments.service';
 import { CaptureWorkbenchStore } from '@app/core/testing/capture-workbench.store';
@@ -48,6 +53,7 @@ export class WorkspaceBundleService {
   private readonly mockServer = inject(MockServerService);
   private readonly capture = inject(CaptureWorkbenchStore);
   private readonly interceptor = inject(InterceptorWorkspaceStore);
+  private readonly databaseQueries = inject(DatabaseQueriesService);
 
   parseFileToBundle(raw: string, sourceLabel: string): ParseBundleResult {
     const bridge = this.electron.bridge();
@@ -67,20 +73,35 @@ export class WorkspaceBundleService {
     }
 
     const appVersion = bridge.versions.app ?? '';
-    const [collections, environments, testSuites, loadTests, regressions, mockServer, capture, interceptor, cookies] =
-      await Promise.all([
-        bridge.config.getCollections(),
-        bridge.config.getEnvironments(),
-        bridge.testing.getTestSuites(),
-        bridge.testing.getLoadTests(),
-        bridge.testing.getRegressions(),
-        bridge.testing.getMockServer(),
-        bridge.testing.getCapture(),
-        bridge.testing.getInterceptor(),
-        bridge.cookies.getAll(),
-      ]);
+    const [
+      collections,
+      environments,
+      testSuites,
+      loadTests,
+      regressions,
+      mockServer,
+      capture,
+      interceptor,
+      cookies,
+      queries,
+    ] = await Promise.all([
+      bridge.config.getCollections(),
+      bridge.config.getEnvironments(),
+      bridge.testing.getTestSuites(),
+      bridge.testing.getLoadTests(),
+      bridge.testing.getRegressions(),
+      bridge.testing.getMockServer(),
+      bridge.testing.getCapture(),
+      bridge.testing.getInterceptor(),
+      bridge.cookies.getAll(),
+      bridge.database.getQueries(),
+    ]);
 
     const settings = this.config.settings();
+    const connections = settings?.databases;
+    const hasConnections = databaseSettingsHasContent(connections);
+    const hasQueries = (queries?.nodes?.length ?? 0) > 0;
+
     return {
       schema: TESTRIX_BUNDLE_SCHEMA_V1,
       exportedAt: new Date().toISOString(),
@@ -93,7 +114,14 @@ export class WorkspaceBundleService {
       mockServer,
       capture,
       interceptor,
-      settings: settings ?? undefined,
+      databases:
+        hasConnections || hasQueries
+          ? {
+              ...(hasConnections ? { connections } : {}),
+              ...(hasQueries ? { queries } : {}),
+            }
+          : undefined,
+      settings: omitSettingsDatabases(settings ?? undefined),
       cookieJar: { cookies: [...cookies] },
     };
   }
@@ -207,6 +235,41 @@ export class WorkspaceBundleService {
       await bridge.testing.setInterceptor(filtered.interceptor);
       await this.interceptor.hydrate();
       parts.push('interceptor config');
+    }
+
+    if (filtered.databases?.connections) {
+      const incoming = normalizeDatabaseSettings(filtered.databases.connections);
+      const current = normalizeDatabaseSettings(
+        (await bridge.config.getSettings()).databases ?? { connections: [], nodes: [] },
+      );
+      const next =
+        options.mode === 'replace'
+          ? incoming
+          : normalizeDatabaseSettings({
+              nodes: mergeDatabaseConnectionItems(current.nodes, incoming.nodes),
+            });
+      await bridge.config.setSettings({
+        databases: {
+          connections: [...next.connections],
+          nodes: [...next.nodes],
+        },
+      });
+      await this.config.hydrate();
+      parts.push(`${next.connections.length} database connection(s)`);
+    }
+
+    if (filtered.databases?.queries) {
+      const incoming = filtered.databases.queries;
+      const current = await bridge.database.getQueries();
+      const next =
+        options.mode === 'replace'
+          ? incoming
+          : {
+              schemaVersion: 2 as const,
+              nodes: mergeSavedQueryItems(current.nodes, incoming.nodes),
+            };
+      await this.databaseQueries.replaceFile(next);
+      parts.push(`${incoming.nodes.length} database query item(s)`);
     }
 
     if (filtered.settings) {

@@ -3,21 +3,45 @@ import { z } from 'zod';
 
 import { databaseConnectionSchema } from '../../../shared/config/database-settings.schema';
 import { databaseConnectionStatusMapSchema } from '../../../shared/database/connection-status.schema';
-import { formatDatabaseConnectionError } from '../../../shared/database/format-database-connection-error';
+import {
+  canPageSqlSelect,
+  databaseIntrospectLevelSchema,
+  databaseQueryEnvelopeSchema,
+  databaseQueryPageSchema,
+  formatDatabaseConnectionError,
+  parseSavedQueriesFile,
+  savedQueriesFileSchema,
+  wrapSqlExplain,
+  wrapSqlSelectPage,
+} from '../../../shared/database';
 import { TestrixError, ErrorCodes } from '../../../shared/errors';
 import type { IpcMainBinder } from '../register-ipc';
 import { wrapInvokeHandler } from '../wrap-ipc-handler';
 import { DbChannels } from '../channels/db.channels';
 import { databaseQueryService } from '../../services/database/database-query.service';
+import { databaseIntrospectService } from '../../services/database/database-introspect.service';
 import { databaseConnectionStatusService } from '../../services/database/database-connection-status.service';
+import type { ConfigFileService } from '../../services/config/config-file.service';
 
 const dbQueryPayloadSchema = z.object({
   connection: databaseConnectionSchema,
   query: z.string(),
   timeoutMs: z.number().int().positive().optional(),
+  page: databaseQueryPageSchema.optional(),
 });
 
-export function registerDbHandlers(ipc: IpcMainBinder): void {
+const dbIntrospectPayloadSchema = z.object({
+  connection: databaseConnectionSchema,
+  level: databaseIntrospectLevelSchema,
+  schema: z.string().optional(),
+  table: z.string().optional(),
+});
+
+export interface DbHandlerDeps {
+  readonly files: ConfigFileService;
+}
+
+export function registerDbHandlers(ipc: IpcMainBinder, deps: DbHandlerDeps): void {
   ipc.handle(
     DbChannels.query,
     wrapInvokeHandler(DbChannels.query, async (_event: IpcMainInvokeEvent, raw: unknown) => {
@@ -28,9 +52,62 @@ export function registerDbHandlers(ipc: IpcMainBinder): void {
           'Invalid database query payload',
         );
       }
-      const { connection, query, timeoutMs } = parsed.data;
+      const { connection, query, timeoutMs, page } = parsed.data;
       try {
-        return await databaseQueryService.query(connection, query, { stepTimeoutMs: timeoutMs });
+        return await runPagedQuery(connection, query, timeoutMs, page);
+      } catch (error: unknown) {
+        throw new TestrixError(
+          ErrorCodes.DATABASE_CONNECTION_FAILED,
+          formatDatabaseConnectionError(error),
+          { cause: error },
+        );
+      }
+    }),
+  );
+
+  ipc.handle(
+    DbChannels.explain,
+    wrapInvokeHandler(DbChannels.explain, async (_event: IpcMainInvokeEvent, raw: unknown) => {
+      const parsed = dbQueryPayloadSchema.pick({ connection: true, query: true, timeoutMs: true }).safeParse(raw);
+      if (!parsed.success) {
+        throw new TestrixError(
+          ErrorCodes.CONFIG_VALIDATION_FAILED,
+          'Invalid database explain payload',
+        );
+      }
+      const explainSql = wrapSqlExplain(parsed.data.query, parsed.data.connection.type);
+      if (!explainSql) {
+        throw new TestrixError(
+          ErrorCodes.CONFIG_VALIDATION_FAILED,
+          'Explain is not available for this database type.',
+        );
+      }
+      try {
+        return await databaseQueryService.query(parsed.data.connection, explainSql, {
+          stepTimeoutMs: parsed.data.timeoutMs,
+        });
+      } catch (error: unknown) {
+        throw new TestrixError(
+          ErrorCodes.DATABASE_CONNECTION_FAILED,
+          formatDatabaseConnectionError(error),
+          { cause: error },
+        );
+      }
+    }),
+  );
+
+  ipc.handle(
+    DbChannels.introspect,
+    wrapInvokeHandler(DbChannels.introspect, async (_event: IpcMainInvokeEvent, raw: unknown) => {
+      const parsed = dbIntrospectPayloadSchema.safeParse(raw);
+      if (!parsed.success) {
+        throw new TestrixError(
+          ErrorCodes.CONFIG_VALIDATION_FAILED,
+          'Invalid database introspect payload',
+        );
+      }
+      try {
+        return await databaseIntrospectService.introspect(parsed.data);
       } catch (error: unknown) {
         throw new TestrixError(
           ErrorCodes.DATABASE_CONNECTION_FAILED,
@@ -62,8 +139,61 @@ export function registerDbHandlers(ipc: IpcMainBinder): void {
       return databaseConnectionStatusMapSchema.parse(databaseConnectionStatusService.getStatusMap());
     }),
   );
+
+  ipc.handle(
+    DbChannels.getQueries,
+    wrapInvokeHandler(DbChannels.getQueries, async () => deps.files.readSavedQueries()),
+  );
+
+  ipc.handle(
+    DbChannels.setQueries,
+    wrapInvokeHandler(DbChannels.setQueries, async (_event, raw: unknown) => {
+      const parsed = savedQueriesFileSchema.safeParse(raw);
+      if (!parsed.success) {
+        throw new TestrixError(ErrorCodes.CONFIG_VALIDATION_FAILED, 'Invalid saved queries payload.');
+      }
+      return deps.files.saveSavedQueries(parseSavedQueriesFile(parsed.data));
+    }),
+  );
 }
 
 export async function closeDatabaseConnections(): Promise<void> {
   await databaseQueryService.closeAll();
+}
+
+async function runPagedQuery(
+  connection: z.infer<typeof databaseConnectionSchema>,
+  query: string,
+  timeoutMs: number | undefined,
+  page: z.infer<typeof databaseQueryPageSchema> | undefined,
+): Promise<z.infer<typeof databaseQueryEnvelopeSchema>> {
+  const canPage = Boolean(page && canPageSqlSelect(query, connection.type));
+  const fetchLimit = page && canPage ? page.limit + 1 : page?.limit;
+  const sql =
+    page && canPage && fetchLimit
+      ? wrapSqlSelectPage(query, fetchLimit, page.offset, connection.type)
+      : query;
+  const result = await databaseQueryService.query(connection, sql, { stepTimeoutMs: timeoutMs });
+  if (!page) {
+    return result;
+  }
+  const rows = Array.isArray(result.rows) ? result.rows : null;
+  if (!rows) {
+    return { ...result, hasMore: false };
+  }
+  if (canPage) {
+    const hasMore = rows.length > page.limit;
+    return {
+      ...result,
+      rows: hasMore ? rows.slice(0, page.limit) : rows,
+      hasMore,
+    };
+  }
+  const start = page.offset;
+  const end = start + page.limit;
+  return {
+    ...result,
+    rows: rows.slice(start, end),
+    hasMore: rows.length > end,
+  };
 }

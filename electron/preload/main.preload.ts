@@ -8,6 +8,7 @@ import { LoggingChannels } from '../ipc/channels/logging.channels';
 import { UpdaterChannels } from '../ipc/channels/updater.channels';
 import { ShellChannels } from '../ipc/channels/shell.channels';
 import { HttpChannels } from '../ipc/channels/http.channels';
+import { OAuthChannels } from '../ipc/channels/oauth.channels';
 import { CookieChannels } from '../ipc/channels/cookie.channels';
 import { TestingChannels } from '../ipc/channels/testing.channels';
 import { E2eChannels } from '../ipc/channels/e2e.channels';
@@ -140,6 +141,7 @@ const api: ElectronAPI = {
     setCollections: (data) => ipcRenderer.invoke(ConfigChannels.setCollections, data),
     getEnvironments: () => ipcRenderer.invoke(ConfigChannels.getEnvironments),
     setEnvironments: (data) => ipcRenderer.invoke(ConfigChannels.setEnvironments, data),
+    vaultEncryptionAvailable: () => ipcRenderer.invoke(ConfigChannels.vaultEncryptionAvailable),
     getHistory: () => ipcRenderer.invoke(ConfigChannels.getHistory),
     setHistory: (data) => ipcRenderer.invoke(ConfigChannels.setHistory, data),
     onHistoryUpdated: (listener) => {
@@ -169,10 +171,19 @@ const api: ElectronAPI = {
     send: (payload) => ipcRenderer.invoke(HttpChannels.send, payload),
     cancel: (requestId) => ipcRenderer.invoke(HttpChannels.cancel, requestId),
   },
+  oauth: {
+    ensureToken: (payload) => ipcRenderer.invoke(OAuthChannels.ensureToken, payload),
+    clearToken: (ownerId) => ipcRenderer.invoke(OAuthChannels.clearToken, ownerId),
+    tokenStatus: (ownerId) => ipcRenderer.invoke(OAuthChannels.tokenStatus, ownerId),
+  },
   database: {
     query: (payload) => ipcRenderer.invoke(DbChannels.query, payload),
+    explain: (payload) => ipcRenderer.invoke(DbChannels.explain, payload),
+    introspect: (payload) => ipcRenderer.invoke(DbChannels.introspect, payload),
     testConnection: (connection) => ipcRenderer.invoke(DbChannels.testConnection, connection),
     getConnectionStatuses: () => ipcRenderer.invoke(DbChannels.getConnectionStatuses),
+    getQueries: () => ipcRenderer.invoke(DbChannels.getQueries),
+    setQueries: (data) => ipcRenderer.invoke(DbChannels.setQueries, data),
   },
   cookies: {
     getAll: () => ipcRenderer.invoke(CookieChannels.getAll),
@@ -193,6 +204,18 @@ const api: ElectronAPI = {
     setCapture: (data) => ipcRenderer.invoke(TestingChannels.setCapture, data),
     getInterceptor: () => ipcRenderer.invoke(TestingChannels.getInterceptor),
     setInterceptor: (data) => ipcRenderer.invoke(TestingChannels.setInterceptor, data),
+    getMonitors: () => ipcRenderer.invoke(TestingChannels.getMonitors),
+    setMonitors: (data) => ipcRenderer.invoke(TestingChannels.setMonitors, data),
+    monitorRunNow: (monitorId) => ipcRenderer.invoke(TestingChannels.monitorRunNow, monitorId),
+    onMonitorResult: (listener) => {
+      const handler = (_event: IpcRendererEvent, payload: import('../../shared/testing').MonitorResult): void => {
+        listener(payload);
+      };
+      ipcRenderer.on(TestingChannels.monitorResult, handler);
+      return () => {
+        ipcRenderer.removeListener(TestingChannels.monitorResult, handler);
+      };
+    },
     mockStatus: () => ipcRenderer.invoke(TestingChannels.mockStatus),
     mockStart: () => ipcRenderer.invoke(TestingChannels.mockStart),
     mockStop: () => ipcRenderer.invoke(TestingChannels.mockStop),
@@ -378,6 +401,8 @@ const api: ElectronAPI = {
     switchBranch: (name) => ipcRenderer.invoke(TeamChannels.switchBranch, name),
     deleteBranch: (name) => ipcRenderer.invoke(TeamChannels.deleteBranch, name),
     resolveConflict: (resolution) => ipcRenderer.invoke(TeamChannels.resolveConflict, resolution),
+    getConflictFile: (filePath) => ipcRenderer.invoke(TeamChannels.getConflictFile, filePath),
+    resolveConflictFile: (payload) => ipcRenderer.invoke(TeamChannels.resolveConflictFile, payload),
     linkWorkspace: () => ipcRenderer.invoke(TeamChannels.linkWorkspace),
     disconnect: () => ipcRenderer.invoke(TeamChannels.disconnect),
     listRepoDirectories: () => ipcRenderer.invoke(TeamChannels.listRepoDirectories),

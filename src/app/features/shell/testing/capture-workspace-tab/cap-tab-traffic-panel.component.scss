@@ -137,6 +137,16 @@
   vertical-align: top;
 }
 
+.cap-traffic__col-select {
+  width: 2rem;
+  padding-inline: 0.5rem 0.15rem;
+}
+
+.cap-traffic__select {
+  margin: 0;
+  accent-color: var(--tx-primary);
+}
+
 .cap-traffic__col-expand {
   width: 1.75rem;
   padding-inline: 0.35rem 0.15rem;

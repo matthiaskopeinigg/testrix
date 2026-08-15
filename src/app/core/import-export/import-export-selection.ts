@@ -97,6 +97,10 @@ function collectIdsByPayload(
           ids.add(node.payload.id);
         } else if (node.payload.kind === 'mockItem') {
           ids.add(node.payload.id);
+        } else if (node.payload.kind === 'databaseConnectionItem') {
+          ids.add(node.payload.id);
+        } else if (node.payload.kind === 'databaseQueryItem') {
+          ids.add(node.payload.id);
         }
       }
       if (node.children.length) {
@@ -169,6 +173,36 @@ export function buildBundleSelection(
     regressions: collectIdsByPayload(nodes, selected, (p) => p.kind === 'regressionItem'),
     mockEndpoints: collectIdsByPayload(nodes, selected, (p) => p.kind === 'mockItem'),
     settingsSections,
+    databaseConnections: groupPayloadEnabled(nodes, selected, 'databaseConnections'),
+    databaseConnectionItems: collectIdsByPayload(nodes, selected, (p) => p.kind === 'databaseConnectionItem'),
+    databaseQueries: groupPayloadEnabled(nodes, selected, 'databaseQueries'),
+    databaseQueryItems: collectIdsByPayload(nodes, selected, (p) => p.kind === 'databaseQueryItem'),
     cookies: cookiesGroup && cookiesLeaf,
   };
+}
+
+/** True when a Database subgroup checkbox is on or partial. */
+function groupPayloadEnabled(
+  nodes: readonly ImportExportTreeNode[],
+  selected: Map<string, CheckState>,
+  kind: 'databaseConnections' | 'databaseQueries',
+): boolean {
+  let found: ImportExportTreeNode | undefined;
+  const walk = (list: readonly ImportExportTreeNode[]): void => {
+    for (const node of list) {
+      if (node.payload.kind === kind) {
+        found = node;
+        return;
+      }
+      if (node.children.length) {
+        walk(node.children);
+      }
+    }
+  };
+  walk(nodes);
+  if (!found) {
+    return false;
+  }
+  const state = selected.get(found.id) ?? computeCheckState(found, selected);
+  return state === 'on' || state === 'partial';
 }

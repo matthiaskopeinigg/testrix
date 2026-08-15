@@ -190,7 +190,12 @@ export function renameEnvironmentNode(
 export function updateEnvironmentVariable(
   nodes: readonly EnvironmentTreeNode[],
   id: string,
-  patch: { readonly key?: string; readonly value?: string; readonly description?: string },
+  patch: {
+    readonly key?: string;
+    readonly value?: string;
+    readonly description?: string;
+    readonly secret?: boolean;
+  },
 ): EnvironmentTreeNode[] | null {
   let found = false;
 
@@ -211,6 +216,8 @@ export function updateEnvironmentVariable(
             value: patch.value !== undefined ? patch.value : (node.data?.value ?? ''),
             description:
               patch.description !== undefined ? patch.description : node.data?.description,
+            secret: patch.secret !== undefined ? patch.secret : (node.data?.secret ?? false),
+            vaultRef: node.data?.vaultRef,
           },
         };
       }

@@ -22,7 +22,7 @@ export const FLOW_STEP_ADD_HINTS: Record<TestSuiteStepType, string> = {
   REQUEST: 'Call an API and store the response.',
   VALIDATION: 'Assert a prior response or value.',
   CACHE: 'Extract values from a prior step into flow variables.',
-  DATABASE: 'Run a query and cache the result.',
+  DATABASE: 'Write a query or select a saved query, then cache the result.',
   E2E: 'Drive the browser (navigate, click, type).',
   HTTP_LISTENER: 'Wait for a matching HTTP request.',
   HTTP_INTERCEPTOR: 'Capture and modify HTTP traffic.',

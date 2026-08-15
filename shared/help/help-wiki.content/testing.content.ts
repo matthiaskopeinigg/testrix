@@ -23,6 +23,7 @@ export const HELP_WIKI_TESTING_SECTIONS: readonly HelpWikiSection[] = [
           'Mock Server — local HTTP stubs and matchers.',
           'Capture — embedded browser traffic log.',
           'Interceptor — proxy/block/mock rules for outbound HTTP.',
+          'Monitors — local cron that runs a request, flow, or load test while Testrix is open.',
         ],
       },
     ],
@@ -63,7 +64,7 @@ export const HELP_WIKI_TESTING_SECTIONS: readonly HelpWikiSection[] = [
         items: [
           'REQUEST — send an HTTP request from the step config.',
           'VALIDATION — assert on prior step response (status, body, headers).',
-          'DATABASE — run SQL against a configured connection.',
+          'DATABASE — write SQL/Redis inline, or select a saved query from the Database sidebar.',
           'E2E — browser automation screenshot/step (when configured).',
           'HTTP_LISTENER — wait for an incoming HTTP callback.',
           'HTTP_INTERCEPTOR — apply intercept rules during the step.',
@@ -89,8 +90,10 @@ export const HELP_WIKI_TESTING_SECTIONS: readonly HelpWikiSection[] = [
       {
         type: 'list',
         items: [
+          'Pick an environment on the Target section (inherit from the collection request, none, or a specific profile). Manual targets use the selected environment for {{variables}}.',
           'Compare runs to spot regressions in p95 latency or error rate.',
           'Manual targets support custom headers and body without a collection request.',
+          'From Results, export a self-contained HTML report (includes environment name), a k6 script, or a Gatling Simulation stub.',
         ],
       },
     ],
@@ -143,7 +146,7 @@ export const HELP_WIKI_TESTING_SECTIONS: readonly HelpWikiSection[] = [
     blocks: [
       {
         type: 'paragraph',
-        text: 'Capture opens an embedded browser session and logs HTTP traffic. Session tabs have Overview (summary, start URL) and Traffic sections. Layout is under Settings → Capture. Filter the log and open entries as new collection requests.',
+        text: 'Capture opens an embedded browser session and logs HTTP traffic. Session tabs have Overview (summary, start URL) and Traffic sections. Layout is under Settings → Capture. Filter the log, multi-select rows, and Generate a collection folder, OpenAPI spec, or mock endpoints. Duplicate method+path rows are collapsed and hop-by-hop headers are stripped.',
       },
     ],
   }),
@@ -158,6 +161,29 @@ export const HELP_WIKI_TESTING_SECTIONS: readonly HelpWikiSection[] = [
       {
         type: 'paragraph',
         text: 'Define rules that match outbound URLs and proxy, block, or return mock responses. Rule tabs use Overview, Match, and Action sections. Layout is under Settings → Interceptor. Enable the interceptor runtime from the sidebar to apply rules to Testrix HTTP traffic.',
+      },
+    ],
+  }),
+  wikiSection({
+    id: 'monitors',
+    groupId: 'testing',
+    label: 'Monitors',
+    icon: 'clock',
+    title: 'Local monitors',
+    description: 'Cron-scheduled request, flow, and load-test runs while the app is open.',
+    blocks: [
+      {
+        type: 'paragraph',
+        text: 'Monitors live in the Testing hub and run only while Testrix is open. Each monitor has a cron expression, a target (collection request, test-suite flow, or load test), and an optional environment override.',
+      },
+      {
+        type: 'list',
+        items: [
+          'Failures show a desktop notification and a compact log on the Monitors panel.',
+          'Load-test monitors skip if that load test is already running.',
+          'Use the Cron development tool’s “Use in monitor…” action to prefill an expression.',
+          'monitors.json stays local to the profile and is not Git-synced.',
+        ],
       },
     ],
   }),

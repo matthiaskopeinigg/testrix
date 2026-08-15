@@ -97,10 +97,16 @@ export class CapTabTrafficPanelComponent {
   readonly clearHistory = output<void>();
   readonly createCollectionRequest = output<CaptureLogEntry>();
   readonly createFlowFromCapture = output<CaptureLogEntry>();
+  readonly generateCollection = output<readonly CaptureLogEntry[]>();
+  readonly generateOpenApi = output<readonly CaptureLogEntry[]>();
+  readonly generateMockEndpoints = output<readonly CaptureLogEntry[]>();
 
   protected readonly scopeOptions = SCOPE_OPTIONS;
   protected readonly resourceOptions = RESOURCE_OPTIONS;
   protected readonly expandedIds = signal<ReadonlySet<string>>(new Set());
+  protected readonly selectedIds = signal<ReadonlySet<string>>(new Set());
+
+  protected readonly selectedCount = computed(() => this.selectedIds().size);
 
   protected readonly filtered = computed(() =>
     filterCaptureLogEntries(this.entries(), {
@@ -131,6 +137,55 @@ export class CapTabTrafficPanelComponent {
 
   protected isExpanded(entryId: string): boolean {
     return this.expandedIds().has(entryId);
+  }
+
+  protected isSelected(entryId: string): boolean {
+    return this.selectedIds().has(entryId);
+  }
+
+  protected handleSelectChange(entryId: string, event: Event): void {
+    const target = event.target as HTMLInputElement | null;
+    this.handleToggleSelected(entryId, Boolean(target?.checked));
+  }
+
+  protected handleToggleSelected(entryId: string, checked: boolean): void {
+    this.selectedIds.update((prev) => {
+      const next = new Set(prev);
+      if (checked) {
+        next.add(entryId);
+      } else {
+        next.delete(entryId);
+      }
+      return next;
+    });
+  }
+
+  protected handleSelectFiltered(): void {
+    this.selectedIds.set(new Set(this.filtered().map((entry) => entry.id)));
+  }
+
+  protected handleClearSelection(): void {
+    this.selectedIds.set(new Set());
+  }
+
+  protected generateEntries(): CaptureLogEntry[] {
+    const selected = this.selectedIds();
+    if (selected.size === 0) {
+      return [...this.filtered()];
+    }
+    return this.filtered().filter((entry) => selected.has(entry.id));
+  }
+
+  protected handleGenerateCollection(): void {
+    this.generateCollection.emit(this.generateEntries());
+  }
+
+  protected handleGenerateOpenApi(): void {
+    this.generateOpenApi.emit(this.generateEntries());
+  }
+
+  protected handleGenerateMocks(): void {
+    this.generateMockEndpoints.emit(this.generateEntries());
   }
 
   protected handleRowActivate(entry: CaptureLogEntry, event: Event): void {

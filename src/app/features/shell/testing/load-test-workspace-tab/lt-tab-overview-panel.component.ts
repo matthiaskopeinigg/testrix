@@ -138,7 +138,7 @@ interface LtOverviewRunStat {
         </div>
 
         <div class="lt-overview-config__grid">
-          @for (card of configCards(); track card.section) {
+          @for (card of configCards(); track card.label) {
             <button
               type="button"
               class="lt-overview-config-card"
@@ -171,6 +171,7 @@ export class LtTabOverviewPanelComponent {
   readonly tags = input<readonly string[]>([]);
   readonly profile = input<LoadTestProfile | undefined>(undefined);
   readonly targetSummary = input('—');
+  readonly environmentSummary = input('Inherit from request');
   readonly runs = input<readonly LoadTestRunRecord[]>([]);
   readonly pinnedBaselineRunId = input<string | null>(null);
 
@@ -244,6 +245,7 @@ export class LtTabOverviewPanelComponent {
     return [
       { section: 'profile', label: 'Profile', value: profileValue, icon: 'sliders' },
       { section: 'target', label: 'Target', value: this.targetSummary(), icon: 'target' },
+      { section: 'target', label: 'Environment', value: this.environmentSummary(), icon: 'globe' },
       { section: 'thresholds', label: 'Thresholds', value: 'Pass / fail gates', icon: 'checkCircle' },
     ];
   });

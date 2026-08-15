@@ -56,7 +56,7 @@ export function groupHistoryItems(
   });
 }
 
-/** Filters history items by label, method, or URL. */
+/** Filters history items by label, method, URL, or stored request/response body. */
 export function filterHistoryItems(items: readonly HistoryItem[], query: string): HistoryItem[] {
   const trimmed = query.trim().toLowerCase();
   if (!trimmed) {
@@ -68,7 +68,9 @@ export function filterHistoryItems(items: readonly HistoryItem[], query: string)
     return (
       item.label.toLowerCase().includes(trimmed) ||
       method.includes(trimmed) ||
-      url.includes(trimmed)
+      url.includes(trimmed) ||
+      (item.request?.body ?? '').toLowerCase().includes(trimmed) ||
+      (item.snapshot?.body?.text ?? '').toLowerCase().includes(trimmed)
     );
   });
 }

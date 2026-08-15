@@ -1,11 +1,18 @@
 <div class="request-panel ts-flow-step-panel ts-flow-database-panel">
-  <h2 class="request-panel__title">Database</h2>
-
   @if (!hasConnections()) {
     <p class="ts-flow-step-panel__hint">
-      No database connections configured. Add connections in Settings → Databases.
+      No database connections configured. Add connections from the Database sidebar.
     </p>
   }
+
+  <tx-form-field label="Query source" controlId="ts-db-query-source">
+    <tx-dropdown
+      id="ts-db-query-source"
+      [options]="querySourceOptions"
+      [ngModel]="querySource()"
+      (ngModelChange)="handleQuerySourceChange($event)"
+    />
+  </tx-form-field>
 
   <tx-form-field label="Connection" controlId="ts-db-conn">
     <tx-dropdown
@@ -17,25 +24,68 @@
     />
   </tx-form-field>
 
-  <div class="ts-flow-database-panel__query">
-    <tx-form-field label="Query" controlId="ts-db-query">
-      <div class="ts-flow-database-panel__editor">
-        <tx-code-editor
-          [language]="queryEditorLanguage()"
-          [languageBadgeLabel]="queryEditorLanguageLabel()"
-          title="Query"
-          [hideToolbarActions]="true"
-          [framed]="true"
-          [autocomplete]="true"
-          [extraCompletionItems]="queryEditorCompletions()"
-          [variableCatalog]="variableCatalog()"
-          [placeholder]="queryEditorPlaceholder()"
-          [ngModel]="cfg().query"
-          (ngModelChange)="patch({ query: $event })"
-        />
-      </div>
+  @if (querySource() === 'saved') {
+    @if (!hasSavedQueries()) {
+      <tx-banner variant="warning" title="Saved query">
+        No saved queries yet. Create one in the Database sidebar, then select it here.
+      </tx-banner>
+    } @else if (needsSavedQuery()) {
+      <tx-banner variant="warning" title="Saved query">
+        Select a saved query from the Database sidebar.
+      </tx-banner>
+    } @else if (missingSavedQuery()) {
+      <tx-banner variant="warning" title="Saved query">
+        The selected query is missing. Pick another query from the Database sidebar.
+      </tx-banner>
+    }
+
+    <tx-form-field label="Saved query" controlId="ts-db-saved-query">
+      <tx-dropdown
+        id="ts-db-saved-query"
+        [options]="savedQueryOptions()"
+        [ngModel]="cfg().savedQueryId ?? ''"
+        (ngModelChange)="handleSavedQueryChange($event)"
+        emptyLabel="Select a saved query"
+      />
     </tx-form-field>
-  </div>
+
+    <div class="ts-flow-database-panel__query">
+      <tx-form-field label="Query preview" controlId="ts-db-query-preview">
+        <div class="ts-flow-database-panel__editor">
+          <tx-code-editor
+            [language]="queryEditorLanguage()"
+            [languageBadgeLabel]="queryEditorLanguageLabel()"
+            title="Query preview"
+            [hideToolbarActions]="true"
+            [framed]="true"
+            [readOnly]="true"
+            [ngModel]="savedQueryPreview()"
+            placeholder="Select a saved query to preview its SQL"
+          />
+        </div>
+      </tx-form-field>
+    </div>
+  } @else {
+    <div class="ts-flow-database-panel__query">
+      <tx-form-field label="Query" controlId="ts-db-query">
+        <div class="ts-flow-database-panel__editor">
+          <tx-code-editor
+            [language]="queryEditorLanguage()"
+            [languageBadgeLabel]="queryEditorLanguageLabel()"
+            title="Query"
+            [hideToolbarActions]="true"
+            [framed]="true"
+            [autocomplete]="true"
+            [extraCompletionItems]="queryEditorCompletions()"
+            [variableCatalog]="variableCatalog()"
+            [placeholder]="queryEditorPlaceholder()"
+            [ngModel]="cfg().query"
+            (ngModelChange)="patch({ query: $event })"
+          />
+        </div>
+      </tx-form-field>
+    </div>
+  }
 
   <tx-form-field label="Cache as variable" controlId="ts-db-cache">
     <tx-input

@@ -11,11 +11,14 @@ import {
 import { FormsModule } from '@angular/forms';
 
 import { EnvironmentsService } from '@app/core/environments/environments.service';
+import { ElectronService } from '@app/core/electron/electron.service';
+import { TxNotificationService } from '@app/core/notifications/tx-notification.service';
 import { findScopeNodeLocation } from '@app/features/shell/environments/environment-profile.utils';
 import { TxFormFieldComponent } from '@app/shared/components/forms/tx-form-field/tx-form-field.component';
 import { TxIconComponent } from '@app/shared/components/forms/tx-icon/tx-icon.component';
 import { TxInputComponent } from '@app/shared/components/forms/tx-input/tx-input.component';
 import { TxTextareaComponent } from '@app/shared/components/forms/tx-textarea/tx-textarea.component';
+import { TxToggleComponent } from '@app/shared/components/forms/tx-toggle/tx-toggle.component';
 import { TxTooltipDirective } from '@app/shared/components/overlays/tx-tooltip/tx-tooltip.directive';
 import { TxVariableInputComponent } from '@app/shared/components/editors/tx-variable-input/tx-variable-input.component';
 
@@ -32,6 +35,7 @@ const SAVE_DEBOUNCE_MS = 300;
     TxIconComponent,
     TxInputComponent,
     TxTextareaComponent,
+    TxToggleComponent,
     TxVariableInputComponent,
     TxTooltipDirective,
   ],
@@ -41,6 +45,8 @@ const SAVE_DEBOUNCE_MS = 300;
 })
 export class EnvironmentVariableEditorComponent {
   private readonly environmentsService = inject(EnvironmentsService);
+  private readonly electron = inject(ElectronService);
+  private readonly notifications = inject(TxNotificationService);
 
   readonly variableId = input.required<string>();
 
@@ -49,6 +55,8 @@ export class EnvironmentVariableEditorComponent {
   protected readonly key = signal('');
   protected readonly value = signal('');
   protected readonly description = signal('');
+  protected readonly secret = signal(false);
+  protected readonly vaultAvailable = signal(true);
 
   protected readonly valueHintTooltip = ENVIRONMENT_VALUE_HINT_TOOLTIP;
   protected readonly showValue = signal(false);
@@ -68,6 +76,7 @@ export class EnvironmentVariableEditorComponent {
       key: loc.node.data.key ?? loc.node.label,
       value: loc.node.data.value ?? '',
       description: loc.node.data.description ?? '',
+      secret: loc.node.data.secret ?? false,
     };
   });
 
@@ -89,7 +98,12 @@ export class EnvironmentVariableEditorComponent {
       this.key.set(meta.key);
       this.value.set(meta.value);
       this.description.set(meta.description);
+      this.secret.set(meta.secret);
       this.syncingFromStore = false;
+    });
+
+    void this.electron.bridge()?.config.vaultEncryptionAvailable?.().then((available) => {
+      this.vaultAvailable.set(available);
     });
   }
 
@@ -109,6 +123,17 @@ export class EnvironmentVariableEditorComponent {
     this.scheduleSave({ description: next });
   }
 
+  protected handleSecretChange(next: boolean): void {
+    if (next && !this.vaultAvailable()) {
+      this.notifications.showError(
+        'OS encryption is unavailable. Testrix will not store secrets in plaintext.',
+      );
+      return;
+    }
+    this.secret.set(next);
+    this.scheduleSave({ secret: next });
+  }
+
   protected handleToggleShowValue(): void {
     this.showValue.update((visible) => !visible);
   }
@@ -117,6 +142,7 @@ export class EnvironmentVariableEditorComponent {
     readonly key?: string;
     readonly value?: string;
     readonly description?: string;
+    readonly secret?: boolean;
   }): void {
     if (this.syncingFromStore) {
       return;

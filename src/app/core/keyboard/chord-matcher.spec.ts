@@ -14,6 +14,27 @@ function ev(partial: Partial<KeyboardEvent> & Pick<KeyboardEvent, 'code'>): Keyb
 
 describe('chord-matcher', () => {
   describe('parseChord', () => {
+    it('parses Mod+Enter', () => {
+      const parsed = parseChord('Mod+Enter');
+      expect(parsed).toEqual(
+        expect.objectContaining({
+          mod: true,
+          shift: false,
+          code: 'Enter',
+        }),
+      );
+    });
+
+    it('parses Mod+ArrowRight', () => {
+      const parsed = parseChord('Mod+ArrowRight');
+      expect(parsed).toEqual(
+        expect.objectContaining({
+          mod: true,
+          code: 'ArrowRight',
+        }),
+      );
+    });
+
     it('parses Mod+KeyK', () => {
       const parsed = parseChord('Mod+KeyK');
       expect(parsed).toEqual(
@@ -79,6 +100,21 @@ describe('chord-matcher', () => {
         keyboardEventMatchesChord(
           ev({ code: 'KeyF', ctrlKey: true, metaKey: false, altKey: false, shiftKey: false }),
           'KeyF',
+        ),
+      ).toBe(false);
+    });
+
+    it('matches Mod+Enter', () => {
+      expect(
+        keyboardEventMatchesChord(
+          ev({ code: 'Enter', ctrlKey: true, metaKey: false, altKey: false, shiftKey: false }),
+          'Mod+Enter',
+        ),
+      ).toBe(true);
+      expect(
+        keyboardEventMatchesChord(
+          ev({ code: 'Enter', ctrlKey: true, metaKey: false, altKey: false, shiftKey: true }),
+          'Mod+Enter',
         ),
       ).toBe(false);
     });

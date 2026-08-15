@@ -17,6 +17,10 @@ const PANEL_SEARCH: Record<string, WorkspaceSidebarPanelSearch> = {
     placeholder: 'Search…',
     ariaLabel: 'Search tests',
   },
+  data: {
+    placeholder: 'Search connections and queries…',
+    ariaLabel: 'Search database connections and queries',
+  },
   development: {
     placeholder: 'Search…',
     ariaLabel: 'Search development tools',

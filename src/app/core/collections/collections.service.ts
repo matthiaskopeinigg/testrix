@@ -7,7 +7,8 @@ import type {
   CollectionsFile,
   HttpMethodId,
 } from '@shared/config';
-import { createDefaultCollections, enrichCollectionNodes } from '@shared/config';
+import { createDefaultCollections, createHttpKeyValueRow, enrichCollectionNodes } from '@shared/config';
+import { parseCurl } from '@shared/http/parse-curl';
 
 import { fromTreeNodes, toTreeNodes } from '@app/features/shell/collections/collection-tree.adapter';
 import { withCollectionTreeIcons } from '@app/features/shell/collections/collection-tree.icons';
@@ -186,6 +187,43 @@ export class CollectionsService {
     }
     this.saveNodes(next);
     return true;
+  }
+
+  /**
+   * Applies a parsed cURL command onto an existing collection request.
+   *
+   * @returns Whether the command was parsed and written.
+   */
+  applyCurl(requestId: string, raw: string): boolean {
+    const parsed = parseCurl(raw);
+    if (!parsed) {
+      return false;
+    }
+    const headers = {
+      rows: parsed.headers.map((header) => createHttpKeyValueRow({ key: header.key, value: header.value })),
+      overrides: {},
+    };
+    const lineOk = this.updateRequest(requestId, { method: parsed.method, url: parsed.url });
+    const settingsOk = this.patchRequestSettings(requestId, { headers, body: parsed.body });
+    return lineOk && settingsOk;
+  }
+
+  /**
+   * Creates a collection request from a cURL command.
+   *
+   * @returns The new request id, or null when parse/create fails.
+   */
+  createRequestFromCurl(raw: string, parentId: string | null = null): string | null {
+    const parsed = parseCurl(raw);
+    if (!parsed) {
+      return null;
+    }
+    const id = this.createRequest(parentId, parsed.method + ' ' + parsed.url);
+    if (!id) {
+      return null;
+    }
+    this.applyCurl(id, raw);
+    return id;
   }
 
   /** Updates persisted settings on a collection request. */

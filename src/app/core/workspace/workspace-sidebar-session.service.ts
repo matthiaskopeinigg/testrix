@@ -8,6 +8,7 @@ const WORKSPACE_SIDEBAR_PANEL_IDS = [
   'collections',
   'environments',
   'testing',
+  'data',
   'development',
   'history',
   'debug',

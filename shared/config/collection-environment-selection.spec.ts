@@ -30,4 +30,11 @@ describe('collection-environment-selection', () => {
     expect(options[1].value).toBe(COLLECTION_ENVIRONMENT_NONE);
     expect(options[2]).toEqual({ value: 'e1', label: 'Dev' });
   });
+
+  it('uses a custom inherit label when provided', () => {
+    const options = buildCollectionEnvironmentDropdownOptions([{ id: 'e1', name: 'Dev' }], {
+      inheritLabel: 'Inherit from request',
+    });
+    expect(options[0]?.label).toBe('Inherit from request');
+  });
 });

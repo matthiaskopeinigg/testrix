@@ -17,6 +17,7 @@ import type { ProfileEntry, ProfilesManifest } from './profiles.schema';
 import { createPathsAnchorV2 } from './migrate-paths-anchor';
 import { createDefaultWorkspaceDesignSystem } from './design-system-session.schema';
 import { createDefaultWorkspaceDevelopment } from './development-session.schema';
+import { createDefaultWorkspaceDatabase } from './database-session.schema';
 import { createDefaultWorkspaceTesting } from './testing-session.schema';
 import type { SessionFile } from './session.schema';
 import type { SettingsFile } from './settings.schema';
@@ -126,6 +127,7 @@ export function createDefaultSettings(): SettingsFile {
     http: createDefaultHttpSettings(),
     databases: {
       connections: [],
+      nodes: [],
     },
   };
 }
@@ -275,6 +277,7 @@ export function createDefaultSession(): SessionFile {
       designSystem: createDefaultWorkspaceDesignSystem(),
       development: createDefaultWorkspaceDevelopment(),
       testing: createDefaultWorkspaceTesting(),
+      database: createDefaultWorkspaceDatabase(),
     },
   };
 }

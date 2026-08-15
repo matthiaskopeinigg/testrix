@@ -49,6 +49,11 @@ import type { TxTabBarItem } from '@app/shared/components/chrome/tx-tab/tx-tab.t
 import { TxSplitPaneComponent } from '@app/shared/components/chrome/tx-split-pane/tx-split-pane.component';
 import type { SplitLayoutNode } from '@shared/config';
 import { TxTreeComponent } from '@app/shared/components/data/tx-tree/tx-tree.component';
+import { TxDataGridComponent } from '@app/shared/components/data/tx-data-grid/tx-data-grid.component';
+import {
+  TX_DATA_GRID_DEMO_COLUMNS,
+  TX_DATA_GRID_DEMO_ROWS,
+} from '@app/shared/components/data/tx-data-grid/tx-data-grid.types';
 import { TX_TREE_DEMO_NODES } from '@app/shared/components/data/tx-tree/tx-tree.sample';
 import {
   TX_TREE_INITIAL_DND_DEBUG_INFO,
@@ -144,6 +149,7 @@ const BUTTON_DEMO_SPECS: readonly ButtonDemoSpec[] = [
     TxTabComponent,
     TxTabBarComponent,
     TxSplitPaneComponent,
+    TxDataGridComponent,
     TxTreeComponent,
   ],
   templateUrl: './ds-components-panel.component.html',
@@ -207,6 +213,9 @@ export class DsComponentsPanelComponent {
   ];
   readonly truncateSample =
     'https://api.example.com/v1/collections/aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee/requests';
+
+  protected readonly dataGridDemoColumns = TX_DATA_GRID_DEMO_COLUMNS;
+  protected readonly dataGridDemoRows = TX_DATA_GRID_DEMO_ROWS;
 
   readonly treeDemoNodes = signal<typeof TX_TREE_DEMO_NODES>([...TX_TREE_DEMO_NODES]);
   readonly treeDemoExpandedIds = signal<string[]>([]);

@@ -1,0 +1,147 @@
+:host {
+  --tx-data-grid-row-height: 1.65rem;
+  --tx-data-grid-cell-padding-y: 0.22rem;
+  --tx-data-grid-cell-padding-x: 0.55rem;
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  outline: none;
+}
+
+:host:focus-visible {
+  box-shadow: inset 0 0 0 1px var(--tx-focus-ring);
+}
+
+.tx-data-grid__empty {
+  margin: 0;
+  padding: 0.65rem 0.75rem;
+  color: var(--tx-text-1);
+  font-size: 0.8125rem;
+}
+
+.tx-data-grid__scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  border: 1px solid color-mix(in srgb, var(--tx-border-0) 55%, transparent);
+  border-radius: var(--tx-radius-sm, 8px);
+  background: var(--tx-surface-0);
+}
+
+.tx-data-grid__table {
+  width: max-content;
+  min-width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+
+th,
+td {
+  box-sizing: border-box;
+  padding: var(--tx-data-grid-cell-padding-y) var(--tx-data-grid-cell-padding-x);
+  text-align: left;
+  white-space: nowrap;
+  border-bottom: 1px solid color-mix(in srgb, var(--tx-border-0) 35%, transparent);
+  border-right: 1px solid color-mix(in srgb, var(--tx-border-0) 28%, transparent);
+  vertical-align: middle;
+}
+
+tbody td,
+tbody .tx-data-grid__gutter {
+  position: relative;
+  height: var(--tx-data-grid-row-height);
+  max-height: var(--tx-data-grid-row-height);
+  overflow: hidden;
+}
+
+thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--tx-surface-1);
+  color: var(--tx-text-1);
+  font-weight: 600;
+  cursor: pointer;
+  user-select: none;
+}
+
+.tx-data-grid__header {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.tx-data-grid__header-type {
+  display: block;
+  margin-top: 0.05rem;
+  color: var(--tx-text-1);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  opacity: 0.75;
+}
+
+.tx-data-grid__gutter {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  width: 1%;
+  min-width: 2.25rem;
+  text-align: right;
+  color: var(--tx-text-1);
+  background: var(--tx-surface-1);
+  font-weight: 500;
+  cursor: pointer;
+  user-select: none;
+}
+
+thead .tx-data-grid__gutter {
+  z-index: 3;
+  cursor: default;
+}
+
+tbody tr:nth-child(even) td,
+tbody tr:nth-child(even) .tx-data-grid__gutter {
+  background: color-mix(in srgb, var(--tx-surface-1) 55%, var(--tx-surface-0));
+}
+
+tbody tr:hover td:not(.tx-data-grid__cell--selected),
+tbody tr:hover .tx-data-grid__gutter {
+  background: color-mix(in srgb, var(--tx-primary) 8%, var(--tx-surface-0));
+}
+
+.tx-data-grid__cell--selected {
+  background: color-mix(in srgb, var(--tx-primary) 22%, var(--tx-surface-0)) !important;
+}
+
+.tx-data-grid__cell--active {
+  box-shadow: inset 0 0 0 1px var(--tx-primary);
+}
+
+.tx-data-grid__null {
+  color: var(--tx-text-1);
+  font-style: italic;
+  opacity: 0.8;
+}
+
+.tx-data-grid__cell--dirty {
+  background: color-mix(in srgb, var(--tx-warning, #d4a017) 18%, var(--tx-surface-0)) !important;
+}
+
+.tx-data-grid__cell--editing {
+  padding: 0;
+  overflow: hidden;
+}
+
+.tx-data-grid__row--inserted td,
+.tx-data-grid__row--inserted .tx-data-grid__gutter {
+  background: color-mix(in srgb, var(--tx-success, #3fb950) 10%, var(--tx-surface-0));
+}
+
+.tx-data-grid__row--deleted td,
+.tx-data-grid__row--deleted .tx-data-grid__gutter {
+  text-decoration: line-through;
+  opacity: 0.55;
+}

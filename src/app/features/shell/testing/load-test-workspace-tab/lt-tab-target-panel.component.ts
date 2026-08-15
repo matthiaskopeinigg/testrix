@@ -15,6 +15,11 @@ import { FormsModule } from '@angular/forms';
 
 import type { CollectionRequestBody } from '@shared/config';
 import {
+  buildCollectionEnvironmentDropdownOptions,
+  environmentIdFromDropdownValue,
+  toEnvironmentDropdownValue,
+} from '@shared/config';
+import {
   createDefaultLoadTestManualTarget,
   createDefaultRequestStepConfig,
   flowRequestStepCollectionBody,
@@ -24,6 +29,7 @@ import {
 } from '@shared/testing';
 
 import { CollectionsService } from '@app/core/collections/collections.service';
+import { EnvironmentsService } from '@app/core/environments/environments.service';
 import { findCollectionNode } from '@app/features/shell/collections/collection-tree.mutations';
 import { collectFolderIdsInSubtree } from '@app/features/shell/collections/collection-tree.expand';
 import type { CollectionTreeKind, CollectionTreeNode, CollectionTreeNodeMeta } from '@app/features/shell/collections/collection-tree.types';
@@ -93,6 +99,7 @@ const SEARCH_DEBOUNCE_MS = 100;
 })
 export class LtTabTargetPanelComponent {
   private readonly collectionsService = inject(CollectionsService);
+  private readonly environmentsService = inject(EnvironmentsService);
   private readonly cdr = inject(ChangeDetectorRef);
 
   private readonly tree = viewChild(TxTreeComponent);
@@ -100,10 +107,12 @@ export class LtTabTargetPanelComponent {
   readonly targetSource = input<LoadTestTargetSource>('collection');
   readonly targetRequestId = input<string | undefined>(undefined);
   readonly manualTarget = input<LoadTestManualTarget | undefined>(undefined);
+  readonly environmentId = input<string | null | undefined>(undefined);
 
   readonly targetSourceChange = output<LoadTestTargetSource>();
   readonly targetRequestIdChange = output<string | undefined>();
   readonly manualTargetChange = output<LoadTestManualTarget>();
+  readonly environmentIdChange = output<string | null>();
   readonly openRequest = output<void>();
 
   protected readonly targetSourceOptions: readonly TxDropdownOption<LoadTestTargetSource>[] = [
@@ -120,6 +129,20 @@ export class LtTabTargetPanelComponent {
     this.isManual()
       ? 'Build the HTTP request this load test will send.'
       : 'Pick an existing collection request to run this load test against.',
+  );
+
+  protected readonly environmentOptions = computed(() =>
+    buildCollectionEnvironmentDropdownOptions(this.environmentsService.environments(), {
+      inheritLabel: this.isManual() ? 'Default (no environment)' : 'Inherit from request',
+    }),
+  );
+
+  protected readonly environmentDropdownValue = computed(() =>
+    toEnvironmentDropdownValue(this.environmentId()),
+  );
+
+  protected readonly environmentPlaceholder = computed(() =>
+    this.isManual() ? 'No environment' : 'Inherit from request',
   );
 
   protected readonly needsManualUrl = computed(
@@ -319,6 +342,11 @@ export class LtTabTargetPanelComponent {
       return;
     }
     this.targetSourceChange.emit(source);
+  }
+
+  /** Persists the load-test environment dropdown (inherit, none, or a profile id). */
+  protected handleEnvironmentChange(value: string): void {
+    this.environmentIdChange.emit(environmentIdFromDropdownValue(value));
   }
 
   protected handleSectionSelect(section: FlowRequestStepSection): void {

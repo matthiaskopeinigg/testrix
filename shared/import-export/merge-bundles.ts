@@ -1,13 +1,16 @@
-import type { TestrixBundleV1 } from './testrix-bundle.schema';
+import { normalizeDatabaseSettings } from '../config/database-settings.schema';
+import { liftDatabasesFromSettings } from './bundle-databases';
 import {
   mergeCollectionNodes,
+  mergeDatabaseConnectionItems,
   mergeEnvironmentDefinitions,
   mergeLoadTestItems,
   mergeMockServerItems,
   mergeRegressionItems,
+  mergeSavedQueryItems,
   mergeTestSuiteRoots,
 } from './merge-helpers';
-import { TESTRIX_BUNDLE_SCHEMA_V1 } from './testrix-bundle.schema';
+import { TESTRIX_BUNDLE_SCHEMA_V1, type TestrixBundleV1 } from './testrix-bundle.schema';
 
 /** Combines multiple bundles into one preview/import bundle (merge semantics). */
 export function mergeBundles(bundles: readonly TestrixBundleV1[]): TestrixBundleV1 {
@@ -25,7 +28,8 @@ export function mergeBundles(bundles: readonly TestrixBundleV1[]): TestrixBundle
     appVersion: first.appVersion,
   };
 
-  for (const bundle of bundles) {
+  for (const raw of bundles) {
+    const bundle = liftDatabasesFromSettings(raw);
     if (bundle.collections) {
       out = {
         ...out,
@@ -84,6 +88,33 @@ export function mergeBundles(bundles: readonly TestrixBundleV1[]): TestrixBundle
         mockServer: out.mockServer
           ? { ...bundle.mockServer, items: mergeMockServerItems(out.mockServer.items, bundle.mockServer.items) }
           : bundle.mockServer,
+      };
+    }
+    if (bundle.databases) {
+      const current = out.databases;
+      const incoming = bundle.databases;
+      const connections =
+        incoming.connections || current?.connections
+          ? normalizeDatabaseSettings({
+              nodes: mergeDatabaseConnectionItems(
+                current?.connections?.nodes ?? [],
+                incoming.connections?.nodes ?? [],
+              ),
+            })
+          : undefined;
+      const queries =
+        incoming.queries || current?.queries
+          ? {
+              schemaVersion: 2 as const,
+              nodes: mergeSavedQueryItems(current?.queries?.nodes ?? [], incoming.queries?.nodes ?? []),
+            }
+          : undefined;
+      out = {
+        ...out,
+        databases: {
+          ...(connections ? { connections } : {}),
+          ...(queries ? { queries } : {}),
+        },
       };
     }
     if (bundle.settings) {

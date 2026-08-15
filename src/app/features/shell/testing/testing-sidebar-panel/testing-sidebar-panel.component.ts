@@ -141,6 +141,13 @@ export class TestingSidebarPanelComponent implements OnDestroy {
       hint: 'Define HTTP intercept rules',
       subpanel: 'interceptor',
     },
+    {
+      id: 'monitors',
+      icon: 'clock',
+      title: 'Monitors',
+      hint: 'Local cron for request, flow, or load test',
+      subpanel: 'monitors',
+    },
   ];
 
   constructor() {

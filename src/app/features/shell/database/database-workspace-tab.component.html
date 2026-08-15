@@ -1,0 +1,162 @@
+@if (isConnectionTab()) {
+  <app-database-connection-editor [resourceId]="resourceId()" [active]="active()" />
+} @else if (isTableDataTab()) {
+  <app-database-table-data-tab [resourceId]="resourceId()" [active]="active()" />
+} @else {
+<section class="db-tab tx-workspace-tab" aria-label="Database query">
+  @if (!saved()) {
+    <tx-banner variant="warning" title="Query not found">
+      This tab is not linked to a saved query. Open one from the Database sidebar.
+    </tx-banner>
+  } @else {
+    <tx-vertical-split-pane
+      class="db-tab__split"
+      revealLabel="Results"
+      [secondaryVisible]="showResultPanel()"
+      [secondaryHidden]="resultPanelHidden()"
+      [secondaryHeight]="resultPanelHeight()"
+      (secondaryHeightChange)="handleResultPanelHeight($event)"
+      (secondaryHeightCommit)="handleResultPanelHeightCommit($event)"
+      (secondaryHiddenChange)="handleResultPanelHidden($event)"
+    >
+      <div class="db-tab__split-primary" txSplitPrimary>
+        <div class="db-tab__toolbar">
+          <tx-form-field label="Name" controlId="db-query-name">
+            <tx-input
+              id="db-query-name"
+              [ngModel]="saved()!.name"
+              (ngModelChange)="handleNameChange($event)"
+            />
+          </tx-form-field>
+          <tx-form-field label="Connection" controlId="db-query-connection">
+            <tx-dropdown
+              id="db-query-connection"
+              [options]="connectionOptions()"
+              [ngModel]="saved()!.connectionId"
+              (ngModelChange)="handleConnectionChange($event)"
+              placeholder="Select connection"
+            />
+          </tx-form-field>
+          <div class="db-tab__actions">
+            <tx-button
+              variant="primary"
+              [loading]="running()"
+              [disabled]="running()"
+              [hint]="runShortcutHint()"
+              (pressed)="handleRun()"
+            >Run</tx-button>
+            <tx-button
+              variant="secondary"
+              [disabled]="running() || !canExplain()"
+              (pressed)="handleExplain()"
+            >Explain</tx-button>
+          </div>
+        </div>
+
+        @if (connectionOptions().length === 0) {
+          <tx-banner variant="info" title="No connections">
+            Add a database connection from the Database sidebar, then run queries here.
+          </tx-banner>
+        }
+
+        <div class="db-tab__editor">
+          <tx-code-editor
+            [language]="editorLanguage()"
+            [title]="editorLanguageLabel()"
+            [placeholder]="editorPlaceholder()"
+            [extraCompletionItems]="editorCompletions()"
+            [framed]="true"
+            [readOnly]="saved()!.readOnly === true"
+            [ngModel]="saved()!.query"
+            (ngModelChange)="handleQueryChange($event)"
+          />
+        </div>
+      </div>
+
+      <div class="db-tab__result" txSplitSecondary aria-live="polite">
+        @if (running()) {
+          <tx-spinner [ariaLabel]="runningLabel()" />
+        } @else if (error(); as message) {
+          <tx-banner variant="error" [title]="message" />
+        } @else if (filteredTable(); as result) {
+          <div class="db-tab__result-toolbar">
+            <p class="db-tab__meta">{{ resultMeta() }}</p>
+            <div class="db-tab__result-actions">
+              <tx-form-field label="Filter" controlId="db-result-filter">
+                <tx-input
+                  id="db-result-filter"
+                  [ngModel]="resultFilter()"
+                  (ngModelChange)="handleResultFilter($event)"
+                  placeholder="Filter page"
+                />
+              </tx-form-field>
+              <tx-form-field label="Page size" controlId="db-page-size">
+                <tx-dropdown
+                  id="db-page-size"
+                  [options]="pageSizeOptions"
+                  [ngModel]="'' + pageSize()"
+                  (ngModelChange)="handlePageSizeChange($event)"
+                />
+              </tx-form-field>
+              <tx-button
+                variant="secondary"
+                [disabled]="!canGoPrev()"
+                (pressed)="handlePrevPage()"
+              >Previous</tx-button>
+              <tx-button
+                variant="secondary"
+                [disabled]="!canGoNext()"
+                (pressed)="handleNextPage()"
+              >Next</tx-button>
+              <tx-button
+                variant="secondary"
+                [disabled]="result.rows.length === 0 && !result.hasMore"
+                (pressed)="handleLoadAll()"
+              >Load all</tx-button>
+              <tx-button
+                variant="secondary"
+                [disabled]="result.rows.length === 0"
+                (pressed)="handleCopyAll()"
+              >Copy all</tx-button>
+              <tx-button
+                variant="secondary"
+                [disabled]="result.columns.length === 0"
+                (pressed)="handleExportClick($event)"
+              >Export</tx-button>
+            </div>
+          </div>
+          @if (result.columns.length === 0) {
+            <p class="db-tab__empty">Query returned no rows.</p>
+          } @else {
+            <tx-data-grid
+              [columns]="result.columns"
+              [rows]="result.rows"
+              [columnTypes]="result.columnTypes ?? []"
+              (selectionChange)="handleGridSelection($event)"
+              (copied)="handleGridCopied()"
+              (exportRequest)="handleGridExport($event)"
+            />
+          }
+        }
+      </div>
+    </tx-vertical-split-pane>
+  }
+</section>
+}
+
+<tx-context-menu
+  [open]="exportMenuOpen()"
+  [position]="exportMenuPosition()"
+  [items]="exportMenuItems()"
+  (itemSelect)="handleExportMenuSelect($event)"
+  (closed)="handleExportMenuClosed()"
+/>
+
+<tx-confirm-dialog
+  [open]="loadAllOpen()"
+  title="Load all rows"
+  message="This result has more pages. Load every remaining row into the grid?"
+  confirmLabel="Load all"
+  (confirmed)="handleLoadAllConfirmed()"
+  (closed)="handleLoadAllClosed()"
+/>

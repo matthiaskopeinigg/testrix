@@ -166,7 +166,11 @@ export class TxTreeComponent<TMeta = unknown> {
       this.cdr.markForCheck();
     });
 
-    this.destroyRef.onDestroy(() => this.clearExpandRevealTimer());
+    this.destroyRef.onDestroy(() => {
+      this.clearExpandRevealTimer();
+      this.dndController?.destroy();
+      this.dndController = null;
+    });
 
     this.ensureDnDController();
 

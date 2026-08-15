@@ -7,6 +7,10 @@ import { CodeEditorDevToolComponent } from '../tools/code-editor-dev-tool.compon
 import { CronDevToolComponent } from '../tools/cron-dev-tool.component';
 import { JwtDevToolComponent } from '../tools/jwt-dev-tool.component';
 import { OpenApiDevToolComponent } from '../tools/openapi-dev-tool.component';
+import { HashDevToolComponent } from '../tools/hash-dev-tool.component';
+import { JsonpathDevToolComponent } from '../tools/jsonpath-dev-tool.component';
+import { CertInspectorDevToolComponent } from '../tools/cert-inspector-dev-tool.component';
+import { RequestDiffDevToolComponent } from '../tools/request-diff-dev-tool.component';
 import { RegexDevToolComponent } from '../tools/regex-dev-tool.component';
 import { UrlDevToolComponent } from '../tools/url-dev-tool.component';
 import { UuidGeneratorDevToolComponent } from '../tools/uuid-generator-dev-tool.component';
@@ -25,6 +29,10 @@ import { UuidGeneratorDevToolComponent } from '../tools/uuid-generator-dev-tool.
     UrlDevToolComponent,
     BcryptDevToolComponent,
     OpenApiDevToolComponent,
+    HashDevToolComponent,
+    JsonpathDevToolComponent,
+    CertInspectorDevToolComponent,
+    RequestDiffDevToolComponent,
   ],
   templateUrl: './dev-tool-workspace-tab.component.html',
   styleUrl: './dev-tool-workspace-tab.component.scss',

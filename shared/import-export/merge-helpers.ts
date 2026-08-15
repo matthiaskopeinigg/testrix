@@ -1,5 +1,13 @@
 import type { CollectionNode } from '../config/collections.schema';
+import {
+  isDatabaseConnectionFolder,
+  type DatabaseConnectionTreeItem,
+} from '../config/database-settings.schema';
 import type { EnvironmentDefinition, EnvironmentScopeNode } from '../config/environments.schema';
+import {
+  isSavedQueryFolder,
+  type SavedQueryTreeItem,
+} from '../database/saved-queries.schema';
 import type { LoadTestTreeItem } from '../testing/load-tests.schema';
 import type { MockServerTreeItem } from '../testing/mock-server.schema';
 import type { RegressionTreeItem } from '../testing/regressions.schema';
@@ -190,6 +198,52 @@ function mergeMockServerItems(
       map.set(item.id, {
         ...item,
         children: mergeMockServerItems(ex?.children ?? [], item.children),
+      });
+    } else {
+      map.set(item.id, item);
+    }
+  }
+  return [...map.values()];
+}
+
+/** Merges database connection trees by node id; folder children merge recursively. */
+export function mergeDatabaseConnectionItems(
+  current: readonly DatabaseConnectionTreeItem[],
+  incoming: readonly DatabaseConnectionTreeItem[],
+): DatabaseConnectionTreeItem[] {
+  const map = new Map<string, DatabaseConnectionTreeItem>();
+  for (const item of current) {
+    map.set(item.id, item);
+  }
+  for (const item of incoming) {
+    const existing = map.get(item.id);
+    if (isDatabaseConnectionFolder(item) && existing && isDatabaseConnectionFolder(existing)) {
+      map.set(item.id, {
+        ...item,
+        children: mergeDatabaseConnectionItems(existing.children, item.children),
+      });
+    } else {
+      map.set(item.id, item);
+    }
+  }
+  return [...map.values()];
+}
+
+/** Merges saved-query trees by node id; folder children merge recursively. */
+export function mergeSavedQueryItems(
+  current: readonly SavedQueryTreeItem[],
+  incoming: readonly SavedQueryTreeItem[],
+): SavedQueryTreeItem[] {
+  const map = new Map<string, SavedQueryTreeItem>();
+  for (const item of current) {
+    map.set(item.id, item);
+  }
+  for (const item of incoming) {
+    const existing = map.get(item.id);
+    if (isSavedQueryFolder(item) && existing && isSavedQueryFolder(existing)) {
+      map.set(item.id, {
+        ...item,
+        children: mergeSavedQueryItems(existing.children, item.children),
       });
     } else {
       map.set(item.id, item);

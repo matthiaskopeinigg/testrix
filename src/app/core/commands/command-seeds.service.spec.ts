@@ -3,6 +3,8 @@ import { signal } from '@angular/core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { CollectionsService } from '@app/core/collections/collections.service';
+import { DatabaseConnectionsService } from '@app/core/database/database-connections.service';
+import { DatabaseQueriesService } from '@app/core/database/database-queries.service';
 import { TeamsPanelService } from '@app/core/collaboration/teams-panel.service';
 import { EnvironmentsService } from '@app/core/environments/environments.service';
 import { HistoryService } from '@app/core/history/history.service';
@@ -13,8 +15,11 @@ import { MockServerService } from '@app/core/testing/mock-server.service';
 import { RegressionService } from '@app/core/testing/regression.service';
 import { TestSuiteService } from '@app/core/testing/test-suite.service';
 import { CommandPaletteService } from '@app/core/ui/command-palette.service';
+import { TestingSessionService } from '@app/core/testing/testing-session.service';
 import { HelpPopupService } from '@app/core/ui/help-popup.service';
 import { SettingsPopupService } from '@app/core/ui/settings-popup.service';
+import { FileDialogService } from '@app/core/platform/file-dialog.service';
+import { TxNotificationService } from '@app/core/notifications/tx-notification.service';
 import { WorkspaceEditorService } from '@app/core/workspace/workspace-editor.service';
 import { WorkspaceSidebarSessionService } from '@app/core/workspace/workspace-sidebar-session.service';
 import type { CollectionTreeNode } from '@app/features/shell/collections/collection-tree.types';
@@ -33,15 +38,42 @@ function configureSeedsTestBed(options: {
     providers: [
       CommandRegistryService,
       CommandSeedsService,
-      { provide: WorkspaceEditorService, useValue: { openResource } },
+      {
+        provide: WorkspaceEditorService,
+        useValue: {
+          openResource,
+          activeTab: () => null,
+          closeActiveTab: vi.fn(),
+          splitFocusedPane: vi.fn(),
+        },
+      },
       {
         provide: CollectionsService,
         useValue: { nodes: collectionNodes, createFolder: vi.fn() },
       },
+      {
+        provide: DatabaseQueriesService,
+        useValue: {
+          createQuery: vi.fn(() => ({ id: 'q1' })),
+          createFolder: vi.fn(),
+          tabResourceId: (id: string) => `dbq:${id}`,
+        },
+      },
+      {
+        provide: DatabaseConnectionsService,
+        useValue: {
+          createConnection: vi.fn(async () => ({ id: 'c1' })),
+          createFolder: vi.fn(async () => 'f1'),
+        },
+      },
       { provide: EnvironmentsService, useValue: { environments: signal([]) } },
       { provide: HistoryService, useValue: { nodes: signal([]) } },
       { provide: TestSuiteService, useValue: { nodes: signal([]) } },
-      { provide: LoadTestService, useValue: { nodes: signal([]), tabResourceId: (id: string) => id } },
+      {
+        provide: LoadTestService,
+        useValue: { nodes: signal([]), tabResourceId: (id: string) => id, findArtifact: () => null },
+      },
+      { provide: FileDialogService, useValue: { saveText: vi.fn() } },
       { provide: RegressionService, useValue: { nodes: signal([]), tabResourceId: (id: string) => id } },
       { provide: MockServerService, useValue: { nodes: signal([]) } },
       { provide: CaptureWorkbenchStore, useValue: { nodes: signal([]), tabResourceId: (id: string) => id } },
@@ -54,6 +86,8 @@ function configureSeedsTestBed(options: {
       { provide: HelpPopupService, useValue: { show: vi.fn() } },
       { provide: TeamsPanelService, useValue: { show: vi.fn() } },
       { provide: CommandPaletteService, useValue: { toggle: vi.fn() } },
+      { provide: TestingSessionService, useValue: { setSubpanel: vi.fn() } },
+      { provide: TxNotificationService, useValue: { showSuccess: vi.fn(), showError: vi.fn() } },
     ],
   });
 }
@@ -74,7 +108,14 @@ describe('CommandSeedsService', () => {
     const ids = registry.snapshot().map((cmd) => cmd.id);
     expect(ids).toContain('shell.openSettings');
     expect(ids).toContain('shell.toggleCommandPalette');
+    expect(ids).toContain('workspace.importCurl');
+    expect(ids).toContain('workspace.closeActiveTab');
+    expect(ids).toContain('workspace.splitTabRight');
     expect(ids).toContain('sidebar.collections');
+    expect(ids).toContain('database.newQuery');
+    expect(ids).toContain('database.newFolder');
+    expect(ids).toContain('database.newConnection');
+    expect(ids).toContain('database.newConnectionFolder');
   });
 
   it('indexes collection requests for quick open', () => {

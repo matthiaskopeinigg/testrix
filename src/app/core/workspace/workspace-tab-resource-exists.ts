@@ -4,6 +4,11 @@ import {
   parseTestSuiteTabResourceId,
   shouldStripWorkspaceTabOnRestore,
 } from '@shared/testing';
+import {
+  parseDatabaseConnectionTabResourceId,
+  parseDatabaseQueryTabResourceId,
+  parseDatabaseTableTabResourceId,
+} from '@shared/database';
 
 import { findCollectionNode } from '@app/features/shell/collections/collection-tree.mutations';
 import type { CollectionTreeNode } from '@app/features/shell/collections/collection-tree.types';
@@ -34,6 +39,8 @@ export interface WorkspaceTabResourceLookupContext {
   readonly mockServer: MockServerService;
   readonly capture: CaptureWorkbenchStore;
   readonly interceptor: InterceptorWorkspaceStore;
+  readonly databases: { find(id: string): unknown | null };
+  readonly databaseQueries: { find(id: string): unknown | null };
 }
 
 function collectionKind(node: CollectionTreeNode): string | undefined {
@@ -135,6 +142,18 @@ export function workspaceTabResourceExists(
         resourceId.startsWith('int-rule:') &&
         ctx.interceptor.findRule(resourceId.slice('int-rule:'.length)) !== null
       );
+    case 'database': {
+      const queryId = parseDatabaseQueryTabResourceId(resourceId);
+      if (queryId) {
+        return ctx.databaseQueries.find(queryId) !== null;
+      }
+      const connectionId = parseDatabaseConnectionTabResourceId(resourceId);
+      if (connectionId) {
+        return ctx.databases.find(connectionId) !== null;
+      }
+      const tableTab = parseDatabaseTableTabResourceId(resourceId);
+      return tableTab !== null && ctx.databases.find(tableTab.connectionId) !== null;
+    }
     default:
       return false;
   }

@@ -7,7 +7,12 @@ import mysql from 'mysql2/promise';
 import sqlMssql from 'mssql';
 
 import type { DatabaseConnection } from '../../../shared/config/database-settings.schema';
+import type { DatabaseQueryEnvelope } from '../../../shared/database/database-introspect.schema';
 import { tokenizeRedisQuery } from '../../../shared/database/tokenize-redis-query';
+import {
+  postgresPoolFingerprint,
+  resolvePostgresDatabaseName,
+} from '../../../shared/database/resolve-postgres-database';
 import { logError, logInfo } from '../../errors/logger';
 
 export interface DatabaseQueryOptions {
@@ -20,7 +25,7 @@ export interface DatabaseQueryOptions {
 export class DatabaseQueryService {
   private readonly redisPool = new Map<string, Redis>();
   private readonly sqliteDbs = new Map<string, Database.Database>();
-  private readonly pgPools = new Map<string, PgPool>();
+  private readonly pgPools = new Map<string, { fingerprint: string; pool: PgPool }>();
   private readonly mysqlPools = new Map<string, mysql.Pool>();
   private readonly mssqlPools = new Map<string, sqlMssql.ConnectionPool>();
 
@@ -31,7 +36,7 @@ export class DatabaseQueryService {
     connection: DatabaseConnection,
     queryText: string,
     options: DatabaseQueryOptions = {},
-  ): Promise<unknown> {
+  ): Promise<DatabaseQueryEnvelope> {
     if (!connection || !queryText) {
       throw new Error('Connection and query are required');
     }
@@ -104,7 +109,7 @@ export class DatabaseQueryService {
         port: Number(connection.port) || 5432,
         user: connection.user,
         password: connection.password,
-        database: connection.database || 'postgres',
+        database: resolvePostgresDatabaseName(connection.database),
         ssl: connection.tls ? { rejectUnauthorized: false } : false,
         connectionTimeoutMillis: connectMs,
       });
@@ -183,8 +188,8 @@ export class DatabaseQueryService {
       }
     }
     this.sqliteDbs.clear();
-    for (const p of this.pgPools.values()) {
-      promises.push(p.end().catch(() => {}));
+    for (const entry of this.pgPools.values()) {
+      promises.push(entry.pool.end().catch(() => {}));
     }
     this.pgPools.clear();
     for (const p of this.mysqlPools.values()) {
@@ -275,7 +280,7 @@ export class DatabaseQueryService {
       port: Number(conn.port) || 5432,
       user: conn.user,
       password: conn.password,
-      database: conn.database || 'postgres',
+      database: resolvePostgresDatabaseName(conn.database),
       ssl: conn.tls ? { rejectUnauthorized: false } : false,
       max: 4,
       connectionTimeoutMillis: this.connectTimeoutMs(conn),
@@ -283,11 +288,18 @@ export class DatabaseQueryService {
   }
 
   private getPgPool(conn: DatabaseConnection): PgPool {
-    const id = conn.id || `pg:${conn.host}:${conn.port}:${conn.database}`;
-    if (!this.pgPools.has(id)) {
-      this.pgPools.set(id, new PgPool(this.pgConfig(conn)));
+    const id = conn.id || `pg:${conn.host}:${conn.port}:${conn.database ?? ''}`;
+    const fingerprint = postgresPoolFingerprint(conn);
+    const existing = this.pgPools.get(id);
+    if (existing?.fingerprint === fingerprint) {
+      return existing.pool;
     }
-    return this.pgPools.get(id)!;
+    if (existing) {
+      void existing.pool.end().catch(() => {});
+    }
+    const pool = new PgPool(this.pgConfig(conn));
+    this.pgPools.set(id, { fingerprint, pool });
+    return pool;
   }
 
   private async getMysqlPool(conn: DatabaseConnection): Promise<mysql.Pool> {
@@ -330,47 +342,71 @@ export class DatabaseQueryService {
     return this.mssqlPools.get(id)!;
   }
 
-  private runSqlite(config: DatabaseConnection, queryText: string): unknown {
+  private runSqlite(config: DatabaseConnection, queryText: string): DatabaseQueryEnvelope {
     const db = this.getSqlite(config);
     const q = String(queryText).trim();
     if (!q) {
-      return [];
+      return { rows: [] };
     }
     const lower = q.toLowerCase();
-    if (lower.startsWith('select') || lower.startsWith('pragma')) {
-      return db.prepare(q).all();
+    if (
+      lower.startsWith('select') ||
+      lower.startsWith('pragma') ||
+      lower.startsWith('explain') ||
+      lower.startsWith('with')
+    ) {
+      return { rows: db.prepare(q).all() };
     }
     const info = db.prepare(q).run();
-    return { changes: info.changes, lastInsertRowid: info.lastInsertRowid };
+    return {
+      rows: { changes: info.changes, lastInsertRowid: info.lastInsertRowid },
+      affectedRows: info.changes,
+    };
   }
 
   private async runPostgres(
     config: DatabaseConnection,
     queryText: string,
     stepTimeoutMs: number | undefined,
-  ): Promise<unknown> {
+  ): Promise<DatabaseQueryEnvelope> {
     const pool = this.getPgPool(config);
     const cmdMs = this.effectiveCommandMs(config, stepTimeoutMs);
     const res = await this.withOptionalTimeout(pool.query(queryText), cmdMs, 'Query');
-    return res.rows;
+    const command = String(res.command ?? '').toUpperCase();
+    const dml = command === 'INSERT' || command === 'UPDATE' || command === 'DELETE' || command === 'MERGE';
+    return {
+      rows: res.rows,
+      affectedRows: dml && typeof res.rowCount === 'number' ? res.rowCount : undefined,
+      columnTypes: mapPgColumnTypes(res.fields),
+    };
   }
 
   private async runMysql(
     config: DatabaseConnection,
     queryText: string,
     stepTimeoutMs: number | undefined,
-  ): Promise<unknown> {
+  ): Promise<DatabaseQueryEnvelope> {
     const pool = await this.getMysqlPool(config);
     const cmdMs = this.effectiveCommandMs(config, stepTimeoutMs);
-    const [rows] = await this.withOptionalTimeout(pool.query(queryText), cmdMs, 'Query');
-    return rows;
+    const [rows, fields] = await this.withOptionalTimeout(pool.query(queryText), cmdMs, 'Query');
+    if (rows && typeof rows === 'object' && !Array.isArray(rows) && 'affectedRows' in rows) {
+      const header = rows as { affectedRows?: number; insertId?: number };
+      return {
+        rows: header,
+        affectedRows: header.affectedRows,
+      };
+    }
+    return {
+      rows,
+      columnTypes: mapMysqlColumnTypes(fields),
+    };
   }
 
   private async runMssql(
     config: DatabaseConnection,
     queryText: string,
     stepTimeoutMs: number | undefined,
-  ): Promise<unknown> {
+  ): Promise<DatabaseQueryEnvelope> {
     const pool = await this.getMssqlPool(config);
     const cmdMs = this.effectiveCommandMs(config, stepTimeoutMs);
     const req = pool.request();
@@ -378,14 +414,23 @@ export class DatabaseQueryService {
       (req as sqlMssql.Request & { timeout?: number }).timeout = cmdMs;
     }
     const res = await req.query(queryText);
-    return res.recordset;
+    const rows = res.recordset ?? [];
+    const affected =
+      Array.isArray(res.rowsAffected) && res.rowsAffected.length > 0
+        ? res.rowsAffected.reduce((sum, n) => sum + n, 0)
+        : undefined;
+    const dml = /^\s*(insert|update|delete|merge)\b/i.test(queryText);
+    return {
+      rows,
+      affectedRows: dml ? affected : undefined,
+    };
   }
 
   private async runRedis(
     config: DatabaseConnection,
     query: string,
     stepTimeoutMs: number | undefined,
-  ): Promise<unknown> {
+  ): Promise<DatabaseQueryEnvelope> {
     const poolId = config.id || `${config.host}:${config.port}`;
     let client = this.redisPool.get(poolId);
     if (!client) {
@@ -417,8 +462,66 @@ export class DatabaseQueryService {
     }
     const cmdMs = this.effectiveCommandMs(config, stepTimeoutMs);
     const exec = (fn as (...a: string[]) => unknown).call(client, ...args);
-    return await this.withOptionalTimeout(Promise.resolve(exec as Promise<unknown>), cmdMs, 'Redis command');
+    return {
+      rows: await this.withOptionalTimeout(Promise.resolve(exec as Promise<unknown>), cmdMs, 'Redis command'),
+    };
   }
+}
+
+const PG_OID_NAMES: Record<number, string> = {
+  16: 'bool',
+  20: 'int8',
+  21: 'int2',
+  23: 'int4',
+  25: 'text',
+  114: 'json',
+  700: 'float4',
+  701: 'float8',
+  1042: 'bpchar',
+  1043: 'varchar',
+  1082: 'date',
+  1114: 'timestamp',
+  1184: 'timestamptz',
+  1700: 'numeric',
+  2950: 'uuid',
+  3802: 'jsonb',
+};
+
+function mapPgColumnTypes(fields: readonly { dataTypeID?: number }[] | undefined): string[] | undefined {
+  if (!fields?.length) {
+    return undefined;
+  }
+  const types = fields.map((field) => PG_OID_NAMES[field.dataTypeID ?? -1] ?? '');
+  return types.some((type) => type.length > 0) ? types : undefined;
+}
+
+const MYSQL_TYPE_NAMES: Record<number, string> = {
+  0: 'decimal',
+  1: 'tinyint',
+  2: 'smallint',
+  3: 'int',
+  4: 'float',
+  5: 'double',
+  7: 'timestamp',
+  8: 'bigint',
+  10: 'date',
+  12: 'datetime',
+  15: 'varchar',
+  245: 'json',
+  246: 'decimal',
+  253: 'varchar',
+  254: 'char',
+};
+
+function mapMysqlColumnTypes(fields: unknown): string[] | undefined {
+  if (!Array.isArray(fields) || fields.length === 0) {
+    return undefined;
+  }
+  const types = fields.map((field) => {
+    const typeId = Number((field as { columnType?: number; type?: number }).columnType ?? (field as { type?: number }).type);
+    return MYSQL_TYPE_NAMES[typeId] ?? '';
+  });
+  return types.some((type) => type.length > 0) ? types : undefined;
 }
 
 /** Shared singleton for the app session. */

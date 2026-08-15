@@ -5,9 +5,16 @@ export {
   createEmptyTestrixBundle,
   testrixBundleSchemaV1,
   type TestrixBundleV1,
+  type TestrixBundleDatabases,
   type TestrixBundleSectionKey,
   type SettingsSectionKey,
 } from './testrix-bundle.schema';
+
+export {
+  liftDatabasesFromSettings,
+  omitSettingsDatabases,
+  databaseSettingsHasContent,
+} from './bundle-databases';
 
 export {
   filterBundle,
@@ -27,16 +34,18 @@ export {
 } from './parse-to-bundle';
 
 export { importPostmanCollection, importPostmanEnvironment } from './converters/postman';
-export { importOpenApi } from './converters/openapi';
+export { importOpenApi, importOpenApiToMockEndpoints } from './converters/openapi';
 export { importHar } from './converters/har';
 export { importGraylog } from './converters/graylog';
 export { importInsomniaExport } from './converters/insomnia';
 export {
   mergeCollectionNodes,
+  mergeDatabaseConnectionItems,
   mergeEnvironmentDefinitions,
   mergeTestSuiteRoots,
   mergeLoadTestItems,
   mergeRegressionItems,
   mergeMockServerItems,
+  mergeSavedQueryItems,
 } from './merge-helpers';
 export { mergeBundles } from './merge-bundles';

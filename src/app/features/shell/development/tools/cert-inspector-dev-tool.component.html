@@ -1,0 +1,19 @@
+<app-dev-tool-layout toolId="cert-inspector">
+  <app-dev-tool-toolbar devToolToolbar>
+    <div trailing>
+      <tx-button variant="primary" (click)="handleInspect()">Inspect</tx-button>
+      <tx-button variant="secondary" (click)="handleCopy()">Copy</tx-button>
+    </div>
+  </app-dev-tool-toolbar>
+
+  <tx-form-field label="PEM (certificate, CSR, or public key)">
+    <tx-textarea
+      [rows]="10"
+      [ngModel]="state().pem"
+      (ngModelChange)="state.update((s) => ({ ...s, pem: $event }))"
+    />
+  </tx-form-field>
+  <tx-form-field label="Summary">
+    <tx-textarea [rows]="8" [ngModel]="state().output" [readOnly]="true" />
+  </tx-form-field>
+</app-dev-tool-layout>

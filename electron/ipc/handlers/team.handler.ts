@@ -4,9 +4,12 @@ import {
   enrichTeamWorkspaceConfig,
   listProfileSyncTargets,
   resolveEffectiveShareScope,
+  teamConflictFilePreviewSchema,
+  teamConflictFileResolutionSchema,
   teamConflictResolutionSchema,
   teamFetchRemoteCatalogOptionsSchema,
   teamWorkspaceConfigSchema,
+  tryEntityMergeWorkspaceFile,
   type TeamWorkspaceConfig,
 } from '../../../shared/collaboration';
 import type { ProfilesState } from '../../../shared/config';
@@ -309,6 +312,57 @@ export function registerTeamHandlers(ipc: IpcMainBinder, deps: TeamHandlerDeps):
       }
       await gitWorkspaceService.resolveConflict(dir, parsed);
       await teamSyncEngine.syncNow();
+      return teamSyncEngine.getStatus();
+    }),
+  );
+
+  ipc.handle(
+    TeamChannels.getConflictFile,
+    wrapInvokeHandler(TeamChannels.getConflictFile, async (_e, filePath: unknown) => {
+      if (typeof filePath !== 'string' || !filePath.trim()) {
+        throw new Error('Conflict file path is required');
+      }
+      const dir = deps.getTeamRepoDir();
+      if (!dir) {
+        throw new Error('Team workspace is not initialized');
+      }
+      return teamConflictFilePreviewSchema.parse(await gitWorkspaceService.getConflictFilePreview(dir, filePath.trim()));
+    }),
+  );
+
+  ipc.handle(
+    TeamChannels.resolveConflictFile,
+    wrapInvokeHandler(TeamChannels.resolveConflictFile, async (_e, raw: unknown) => {
+      const parsed = teamConflictFileResolutionSchema.parse(raw);
+      const dir = deps.getTeamRepoDir();
+      if (!dir) {
+        throw new Error('Team workspace is not initialized');
+      }
+      if (parsed.resolution === 'merged') {
+        const preview = await gitWorkspaceService.getConflictFilePreview(dir, parsed.path);
+        let base: unknown = {};
+        let ours: unknown = {};
+        let theirs: unknown = {};
+        try {
+          base = preview.base ? JSON.parse(preview.base) : {};
+          ours = JSON.parse(preview.ours || '{}');
+          theirs = JSON.parse(preview.theirs || '{}');
+        } catch {
+          throw new Error('Could not parse JSON for entity merge.');
+        }
+        const merged = tryEntityMergeWorkspaceFile(parsed.path, base, ours, theirs);
+        if (!merged) {
+          throw new Error('Entity merge is only available for collections.json and environments.json.');
+        }
+        const content = `${JSON.stringify(merged.merged, null, 2)}\n`;
+        await gitWorkspaceService.resolveConflictWithContent(dir, parsed.path, content);
+      } else {
+        await gitWorkspaceService.resolveConflictFile(dir, parsed.path, parsed.resolution);
+      }
+      const remaining = await gitWorkspaceService.listConflictedFiles(dir);
+      if (remaining.length === 0) {
+        await teamSyncEngine.syncNow();
+      }
       return teamSyncEngine.getStatus();
     }),
   );

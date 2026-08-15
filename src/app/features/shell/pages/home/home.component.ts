@@ -14,6 +14,12 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { CollectionsService } from '@app/core/collections/collections.service';
 import { ImportExportFlowService } from '@app/core/import-export/import-export-flow.service';
 import { HelpPopupService } from '@app/core/ui/help-popup.service';
+import { looksLikeCurl } from '@shared/http/parse-curl';
+import {
+  createHttpKeyValueRow,
+  WELCOME_COLLECTION_TEMPLATES,
+  type WelcomeCollectionTemplate,
+} from '@shared/config';
 import { UiPreferencesService } from '@app/core/ui/ui-preferences.service';
 import { ElectronService } from '@app/core/electron/electron.service';
 import { FileDialogService } from '@app/core/platform/file-dialog.service';
@@ -178,6 +184,8 @@ export class HomeComponent {
     return live?.app?.trim() || live?.installedApp?.trim() || '0.1.0';
   });
 
+  protected readonly welcomeTemplates = WELCOME_COLLECTION_TEMPLATES;
+
   protected handleCreateCollection(): void {
     const id = this.collections.createFolder(null, 'New collection');
     this.openSidebarPanel('collections');
@@ -225,6 +233,61 @@ export class HomeComponent {
 
   protected handleOpenHelpGuide(): void {
     this.helpPopup.show();
+  }
+
+  protected async handlePasteCurl(): Promise<void> {
+    let text = '';
+    try {
+      text = (await navigator.clipboard.readText()).trim();
+    } catch {
+      this.showToast('Could not read the clipboard.', 'error');
+      return;
+    }
+    if (!looksLikeCurl(text)) {
+      this.showToast('Clipboard does not contain a cURL command.', 'error');
+      return;
+    }
+    const id = this.collections.createRequestFromCurl(text);
+    if (!id) {
+      this.showToast('Could not import the cURL command.', 'error');
+      return;
+    }
+    this.openSidebarPanel('collections');
+    this.workspaceEditor.openResource({ resourceId: id, kind: 'request' });
+    this.showToast('Imported cURL as a collection request.');
+  }
+
+  protected handleApplyWelcomeTemplate(template: WelcomeCollectionTemplate): void {
+    const folderId = this.collections.createFolder(null, template.folderLabel);
+    if (!folderId) {
+      this.showToast('Could not create the starter collection.', 'error');
+      return;
+    }
+    let firstRequestId: string | null = null;
+    for (const request of template.requests) {
+      const id = this.collections.createRequest(folderId, request.label);
+      if (!id) {
+        continue;
+      }
+      firstRequestId ??= id;
+      this.collections.updateRequest(id, { method: request.method, url: request.url, label: request.label });
+      const headers = request.headerRows
+        ? {
+            rows: request.headerRows.map((row) => createHttpKeyValueRow({ key: row.key, value: row.value })),
+            overrides: {},
+          }
+        : undefined;
+      this.collections.patchRequestSettings(id, {
+        ...(request.body ? { body: request.body } : {}),
+        ...(headers ? { headers } : {}),
+      });
+    }
+    this.openSidebarPanel('collections');
+    this.workspaceEditor.openResource({
+      resourceId: firstRequestId ?? folderId,
+      kind: firstRequestId ? 'request' : 'folder',
+    });
+    this.showToast(`Created ${template.label} starter collection.`);
   }
 
   protected handleSidebarSelect(id: string): void {

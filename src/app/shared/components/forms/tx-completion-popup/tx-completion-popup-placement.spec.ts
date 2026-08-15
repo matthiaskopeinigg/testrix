@@ -5,6 +5,21 @@ import {
   resolveCompletionPlacement,
 } from './tx-completion-popup-placement';
 
+function stubPanel(height: number): HTMLElement {
+  const style = { top: '', left: '', width: '', maxHeight: '' } as CSSStyleDeclaration;
+  return {
+    offsetHeight: height,
+    style,
+  } as HTMLElement;
+}
+
+function stubAnchor(rect: { top: number; bottom: number; left: number; width: number }): HTMLElement {
+  return {
+    getBoundingClientRect: () => rect,
+    parentElement: null,
+  } as unknown as HTMLElement;
+}
+
 describe('resolveCompletionPlacement', () => {
   it('keeps above when there is enough space', () => {
     expect(
@@ -33,20 +48,52 @@ describe('resolveCompletionPlacement', () => {
       }),
     ).toBe('below');
   });
+
+  it('flips below when a clipping pane leaves no room above', () => {
+    expect(
+      resolveCompletionPlacement({
+        placement: 'above',
+        anchorTop: 280,
+        anchorBottom: 316,
+        panelHeight: 180,
+        gapPx: 4,
+        viewportMarginPx: 8,
+        viewportHeight: 900,
+        clipTop: 220,
+        clipBottom: 880,
+      }),
+    ).toBe('below');
+  });
+
+  it('keeps below when preferred and there is room under the field', () => {
+    expect(
+      resolveCompletionPlacement({
+        placement: 'below',
+        anchorTop: 280,
+        anchorBottom: 316,
+        panelHeight: 180,
+        gapPx: 4,
+        viewportMarginPx: 8,
+        viewportHeight: 900,
+        clipTop: 140,
+        clipBottom: 880,
+      }),
+    ).toBe('below');
+  });
 });
 
 describe('positionFixedCompletionPopup', () => {
   it('places the panel above the anchor', () => {
-    const anchor = {
-      getBoundingClientRect: () => ({ top: 200, bottom: 236, left: 10, width: 120 }),
-    } as HTMLElement;
-    const panel = {
-      offsetHeight: 80,
-      style: {} as CSSStyleDeclaration,
-    } as HTMLElement;
-    Object.assign(panel.style, { top: '', left: '', width: '' });
+    const anchor = stubAnchor({ top: 200, bottom: 236, left: 10, width: 120 });
+    const panel = stubPanel(80);
 
-    const resolved = positionFixedCompletionPopup({ anchor, panel, placement: 'above', gapPx: 4 });
+    const resolved = positionFixedCompletionPopup({
+      anchor,
+      panel,
+      placement: 'above',
+      gapPx: 4,
+      clipRect: { top: 0, bottom: 900, left: 0, right: 1200 },
+    });
 
     expect(resolved).toBe('above');
     expect(panel.style.top).toBe('116px');
@@ -55,19 +102,18 @@ describe('positionFixedCompletionPopup', () => {
   });
 
   it('places the panel below the anchor', () => {
-    const anchor = {
-      getBoundingClientRect: () => ({ top: 200, bottom: 236, left: 10, width: 120 }),
-    } as HTMLElement;
-    const panel = {
-      offsetHeight: 80,
-      style: {} as CSSStyleDeclaration,
-    } as HTMLElement;
-    Object.assign(panel.style, { top: '', left: '', width: '' });
-
+    const anchor = stubAnchor({ top: 200, bottom: 236, left: 10, width: 120 });
+    const panel = stubPanel(80);
     const originalInnerHeight = globalThis.innerHeight;
     Object.defineProperty(globalThis, 'innerHeight', { value: 900, configurable: true });
     try {
-      const resolved = positionFixedCompletionPopup({ anchor, panel, placement: 'below', gapPx: 4 });
+      const resolved = positionFixedCompletionPopup({
+        anchor,
+        panel,
+        placement: 'below',
+        gapPx: 4,
+        clipRect: { top: 0, bottom: 900, left: 0, right: 1200 },
+      });
       expect(resolved).toBe('below');
     } finally {
       Object.defineProperty(globalThis, 'innerHeight', {
@@ -79,22 +125,21 @@ describe('positionFixedCompletionPopup', () => {
     expect(panel.style.top).toBe('240px');
   });
 
-  it('flips below when above would clamp into the toolbar area', () => {
-    const anchor = {
-      getBoundingClientRect: () => ({ top: 120, bottom: 156, left: 24, width: 180 }),
-    } as HTMLElement;
-    const panel = {
-      offsetHeight: 180,
-      style: {} as CSSStyleDeclaration,
-    } as HTMLElement;
-    Object.assign(panel.style, { top: '', left: '', width: '' });
-
+  it('flips below when above would clamp into a clipping pane', () => {
+    const anchor = stubAnchor({ top: 280, bottom: 316, left: 24, width: 180 });
+    const panel = stubPanel(180);
     const originalInnerHeight = globalThis.innerHeight;
     Object.defineProperty(globalThis, 'innerHeight', { value: 900, configurable: true });
     try {
-      const resolved = positionFixedCompletionPopup({ anchor, panel, placement: 'above', gapPx: 4 });
+      const resolved = positionFixedCompletionPopup({
+        anchor,
+        panel,
+        placement: 'above',
+        gapPx: 4,
+        clipRect: { top: 220, bottom: 880, left: 0, right: 1200 },
+      });
       expect(resolved).toBe('below');
-      expect(panel.style.top).toBe('160px');
+      expect(panel.style.top).toBe('320px');
     } finally {
       Object.defineProperty(globalThis, 'innerHeight', {
         value: originalInnerHeight,

@@ -147,7 +147,7 @@
 
       <section class="welcome__section" aria-labelledby="welcome-start-heading">
         <h2 id="welcome-start-heading" class="welcome__section-title">Get started</h2>
-        <ul class="welcome__action-list welcome__action-list--grid">
+        <ul class="welcome__action-list">
           <li>
             <button type="button" class="welcome__action" (click)="handleNewRequest()">
               <span class="welcome__action-icon welcome__action-icon--primary" aria-hidden="true">
@@ -156,6 +156,17 @@
               <span class="welcome__action-body">
                 <span class="welcome__action-title">New request</span>
                 <span class="welcome__action-desc">Create an HTTP request and start sending</span>
+              </span>
+            </button>
+          </li>
+          <li>
+            <button type="button" class="welcome__action" (click)="handlePasteCurl()">
+              <span class="welcome__action-icon welcome__action-icon--secondary" aria-hidden="true">
+                <tx-icon name="clipboard" [size]="20" />
+              </span>
+              <span class="welcome__action-body">
+                <span class="welcome__action-title">Paste cURL</span>
+                <span class="welcome__action-desc">Import a curl command from the clipboard</span>
               </span>
             </button>
           </li>
@@ -193,28 +204,6 @@
             </button>
           </li>
         </ul>
-      </section>
-
-      <section class="welcome__section" aria-labelledby="welcome-features-heading">
-        <h2 id="welcome-features-heading" class="welcome__section-title">Included</h2>
-        <dl class="welcome__pillars">
-          <div class="welcome__pillar">
-            <dt class="welcome__pillar-term">Collections</dt>
-            <dd class="welcome__pillar-desc">Organize HTTP and WebSocket requests in folders.</dd>
-          </div>
-          <div class="welcome__pillar">
-            <dt class="welcome__pillar-term">Environments</dt>
-            <dd class="welcome__pillar-desc">Stage-specific variables and secrets for each profile.</dd>
-          </div>
-          <div class="welcome__pillar">
-            <dt class="welcome__pillar-term">Testing</dt>
-            <dd class="welcome__pillar-desc">Capture traffic, mock APIs, regression, and load tests.</dd>
-          </div>
-          <div class="welcome__pillar">
-            <dt class="welcome__pillar-term">Local profiles</dt>
-            <dd class="welcome__pillar-desc">Workspace data on disk with import and export.</dd>
-          </div>
-        </dl>
       </section>
 
       <footer class="welcome__footer">

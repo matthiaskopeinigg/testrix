@@ -43,6 +43,8 @@ function toVariableTreeNode(node: EnvironmentScopeVariable): EnvironmentTreeNode
       key: node.key,
       value: node.value,
       description: node.description,
+      secret: node.secret,
+      vaultRef: node.vaultRef,
     },
   };
 }
@@ -61,7 +63,7 @@ function fromTreeNode(node: EnvironmentTreeNode): EnvironmentScopeNode {
       kind: 'folder',
       label: node.label,
       order: node.order,
-      description: node.data?.description,
+      ...(node.data?.description !== undefined ? { description: node.data.description } : {}),
       children: (node.children ?? []).map(fromTreeNode),
     };
   }
@@ -72,7 +74,9 @@ function fromTreeNode(node: EnvironmentTreeNode): EnvironmentScopeNode {
     key: node.data?.key ?? node.label,
     value: node.data?.value ?? '',
     order: node.order,
-    description: node.data?.description,
+    ...(node.data?.description !== undefined ? { description: node.data.description } : {}),
+    ...(node.data?.secret ? { secret: true } : {}),
+    ...(node.data?.vaultRef ? { vaultRef: node.data.vaultRef } : {}),
   };
 }
 

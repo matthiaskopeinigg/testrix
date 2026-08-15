@@ -1,0 +1,281 @@
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  DestroyRef,
+  effect,
+  inject,
+  input,
+  signal,
+} from '@angular/core';
+import { FormsModule } from '@angular/forms';
+
+import {
+  collectDatabaseConnectionFolders,
+  defaultPortForDatabaseType,
+  type DatabaseConnection,
+  type DatabaseType,
+} from '@shared/config';
+import type {
+  DatabaseConnectionStatus,
+  DatabaseConnectionStatusMap,
+} from '@shared/database/connection-status.schema';
+import { parseDatabaseConnectionTabResourceId } from '@shared/database';
+import { unwrapIpcInvokeError } from '@shared/errors';
+
+import { DatabaseConnectionsService } from '@app/core/database/database-connections.service';
+import { ElectronService } from '@app/core/electron/electron.service';
+import { TxBannerComponent } from '@app/shared/components/feedback/tx-banner/tx-banner.component';
+import { TxButtonComponent } from '@app/shared/components/forms/tx-button/tx-button.component';
+import { TxDropdownComponent } from '@app/shared/components/forms/tx-dropdown/tx-dropdown.component';
+import { TxFormFieldComponent } from '@app/shared/components/forms/tx-form-field/tx-form-field.component';
+import { TxInputComponent } from '@app/shared/components/forms/tx-input/tx-input.component';
+import { TxTagComponent } from '@app/shared/components/forms/tx-tag/tx-tag.component';
+import { TxToggleComponent } from '@app/shared/components/forms/tx-toggle/tx-toggle.component';
+
+const FOLDER_NONE = '';
+const FOLDER_NEW = '__tx_new_folder__';
+
+const DATABASE_TYPE_OPTIONS: readonly { value: DatabaseType; label: string }[] = [
+  { value: 'postgresql', label: 'PostgreSQL' },
+  { value: 'mysql', label: 'MySQL / MariaDB' },
+  { value: 'mssql', label: 'SQL Server' },
+  { value: 'sqlite', label: 'SQLite' },
+  { value: 'redis', label: 'Redis' },
+];
+
+type TestOutcome = { readonly kind: 'success' | 'error'; readonly message: string };
+
+@Component({
+  selector: 'app-database-connection-editor',
+  standalone: true,
+  imports: [
+    FormsModule,
+    TxBannerComponent,
+    TxButtonComponent,
+    TxDropdownComponent,
+    TxFormFieldComponent,
+    TxInputComponent,
+    TxTagComponent,
+    TxToggleComponent,
+  ],
+  templateUrl: './database-connection-editor.component.html',
+  styleUrl: './database-connection-editor.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+export class DatabaseConnectionEditorComponent {
+  private readonly connections = inject(DatabaseConnectionsService);
+  private readonly electron = inject(ElectronService);
+  private readonly destroyRef = inject(DestroyRef);
+
+  readonly resourceId = input.required<string>();
+  readonly active = input(false);
+
+  protected readonly typeOptions = DATABASE_TYPE_OPTIONS.map((entry) => ({
+    value: entry.value,
+    label: entry.label,
+  }));
+
+  protected readonly testing = signal(false);
+  protected readonly testOutcome = signal<TestOutcome | null>(null);
+  protected readonly statusById = signal<DatabaseConnectionStatusMap>({});
+  protected readonly draft = signal<DatabaseConnection | null>(null);
+
+  private saveTimer: ReturnType<typeof setTimeout> | null = null;
+
+  protected readonly connectionId = computed(() => parseDatabaseConnectionTabResourceId(this.resourceId()));
+
+  protected readonly connection = computed(() => this.draft());
+
+  protected readonly canPickFile = computed(() => Boolean(this.electron.bridge()?.shell?.pickFile));
+
+  protected readonly folderOptions = computed(() => {
+    const folders = collectDatabaseConnectionFolders(this.connections.nodes());
+    return [
+      { value: FOLDER_NONE, label: '(none)' },
+      ...folders.map((folder) => ({ value: folder.id, label: folder.label })),
+      { value: FOLDER_NEW, label: 'New folder…' },
+    ];
+  });
+
+  protected readonly folderValue = computed(() => {
+    const id = this.connectionId();
+    if (!id) {
+      return FOLDER_NONE;
+    }
+    return this.connections.parentFolderId(id) ?? FOLDER_NONE;
+  });
+
+  constructor() {
+    effect(() => {
+      const id = this.connectionId();
+      const stored = id != null ? this.connections.find(id) : null;
+      if (this.draft()?.id !== stored?.id) {
+        this.draft.set(stored);
+      }
+    });
+    effect(() => {
+      if (this.connection()) {
+        void this.refreshStatusesFromMain();
+      }
+    });
+    this.destroyRef.onDestroy(() => {
+      if (this.saveTimer !== null) {
+        clearTimeout(this.saveTimer);
+        this.saveTimer = null;
+      }
+    });
+  }
+
+  protected typeLabel(type: DatabaseType | undefined): string {
+    return DATABASE_TYPE_OPTIONS.find((entry) => entry.value === type)?.label ?? type ?? 'Unknown';
+  }
+
+  protected statusFor(conn: DatabaseConnection): DatabaseConnectionStatus | null {
+    return this.statusById()[conn.id] ?? null;
+  }
+
+  protected statusTagVariant(conn: DatabaseConnection): 'default' | 'success' | 'warning' | 'error' | 'info' {
+    const status = this.statusFor(conn);
+    switch (status?.state) {
+      case 'connected':
+        return 'success';
+      case 'error':
+        return 'error';
+      case 'checking':
+        return 'info';
+      default:
+        return 'default';
+    }
+  }
+
+  protected statusLabel(conn: DatabaseConnection): string {
+    const status = this.statusFor(conn);
+    switch (status?.state) {
+      case 'checking':
+        return 'Checking…';
+      case 'connected':
+        return 'Connected';
+      case 'error':
+        return 'Failed';
+      default:
+        return 'Not checked';
+    }
+  }
+
+  protected handlePatch(patch: Partial<DatabaseConnection>): void {
+    const current = this.draft();
+    if (!current) {
+      return;
+    }
+    const next = { ...current, ...patch };
+    this.draft.set(next);
+    this.persist();
+  }
+
+  protected handleTypeChange(type: DatabaseType): void {
+    this.handlePatch({ type, port: defaultPortForDatabaseType(type) });
+  }
+
+  protected async handleFolderChange(value: string): Promise<void> {
+    const conn = this.connection();
+    if (!conn) {
+      return;
+    }
+    if (value === FOLDER_NEW) {
+      const folderId = await this.connections.createFolder();
+      await this.connections.moveConnectionToFolder(conn.id, folderId);
+      return;
+    }
+    await this.connections.moveConnectionToFolder(conn.id, value || null);
+  }
+
+  protected async handlePickSqliteFile(): Promise<void> {
+    const picked = await this.electron.bridge()?.shell.pickFile({
+      filters: [{ name: 'SQLite database', extensions: ['db', 'sqlite', 'sqlite3'] }],
+    });
+    if (!picked) {
+      return;
+    }
+    this.handlePatch({ filePath: picked.filePath });
+  }
+
+  protected async handleTestConnection(): Promise<void> {
+    const conn = this.connection();
+    const bridge = this.electron.bridge();
+    if (!conn || !bridge?.database) {
+      this.testOutcome.set({
+        kind: 'error',
+        message: 'Database testing is only available in the desktop app.',
+      });
+      return;
+    }
+    this.testing.set(true);
+    this.testOutcome.set(null);
+    this.statusById.update((map) => ({ ...map, [conn.id]: { state: 'checking' } }));
+    const requestId = conn.id;
+    try {
+      await bridge.database.testConnection(conn);
+      if (this.connectionId() !== requestId || !this.connections.find(requestId)) {
+        return;
+      }
+      this.testOutcome.set({ kind: 'success', message: 'Connection successful.' });
+      await this.refreshStatusesFromMain();
+    } catch (err: unknown) {
+      if (this.connectionId() !== requestId || !this.connections.find(requestId)) {
+        return;
+      }
+      const ipc = unwrapIpcInvokeError(err);
+      const message = ipc?.userMessage ?? (err instanceof Error ? err.message : 'Connection failed.');
+      this.testOutcome.set({ kind: 'error', message });
+      this.statusById.update((map) => ({
+        ...map,
+        [conn.id]: { state: 'error', message, checkedAt: new Date().toISOString() },
+      }));
+    } finally {
+      if (this.connectionId() === requestId) {
+        this.testing.set(false);
+      }
+    }
+  }
+
+  private persist(): void {
+    if (this.saveTimer !== null) {
+      clearTimeout(this.saveTimer);
+    }
+    this.saveTimer = setTimeout(() => {
+      this.saveTimer = null;
+      const latest = this.draft();
+      if (!latest || !this.connections.find(latest.id)) {
+        return;
+      }
+      void this.connections.patchConnection(latest.id, {
+        name: latest.name,
+        type: latest.type,
+        host: latest.host,
+        port: latest.port,
+        user: latest.user,
+        password: latest.password,
+        database: latest.database,
+        filePath: latest.filePath,
+        tls: latest.tls,
+        connectTimeoutMs: latest.connectTimeoutMs,
+        commandTimeoutMs: latest.commandTimeoutMs,
+        busyTimeoutMs: latest.busyTimeoutMs,
+        connectOnBoot: latest.connectOnBoot,
+      });
+    }, 300);
+  }
+
+  private async refreshStatusesFromMain(): Promise<void> {
+    const bridge = this.electron.bridge()?.database;
+    if (!bridge?.getConnectionStatuses) {
+      return;
+    }
+    try {
+      this.statusById.set(await bridge.getConnectionStatuses());
+    } catch {
+      /* statuses are optional UI hints */
+    }
+  }
+}

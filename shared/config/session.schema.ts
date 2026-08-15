@@ -21,6 +21,7 @@ import {
 import { workspaceHistorySidebarSchema } from './history-sidebar';
 import { workspaceEditorStateSchema } from './workspace-editor.schema';
 import { workspaceTestingSchema } from './testing-session.schema';
+import { workspaceDatabaseSchema } from './database-session.schema';
 
 const metaSessionSchema = z.object({
   createdAt: z.string(),
@@ -68,6 +69,7 @@ const workspaceSchema = z.object({
   designSystem: workspaceDesignSystemSchema,
   development: workspaceDevelopmentSchema,
   testing: workspaceTestingSchema,
+  database: workspaceDatabaseSchema,
 });
 
 export const sessionFileSchema = z.object({
@@ -102,6 +104,7 @@ export const sessionPatchSchema = z
           })
           .optional(),
         testing: workspaceTestingSchema.partial().optional(),
+        database: workspaceDatabaseSchema.partial().optional(),
       })
       .strict()
       .optional(),

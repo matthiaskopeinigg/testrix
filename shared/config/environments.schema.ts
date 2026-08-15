@@ -15,9 +15,12 @@ export const environmentScopeVariableSchema = environmentNodeBaseSchema.extend({
   key: z.string().min(1),
   value: z.string(),
   description: z.string().optional(),
+  /** When true, `value` is stored in the local vault rather than Git-synced JSON. */
+  secret: z.boolean().default(false),
+  vaultRef: z.string().min(1).optional(),
 });
 
-export type EnvironmentScopeVariable = z.infer<typeof environmentScopeVariableSchema>;
+export type EnvironmentScopeVariable = z.input<typeof environmentScopeVariableSchema>;
 
 export type EnvironmentScopeFolder = {
   readonly id: string;

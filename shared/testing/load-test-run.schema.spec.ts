@@ -57,4 +57,26 @@ describe('loadTestStartOptionsSchema', () => {
       }),
     ).toThrow(/URL/i);
   });
+
+  it('accepts an environment override', () => {
+    const parsed = loadTestStartOptionsSchema.parse({
+      loadTestId: 'lt-1',
+      targetRequestId: 'req-1',
+      environmentId: 'env-prod',
+      virtualUsers: 1,
+      durationSec: 1,
+    });
+    expect(parsed.environmentId).toBe('env-prod');
+  });
+
+  it('accepts a forced-none environment', () => {
+    const parsed = loadTestStartOptionsSchema.parse({
+      loadTestId: 'lt-1',
+      targetRequestId: 'req-1',
+      environmentId: '',
+      virtualUsers: 1,
+      durationSec: 1,
+    });
+    expect(parsed.environmentId).toBe('');
+  });
 });

@@ -6,8 +6,10 @@ import {
   createDefaultSettings,
   enrichHttpHeadersSettings,
   httpHeaderRowsEqual,
+  mergeWorkspaceDatabase,
   mergeWorkspaceDevelopment,
   mergeWorkspaceTesting,
+  normalizeDatabaseSettings,
 } from '@shared/config';
 import type { AppearanceThemeId } from '@shared/theme';
 
@@ -171,6 +173,15 @@ export class ConfigService {
         http: patch.http
           ? ({ ...current.http, ...patch.http } as SettingsFile['http'])
           : current.http,
+        databases: patch.databases
+          ? normalizeDatabaseSettings(
+              patch.databases.nodes !== undefined
+                ? { nodes: patch.databases.nodes }
+                : patch.databases.connections !== undefined
+                  ? { connections: patch.databases.connections }
+                  : current.databases,
+            )
+          : current.databases,
       };
       this.settingsState.set(next);
       if (patch.appearance) {
@@ -275,6 +286,9 @@ export class ConfigService {
           testing: patch.workspace?.testing
             ? mergeWorkspaceTesting(current.workspace.testing, patch.workspace.testing)
             : current.workspace.testing,
+          database: patch.workspace?.database
+            ? mergeWorkspaceDatabase(current.workspace.database, patch.workspace.database)
+            : current.workspace.database,
         },
       };
       this.sessionState.set(next);

@@ -37,9 +37,11 @@ export class TxContextMenuComponent {
 
   private readonly document = inject(DOCUMENT);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly host = inject(ElementRef<HTMLElement>);
   private readonly panelRef = viewChild<ElementRef<HTMLElement>>('panel');
   private readonly activeIndex = signal(0);
   protected readonly clampedPosition = signal<TxContextMenuPosition>({ x: 0, y: 0 });
+  private portaledPanel: HTMLElement | null = null;
 
   protected readonly actionableItems = computed(() =>
     this.items().filter((item) => !item.separator && !item.disabled),
@@ -48,10 +50,15 @@ export class TxContextMenuComponent {
   constructor() {
     effect(() => {
       if (!this.open()) {
+        this.removePortaledPanel();
         return;
       }
       this.activeIndex.set(0);
       queueMicrotask(() => {
+        if (!this.open()) {
+          this.removePortaledPanel();
+          return;
+        }
         this.portalPanelToBody();
         this.clampToViewport();
       });
@@ -62,6 +69,10 @@ export class TxContextMenuComponent {
         this.position();
         this.items();
         queueMicrotask(() => {
+          if (!this.open()) {
+            this.removePortaledPanel();
+            return;
+          }
           this.portalPanelToBody();
           this.clampToViewport();
         });
@@ -69,10 +80,7 @@ export class TxContextMenuComponent {
     });
 
     this.destroyRef.onDestroy(() => {
-      const panel = this.panelRef()?.nativeElement;
-      if (panel?.isConnected) {
-        panel.remove();
-      }
+      this.removePortaledPanel();
     });
   }
 
@@ -153,11 +161,26 @@ export class TxContextMenuComponent {
   /** Escapes sidebar overflow clipping by mounting the panel on `document.body`. */
   private portalPanelToBody(): void {
     const panel = this.panelRef()?.nativeElement;
-    if (!panel || panel.parentElement === this.document.body) {
+    if (!panel) {
       return;
     }
-
+    this.portaledPanel = panel;
+    if (panel.parentElement === this.document.body) {
+      return;
+    }
     this.document.body.appendChild(panel);
+  }
+
+  private removePortaledPanel(): void {
+    const panel = this.portaledPanel;
+    this.portaledPanel = null;
+    if (!panel?.isConnected) {
+      return;
+    }
+    const host = this.host.nativeElement;
+    if (panel.parentElement === this.document.body) {
+      host.appendChild(panel);
+    }
   }
 
   private clampToViewport(): void {

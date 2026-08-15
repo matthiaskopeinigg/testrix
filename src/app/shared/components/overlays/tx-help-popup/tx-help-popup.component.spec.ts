@@ -39,6 +39,8 @@ describe('TxHelpPopupComponent', () => {
     expect(text).toContain('Guide to Testrix features');
     expect(text).toContain('Overview');
     expect(text).toContain('Getting started');
+    expect(text).toContain('Database');
+    expect(text).toContain('Database sidebar');
   });
 
   it('switches section content when a sidebar item is clicked', async () => {

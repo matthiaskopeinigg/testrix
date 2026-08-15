@@ -73,7 +73,11 @@
 
       <span class="lt-results-panel__chrome-divider" aria-hidden="true"></span>
 
-      <app-lt-results-export-toolbar class="lt-results-panel__export" [record]="exportRecord()" />
+      <app-lt-results-export-toolbar
+        class="lt-results-panel__export"
+        [record]="exportRecord()"
+        [artifact]="artifact()"
+      />
 
       @if (runs().length > 0) {
         <tx-button variant="secondary" (pressed)="handleClearRunsRequest()">Clear history</tx-button>

@@ -70,6 +70,8 @@ export function resolveCollectionFolderAuthValues(
         clientSecret: resolveText(auth.clientSecret),
         scope: resolveText(auth.scope),
         redirectUri: resolveText(auth.redirectUri),
+        username: resolveText(auth.username ?? ''),
+        password: resolveText(auth.password ?? ''),
       };
     case 'inherit':
     case 'none':
@@ -117,6 +119,7 @@ export function applyCollectionRequestAuth(
   auth: CollectionFolderAuth,
   headers: Record<string, string>,
   url: string,
+  oauthAccessToken?: string,
 ): string {
   switch (auth.type) {
     case 'bearer':
@@ -141,8 +144,14 @@ export function applyCollectionRequestAuth(
         return url;
       }
       return appendQueryParam(url, auth.name.trim(), auth.value);
-    case 'oauth2':
-    case 'inherit':
+    case 'oauth2': {
+      const token = oauthAccessToken?.trim();
+      if (token && !headerKeyExists(headers, 'Authorization')) {
+        const type = auth.tokenType?.trim() || 'Bearer';
+        headers['Authorization'] = `${type} ${token}`;
+      }
+      return url;
+    }
     case 'none':
     default:
       return url;

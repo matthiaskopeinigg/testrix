@@ -28,6 +28,8 @@ export interface TxTreeNode<TMeta = unknown> {
   readonly httpMethod?: string;
   readonly icon?: TxIconName;
   readonly kind?: string;
+  /** Optional connection/status indicator shown before the row icon. */
+  readonly statusDot?: 'connected' | 'error' | 'idle' | 'unknown' | 'checking';
   readonly children?: readonly TxTreeNode<TMeta>[];
   readonly order?: number;
   readonly priority?: number;
@@ -112,12 +114,22 @@ export interface TxTreeDragPolicy<TMeta = unknown> {
   readonly canDrag?: (ctx: TxTreeDragContext<TMeta>) => boolean;
 }
 
+export interface TxTreeDropRemap {
+  readonly targetId: string;
+  readonly position: TxTreeDropPosition;
+}
+
 export interface TxTreeDropPolicy<TMeta = unknown> {
   readonly enabled: boolean;
   readonly positions: readonly TxTreeDropPosition[];
   readonly reparentAllowed: boolean;
   readonly maxDepth: number | null;
   readonly canDrop?: (ctx: TxTreeDropContext<TMeta>) => boolean;
+  /**
+   * Rewrites a hit-test target before {@link canDrop} and {@link TxTreeModel.moveNode}.
+   * Use this when live children (catalog rows, status nodes) should not accept drops.
+   */
+  readonly remapDropTarget?: (ctx: TxTreeDropContext<TMeta>) => TxTreeDropRemap | null;
 }
 
 export interface TxTreeSortConfig {

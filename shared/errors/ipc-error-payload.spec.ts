@@ -46,6 +46,19 @@ describe('unwrapIpcInvokeError', () => {
     });
   });
 
+  it('unwraps TestrixError codes from Electron invoke wrappers', () => {
+    expect(
+      unwrapIpcInvokeError(
+        new Error(
+          "Error invoking remote method 'db:query': TestrixError: DATABASE_CONNECTION_FAILED: relation \"users\" does not exist",
+        ),
+      ),
+    ).toEqual({
+      code: 'DATABASE_CONNECTION_FAILED',
+      userMessage: 'relation "users" does not exist',
+    });
+  });
+
   it('returns null for [object Object] invoke wrappers', () => {
     expect(
       unwrapIpcInvokeError(new Error("Error invoking remote method 'http:send': [object Object]")),

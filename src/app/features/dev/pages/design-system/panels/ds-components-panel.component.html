@@ -345,6 +345,15 @@
           <tx-split-pane [layout]="splitDemoLayout()" [leafTemplate]="splitPaneLeaf" />
         </div>
       }
+      @case ('data-grid') {
+        <p class="ds-lede">
+          Click a cell, Shift-click a range, and press Ctrl+C (⌘C) to copy TSV. SQL NULL renders as
+          <code>&lt;null&gt;</code>.
+        </p>
+        <div class="ds-data-grid-demo">
+          <tx-data-grid [columns]="dataGridDemoColumns" [rows]="dataGridDemoRows" />
+        </div>
+      }
       @case ('tree') {
         <p class="ds-lede">
           Pointer drag-and-drop with configurable policies. Keyboard reorder is planned for a later release.

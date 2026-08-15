@@ -82,4 +82,78 @@ describe('filterBundle', () => {
     expect(filtered.environments?.environments[0]?.id).toBe('env-a');
     expect(filtered.collections).toBeUndefined();
   });
+
+  it('prunes database connections without dropping queries', () => {
+    const connA = {
+      id: 'conn-a',
+      kind: 'connection' as const,
+      name: 'A',
+      type: 'postgresql' as const,
+      host: 'localhost',
+      port: 5432,
+      connectOnBoot: false,
+    };
+    const connB = { ...connA, id: 'conn-b', name: 'B' };
+    const source: TestrixBundleV1 = {
+      schema: TESTRIX_BUNDLE_SCHEMA_V1,
+      exportedAt: '2026-01-01T00:00:00.000Z',
+      appVersion: '0.1.0',
+      databases: {
+        connections: { connections: [connA, connB], nodes: [connA, connB] },
+        queries: {
+          schemaVersion: 2,
+          nodes: [
+            {
+              id: 'q-1',
+              kind: 'query',
+              name: 'Users',
+              connectionId: 'conn-a',
+              query: 'SELECT 1',
+              updatedAt: '2026-01-01T00:00:00.000Z',
+            },
+          ],
+        },
+      },
+    };
+
+    const filtered = filterBundle(source, {
+      sections: new Set(['databases']),
+      databaseConnections: true,
+      databaseConnectionItems: new Set(['conn-b']),
+      databaseQueries: true,
+      databaseQueryItems: new Set(['q-1']),
+    });
+
+    expect(filtered.databases?.connections?.connections.map((item) => item.id)).toEqual(['conn-b']);
+    expect(filtered.databases?.queries?.nodes).toHaveLength(1);
+    expect(filtered.databases?.queries?.nodes[0]?.id).toBe('q-1');
+  });
+
+  it('lifts a legacy settings.databases blob when filtering', () => {
+    const conn = {
+      id: 'legacy-1',
+      kind: 'connection' as const,
+      name: 'Legacy',
+      type: 'mysql' as const,
+      host: 'localhost',
+      port: 3306,
+      connectOnBoot: false,
+    };
+    const source: TestrixBundleV1 = {
+      schema: TESTRIX_BUNDLE_SCHEMA_V1,
+      exportedAt: '2026-01-01T00:00:00.000Z',
+      appVersion: '0.1.0',
+      settings: {
+        databases: { connections: [conn], nodes: [conn] },
+      },
+    };
+
+    const filtered = filterBundle(source, {
+      sections: new Set(['databases']),
+      databaseConnections: true,
+    });
+
+    expect(filtered.settings).toBeUndefined();
+    expect(filtered.databases?.connections?.connections[0]?.id).toBe('legacy-1');
+  });
 });

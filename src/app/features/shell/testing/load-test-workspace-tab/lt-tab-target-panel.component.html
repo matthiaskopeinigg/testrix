@@ -12,6 +12,16 @@
         (ngModelChange)="handleTargetSourceChange($event)"
       />
     </tx-form-field>
+    <tx-form-field class="lt-target-panel__env" label="Environment" controlId="lt-target-env">
+      <tx-dropdown
+        controlId="lt-target-env"
+        [options]="environmentOptions()"
+        [ngModel]="environmentDropdownValue()"
+        (ngModelChange)="handleEnvironmentChange($event)"
+        [placeholder]="environmentPlaceholder()"
+        ariaLabel="Load test environment"
+      />
+    </tx-form-field>
   </header>
 
   @if (isManual()) {

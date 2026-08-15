@@ -1,0 +1,33 @@
+<app-dev-tool-layout toolId="request-diff">
+  <app-dev-tool-toolbar devToolToolbar>
+    <div trailing>
+      <tx-button variant="secondary" (click)="handleCopy()">Copy diff</tx-button>
+    </div>
+  </app-dev-tool-toolbar>
+
+  <div class="request-diff-tool__panes">
+    <tx-form-field label="Left">
+      <tx-textarea
+        [rows]="12"
+        [ngModel]="state().left"
+        (ngModelChange)="state.update((s) => ({ ...s, left: $event }))"
+      />
+    </tx-form-field>
+    <tx-form-field label="Right">
+      <tx-textarea
+        [rows]="12"
+        [ngModel]="state().right"
+        (ngModelChange)="state.update((s) => ({ ...s, right: $event }))"
+      />
+    </tx-form-field>
+  </div>
+
+  <div class="request-diff-tool__rows" aria-label="Side-by-side diff">
+    @for (row of paired(); track $index) {
+      <div class="request-diff-tool__row">
+        <pre class="request-diff-tool__cell" [attr.data-kind]="row.left.kind">{{ row.left.text }}</pre>
+        <pre class="request-diff-tool__cell" [attr.data-kind]="row.right.kind">{{ row.right.text }}</pre>
+      </div>
+    }
+  </div>
+</app-dev-tool-layout>

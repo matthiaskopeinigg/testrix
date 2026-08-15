@@ -44,6 +44,7 @@ export class TxModalComponent {
 
   private readonly document = inject(DOCUMENT);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly host = inject(ElementRef<HTMLElement>);
   private readonly rootRef = viewChild<ElementRef<HTMLElement>>('root');
 
   private portaledRoot: HTMLElement | null = null;
@@ -175,10 +176,14 @@ export class TxModalComponent {
 
   private removePortaledRoot(): void {
     const root = this.portaledRoot;
-    if (root?.isConnected) {
-      root.remove();
-    }
     this.portaledRoot = null;
+    if (!root?.isConnected) {
+      return;
+    }
+    const host = this.host.nativeElement;
+    if (root.parentElement === this.document.body) {
+      host.appendChild(root);
+    }
   }
 
   private motionEnabled(): boolean {

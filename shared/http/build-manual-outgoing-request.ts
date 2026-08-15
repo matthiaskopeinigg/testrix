@@ -35,6 +35,7 @@ export function buildManualOutgoingRequest(input: {
   readonly manual: LoadTestManualTarget;
   readonly http: HttpSettings;
   readonly variableContext?: Readonly<Record<string, string>>;
+  readonly environmentId?: string | null;
 }): BuildOutgoingRequestResult | null {
   const variableContext = input.variableContext ?? {};
   const resolveText = (text: string): string =>
@@ -95,7 +96,7 @@ export function buildManualOutgoingRequest(input: {
       retries: input.http.retries,
     },
     scripts: { pre: [], post: [] },
-    environmentId: null,
+    environmentId: input.environmentId?.trim() || null,
     variableContext,
   });
 

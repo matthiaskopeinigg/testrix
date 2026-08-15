@@ -446,4 +446,74 @@ describe('buildOutgoingRequest', () => {
 
     expect(result).toBeNull();
   });
+
+  it('overrides the inherited environment when environmentIdOverride is set', () => {
+    const envFile = {
+      ...createDefaultEnvironments(),
+      environments: [
+        {
+          id: 'env-prod',
+          name: 'Prod',
+          nodes: [{ id: 'v1', kind: 'variable' as const, key: 'host', value: 'https://prod.example' }],
+        },
+        {
+          id: 'env-stage',
+          name: 'Stage',
+          nodes: [{ id: 'v2', kind: 'variable' as const, key: 'host', value: 'https://stage.example' }],
+        },
+      ],
+    };
+    const envNodes: CollectionNode[] = [
+      {
+        id: 'f-env',
+        label: 'API',
+        kind: 'folder',
+        settings: {
+          ...createDefaultCollectionFolderSettings(),
+          environmentId: 'env-prod',
+        },
+        children: [
+          {
+            id: 'req-env-override',
+            label: 'Ping',
+            kind: 'request',
+            method: 'GET',
+            url: '{{host}}/ping',
+            settings: createDefaultCollectionRequestSettings(),
+          },
+        ],
+      },
+    ];
+
+    const inherited = buildOutgoingRequest({
+      requestId: 'req-env-override',
+      nodes: envNodes,
+      http: createDefaultHttpSettings(),
+      environments: envFile,
+      appVersion: '1.0.0',
+    });
+    expect(inherited?.outgoing.environmentId).toBe('env-prod');
+    expect(inherited?.outgoing.url).toContain('prod.example');
+
+    const overridden = buildOutgoingRequest({
+      requestId: 'req-env-override',
+      nodes: envNodes,
+      http: createDefaultHttpSettings(),
+      environments: envFile,
+      appVersion: '1.0.0',
+      environmentIdOverride: 'env-stage',
+    });
+    expect(overridden?.outgoing.environmentId).toBe('env-stage');
+    expect(overridden?.outgoing.url).toContain('stage.example');
+
+    const forcedNone = buildOutgoingRequest({
+      requestId: 'req-env-override',
+      nodes: envNodes,
+      http: createDefaultHttpSettings(),
+      environments: envFile,
+      appVersion: '1.0.0',
+      environmentIdOverride: '',
+    });
+    expect(forcedNone?.outgoing.environmentId).toBeNull();
+  });
 });

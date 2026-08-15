@@ -14,6 +14,11 @@ export const REQUEST_CODE_SNIPPET_FORMAT_IDS = [
   'nodejs',
   'go',
   'csharp',
+  'java',
+  'kotlin',
+  'php',
+  'ruby',
+  'powershell',
 ] as const;
 
 export type RequestCodeSnippetFormatId = (typeof REQUEST_CODE_SNIPPET_FORMAT_IDS)[number];
@@ -33,6 +38,11 @@ export const REQUEST_CODE_SNIPPET_FORMATS: readonly RequestCodeSnippetFormat[] =
   { id: 'nodejs', label: 'Node.js — Fetch', editorLanguage: 'js' },
   { id: 'go', label: 'Go — net/http', editorLanguage: 'text' },
   { id: 'csharp', label: 'C# — HttpClient', editorLanguage: 'text' },
+  { id: 'java', label: 'Java — HttpClient', editorLanguage: 'text' },
+  { id: 'kotlin', label: 'Kotlin — OkHttp', editorLanguage: 'text' },
+  { id: 'php', label: 'PHP — cURL', editorLanguage: 'text' },
+  { id: 'ruby', label: 'Ruby — Net::HTTP', editorLanguage: 'text' },
+  { id: 'powershell', label: 'PowerShell — Invoke-RestMethod', editorLanguage: 'text' },
 ];
 
 export type { RequestCodeSnippetBody } from './snippet-body';
@@ -101,6 +111,16 @@ export function generateRequestCodeSnippet(
       return generateGo(input);
     case 'csharp':
       return generateCsharp(input);
+    case 'java':
+      return generateJava(input);
+    case 'kotlin':
+      return generateKotlin(input);
+    case 'php':
+      return generatePhp(input);
+    case 'ruby':
+      return generateRuby(input);
+    case 'powershell':
+      return generatePowershell(input);
     default:
       return '';
   }
@@ -370,4 +390,124 @@ function toPascalHttpMethod(method: HttpMethodId): string {
     return 'Delete';
   }
   return upper.charAt(0) + upper.slice(1).toLowerCase();
+}
+
+function snippetBodyText(body: RequestCodeSnippetBody): string {
+  switch (body.kind) {
+    case 'text':
+      return body.content;
+    case 'urlencoded': {
+      const encoded = new URLSearchParams();
+      for (const pair of body.pairs) {
+        encoded.set(pair.key, pair.value);
+      }
+      return encoded.toString();
+    }
+    default:
+      return '';
+  }
+}
+
+function generateJava(input: RequestCodeSnippetInput): string {
+  const lines: string[] = [
+    'HttpClient client = HttpClient.newHttpClient();',
+    `HttpRequest.Builder builder = HttpRequest.newBuilder(URI.create(${jsonString(input.url)}))`,
+    `    .method(${jsonString(input.method.toUpperCase())}, ${
+      snippetBodyText(input.body)
+        ? `HttpRequest.BodyPublishers.ofString(${jsonString(snippetBodyText(input.body))})`
+        : 'HttpRequest.BodyPublishers.noBody()'
+    });`,
+  ];
+  for (const [key, value] of Object.entries(input.headers)) {
+    lines.push(`builder.header(${jsonString(key)}, ${jsonString(value)});`);
+  }
+  lines.push(
+    'HttpResponse<String> response = client.send(builder.build(), HttpResponse.BodyHandlers.ofString());',
+    'System.out.println(response.statusCode() + " " + response.body());',
+  );
+  return lines.join('\n');
+}
+
+function generateKotlin(input: RequestCodeSnippetInput): string {
+  const lines: string[] = [
+    'val client = OkHttpClient()',
+    'val request = Request.Builder()',
+    `    .url(${jsonString(input.url)})`,
+  ];
+  const body = snippetBodyText(input.body);
+  if (body) {
+    lines.push(`    .method(${jsonString(input.method.toUpperCase())}, ${jsonString(body)}.toRequestBody())`);
+  } else {
+    lines.push(`    .method(${jsonString(input.method.toUpperCase())}, null)`);
+  }
+  for (const [key, value] of Object.entries(input.headers)) {
+    lines.push(`    .addHeader(${jsonString(key)}, ${jsonString(value)})`);
+  }
+  lines.push(
+    '    .build()',
+    'client.newCall(request).execute().use { response ->',
+    '    println("${response.code} ${response.body?.string()}")',
+    '}',
+  );
+  return lines.join('\n');
+}
+
+function generatePhp(input: RequestCodeSnippetInput): string {
+  const lines: string[] = [
+    '$ch = curl_init();',
+    `curl_setopt($ch, CURLOPT_URL, ${jsonString(input.url)});`,
+    `curl_setopt($ch, CURLOPT_CUSTOMREQUEST, ${jsonString(input.method.toUpperCase())});`,
+    'curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);',
+  ];
+  const headerList = Object.entries(input.headers).map(([key, value]) => `${key}: ${value}`);
+  if (headerList.length) {
+    lines.push(`curl_setopt($ch, CURLOPT_HTTPHEADER, ${JSON.stringify(headerList)});`);
+  }
+  const body = snippetBodyText(input.body);
+  if (body) {
+    lines.push(`curl_setopt($ch, CURLOPT_POSTFIELDS, ${jsonString(body)});`);
+  }
+  lines.push('$response = curl_exec($ch);', 'curl_close($ch);', 'echo $response;');
+  return lines.join('\n');
+}
+
+function generateRuby(input: RequestCodeSnippetInput): string {
+  const lines: string[] = [
+    'require "net/http"',
+    'require "uri"',
+    `uri = URI(${jsonString(input.url)})`,
+    'http = Net::HTTP.new(uri.host, uri.port)',
+    'http.use_ssl = uri.scheme == "https"',
+    `request = Net::HTTPGenericRequest.new(${jsonString(input.method.toUpperCase())}, true, true, uri)`,
+  ];
+  for (const [key, value] of Object.entries(input.headers)) {
+    lines.push(`request[${jsonString(key)}] = ${jsonString(value)}`);
+  }
+  const body = snippetBodyText(input.body);
+  if (body) {
+    lines.push(`request.body = ${jsonString(body)}`);
+  }
+  lines.push('response = http.request(request)', 'puts "#{response.code} #{response.body}"');
+  return lines.join('\n');
+}
+
+function generatePowershell(input: RequestCodeSnippetInput): string {
+  const lines: string[] = [
+    `$headers = @{`,
+  ];
+  for (const [key, value] of Object.entries(input.headers)) {
+    lines.push(`  ${jsonString(key)} = ${jsonString(value)}`);
+  }
+  lines.push('}');
+  const body = snippetBodyText(input.body);
+  if (body) {
+    lines.push(
+      `Invoke-RestMethod -Method ${input.method.toUpperCase()} -Uri ${jsonString(input.url)} -Headers $headers -Body ${jsonString(body)}`,
+    );
+  } else {
+    lines.push(
+      `Invoke-RestMethod -Method ${input.method.toUpperCase()} -Uri ${jsonString(input.url)} -Headers $headers`,
+    );
+  }
+  return lines.join('\n');
 }

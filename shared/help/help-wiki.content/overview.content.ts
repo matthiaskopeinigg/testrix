@@ -46,7 +46,7 @@ export const HELP_WIKI_OVERVIEW_SECTIONS: readonly HelpWikiSection[] = [
     blocks: [
       {
         type: 'paragraph',
-        text: 'The main workspace shows one or more editor tabs: HTTP requests, environments, test flows, mock servers, and other resources you open from the sidebar.',
+        text: 'The main workspace shows one or more editor tabs: HTTP requests, environments, Database connections and queries, test flows, mock servers, and other resources you open from the sidebar.',
       },
       {
         type: 'list',
@@ -82,6 +82,7 @@ export const HELP_WIKI_OVERVIEW_SECTIONS: readonly HelpWikiSection[] = [
           'Collections — HTTP/WebSocket trees and collection management.',
           'Environments — environment definitions and variables.',
           'Testing — test suites, load tests, regression, mock server, capture, interceptor.',
+          'Database — connections, catalog browser, saved SQL/Redis queries, and table data.',
           'Development — built-in utilities (JWT, regex, OpenAPI, etc.).',
           'History — sent request log (footer rail).',
           'Help — this guide (footer rail).',
@@ -108,8 +109,8 @@ export const HELP_WIKI_OVERVIEW_SECTIONS: readonly HelpWikiSection[] = [
       {
         type: 'list',
         items: [
-          'Per profile: collections, environments, test suites, load tests, regressions, mock server, capture, interceptor, session/history.',
-          'Shared: settings.json (appearance, HTTP defaults, logging, databases list, keyboard bindings).',
+          'Per profile: collections, environments, test suites, load tests, regressions, mock server, capture, interceptor, saved Database queries, session/history.',
+          'Shared: settings.json (appearance, HTTP defaults, logging, Database connections, keyboard bindings).',
           'Config root defaults to Documents/Testrix on Windows/macOS; see Reference → Local-first & paths.',
         ],
       },

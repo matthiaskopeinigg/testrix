@@ -24,6 +24,10 @@ const programmaticLoaders: Record<
     import('@app/features/shell/testing/interceptor-sidebar-panel/interceptor-sidebar-panel.component').then(
       (m) => ({ default: m.InterceptorSidebarPanelComponent }),
     ),
+  monitors: () =>
+    import('@app/features/shell/testing/monitors-sidebar-panel/monitors-sidebar-panel.component').then(
+      (m) => ({ default: m.MonitorsSidebarPanelComponent }),
+    ),
 };
 
 const hubLoader = () =>
@@ -68,6 +72,7 @@ const PROGRAMMATIC_SUBPANELS: readonly Exclude<TestingSubpanelId, 'menu'>[] = [
   'mock-server',
   'capture',
   'interceptor',
+  'monitors',
 ];
 
 /**

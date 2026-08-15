@@ -2,6 +2,7 @@
   <input
     #nativeInput
     class="tx-suggest-input__control"
+    [class.tx-suggest-input__control--with-clear]="showClear()"
     [id]="effectiveId()"
     type="text"
     [value]="value()"
@@ -16,6 +17,19 @@
     (keydown)="handleKeydown($event)"
     (blur)="handleBlur()"
   />
+
+  @if (showClear()) {
+    <button
+      type="button"
+      class="tx-suggest-input__clear"
+      aria-label="Clear"
+      [disabled]="disabled()"
+      (mousedown)="$event.preventDefault()"
+      (click)="handleClear($event)"
+    >
+      <tx-icon name="close" [size]="14" aria-hidden="true" />
+    </button>
+  }
 
   @if (completionOpen()) {
     <div

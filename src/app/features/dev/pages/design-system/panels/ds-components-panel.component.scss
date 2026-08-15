@@ -234,6 +234,12 @@ input[type='url'] {
   }
 }
 
+.ds-data-grid-demo {
+  display: flex;
+  min-height: 220px;
+  max-height: 320px;
+}
+
 .ds-tree-demo {
   display: flex;
   flex-direction: column;

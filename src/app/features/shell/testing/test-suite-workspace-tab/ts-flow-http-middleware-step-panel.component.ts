@@ -7,7 +7,6 @@ import type { z } from 'zod';
 
 import { TxDropdownComponent } from '@app/shared/components/forms/tx-dropdown/tx-dropdown.component';
 import { TxFormFieldComponent } from '@app/shared/components/forms/tx-form-field/tx-form-field.component';
-import { TxIconComponent } from '@app/shared/components/forms/tx-icon/tx-icon.component';
 import { TxInputComponent } from '@app/shared/components/forms/tx-input/tx-input.component';
 import { TxVariableInputComponent } from '@app/shared/components/editors/tx-variable-input/tx-variable-input.component';
 
@@ -24,7 +23,6 @@ import {
     TxFormFieldComponent,
     TxInputComponent,
     TxDropdownComponent,
-    TxIconComponent,
     TxVariableInputComponent,
   ],
   templateUrl: './ts-flow-http-middleware-step-panel.component.html',

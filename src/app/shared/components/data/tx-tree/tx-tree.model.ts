@@ -142,6 +142,12 @@ export class TxTreeModel<TMeta = unknown> {
     targetId: string,
     position: TxTreeDropPosition,
   ): { readonly targetId: string; readonly position: TxTreeDropPosition } {
+    const remapped = this.applyConfiguredDropRemap(sourceId, targetId, position);
+    if (remapped) {
+      targetId = remapped.targetId;
+      position = remapped.position;
+    }
+
     if (targetId === sourceId) {
       return this.resolveSelfHitDrop(sourceId, position);
     }
@@ -176,6 +182,37 @@ export class TxTreeModel<TMeta = unknown> {
       return false;
     }
     return isEquivalentMove(sourceLoc, targetLoc, 'inside');
+  }
+
+  private applyConfiguredDropRemap(
+    sourceId: string,
+    targetId: string,
+    position: TxTreeDropPosition,
+  ): { readonly targetId: string; readonly position: TxTreeDropPosition } | null {
+    const remap = this.config.drop.remapDropTarget;
+    if (!remap) {
+      return null;
+    }
+
+    const sourceLoc = findLocation(this.nodes, sourceId);
+    const targetLoc = findLocation(this.nodes, targetId);
+    if (!sourceLoc || !targetLoc) {
+      return null;
+    }
+
+    const remapped = remap(
+      this.toDropContext(
+        sourceLoc,
+        targetLoc,
+        position,
+        resolveNextParentId(targetLoc, position),
+      ),
+    );
+    if (!remapped || (remapped.targetId === targetId && remapped.position === position)) {
+      return null;
+    }
+
+    return remapped;
   }
 
   private resolveSelfHitDrop(
@@ -403,7 +440,7 @@ export class TxTreeModel<TMeta = unknown> {
   ): void {
     const sorted = sortSiblings([...nodes], this.config.sort);
     sorted.forEach((node, index) => {
-      const hasChildren = !!node.children?.length;
+      const hasChildren = hasChildrenCapability(node);
       const expanded = hasChildren && this.expandedIds.has(node.id);
       out.push({
         id: node.id,
@@ -434,7 +471,16 @@ function hasChildrenCapability<TMeta>(node: TxTreeNode<TMeta>): boolean {
   if (node.kind === 'request' || node.kind === 'websocket') {
     return false;
   }
-  return !!node.children?.length || node.kind === 'folder' || node.kind === 'collection';
+  return (
+    !!node.children?.length ||
+    node.kind === 'folder' ||
+    node.kind === 'collection' ||
+    node.kind === 'connection' ||
+    node.kind === 'schema' ||
+    node.kind === 'group' ||
+    node.kind === 'table' ||
+    node.kind === 'view'
+  );
 }
 
 /**

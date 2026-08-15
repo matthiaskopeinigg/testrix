@@ -20,6 +20,7 @@ import {
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
     class: 'tx-inline-rename-input-host',
+    '[class.tx-inline-rename-input-host--cell]': "density() === 'cell'",
     '(click)': 'handleHostClick($event)',
     '(dblclick)': 'handleHostClick($event)',
     '(pointerdown)': 'handleHostPointerDown($event)',
@@ -30,6 +31,15 @@ export class TxInlineRenameInputComponent implements AfterViewInit {
 
   readonly value = input.required<string>();
   readonly ariaLabel = input('Rename');
+  /**
+   * `cell` fills a table cell without changing row height.
+   * Default keeps the tree-rename chrome.
+   */
+  readonly density = input<'default' | 'cell'>('default');
+  /** When true, committing an empty draft emits `committed` instead of `cancelled`. */
+  readonly allowEmpty = input(false);
+  /** When true, leading and trailing whitespace are removed on commit. */
+  readonly trimValue = input(true);
 
   readonly committed = output<string>();
   readonly cancelled = output<void>();
@@ -53,8 +63,11 @@ export class TxInlineRenameInputComponent implements AfterViewInit {
 
   /** Keeps the full value selected when the field is clicked (Explorer-style rename). */
   protected handleMouseDown(event: MouseEvent): void {
-    event.preventDefault();
     const input = event.target as HTMLInputElement;
+    if (this.density() === 'cell' && document.activeElement === input) {
+      return;
+    }
+    event.preventDefault();
     if (document.activeElement !== input) {
       input.focus({ preventScroll: true });
     }
@@ -88,12 +101,12 @@ export class TxInlineRenameInputComponent implements AfterViewInit {
   }
 
   private commit(): void {
-    const trimmed = this.draft().trim();
-    if (!trimmed) {
+    const next = this.trimValue() ? this.draft().trim() : this.draft();
+    if (!next && !this.allowEmpty()) {
       this.cancelled.emit();
       return;
     }
-    this.committed.emit(trimmed);
+    this.committed.emit(next);
   }
 
   private scheduleFocusAndSelectAll(): void {

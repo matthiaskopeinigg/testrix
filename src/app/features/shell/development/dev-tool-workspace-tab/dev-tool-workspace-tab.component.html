@@ -26,6 +26,18 @@
   @case ('openapi') {
     <app-openapi-dev-tool />
   }
+  @case ('hash') {
+    <app-hash-dev-tool />
+  }
+  @case ('jsonpath') {
+    <app-jsonpath-dev-tool />
+  }
+  @case ('cert-inspector') {
+    <app-cert-inspector-dev-tool />
+  }
+  @case ('request-diff') {
+    <app-request-diff-dev-tool />
+  }
   @default {
     <div class="dev-tool-unknown">
       <tx-banner variant="warning" title="Unknown tool">

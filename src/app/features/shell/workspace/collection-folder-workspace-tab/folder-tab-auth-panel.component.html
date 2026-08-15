@@ -137,14 +137,64 @@
         (environmentVariableClick)="environmentVariableClick.emit($event)"
       />
     </tx-form-field>
-    <tx-form-field label="Redirect URI" controlId="folder-auth-oauth-redirect">
-      <tx-variable-input
-        id="folder-auth-oauth-redirect"
-        [catalog]="catalog()"
-        [ngModel]="authConfig.redirectUri"
-        (ngModelChange)="patchOAuth2({ redirectUri: $event })"
-        (environmentVariableClick)="environmentVariableClick.emit($event)"
+    @if (authConfig.grantType === 'authorization_code') {
+      <tx-form-field label="Redirect URI" controlId="folder-auth-oauth-redirect">
+        <tx-variable-input
+          id="folder-auth-oauth-redirect"
+          [catalog]="catalog()"
+          [ngModel]="authConfig.redirectUri"
+          (ngModelChange)="patchOAuth2({ redirectUri: $event })"
+          (environmentVariableClick)="environmentVariableClick.emit($event)"
+          placeholder="http://127.0.0.1:9876/callback"
+        />
+      </tx-form-field>
+      <tx-toggle
+        controlId="folder-auth-oauth-pkce"
+        label="Use PKCE (S256)"
+        [ngModel]="authConfig.usePkce !== false"
+        (ngModelChange)="patchOAuth2({ usePkce: $event })"
       />
-    </tx-form-field>
+    }
+    @if (authConfig.grantType === 'password') {
+      <tx-form-field label="Username" controlId="folder-auth-oauth-user">
+        <tx-variable-input
+          id="folder-auth-oauth-user"
+          [catalog]="catalog()"
+          [ngModel]="authConfig.username"
+          (ngModelChange)="patchOAuth2({ username: $event })"
+          (environmentVariableClick)="environmentVariableClick.emit($event)"
+        />
+      </tx-form-field>
+      <tx-form-field label="Password" controlId="folder-auth-oauth-password">
+        <tx-variable-input
+          id="folder-auth-oauth-password"
+          [catalog]="catalog()"
+          [ngModel]="authConfig.password"
+          (ngModelChange)="patchOAuth2({ password: $event })"
+          (environmentVariableClick)="environmentVariableClick.emit($event)"
+          [maskValue]="true"
+        />
+      </tx-form-field>
+    }
+    <div class="folder-auth-panel__token">
+      <p class="folder-auth-panel__hint">{{ tokenStatusLabel() }}</p>
+      <div class="folder-auth-panel__token-actions">
+        <tx-button
+          variant="primary"
+          [loading]="tokenBusy()"
+          [disabled]="!ownerId()"
+          (pressed)="handleGetToken()"
+        >
+          Get Token
+        </tx-button>
+        <tx-button
+          variant="secondary"
+          [disabled]="tokenBusy() || !ownerId()"
+          (pressed)="handleClearToken()"
+        >
+          Clear
+        </tx-button>
+      </div>
+    </div>
   }
 </div>

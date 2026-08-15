@@ -83,11 +83,6 @@ export class TsFlowStepEditorComponent {
   readonly failureDismissed = output<void>();
   readonly failureReopened = output<void>();
 
-  protected readonly stepTypeLabel = computed(() => {
-    const step = this.step();
-    return step ? FLOW_STEP_GUIDED_TITLES[step.stepType] : '';
-  });
-
   protected readonly stepTypeIcon = computed((): TxIconName => {
     const step = this.step();
     return step ? FLOW_STEP_ADD_ICONS[step.stepType] : 'layers';

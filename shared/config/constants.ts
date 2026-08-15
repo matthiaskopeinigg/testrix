@@ -21,6 +21,8 @@ export const REGRESSIONS_FILE_NAME = 'regressions.json';
 export const MOCK_SERVER_FILE_NAME = 'mock.json';
 export const CAPTURE_FILE_NAME = 'capture.json';
 export const INTERCEPTOR_FILE_NAME = 'interceptor.json';
+export const QUERIES_FILE_NAME = 'queries.json';
+export const MONITORS_FILE_NAME = 'monitors.json';
 
 /** Default `ng serve` port — avoids clashing with other Angular apps on 4200. */
 export const TESTRIX_DEV_SERVER_PORT = 4720;

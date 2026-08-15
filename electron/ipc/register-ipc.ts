@@ -7,6 +7,7 @@ import { registerLoggingHandlers } from './handlers/logging.handler';
 import { registerUpdaterHandlers } from './handlers/updater.handler';
 import { registerShellHandlers } from './handlers/shell.handler';
 import { registerHttpHandlers } from './handlers/http.handler';
+import { registerOAuthHandlers } from './handlers/oauth.handler';
 import { registerCookieHandlers } from './handlers/cookie.handler';
 import { registerWindowControlHandlers } from './handlers/window-control.handler';
 import { registerTeamHandlers } from './handlers/team.handler';
@@ -43,10 +44,14 @@ export function registerAllIpcHandlers(
   registerUpdaterHandlers(ipc);
   registerShellHandlers(ipc);
   registerHttpHandlers(ipc);
+  registerOAuthHandlers(ipc, {
+    getProfileDir: configDeps.getConfigDir,
+    getMainWindow,
+  });
   registerCookieHandlers(ipc);
   registerWindowControlHandlers(ipc);
   registerE2eIpcHandlers();
-  registerDbHandlers(ipc);
-  registerTestingHandlers(ipc, { files: configDeps.files });
+  registerDbHandlers(ipc, { files: configDeps.files });
+  registerTestingHandlers(ipc, { files: configDeps.files, getMainWindow });
 }
 

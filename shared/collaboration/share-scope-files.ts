@@ -7,12 +7,15 @@ import {
   INTERCEPTOR_FILE_NAME,
   LOAD_TESTS_FILE_NAME,
   MOCK_SERVER_FILE_NAME,
+  MONITORS_FILE_NAME,
   PROFILES_FILE_NAME,
+  QUERIES_FILE_NAME,
   REGRESSIONS_FILE_NAME,
   SESSION_FILE_NAME,
   SETTINGS_FILE_NAME,
   TEST_SUITES_FILE_NAME,
 } from '../config/constants';
+import { VAULT_FILE_NAME } from '../config/environment-secret-vault';
 
 import type { TeamShareScope } from './team-workspace.schema';
 
@@ -21,6 +24,9 @@ export const TEAM_ALWAYS_EXCLUDED_FILES = [
   SESSION_FILE_NAME,
   HISTORY_FILE_NAME,
   COOKIE_JAR_FILE_NAME,
+  VAULT_FILE_NAME,
+  QUERIES_FILE_NAME,
+  MONITORS_FILE_NAME,
 ] as const;
 
 /** Map share-scope toggles to profile workspace file names. */
@@ -65,6 +71,9 @@ export const TEAM_GITIGNORE_LINES = [
   SESSION_FILE_NAME,
   HISTORY_FILE_NAME,
   COOKIE_JAR_FILE_NAME,
+  VAULT_FILE_NAME,
+  QUERIES_FILE_NAME,
+  MONITORS_FILE_NAME,
   'testrix.team.json',
   '.testrix/',
 ] as const;

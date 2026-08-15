@@ -6,7 +6,9 @@ import {
   interceptorFileSchema,
   loadTestsFileSchema,
   mockServerFileSchema,
+  monitorsFileSchema,
   parseLoadTestIpcId,
+  parseMonitorsFile,
   regressionsFileSchema,
   testSuitesFileSchema,
 } from '../../../shared/testing';
@@ -14,6 +16,7 @@ import { ErrorCodes, TestrixError } from '../../../shared/errors';
 
 import type { ConfigFileService } from '../../services/config/config-file.service';
 import { TestingRuntimeService } from '../../services/testing/testing-runtime.service';
+import { getMonitorScheduler } from '../../services/testing/monitor-scheduler.service';
 import { E2eChannels } from '../channels/e2e.channels';
 import { TestingChannels } from '../channels/testing.channels';
 import { wrapInvokeHandler } from '../wrap-ipc-handler';
@@ -64,6 +67,8 @@ export function registerTestingHandlers(ipc: IpcMainBinder, deps: TestingHandler
   if (deps.getMainWindow) {
     runtime.setMainWindowProvider(deps.getMainWindow);
   }
+  const scheduler = getMonitorScheduler(deps.files, runtime, () => deps.getMainWindow?.() ?? null);
+  scheduler.start();
 
   ipc.handle(
     TestingChannels.getTestSuites,
@@ -281,5 +286,28 @@ export function registerTestingHandlers(ipc: IpcMainBinder, deps: TestingHandler
   ipc.handle(
     TestingChannels.regressionCancel,
     wrapInvokeHandler(TestingChannels.regressionCancel, async () => runtime.regressionCancel()),
+  );
+  ipc.handle(
+    TestingChannels.getMonitors,
+    wrapInvokeHandler(TestingChannels.getMonitors, async () => deps.files.readMonitors()),
+  );
+  ipc.handle(
+    TestingChannels.setMonitors,
+    wrapInvokeHandler(TestingChannels.setMonitors, async (_e, data: unknown) => {
+      const parsed = monitorsFileSchema.safeParse(data);
+      if (!parsed.success) {
+        throw new TestrixError(ErrorCodes.CONFIG_VALIDATION_FAILED, 'Invalid monitors payload.');
+      }
+      return deps.files.saveMonitors(parseMonitorsFile(parsed.data));
+    }),
+  );
+  ipc.handle(
+    TestingChannels.monitorRunNow,
+    wrapInvokeHandler(TestingChannels.monitorRunNow, async (_e, monitorId: unknown) => {
+      if (typeof monitorId !== 'string' || !monitorId.trim()) {
+        throw new TestrixError(ErrorCodes.CONFIG_VALIDATION_FAILED, 'Monitor id is required.');
+      }
+      return scheduler.runNow(monitorId.trim());
+    }),
   );
 }

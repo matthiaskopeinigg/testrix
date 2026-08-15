@@ -1,0 +1,75 @@
+@use '../testing-sidebar-shared' as shared;
+
+:host {
+  @include shared.testing-sidebar-host;
+}
+
+.monitors-sidebar-panel {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  gap: 0.75rem;
+  padding: 0.6rem 10px 0.8rem;
+}
+
+.monitors-sidebar-panel__form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--tx-border-0) 48%, transparent);
+}
+
+.monitors-sidebar-panel__hint {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--tx-text-2);
+}
+
+.monitors-sidebar-panel__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  overflow: auto;
+  min-height: 0;
+}
+
+.monitors-sidebar-panel__item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.55rem;
+  border: 1px solid color-mix(in srgb, var(--tx-border-0) 55%, transparent);
+  border-radius: var(--tx-radius-sm, 8px);
+  background: color-mix(in srgb, var(--tx-surface-1) 70%, transparent);
+}
+
+.monitors-sidebar-panel__item-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+}
+
+.monitors-sidebar-panel__item-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.monitors-sidebar-panel__log {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-size: 0.75rem;
+  color: var(--tx-text-1);
+
+  .is-fail {
+    color: var(--tx-danger, var(--tx-text-0));
+  }
+}

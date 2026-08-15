@@ -1,7 +1,17 @@
 @use '../../workspace/request-workspace-tab/request-tab-panels';
 
 .ts-flow-step-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
   max-width: 56rem;
+}
+
+.ts-flow-step-panel__hint {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--tx-text-2);
 }
 
 .ts-flow-step-panel__hero {

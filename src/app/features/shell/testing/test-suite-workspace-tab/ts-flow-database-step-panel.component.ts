@@ -8,19 +8,33 @@ import {
   databaseQueryEditorPlaceholder,
 } from '@shared/database/database-query-editor';
 import type { DynamicVariableCatalogItem } from '@shared/dynamic-variables';
+import {
+  createDefaultDatabaseStepConfig,
+  resolveDatabaseStepQuerySource,
+  type DatabaseStepConfig,
+  type FlowDatabaseStepQuerySource,
+} from '@shared/testing';
 
 import { ConfigService } from '@app/core/config/config.service';
+import { DatabaseQueriesService } from '@app/core/database/database-queries.service';
+import { TxBannerComponent } from '@app/shared/components/feedback/tx-banner/tx-banner.component';
 import { TxCodeEditorComponent } from '@app/shared/components/editors/tx-code-editor/tx-code-editor.component';
 import type { TxCodeEditorCompletionItem } from '@app/shared/components/editors/tx-code-editor/tx-code-editor-completion';
 import { TxDropdownComponent } from '@app/shared/components/forms/tx-dropdown/tx-dropdown.component';
 import { TxFormFieldComponent } from '@app/shared/components/forms/tx-form-field/tx-form-field.component';
 import { TxInputComponent } from '@app/shared/components/forms/tx-input/tx-input.component';
 
+import {
+  FLOW_DATABASE_QUERY_SOURCE_OPTIONS,
+  savedQueryDropdownOptions,
+} from './flow-database-query-source';
+
 @Component({
   selector: 'app-ts-flow-database-step-panel',
   standalone: true,
   imports: [
     FormsModule,
+    TxBannerComponent,
     TxCodeEditorComponent,
     TxDropdownComponent,
     TxFormFieldComponent,
@@ -38,6 +52,11 @@ export class TsFlowDatabaseStepPanelComponent {
   readonly configChange = output<Record<string, unknown>>();
 
   private readonly configService = inject(ConfigService);
+  private readonly queries = inject(DatabaseQueriesService);
+
+  protected readonly querySourceOptions = FLOW_DATABASE_QUERY_SOURCE_OPTIONS;
+
+  protected readonly querySource = computed(() => resolveDatabaseStepQuerySource(this.cfg()));
 
   protected readonly connectionOptions = computed(() => {
     const connections = this.configService.settings()?.databases?.connections ?? [];
@@ -48,6 +67,26 @@ export class TsFlowDatabaseStepPanelComponent {
   });
 
   protected readonly hasConnections = computed(() => this.connectionOptions().length > 0);
+
+  protected readonly savedQueryOptions = computed(() => savedQueryDropdownOptions(this.queries.nodes()));
+
+  protected readonly hasSavedQueries = computed(() => this.savedQueryOptions().length > 0);
+
+  protected readonly selectedSavedQuery = computed(() => {
+    const savedQueryId = this.cfg().savedQueryId;
+    if (!savedQueryId) {
+      return null;
+    }
+    return this.queries.find(savedQueryId);
+  });
+
+  protected readonly needsSavedQuery = computed(
+    () => this.querySource() === 'saved' && !this.cfg().savedQueryId,
+  );
+
+  protected readonly missingSavedQuery = computed(
+    () => this.querySource() === 'saved' && Boolean(this.cfg().savedQueryId) && !this.selectedSavedQuery(),
+  );
 
   protected readonly selectedConnection = computed(() => {
     const connectionId = this.cfg().connectionId;
@@ -76,15 +115,43 @@ export class TsFlowDatabaseStepPanelComponent {
     databaseQueryEditorCompletions(this.selectedConnection()?.type),
   );
 
-  protected cfg(): { connectionId: string; query: string; cacheAs?: string } {
-    return (this.config() ?? { connectionId: '', query: '' }) as {
-      connectionId: string;
-      query: string;
-      cacheAs?: string;
-    };
+  protected readonly savedQueryPreview = computed(() => this.selectedSavedQuery()?.query ?? '');
+
+  constructor() {
+    void this.queries.hydrate();
   }
 
-  protected patch(patch: Record<string, unknown>): void {
+  protected cfg(): DatabaseStepConfig {
+    return (this.config() ?? createDefaultDatabaseStepConfig()) as DatabaseStepConfig;
+  }
+
+  protected patch(patch: Partial<DatabaseStepConfig>): void {
     this.configChange.emit({ ...this.cfg(), ...patch });
+  }
+
+  protected handleQuerySourceChange(source: FlowDatabaseStepQuerySource): void {
+    if (source === 'manual') {
+      this.patch({
+        querySource: 'manual',
+        savedQueryId: undefined,
+      });
+      return;
+    }
+    this.patch({
+      querySource: 'saved',
+    });
+  }
+
+  protected handleSavedQueryChange(savedQueryId: string): void {
+    const id = savedQueryId.trim();
+    if (!id) {
+      this.patch({ savedQueryId: undefined });
+      return;
+    }
+    const saved = this.queries.find(id);
+    this.patch({
+      savedQueryId: id,
+      connectionId: saved?.connectionId || this.cfg().connectionId,
+    });
   }
 }

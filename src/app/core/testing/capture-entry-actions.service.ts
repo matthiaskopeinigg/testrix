@@ -7,12 +7,19 @@ import {
   captureEntryRequestLabel,
   captureFlowNameFromEntry,
   coerceCaptureHttpMethod,
+  generateCollectionRequestsFromCapture,
+  generateMockEndpointsFromCapture,
+  generateOpenApiFromCapture,
   type CaptureLogEntry,
 } from '@shared/testing';
-import { parseTestSuiteTabResourceId, testSuiteTabResourceId } from '@shared/testing';
+import { parseTestSuiteTabResourceId, mockServerTabResourceId, testSuiteTabResourceId } from '@shared/testing';
+import { importOpenApiToMockEndpoints } from '@shared/import-export';
 
 import { CollectionsService } from '@app/core/collections/collections.service';
+import { DevelopmentSessionService } from '@app/core/development/development-session.service';
 import { ErrorNotificationService } from '@app/core/errors/error-notification.service';
+import { TxNotificationService } from '@app/core/notifications/tx-notification.service';
+import { MockServerService } from '@app/core/testing/mock-server.service';
 import { TestSuiteService } from '@app/core/testing/test-suite.service';
 import { WorkspaceEditorService } from '@app/core/workspace/workspace-editor.service';
 
@@ -23,8 +30,11 @@ import { WorkspaceEditorService } from '@app/core/workspace/workspace-editor.ser
 export class CaptureEntryActionsService {
   private readonly collections = inject(CollectionsService);
   private readonly testSuite = inject(TestSuiteService);
+  private readonly mockServer = inject(MockServerService);
+  private readonly developmentSession = inject(DevelopmentSessionService);
   private readonly workspaceEditor = inject(WorkspaceEditorService);
   private readonly notifier = inject(ErrorNotificationService);
+  private readonly notifications = inject(TxNotificationService);
 
   /**
    * Adds a new collection request from a capture entry and opens its workspace tab.
@@ -98,6 +108,97 @@ export class CaptureEntryActionsService {
       kind: 'test-suite',
     });
     return flow.id;
+  }
+
+  /**
+   * Creates a collection folder of unique method+path requests from selected capture rows.
+   */
+  generateCollectionFromCapture(entries: readonly CaptureLogEntry[]): string | null {
+    const drafts = generateCollectionRequestsFromCapture(entries);
+    if (drafts.length === 0) {
+      this.notifier.reportUnknown(new Error('Select captured requests to generate a collection.'));
+      return null;
+    }
+    const folderId = this.collections.createFolder(null, 'From capture');
+    if (!folderId) {
+      this.notifier.reportUnknown(new Error('Could not create a collection folder from capture.'));
+      return null;
+    }
+    for (const draft of drafts) {
+      const requestId = this.collections.createRequest(folderId, draft.label);
+      if (!requestId) {
+        continue;
+      }
+      this.collections.updateRequest(requestId, {
+        method: draft.method,
+        url: draft.url,
+        label: draft.label,
+      });
+      this.collections.patchRequestSettings(requestId, draft.settings);
+    }
+    this.workspaceEditor.openResource({ resourceId: folderId, kind: 'folder' });
+    this.notifications.showSuccess(`Created ${drafts.length} request${drafts.length === 1 ? '' : 's'} from capture.`);
+    return folderId;
+  }
+
+  /**
+   * Opens the OpenAPI development tool with a spec generated from capture rows.
+   */
+  generateOpenApiFromCapture(entries: readonly CaptureLogEntry[]): boolean {
+    if (entries.length === 0) {
+      this.notifier.reportUnknown(new Error('Select captured requests to generate OpenAPI.'));
+      return false;
+    }
+    const content = generateOpenApiFromCapture(entries);
+    this.developmentSession.patchToolState('openapi', {
+      content,
+      format: 'json',
+      section: 'editor',
+    });
+    this.workspaceEditor.openResource({ resourceId: 'openapi', kind: 'dev-tool' });
+    this.notifications.showSuccess('Opened generated OpenAPI spec.');
+    return true;
+  }
+
+  /**
+   * Creates mock endpoints from captured traffic.
+   */
+  async generateMockEndpointsFromCapture(entries: readonly CaptureLogEntry[]): Promise<number> {
+    const endpoints = generateMockEndpointsFromCapture(entries);
+    if (endpoints.length === 0) {
+      this.notifier.reportUnknown(new Error('Select captured requests to generate mock endpoints.'));
+      return 0;
+    }
+    await this.mockServer.hydrate();
+    this.mockServer.appendEndpoints(endpoints);
+    const first = endpoints[0];
+    if (first) {
+      this.workspaceEditor.openResource({
+        resourceId: mockServerTabResourceId(first.id),
+        kind: 'mock-server',
+      });
+    }
+    this.notifications.showSuccess(
+      `Created ${endpoints.length} mock endpoint${endpoints.length === 1 ? '' : 's'} from capture.`,
+    );
+    return endpoints.length;
+  }
+
+  /**
+   * Creates mock endpoints from an OpenAPI document (response examples).
+   */
+  async generateMockEndpointsFromOpenApi(raw: string): Promise<number> {
+    const endpoints = importOpenApiToMockEndpoints(raw);
+    if (endpoints.length === 0) {
+      this.notifier.reportUnknown(new Error('No OpenAPI operations found to mock.'));
+      return 0;
+    }
+    await this.mockServer.hydrate();
+    this.mockServer.appendEndpoints(endpoints);
+    this.notifications.showSuccess(
+      `Created ${endpoints.length} mock endpoint${endpoints.length === 1 ? '' : 's'} from OpenAPI.`,
+    );
+    return endpoints.length;
   }
 
   /** When a suite folder tab is active, new flows are created inside that folder. */

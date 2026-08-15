@@ -185,7 +185,11 @@ export class TestingRuntimeService {
     return this.regressionRunner.cancel();
   }
 
-  async e2eExecuteFlow(flowId: string, sender?: WebContents): Promise<TestSuiteFlowRunResult> {
+  async e2eExecuteFlow(
+    flowId: string,
+    sender?: WebContents,
+    options?: import('./test-suite-flow-executor.service').TestSuiteFlowExecuteOptions,
+  ): Promise<TestSuiteFlowRunResult> {
     this.manualInputCoordinator.bindSender(sender);
     try {
       return await this.flowExecutor.executeFlow(
@@ -195,6 +199,7 @@ export class TestingRuntimeService {
           sender?.send(TestingChannels.flowRunProgress, event);
         },
         {
+          ...options,
           requestManualInput: (request) => this.manualInputCoordinator.prompt(request),
         },
       );

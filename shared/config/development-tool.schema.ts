@@ -11,6 +11,10 @@ export const DEVELOPMENT_TOOL_IDS = [
   'url',
   'bcrypt',
   'openapi',
+  'hash',
+  'jsonpath',
+  'cert-inspector',
+  'request-diff',
 ] as const;
 
 export const developmentToolIdSchema = z.enum(DEVELOPMENT_TOOL_IDS);

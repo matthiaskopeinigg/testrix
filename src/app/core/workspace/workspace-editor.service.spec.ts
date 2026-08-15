@@ -108,6 +108,32 @@ describe('WorkspaceEditorService', () => {
     expect(tabs[0]?.icon).toBe('development');
   });
 
+  it('moves the active tab when splitting the focused pane', () => {
+    service.openResource({ resourceId: 'req-1', kind: 'request' });
+    const tabId = service.tabsForGroup('main')[0]!.id;
+
+    service.splitFocusedPane('right');
+
+    expect(service.hasMultiplePanes()).toBe(true);
+    expect(service.tabsForGroup('main')).toHaveLength(0);
+    const focused = service.focusedGroupId();
+    expect(service.tabsForGroup(focused).map((tab) => tab.id)).toEqual([tabId]);
+    expect(service.tabsForGroup(focused)[0]?.resourceId).toBe('req-1');
+  });
+
+  it('keeps an empty pane after split when another pane is focused', () => {
+    service.openResource({ resourceId: 'req-1', kind: 'request' });
+    service.splitFocusedPane('right');
+
+    const focused = service.focusedGroupId();
+    service.focusGroup('main');
+
+    expect(service.hasMultiplePanes()).toBe(true);
+    expect(service.tabsForGroup('main')).toHaveLength(0);
+    expect(service.tabsForGroup(focused)).toHaveLength(1);
+    expect(service.focusedGroupId()).toBe('main');
+  });
+
   it('splits pane and moves tab when dropped on an edge zone', () => {
     service.openResource({ resourceId: 'req-1', kind: 'request' });
     const tabId = service.tabsForGroup('main')[0]!.id;

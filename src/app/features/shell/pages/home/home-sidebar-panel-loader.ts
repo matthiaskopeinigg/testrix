@@ -4,6 +4,7 @@ export type HomeSidebarPanelId =
   | 'collections'
   | 'environments'
   | 'testing'
+  | 'data'
   | 'development'
   | 'history'
   | 'debug';
@@ -26,6 +27,10 @@ const panelLoaders: Record<
     import('@app/features/shell/testing/testing-sidebar-panel/testing-sidebar-panel.component').then(
       (m) => ({ default: m.TestingSidebarPanelComponent }),
     ),
+  data: () =>
+    import('@app/features/shell/database/database-sidebar-panel.component').then((m) => ({
+      default: m.DatabaseSidebarPanelComponent,
+    })),
   development: () =>
     import('@app/features/shell/development/development-sidebar-panel/development-sidebar-panel.component').then(
       (m) => ({ default: m.DevelopmentSidebarPanelComponent }),
@@ -72,6 +77,7 @@ export function isHomeSidebarPanelId(id: string | undefined): id is HomeSidebarP
     id === 'collections' ||
     id === 'environments' ||
     id === 'testing' ||
+    id === 'data' ||
     id === 'development' ||
     id === 'history' ||
     id === 'debug'

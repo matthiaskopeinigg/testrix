@@ -288,11 +288,11 @@ export const HELP_WIKI_SETTINGS_SECTIONS: readonly HelpWikiSection[] = [
     label: 'Databases',
     icon: 'database',
     title: 'Settings — Databases',
-    description: 'Saved database connections.',
+    description: 'Connections live in the Database sidebar, not Settings.',
     blocks: [
       {
         type: 'paragraph',
-        text: 'Define SQLite, PostgreSQL, MySQL, Redis, and SQL Server connections used by test suite DATABASE steps and database tools.',
+        text: 'There is no connection editor in Settings. Open the Database sidebar to add PostgreSQL, MySQL, SQL Server, SQLite, and Redis connections, organize them in folders, and browse catalogs. See Help → Database for the sidebar, saved queries, and table data.',
       },
     ],
   }),
@@ -306,7 +306,7 @@ export const HELP_WIKI_SETTINGS_SECTIONS: readonly HelpWikiSection[] = [
     blocks: [
       {
         type: 'paragraph',
-        text: 'Create/rename/delete profiles, change config root directory, import/export workspace data (with format auto-detect and selection), view per-file schema versions, and reset session data.',
+        text: 'Create/rename/delete profiles, change config root directory, import/export workspace data (with format auto-detect and selection, including Database connections and saved queries), view per-file schema versions, and reset session data.',
       },
     ],
   }),

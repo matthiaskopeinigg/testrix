@@ -1,0 +1,65 @@
+<div class="monitors-sidebar-panel">
+  <section class="monitors-sidebar-panel__form" aria-label="Create monitor">
+    <tx-form-field label="Name">
+      <tx-input [ngModel]="name()" (ngModelChange)="name.set($event)" />
+    </tx-form-field>
+    <tx-form-field label="Cron">
+      <tx-input [ngModel]="cron()" (ngModelChange)="cron.set($event)" />
+    </tx-form-field>
+    <p class="monitors-sidebar-panel__hint">{{ cronDescription() }}</p>
+    <tx-form-field label="Target">
+      <tx-dropdown
+        [options]="kindOptions"
+        [ngModel]="targetKind()"
+        (ngModelChange)="handleKindChange($event)"
+      />
+    </tx-form-field>
+    <tx-form-field label="Item">
+      <tx-dropdown
+        [options]="targetOptions()"
+        [ngModel]="targetId()"
+        (ngModelChange)="targetId.set($event)"
+      />
+    </tx-form-field>
+    <tx-form-field label="Environment">
+      <tx-dropdown
+        [options]="environmentOptions()"
+        [ngModel]="environmentDropdown()"
+        (ngModelChange)="environmentDropdown.set($event)"
+      />
+    </tx-form-field>
+    <tx-button [disabled]="!targetId()" (pressed)="handleCreate()">Add monitor</tx-button>
+  </section>
+
+  <ul class="monitors-sidebar-panel__list" aria-label="Monitors">
+    @for (monitor of monitors(); track monitor.id) {
+      <li class="monitors-sidebar-panel__item">
+        <div class="monitors-sidebar-panel__item-head">
+          <strong>{{ monitor.name }}</strong>
+          <tx-tag>{{ monitor.targetKind }}</tx-tag>
+        </div>
+        <p class="monitors-sidebar-panel__hint">{{ cronLabel(monitor.cron) }}</p>
+        <div class="monitors-sidebar-panel__item-actions">
+          <tx-toggle
+            label="Enabled"
+            [ngModel]="monitor.enabled"
+            (ngModelChange)="handleToggle(monitor.id, $event)"
+          />
+          <tx-button variant="secondary" (pressed)="handleRunNow(monitor.id)">Run now</tx-button>
+          <tx-button variant="danger" (pressed)="handleDelete(monitor.id)">Delete</tx-button>
+        </div>
+        <ul class="monitors-sidebar-panel__log">
+          @for (row of resultsFor(monitor.id); track row.id) {
+            <li [class.is-fail]="!row.ok">
+              {{ row.ok ? 'Pass' : 'Fail' }} · {{ row.message }}
+            </li>
+          } @empty {
+            <li class="monitors-sidebar-panel__hint">No runs yet. Monitors fire while Testrix is open.</li>
+          }
+        </ul>
+      </li>
+    } @empty {
+      <li class="monitors-sidebar-panel__hint">No monitors yet. They run on this machine while the app is open.</li>
+    }
+  </ul>
+</div>

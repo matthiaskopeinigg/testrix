@@ -25,6 +25,6 @@ describe('request-tab-overview-summary', () => {
   it('formats auth labels', () => {
     expect(formatRequestAuthLabel({ type: 'inherit' })).toBe('Inherit from folder');
     expect(formatRequestAuthLabel({ type: 'bearer', token: '' })).toBe('Bearer token');
-    expect(formatRequestAuthLabel({ type: 'oauth2', grantType: 'client_credentials', authUrl: '', tokenUrl: '', clientId: '', clientSecret: '', scope: '', redirectUri: '' })).toBe('OAuth 2.0');
+    expect(formatRequestAuthLabel({ type: 'oauth2', grantType: 'client_credentials', authUrl: '', tokenUrl: '', clientId: '', clientSecret: '', scope: '', redirectUri: '', usePkce: false, tokenType: 'Bearer', username: '', password: '' })).toBe('OAuth 2.0');
   });
 });

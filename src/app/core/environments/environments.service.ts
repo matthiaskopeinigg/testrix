@@ -27,6 +27,24 @@ function newId(): string {
   return globalThis.crypto?.randomUUID?.() ?? `env-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
+function findVariableNodeByKey(
+  nodes: readonly EnvironmentTreeNode[],
+  key: string,
+): EnvironmentTreeNode | null {
+  for (const node of nodes) {
+    if (node.data?.kind === 'variable' && node.data.key === key) {
+      return node;
+    }
+    if (node.children?.length) {
+      const nested = findVariableNodeByKey(node.children, key);
+      if (nested) {
+        return nested;
+      }
+    }
+  }
+  return null;
+}
+
 @Injectable({ providedIn: 'root' })
 export class EnvironmentsService {
   private readonly electron = inject(ElectronService);
@@ -229,9 +247,39 @@ export class EnvironmentsService {
     return this.saveScopeNodes(environmentId, next);
   }
 
+  /**
+   * Creates or updates a root-scope variable by key in the given environment.
+   *
+   * @returns Whether the value was written.
+   */
+  upsertVariableByKey(environmentId: string, key: string, value: string): boolean {
+    const trimmed = key.trim();
+    if (!trimmed) {
+      return false;
+    }
+    const scope = this.scopeTreeNodes(environmentId);
+    if (!scope) {
+      return false;
+    }
+    const existing = findVariableNodeByKey(scope, trimmed);
+    if (existing) {
+      return this.updateVariable(existing.id, { value }, true);
+    }
+    const createdId = this.createScopeVariable(environmentId, null, trimmed);
+    if (!createdId) {
+      return false;
+    }
+    return this.updateVariable(createdId, { value }, true);
+  }
+
   updateVariable(
     id: string,
-    patch: { readonly key?: string; readonly value?: string; readonly description?: string },
+    patch: {
+      readonly key?: string;
+      readonly value?: string;
+      readonly description?: string;
+      readonly secret?: boolean;
+    },
     immediate = false,
   ): boolean {
     const environmentId = this.findEnvironmentIdContainingNode(id);

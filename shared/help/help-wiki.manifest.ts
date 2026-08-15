@@ -5,6 +5,11 @@ export const HELP_WIKI_SECTION_IDS = [
   'workspace-tabs',
   'sidebar-navigation',
   'profiles-data',
+  // Database
+  'database-workspace',
+  'database-connections',
+  'database-queries',
+  'database-table-data',
   // Collections
   'collections-tree',
   'http-requests',
@@ -31,6 +36,7 @@ export const HELP_WIKI_SECTION_IDS = [
   'mock-server',
   'capture',
   'interceptor',
+  'monitors',
   // Development tools
   'dev-uuid-generator',
   'dev-code-editor',
@@ -41,6 +47,10 @@ export const HELP_WIKI_SECTION_IDS = [
   'dev-url',
   'dev-bcrypt',
   'dev-openapi',
+  'dev-hash',
+  'dev-jsonpath',
+  'dev-cert-inspector',
+  'dev-request-diff',
   // History
   'history',
   // Teams

@@ -88,6 +88,18 @@ export * from './components/forms/tx-slider/tx-slider.component';
 
 export * from './components/forms/tx-divider/tx-divider.component';
 
+export * from './components/data/tx-data-grid/tx-data-grid.component';
+export {
+  TX_DATA_GRID_DEMO_COLUMNS,
+  TX_DATA_GRID_DEMO_ROWS,
+} from './components/data/tx-data-grid/tx-data-grid.types';
+export type {
+  TxDataGridCell,
+  TxDataGridCopyEvent,
+  TxDataGridExportEvent,
+  TxDataGridExportScope,
+} from './components/data/tx-data-grid/tx-data-grid.types';
+
 export * from './components/data/tx-tree/tx-tree.component';
 export * from './components/data/tx-tree/tx-tree-node-template.directive';
 export { mergeTxTreeConfig, type TxTreeConfigPartial } from './components/data/tx-tree/tx-tree.config';

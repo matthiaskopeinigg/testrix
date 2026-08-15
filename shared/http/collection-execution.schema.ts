@@ -27,6 +27,13 @@ export const collectionExecutionInputSchema = z.object({
   appVersion: z.string(),
   runScope: collectionRunScopeSchema.optional(),
   environmentVariableKeys: environmentVariableKeyModeSchema.optional(),
+  /**
+   * When set, replaces request/folder environment inheritance.
+   * Empty string forces no environment; a profile id overrides.
+   */
+  environmentIdOverride: z.string().nullable().optional(),
+  /** Runtime OAuth access token (never persisted on the collection). */
+  oauthAccessToken: z.string().optional(),
 });
 
 export type CollectionExecutionInput = z.infer<typeof collectionExecutionInputSchema>;

@@ -90,10 +90,10 @@ export function buildOutgoingRequest(input: CollectionExecutionInput): BuildOutg
 
   const { request, ancestorFolders } = loc;
   const settings = request.settings;
-  const environmentId = resolveCollectionRequestEnvironmentId(
-    settings.environmentId,
-    ancestorFolders,
-  );
+  const environmentId =
+    input.environmentIdOverride !== undefined && input.environmentIdOverride !== null
+      ? input.environmentIdOverride.trim() || null
+      : resolveCollectionRequestEnvironmentId(settings.environmentId, ancestorFolders);
   const environment = getEnvironmentDefinition(
     input.environments.environments,
     environmentId,
@@ -127,7 +127,7 @@ export function buildOutgoingRequest(input: CollectionExecutionInput): BuildOutg
 
   const authResolved = resolveCollectionRequestAuth(settings.auth, ancestorFolders);
   const authForSend = resolveCollectionFolderAuthValues(authResolved.auth, resolveText);
-  url = applyCollectionRequestAuth(authForSend, headers, url);
+  url = applyCollectionRequestAuth(authForSend, headers, url, input.oauthAccessToken);
 
   url = normalizeOutgoingRequestUrl(url, {
     defaultScheme: input.http.request.defaultUrlScheme,

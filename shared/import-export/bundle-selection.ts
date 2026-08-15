@@ -1,11 +1,21 @@
 import type { CollectionNode } from '../config/collections.schema';
+import {
+  isDatabaseConnectionFolder,
+  normalizeDatabaseSettings,
+  type DatabaseConnectionTreeItem,
+} from '../config/database-settings.schema';
 import type { EnvironmentDefinition, EnvironmentScopeNode } from '../config/environments.schema';
 import type { SettingsFile } from '../config/settings.schema';
+import {
+  isSavedQueryFolder,
+  type SavedQueryTreeItem,
+} from '../database/saved-queries.schema';
 import type { LoadTestTreeItem } from '../testing/load-tests.schema';
 import type { MockServerTreeItem } from '../testing/mock-server.schema';
 import type { RegressionTreeItem } from '../testing/regressions.schema';
 import type { TestSuiteRoot, TestSuiteTreeItem } from '../testing/test-suites.schema';
 import { isTestSuiteFlow, isTestSuiteFolder } from '../testing/test-suites.schema';
+import { liftDatabasesFromSettings } from './bundle-databases';
 import {
   SETTINGS_SECTION_KEYS,
   TESTRIX_BUNDLE_SCHEMA_V1,
@@ -38,6 +48,14 @@ export interface BundleSelection {
   mockEndpoints?: Set<string>;
   /** Selected `SettingsFile` sub-keys. */
   settingsSections?: Set<SettingsSectionKey>;
+  /** When true, include the Database connections subgroup. */
+  databaseConnections?: boolean;
+  /** Selected connection/folder ids under Database → Connections. */
+  databaseConnectionItems?: Set<string>;
+  /** When true, include the Database queries subgroup. */
+  databaseQueries?: boolean;
+  /** Selected query/folder ids under Database → Queries. */
+  databaseQueryItems?: Set<string>;
   /** Cookies are all-or-nothing. */
   cookies?: boolean;
 }
@@ -203,15 +221,52 @@ function pruneTestSuites(
     .filter((s): s is TestSuiteRoot => s != null);
 }
 
+function pruneDatabaseConnectionItems(
+  items: readonly DatabaseConnectionTreeItem[],
+  keepIds: Set<string>,
+): DatabaseConnectionTreeItem[] {
+  const out: DatabaseConnectionTreeItem[] = [];
+  for (const item of items) {
+    if (isDatabaseConnectionFolder(item)) {
+      const children = pruneDatabaseConnectionItems(item.children, keepIds);
+      if (keepIds.has(item.id) || children.length > 0) {
+        out.push({ ...item, children });
+      }
+    } else if (keepIds.has(item.id)) {
+      out.push(item);
+    }
+  }
+  return out;
+}
+
+function pruneSavedQueryItems(
+  items: readonly SavedQueryTreeItem[],
+  keepIds: Set<string>,
+): SavedQueryTreeItem[] {
+  const out: SavedQueryTreeItem[] = [];
+  for (const item of items) {
+    if (isSavedQueryFolder(item)) {
+      const children = pruneSavedQueryItems(item.children, keepIds);
+      if (keepIds.has(item.id) || children.length > 0) {
+        out.push({ ...item, children });
+      }
+    } else if (keepIds.has(item.id)) {
+      out.push(item);
+    }
+  }
+  return out;
+}
+
 /**
  * Filter a snapshot bundle down to the user-selected items. Returns a fresh bundle
  * (the input is never mutated).
  */
 export function filterBundle(source: TestrixBundleV1, selection: BundleSelection): TestrixBundleV1 {
+  const normalized = liftDatabasesFromSettings(source);
   const out: TestrixBundleV1 = {
     schema: TESTRIX_BUNDLE_SCHEMA_V1,
-    exportedAt: source.exportedAt,
-    appVersion: source.appVersion,
+    exportedAt: normalized.exportedAt,
+    appVersion: normalized.appVersion,
   };
 
   if (selection.sections.has('collections') && source.collections) {
@@ -280,12 +335,41 @@ export function filterBundle(source: TestrixBundleV1, selection: BundleSelection
     out.interceptor = source.interceptor;
   }
 
-  if (selection.sections.has('settings') && source.settings) {
+  if (selection.sections.has('databases') && normalized.databases) {
+    const connections =
+      selection.databaseConnections && normalized.databases.connections
+        ? normalizeDatabaseSettings({
+            nodes: hasSelection(selection.databaseConnectionItems)
+              ? pruneDatabaseConnectionItems(
+                  normalized.databases.connections.nodes,
+                  selection.databaseConnectionItems!,
+                )
+              : normalized.databases.connections.nodes,
+          })
+        : undefined;
+    const queries =
+      selection.databaseQueries && normalized.databases.queries
+        ? {
+            ...normalized.databases.queries,
+            nodes: hasSelection(selection.databaseQueryItems)
+              ? pruneSavedQueryItems(normalized.databases.queries.nodes, selection.databaseQueryItems!)
+              : normalized.databases.queries.nodes,
+          }
+        : undefined;
+    if (connections || queries) {
+      out.databases = {
+        ...(connections ? { connections } : {}),
+        ...(queries ? { queries } : {}),
+      };
+    }
+  }
+
+  if (selection.sections.has('settings') && normalized.settings) {
     const partial: Partial<SettingsFile> = {};
     const keys: SettingsSectionKey[] = Array.from(selection.settingsSections ?? SETTINGS_SECTION_KEYS);
     for (const k of keys) {
-      if (source.settings[k] !== undefined) {
-        (partial as Record<string, unknown>)[k] = source.settings[k];
+      if (normalized.settings[k] !== undefined) {
+        (partial as Record<string, unknown>)[k] = normalized.settings[k];
       }
     }
     if (Object.keys(partial).length > 0) {

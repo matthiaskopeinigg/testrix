@@ -13,6 +13,9 @@ import { DevToolLayoutComponent } from '../shell/dev-tool-layout.component';
 import { DevToolStatStripComponent } from '../shell/dev-tool-stat-strip.component';
 import { DevToolToolbarComponent } from '../shell/dev-tool-toolbar.component';
 import { createDevToolStateBinding } from './dev-tool-session.harness';
+import { MonitorsService } from '@app/core/testing/monitors.service';
+import { TestingSessionService } from '@app/core/testing/testing-session.service';
+import { WorkspaceSidebarSessionService } from '@app/core/workspace/workspace-sidebar-session.service';
 import {
   buildCronExpression,
   CRON_PRESETS,
@@ -39,6 +42,9 @@ import {
 })
 export class CronDevToolComponent {
   private readonly clipboard = inject(DevToolClipboardService);
+  private readonly monitors = inject(MonitorsService);
+  private readonly testingSession = inject(TestingSessionService);
+  private readonly sidebarSession = inject(WorkspaceSidebarSessionService);
   protected readonly state = createDevToolStateBinding('cron');
 
   protected readonly presetOptions: readonly TxDropdownOption[] = [
@@ -99,5 +105,12 @@ export class CronDevToolComponent {
 
   protected async handleCopy(): Promise<void> {
     await this.clipboard.copy(this.expression());
+  }
+
+  protected handleUseInMonitor(): void {
+    this.monitors.setPendingCron(this.expression());
+    this.sidebarSession.setActiveSidebarPanelId('testing');
+    this.sidebarSession.setSidebarPanelOpen(true);
+    this.testingSession.setSubpanel('monitors');
   }
 }

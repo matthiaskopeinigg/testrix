@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, effect, input, output, signal, untracked } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
-import type { LoadTestRunMetrics, LoadTestRunRecord, LoadTestThresholds } from '@shared/testing';
+import type { LoadTestArtifact, LoadTestRunMetrics, LoadTestRunRecord, LoadTestThresholds } from '@shared/testing';
 import {
   buildLoadTestHealthOverview,
   buildEmptyLoadTestHealthOverview,
@@ -92,6 +92,7 @@ export class LtTabResultsPanelComponent {
   readonly pinnedBaselineRunIdChange = output<string | null>();
   readonly clearRuns = output<void>();
   readonly deleteRun = output<string>();
+  readonly artifact = input<LoadTestArtifact | null>(null);
 
   protected readonly clearConfirmOpen = signal(false);
 

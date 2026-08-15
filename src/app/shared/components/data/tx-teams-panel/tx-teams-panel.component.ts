@@ -14,7 +14,7 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
-import type { TeamBranchEntry, TeamShareScope, TeamShareScopeKey } from '@shared/collaboration';
+import type { TeamBranchEntry, TeamConflictFilePreview, TeamShareScope, TeamShareScopeKey } from '@shared/collaboration';
 import {
   TEAM_SHARE_CATALOG,
   TEAM_SHARE_GROUP_LABELS,
@@ -27,6 +27,7 @@ import {
   isSameTeamAuthor,
   isSshGitRemoteUrl,
   listPublishableLocalProfiles,
+  parseUnifiedDiffLines,
   resolveEffectiveShareScope,
   summarizeShareScope,
   teamShareCatalogForGroup,
@@ -140,6 +141,9 @@ export class TxTeamsPanelComponent {
   protected readonly newRepoDataDirError = signal('');
   protected readonly loadingRepoDirectories = signal(false);
   protected readonly disconnectConfirmOpen = signal(false);
+  protected readonly selectedConflictFile = signal<string | null>(null);
+  protected readonly conflictPreview = signal<TeamConflictFilePreview | null>(null);
+  protected readonly loadingConflict = signal(false);
 
   protected readonly status = this.teamSync.status;
   protected readonly config = this.teamSync.config;
@@ -169,6 +173,11 @@ export class TxTeamsPanelComponent {
       default:
         return 'default';
     }
+  });
+
+  protected readonly conflictDiffLines = computed(() => {
+    const diff = this.conflictPreview()?.diff ?? '';
+    return parseUnifiedDiffLines(diff);
   });
 
   protected readonly remoteCatalog = this.teamSync.remoteCatalog;
@@ -349,6 +358,21 @@ export class TxTeamsPanelComponent {
       ) {
         this.activeTab.set('overview');
       }
+    });
+
+    effect(() => {
+      const files = this.status().conflictedFiles;
+      if (this.status().status !== 'conflict' || files.length === 0) {
+        this.selectedConflictFile.set(null);
+        this.conflictPreview.set(null);
+        return;
+      }
+      const selected = this.selectedConflictFile();
+      const next = selected && files.includes(selected) ? selected : files[0]!;
+      if (selected !== next) {
+        this.selectedConflictFile.set(next);
+      }
+      void this.loadConflictPreview(next);
     });
 
     this.destroyRef.onDestroy(() => {
@@ -912,6 +936,31 @@ export class TxTeamsPanelComponent {
   protected async handleResolveConflict(resolution: 'ours' | 'theirs' | 'abort'): Promise<void> {
     await this.teamSync.resolveConflict(resolution);
     this.notifications.showSuccess('Conflict resolved');
+  }
+
+  protected async handleSelectConflictFile(file: string): Promise<void> {
+    this.selectedConflictFile.set(file);
+    await this.loadConflictPreview(file);
+  }
+
+  protected async handleResolveConflictFile(resolution: 'ours' | 'theirs' | 'merged'): Promise<void> {
+    const file = this.selectedConflictFile();
+    if (!file) {
+      return;
+    }
+    await this.teamSync.resolveConflictFile(file, resolution);
+    this.notifications.showSuccess(
+      resolution === 'merged' ? 'Merged entities from both sides' : 'Conflict file resolved',
+    );
+  }
+
+  private async loadConflictPreview(file: string): Promise<void> {
+    this.loadingConflict.set(true);
+    try {
+      this.conflictPreview.set(await this.teamSync.getConflictFile(file));
+    } finally {
+      this.loadingConflict.set(false);
+    }
   }
 
   protected filteredHistory = computed(() => {

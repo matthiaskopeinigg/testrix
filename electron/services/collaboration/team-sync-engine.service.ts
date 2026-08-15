@@ -38,6 +38,11 @@ import {
   type TeamSyncStatus,
   type TeamWorkspaceConfig,
 } from '../../../shared/collaboration';
+import {
+  scanWorkspaceTextForSecrets,
+  secretScanShouldBlock,
+} from '../../../shared/collaboration/secret-scan';
+import { ErrorCodes, TestrixError } from '../../../shared/errors';
 import { isTeamProfile, resolveProfileDir, type ProfilesState } from '../../../shared/config';
 
 import { gitWorkspaceService } from './git-workspace.service';
@@ -740,6 +745,35 @@ export class TeamSyncEngine {
     this.localSelfWriteUntil.set(this.normalizeDir(localDir), Date.now() + 10_000);
   }
 
+  private async assertStagedFilesAreSecretSafe(relativePaths: readonly string[]): Promise<void> {
+    if (!this.workspaceDir) {
+      return;
+    }
+    const findings = [];
+    for (const relativePath of relativePaths) {
+      if (!relativePath.endsWith('.json')) {
+        continue;
+      }
+      try {
+        const raw = await fs.readFile(path.join(this.workspaceDir, relativePath), 'utf8');
+        findings.push(...scanWorkspaceTextForSecrets(path.basename(relativePath), raw));
+      } catch {
+        /* missing file is not a secret leak */
+      }
+    }
+    if (!secretScanShouldBlock(findings)) {
+      return;
+    }
+    const summary = findings
+      .filter((finding) => finding.severity === 'block')
+      .map((finding) => `${finding.fileName}: ${finding.kind}`)
+      .join('; ');
+    throw new TestrixError(
+      ErrorCodes.SECRET_SCAN_BLOCKED,
+      `Push blocked: secrets detected (${summary}). Move values to the vault or remove them before syncing.`,
+    );
+  }
+
   private clearTimers(): void {
     if (this.commitTimer !== null) {
       clearTimeout(this.commitTimer);
@@ -934,6 +968,7 @@ export class TeamSyncEngine {
       const stagedFiles = [...repoPathsToStage];
       let committed = false;
       if (stagedFiles.length > 0) {
+        await this.assertStagedFilesAreSecretSafe(stagedFiles);
         await gitWorkspaceService.stageFiles(this.workspaceDir, stagedFiles);
         committed = await gitWorkspaceService.commit(
           this.workspaceDir,

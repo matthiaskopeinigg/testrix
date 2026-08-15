@@ -42,6 +42,13 @@ export function shouldStripWorkspaceTabOnRestore(kind: WorkspaceTabKind, resourc
   if (kind === 'test-suite') {
     return !resourceId.startsWith('ts:');
   }
+  if (kind === 'database') {
+    return !(
+      resourceId.startsWith('dbq:') ||
+      resourceId.startsWith('dbc:') ||
+      resourceId.startsWith('dbt:')
+    );
+  }
   if (kind === 'dev-tool') {
     return !(DEVELOPMENT_TOOL_IDS as readonly string[]).includes(resourceId);
   }

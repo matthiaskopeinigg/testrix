@@ -54,6 +54,8 @@ export class TxCommandPaletteComponent {
 
   protected readonly query = signal('');
   protected readonly activeIndex = signal(0);
+  /** Hover highlighting stays off until the pointer moves after a query change. */
+  private hoverEnabled = false;
   private readonly commands = signal<Command[]>([]);
 
   protected readonly results = computed((): readonly CommandSearchResult[] =>
@@ -73,6 +75,7 @@ export class TxCommandPaletteComponent {
       }
       this.query.set('');
       this.activeIndex.set(0);
+      this.hoverEnabled = false;
       queueMicrotask(() => this.focusSearch());
     });
   }
@@ -88,9 +91,18 @@ export class TxCommandPaletteComponent {
   protected handleQueryChange(value: string): void {
     this.query.set(value);
     this.activeIndex.set(0);
+    this.hoverEnabled = false;
+  }
+
+  /** Arms hover selection after the pointer actually moves. */
+  protected handleListMouseMove(): void {
+    this.hoverEnabled = true;
   }
 
   protected handleItemHover(index: number): void {
+    if (!this.hoverEnabled) {
+      return;
+    }
     this.activeIndex.set(index);
   }
 

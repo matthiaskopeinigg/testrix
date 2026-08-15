@@ -58,6 +58,30 @@ export const DEVELOPMENT_TOOLS: readonly DevelopmentToolDefinition[] = [
     description: 'JSON/YAML editor, outline, validation',
     icon: 'api',
   },
+  {
+    id: 'hash',
+    label: 'Hash / HMAC',
+    description: 'MD5, SHA family, and HMAC-SHA256',
+    icon: 'hash',
+  },
+  {
+    id: 'jsonpath',
+    label: 'JSONPath Tester',
+    description: 'Evaluate JSONPath against a JSON sample',
+    icon: 'search',
+  },
+  {
+    id: 'cert-inspector',
+    label: 'Certificate Inspector',
+    description: 'Inspect PEM certificates, CSRs, and keys',
+    icon: 'shield',
+  },
+  {
+    id: 'request-diff',
+    label: 'Request / Response Diff',
+    description: 'Side-by-side text diff for payloads',
+    icon: 'layers',
+  },
 ] as const;
 
 /**

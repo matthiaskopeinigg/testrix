@@ -25,7 +25,7 @@
         <kbd class="tx-command-palette__kbd">Esc</kbd>
       </div>
 
-      <ul class="tx-command-palette__list" role="listbox">
+      <ul class="tx-command-palette__list" role="listbox" (mousemove)="handleListMouseMove()">
         @for (result of results(); track result.command.id; let i = $index) {
           <li
             class="tx-command-palette__item"

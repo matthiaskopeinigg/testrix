@@ -542,6 +542,17 @@ export class TxCodeEditorComponent implements ControlValueAccessor, AfterViewIni
     void isDisabled;
   }
 
+  /** Live textarea value and caret/selection, used by execute shortcuts. */
+  getLiveSelection(): { readonly value: string; readonly start: number; readonly end: number } {
+    const ta = this.textareaRef()?.nativeElement;
+    const value = ta?.value ?? this.innerValue();
+    return {
+      value,
+      start: ta?.selectionStart ?? 0,
+      end: ta?.selectionEnd ?? 0,
+    };
+  }
+
   protected handleInput(event: Event): void {
     const ta = event.target as HTMLTextAreaElement;
     if (this.collapsedFoldIds().size > 0) {
@@ -1159,18 +1170,31 @@ export class TxCodeEditorComponent implements ControlValueAccessor, AfterViewIni
   }
 
   private maybeOpenAutocompleteOnInput(event: Event): void {
-    if (
-      !this.autocompleteActive() ||
-      this.readOnly() ||
-      this.language() !== 'js' ||
-      !this.jsAutocompleteActive() ||
-      !this.autocompleteOnDotActive()
-    ) {
+    if (!this.autocompleteActive() || this.readOnly()) {
       return;
     }
     const inputEvent = event as InputEvent;
     if (inputEvent.data === ' ' && this.completionOpen()) {
       this.closeCompletion();
+      return;
+    }
+    const lang = this.language();
+    if (lang === 'sql' || lang === 'redis') {
+      if (!inputEvent.data || !/[\w$]/.test(inputEvent.data)) {
+        return;
+      }
+      const ta = this.textareaRef()?.nativeElement;
+      if (!ta) {
+        return;
+      }
+      const ctx = txCodeEditorCompletionContext(this.innerValue(), ta.selectionStart);
+      if (ctx.needle.length < 1) {
+        return;
+      }
+      this.openAutocomplete();
+      return;
+    }
+    if (lang !== 'js' || !this.jsAutocompleteActive() || !this.autocompleteOnDotActive()) {
       return;
     }
     if (inputEvent.data !== '.') {

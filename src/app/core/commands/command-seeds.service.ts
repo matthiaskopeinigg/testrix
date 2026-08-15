@@ -1,13 +1,24 @@
 import { Injectable, effect, inject, untracked } from '@angular/core';
 
-import type { EnvironmentDefinition } from '@shared/config';
+import { type EnvironmentDefinition } from '@shared/config';
 import type { WorkspaceTabKind } from '@shared/config/workspace-editor.schema';
+import { databaseConnectionTabResourceId } from '@shared/database';
 import {
   mockServerTabResourceId,
   testSuiteTabResourceId,
 } from '@shared/testing';
 
 import { CollectionsService } from '@app/core/collections/collections.service';
+import { DatabaseConnectionsService } from '@app/core/database/database-connections.service';
+import { DatabaseQueriesService } from '@app/core/database/database-queries.service';
+import { TxNotificationService } from '@app/core/notifications/tx-notification.service';
+import {
+  generateGatlingSimulation,
+  generateK6Script,
+  generateLoadTestHtmlReport,
+} from '@shared/testing';
+import { looksLikeCurl } from '@shared/http/parse-curl';
+import { FileDialogService } from '@app/core/platform/file-dialog.service';
 import { TeamsPanelService } from '@app/core/collaboration/teams-panel.service';
 import { DEVELOPMENT_TOOLS } from '@app/core/development-tools/development-tool.registry';
 import { EnvironmentsService } from '@app/core/environments/environments.service';
@@ -18,6 +29,7 @@ import { LoadTestService } from '@app/core/testing/load-test.service';
 import { MockServerService } from '@app/core/testing/mock-server.service';
 import { RegressionService } from '@app/core/testing/regression.service';
 import { TestSuiteService } from '@app/core/testing/test-suite.service';
+import { TestingSessionService } from '@app/core/testing/testing-session.service';
 import { CommandPaletteService } from '@app/core/ui/command-palette.service';
 import { HelpPopupService } from '@app/core/ui/help-popup.service';
 import { SettingsPopupService } from '@app/core/ui/settings-popup.service';
@@ -63,6 +75,9 @@ export class CommandSeedsService {
   private readonly registry = inject(CommandRegistryService);
   private readonly workspaceEditor = inject(WorkspaceEditorService);
   private readonly collections = inject(CollectionsService);
+  private readonly databaseQueries = inject(DatabaseQueriesService);
+  private readonly databaseConnections = inject(DatabaseConnectionsService);
+  private readonly notifications = inject(TxNotificationService);
   private readonly environments = inject(EnvironmentsService);
   private readonly history = inject(HistoryService);
   private readonly testSuite = inject(TestSuiteService);
@@ -76,6 +91,8 @@ export class CommandSeedsService {
   private readonly helpPopup = inject(HelpPopupService);
   private readonly teamsPanel = inject(TeamsPanelService);
   private readonly commandPalette = inject(CommandPaletteService);
+  private readonly files = inject(FileDialogService);
+  private readonly testingSession = inject(TestingSessionService);
 
   private registered = false;
 
@@ -136,7 +153,137 @@ export class CommandSeedsService {
           this.openSidebarPanel('collections');
         },
       },
-      ...(['collections', 'environments', 'testing', 'development', 'history'] as const).map(
+      {
+        id: 'workspace.importCurl',
+        label: 'Import cURL from clipboard',
+        category: 'Workspace',
+        hint: 'Parse a curl command and open it as a collection request',
+        keywords: ['curl', 'paste', 'import'],
+        run: () => void this.importCurlFromClipboard(),
+      },
+      {
+        id: 'workspace.closeActiveTab',
+        label: 'Close active tab',
+        category: 'Workspace',
+        hint: 'Close the tab in the focused pane',
+        shortcut: 'Ctrl+X',
+        keywords: ['close', 'tab'],
+        run: () => this.workspaceEditor.closeActiveTab(),
+      },
+      {
+        id: 'workspace.splitTabRight',
+        label: 'Split tab to the right',
+        category: 'Workspace',
+        hint: 'Open the current tab in a new pane on the right',
+        shortcut: 'Ctrl+Right',
+        keywords: ['split', 'pane', 'right'],
+        run: () => this.workspaceEditor.splitFocusedPane('right'),
+      },
+      {
+        id: 'workspace.splitTabLeft',
+        label: 'Split tab to the left',
+        category: 'Workspace',
+        hint: 'Open the current tab in a new pane on the left',
+        shortcut: 'Ctrl+Left',
+        keywords: ['split', 'pane', 'left'],
+        run: () => this.workspaceEditor.splitFocusedPane('left'),
+      },
+      {
+        id: 'workspace.splitTabUp',
+        label: 'Split tab up',
+        category: 'Workspace',
+        hint: 'Open the current tab in a new pane above',
+        shortcut: 'Ctrl+Up',
+        keywords: ['split', 'pane', 'up'],
+        run: () => this.workspaceEditor.splitFocusedPane('top'),
+      },
+      {
+        id: 'workspace.splitTabDown',
+        label: 'Split tab down',
+        category: 'Workspace',
+        hint: 'Open the current tab in a new pane below',
+        shortcut: 'Ctrl+Down',
+        keywords: ['split', 'pane', 'down'],
+        run: () => this.workspaceEditor.splitFocusedPane('bottom'),
+      },
+      {
+        id: 'database.newQuery',
+        label: 'New database query',
+        category: 'Database',
+        hint: 'Create a saved query in the Database sidebar',
+        keywords: ['sql', 'redis', 'query', 'database'],
+        run: () => {
+          const created = this.databaseQueries.createQuery();
+          this.openSidebarPanel('data');
+          this.workspaceEditor.openResource({
+            resourceId: this.databaseQueries.tabResourceId(created.id),
+            kind: 'database',
+          });
+        },
+      },
+      {
+        id: 'database.newFolder',
+        label: 'New query folder',
+        category: 'Database',
+        hint: 'Create a folder for saved queries',
+        keywords: ['database', 'folder', 'query'],
+        run: () => {
+          this.databaseQueries.createFolder();
+          this.openSidebarPanel('data');
+        },
+      },
+      {
+        id: 'database.newConnection',
+        label: 'New database connection',
+        category: 'Database',
+        hint: 'Add a connection from the Database sidebar',
+        keywords: ['sql', 'redis', 'postgresql', 'mysql', 'sqlite', 'database'],
+        run: () => void this.createDatabaseConnection(),
+      },
+      {
+        id: 'database.newConnectionFolder',
+        label: 'New connection folder',
+        category: 'Database',
+        hint: 'Create a folder for database connections',
+        keywords: ['database', 'folder', 'connection'],
+        run: () => void this.createDatabaseConnectionFolder(),
+      },
+      {
+        id: 'loadTest.exportHtml',
+        label: 'Export load test HTML report',
+        category: 'Load tests',
+        hint: 'Save a self-contained HTML report for the latest run on the active load test',
+        keywords: ['html', 'report', 'export'],
+        run: () => void this.exportActiveLoadTest('html'),
+      },
+      {
+        id: 'loadTest.exportK6',
+        label: 'Export load test k6 script',
+        category: 'Load tests',
+        hint: 'Generate a k6 script from the active load test',
+        keywords: ['k6', 'export'],
+        run: () => void this.exportActiveLoadTest('k6'),
+      },
+      {
+        id: 'loadTest.exportGatling',
+        label: 'Export load test Gatling stub',
+        category: 'Load tests',
+        hint: 'Generate a Gatling Simulation from the active load test',
+        keywords: ['gatling', 'export'],
+        run: () => void this.exportActiveLoadTest('gatling'),
+      },
+      {
+        id: 'testing.openMonitors',
+        label: 'Open Monitors',
+        category: 'Testing',
+        hint: 'Local cron monitors for request, flow, or load test',
+        keywords: ['cron', 'monitor', 'schedule'],
+        run: () => {
+          this.openSidebarPanel('testing');
+          this.testingSession.setSubpanel('monitors');
+        },
+      },
+      ...(['collections', 'environments', 'testing', 'data', 'development', 'history'] as const).map(
         (panelId) => ({
           id: `sidebar.${panelId}`,
           label: `Open ${sidebarPanelLabel(panelId)} sidebar`,
@@ -403,6 +550,85 @@ export class CommandSeedsService {
     this.sidebarSession.setActiveSidebarPanelId(panelId);
     this.sidebarSession.setSidebarPanelOpen(true);
   }
+
+  private async createDatabaseConnection(): Promise<void> {
+    const conn = await this.databaseConnections.createConnection();
+    this.openSidebarPanel('data');
+    this.workspaceEditor.openResource({
+      resourceId: databaseConnectionTabResourceId(conn.id),
+      kind: 'database',
+    });
+  }
+
+  private async createDatabaseConnectionFolder(): Promise<void> {
+    await this.databaseConnections.createFolder();
+    this.openSidebarPanel('data');
+  }
+
+  private async importCurlFromClipboard(): Promise<void> {
+    let text = '';
+    try {
+      text = (await navigator.clipboard.readText()).trim();
+    } catch {
+      this.notifications.showError('Could not read the clipboard');
+      return;
+    }
+    if (!looksLikeCurl(text)) {
+      this.notifications.showError('Clipboard does not contain a cURL command');
+      return;
+    }
+    const id = this.collections.createRequestFromCurl(text);
+    if (!id) {
+      this.notifications.showError('Could not import the cURL command');
+      return;
+    }
+    this.openSidebarPanel('collections');
+    this.workspaceEditor.openResource({ resourceId: id, kind: 'request' });
+    this.notifications.showSuccess('Imported cURL as a collection request');
+  }
+
+  private async exportActiveLoadTest(kind: 'html' | 'k6' | 'gatling'): Promise<void> {
+    const tab = this.workspaceEditor.activeTab();
+    if (!tab || tab.kind !== 'load-test' || !tab.resourceId.startsWith('lt:')) {
+      this.notifications.showError('Open a load test tab to export');
+      return;
+    }
+    const artifact = this.loadTest.findArtifact(tab.resourceId.slice(3));
+    const record = artifact?.runs[0];
+    if (!artifact || !record) {
+      this.notifications.showError('Run the load test before exporting');
+      return;
+    }
+    const context = { artifact, record };
+    if (kind === 'html') {
+      const path = await this.files.saveText(
+        generateLoadTestHtmlReport(context),
+        `load-test-${record.id}.html`,
+        [{ name: 'HTML', extensions: ['html'] }],
+      );
+      if (path) {
+        this.notifications.showSuccess('HTML report saved');
+      }
+      return;
+    }
+    if (kind === 'k6') {
+      const path = await this.files.saveText(generateK6Script(context), `load-test-${artifact.id}.k6.js`, [
+        { name: 'JavaScript', extensions: ['js'] },
+      ]);
+      if (path) {
+        this.notifications.showSuccess('k6 script saved');
+      }
+      return;
+    }
+    const path = await this.files.saveText(
+      generateGatlingSimulation(context),
+      `${artifact.name.replace(/[^A-Za-z0-9]+/g, '') || 'Testrix'}Simulation.scala`,
+      [{ name: 'Scala', extensions: ['scala'] }],
+    );
+    if (path) {
+      this.notifications.showSuccess('Gatling stub saved');
+    }
+  }
 }
 
 function sidebarPanelLabel(panelId: WorkspaceSidebarPanelId): string {
@@ -413,6 +639,8 @@ function sidebarPanelLabel(panelId: WorkspaceSidebarPanelId): string {
       return 'Environments';
     case 'testing':
       return 'Testing';
+    case 'data':
+      return 'Database';
     case 'development':
       return 'Development';
     case 'history':

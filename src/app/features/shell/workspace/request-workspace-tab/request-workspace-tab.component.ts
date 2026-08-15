@@ -14,6 +14,8 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
+import { looksLikeCurl } from '@shared/http/parse-curl';
+
 import type {
   CollectionRequestPathParam,
   CollectionRequestSettings,
@@ -60,6 +62,7 @@ import { WorkspaceTabMotionController } from '@app/core/ui/workspace-tab-motion'
 import { requestTabSectionBlockCount } from '@app/core/ui/workspace-tab-section-stagger';
 import { WorkspaceSectionNavSliderDirective } from '../workspace-section-nav-slider.directive';
 import { HttpRequestService } from '@app/core/http/http-request.service';
+import { TxNotificationService } from '@app/core/notifications/tx-notification.service';
 import { WorkspaceEditorService } from '@app/core/workspace/workspace-editor.service';
 import { TxVerticalSplitPaneComponent } from '@app/shared/components/chrome/tx-vertical-split-pane/tx-vertical-split-pane.component';
 import { TxBannerComponent } from '@app/shared/components/feedback/tx-banner/tx-banner.component';
@@ -133,6 +136,7 @@ export class RequestWorkspaceTabComponent {
   private readonly destroyRef = inject(DestroyRef);
   private readonly uiPreferences = inject(UiPreferencesService);
   private readonly cdr = inject(ChangeDetectorRef);
+  private readonly notifications = inject(TxNotificationService);
   protected readonly httpRequest = inject(HttpRequestService);
 
   protected readonly tabMotion = new WorkspaceTabMotionController(
@@ -148,10 +152,16 @@ export class RequestWorkspaceTabComponent {
 
   protected readonly responsePanelComponent = signal<Type<unknown> | null>(null);
   protected readonly codeSnippetModalComponent = signal<Type<unknown> | null>(null);
+  protected readonly resolvedPreviewModalComponent = signal<Type<unknown> | null>(null);
 
   protected readonly codeSnippetModalInputs = computed(() => ({
     open: this.codeSnippetOpen(),
     snippetInput: this.codeSnippetInput(),
+  }));
+
+  protected readonly resolvedPreviewModalInputs = computed(() => ({
+    open: this.resolvedPreviewOpen(),
+    previewText: this.resolvedPreviewText(),
   }));
 
   protected readonly overviewPanelOutputs = {
@@ -212,11 +222,17 @@ export class RequestWorkspaceTabComponent {
     closed: () => this.handleCloseCodeSnippets(),
   };
 
+  protected readonly resolvedPreviewModalOutputs = {
+    closed: () => this.handleCloseResolvedPreview(),
+  };
+
   protected readonly navItems = NAV_ITEMS;
   protected readonly methodOptions = METHOD_OPTIONS;
   protected readonly activeSection = signal<HttpRequestSectionId>('overview');
   protected readonly activeScriptPane = signal<'pre' | 'post'>('pre');
   protected readonly codeSnippetOpen = signal(false);
+  protected readonly resolvedPreviewOpen = signal(false);
+  protected readonly resolvedPreviewText = signal<string | null>(null);
   protected readonly responsePanelHeight = signal(320);
   protected readonly responsePanelHidden = signal(false);
 
@@ -505,6 +521,7 @@ export class RequestWorkspaceTabComponent {
           auth: this.settings().auth,
           hasParentFolder: this.hasParentFolder(),
           catalog: this.variableCatalog(),
+          ownerId: this.resourceId(),
         };
       case 'headers': {
         const headerInput = this.headerResolveInput();
@@ -552,6 +569,16 @@ export class RequestWorkspaceTabComponent {
       }
       void import('./request-tab-code-snippet-modal.component').then((module) => {
         this.codeSnippetModalComponent.set(module.RequestTabCodeSnippetModalComponent);
+        this.cdr.markForCheck();
+      });
+    });
+
+    effect(() => {
+      if (!this.resolvedPreviewOpen() || this.resolvedPreviewModalComponent()) {
+        return;
+      }
+      void import('./request-tab-resolved-preview-modal.component').then((module) => {
+        this.resolvedPreviewModalComponent.set(module.RequestTabResolvedPreviewModalComponent);
         this.cdr.markForCheck();
       });
     });
@@ -697,6 +724,15 @@ export class RequestWorkspaceTabComponent {
     if (this.syncingFromStore) {
       return;
     }
+    if (looksLikeCurl(display)) {
+      const applied = this.collectionsService.applyCurl(this.resourceId(), display);
+      if (applied) {
+        this.notifications.showSuccess('Imported cURL into this request');
+      } else {
+        this.notifications.showError('Could not parse the cURL command');
+      }
+      return;
+    }
     const parsed = parseRequestUrlInput(display, this.settings().queryParams);
     this.urlPath.set(parsed.path);
     this.scheduleLineSave({ url: parsed.path });
@@ -790,6 +826,15 @@ export class RequestWorkspaceTabComponent {
 
   protected handleCloseCodeSnippets(): void {
     this.codeSnippetOpen.set(false);
+  }
+
+  protected async handleOpenResolvedPreview(): Promise<void> {
+    this.resolvedPreviewText.set(await this.httpRequest.previewCollectionRequest(this.resourceId()));
+    this.resolvedPreviewOpen.set(true);
+  }
+
+  protected handleCloseResolvedPreview(): void {
+    this.resolvedPreviewOpen.set(false);
   }
 
   protected handleEnvironmentVariableClick(event: { readonly key: string }): void {

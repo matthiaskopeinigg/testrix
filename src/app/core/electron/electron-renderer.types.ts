@@ -27,6 +27,8 @@ import type {
   MockServerFile,
   MockServerMismatchRecord,
   MockServerRuntimeStatus,
+  MonitorResult,
+  MonitorsFile,
   RegressionRun,
   RegressionRunMetrics,
   RegressionStartOptions,
@@ -36,6 +38,7 @@ import type {
 import type {
   TeamBranchEntry,
   TeamCommitDetail,
+  TeamConflictFilePreview,
   TeamGitSetupContext,
   TeamHistoryPage,
   TeamSyncStatus,
@@ -145,6 +148,7 @@ export interface ElectronRendererBridge {
     setCollections: (data: CollectionsFile) => Promise<CollectionsFile>;
     getEnvironments: () => Promise<EnvironmentsFile>;
     setEnvironments: (data: EnvironmentsFile) => Promise<EnvironmentsFile>;
+    vaultEncryptionAvailable: () => Promise<boolean>;
     getHistory: () => Promise<HistoryFile>;
     setHistory: (data: HistoryFile) => Promise<HistoryFile>;
     onHistoryUpdated: (listener: (payload: unknown) => void) => () => void;
@@ -192,16 +196,43 @@ export interface ElectronRendererBridge {
     cancel: (requestId: string) => Promise<void>;
   };
 
+  oauth: {
+    ensureToken: (payload: { readonly ownerId: string; readonly auth: unknown }) => Promise<string>;
+    clearToken: (ownerId: string) => Promise<void>;
+    tokenStatus: (ownerId: string) => Promise<{
+      readonly ownerId: string;
+      readonly hasAccessToken: boolean;
+      readonly expiresAt: number | null;
+      readonly expired: boolean;
+    }>;
+  };
+
   database: {
     query: (payload: {
       readonly connection: DatabaseConnection;
       readonly query: string;
       readonly timeoutMs?: number;
-    }) => Promise<unknown>;
+      readonly page?: import('@shared/database').DatabaseQueryPage;
+    }) => Promise<import('@shared/database').DatabaseQueryEnvelope>;
+    explain: (payload: {
+      readonly connection: DatabaseConnection;
+      readonly query: string;
+      readonly timeoutMs?: number;
+    }) => Promise<import('@shared/database').DatabaseQueryEnvelope>;
+    introspect: (payload: {
+      readonly connection: DatabaseConnection;
+      readonly level: import('@shared/database').DatabaseIntrospectLevel;
+      readonly schema?: string;
+      readonly table?: string;
+    }) => Promise<import('@shared/database').DatabaseIntrospectResult>;
     testConnection: (connection: DatabaseConnection) => Promise<{ readonly ok: true }>;
     getConnectionStatuses: () => Promise<
       Record<string, import('@shared/database/connection-status.schema').DatabaseConnectionStatus>
     >;
+    getQueries: () => Promise<import('@shared/database').SavedQueriesFile>;
+    setQueries: (
+      data: import('@shared/database').SavedQueriesFile,
+    ) => Promise<import('@shared/database').SavedQueriesFile>;
   };
 
   cookies: {
@@ -224,6 +255,10 @@ export interface ElectronRendererBridge {
     setCapture: (data: CaptureFile) => Promise<CaptureFile>;
     getInterceptor: () => Promise<InterceptorFile>;
     setInterceptor: (data: InterceptorFile) => Promise<InterceptorFile>;
+    getMonitors: () => Promise<MonitorsFile>;
+    setMonitors: (data: MonitorsFile) => Promise<MonitorsFile>;
+    monitorRunNow: (monitorId: string) => Promise<MonitorResult | null>;
+    onMonitorResult: (listener: (result: MonitorResult) => void) => () => void;
     mockStatus: () => Promise<MockServerRuntimeStatus>;
     mockStart: () => Promise<MockServerRuntimeStatus>;
     mockStop: () => Promise<MockServerRuntimeStatus>;
@@ -308,6 +343,11 @@ export interface ElectronRendererBridge {
     switchBranch: (name: string) => Promise<readonly TeamBranchEntry[]>;
     deleteBranch: (name: string) => Promise<readonly TeamBranchEntry[]>;
     resolveConflict: (resolution: 'ours' | 'theirs' | 'abort') => Promise<TeamSyncStatus>;
+    getConflictFile: (path: string) => Promise<TeamConflictFilePreview>;
+    resolveConflictFile: (payload: {
+      readonly path: string;
+      readonly resolution: 'ours' | 'theirs' | 'merged';
+    }) => Promise<TeamSyncStatus>;
     linkWorkspace: () => Promise<TeamSyncStatus>;
     disconnect: () => Promise<TeamSyncStatus>;
     listRepoDirectories: () => Promise<readonly string[]>;

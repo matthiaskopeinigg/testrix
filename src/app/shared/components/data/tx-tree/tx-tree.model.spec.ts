@@ -46,6 +46,17 @@ describe('TxTreeModel', () => {
     expect(model.getVisibleRows().map((r) => r.id)).toEqual(['root', 'a', 'b', 'folder', 'c']);
   });
 
+  it('treats empty folders as expandable', () => {
+    const model = new TxTreeModel(mergeTxTreeConfig());
+    model.setNodes([{ id: 'empty', label: 'Empty', kind: 'folder', children: [] }]);
+    const row = model.getVisibleRows()[0];
+    expect(row?.hasChildren).toBe(true);
+    expect(row?.expanded).toBe(false);
+    model.expand('empty');
+    expect(model.getVisibleRows().map((item) => item.id)).toEqual(['empty']);
+    expect(model.getVisibleRows()[0]?.expanded).toBe(true);
+  });
+
   it('reorders siblings within the same parent', () => {
     const model = new TxTreeModel(mergeTxTreeConfig());
     model.setNodes(SAMPLE);
@@ -77,6 +88,33 @@ describe('TxTreeModel', () => {
     expect(result).not.toBeNull();
     const folder = result!.nodes[0].children!.find((n) => n.id === 'folder');
     expect(folder?.children?.map((n) => n.id)).toContain('a');
+  });
+
+  it('applies remapDropTarget before canDrop', () => {
+    const model = new TxTreeModel(
+      mergeTxTreeConfig({
+        sort: { siblingSort: 'manual' },
+        drop: {
+          remapDropTarget: (ctx) =>
+            ctx.targetId === 'schema' ? { targetId: 'b', position: 'after' } : null,
+        },
+      }),
+    );
+    model.setNodes([
+      { id: 'a', label: 'A', kind: 'connection' },
+      {
+        id: 'b',
+        label: 'B',
+        kind: 'connection',
+        children: [{ id: 'schema', label: 'public', kind: 'schema' }],
+      },
+    ]);
+    model.expand('b');
+    expect(model.resolveLogicalDrop('a', 'schema', 'before')).toEqual({
+      targetId: 'b',
+      position: 'after',
+    });
+    expect(model.moveNode('a', 'b', 'after')?.nodes.map((node) => node.id)).toEqual(['b', 'a']);
   });
 
   it('denies drop when maxDepth exceeded', () => {

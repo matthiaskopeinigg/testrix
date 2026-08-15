@@ -201,6 +201,17 @@ export class MockServerService {
     return endpoint;
   }
 
+  /**
+   * Appends generated endpoints to the mock workspace tree.
+   */
+  appendEndpoints(endpoints: readonly MockServerEndpoint[]): void {
+    if (endpoints.length === 0) {
+      return;
+    }
+    const file = this.fileState() ?? createDefaultMockServerFile();
+    this.scheduleSave({ ...file, items: [...file.items, ...endpoints] });
+  }
+
   renameNode(nodeId: string, label: string): void {
     const next = renameMockServerNode(this.nodes(), nodeId, label);
     if (next) {

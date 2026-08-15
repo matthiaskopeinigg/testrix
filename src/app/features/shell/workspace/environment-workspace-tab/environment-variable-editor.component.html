@@ -49,6 +49,14 @@
       </div>
     </div>
 
+    <tx-form-field label="Secret" controlId="env-var-secret">
+      <tx-toggle
+        id="env-var-secret"
+        [ngModel]="secret()"
+        (ngModelChange)="handleSecretChange($event)"
+      />
+    </tx-form-field>
+
     <tx-form-field label="Description" controlId="env-var-description">
       <tx-textarea
         id="env-var-description"

@@ -45,18 +45,42 @@ export function unwrapIpcInvokeError(error: unknown): IpcErrorPayload | null {
   }
 
   if (error instanceof Error) {
-    const fromMessage = parseTestrixErrorMessage(error.message);
-    if (fromMessage) {
-      return fromMessage;
-    }
-
-    const invokeTail = ELECTRON_INVOKE_ERROR_RE.exec(error.message)?.[1]?.trim();
-    if (invokeTail && invokeTail !== '[object Object]') {
-      return { code: ErrorCodes.IPC_HANDLER_FAILED, userMessage: invokeTail };
-    }
+    return parseErrorText(error.message);
   }
 
   return null;
+}
+
+/**
+ * Parses Electron invoke wrappers and `CODE: message` / `TestrixError: CODE: message` text.
+ */
+function parseErrorText(message: string): IpcErrorPayload | null {
+  const trimmed = message.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  const fromMessage = parseTestrixErrorMessage(stripTestrixErrorName(trimmed));
+  if (fromMessage) {
+    return fromMessage;
+  }
+
+  const invokeTail = ELECTRON_INVOKE_ERROR_RE.exec(trimmed)?.[1]?.trim();
+  if (!invokeTail || invokeTail === '[object Object]') {
+    return null;
+  }
+
+  const inner = stripTestrixErrorName(invokeTail);
+  const fromTail = parseTestrixErrorMessage(inner);
+  if (fromTail) {
+    return fromTail;
+  }
+  return { code: ErrorCodes.IPC_HANDLER_FAILED, userMessage: inner };
+}
+
+/** Drops the `TestrixError:` prefix Electron may prepend via `error.toString()`. */
+function stripTestrixErrorName(message: string): string {
+  return message.replace(/^TestrixError:\s*/, '');
 }
 
 function parseTestrixErrorMessage(message: string): IpcErrorPayload | null {

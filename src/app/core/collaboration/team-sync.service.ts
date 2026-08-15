@@ -7,6 +7,7 @@ import {
   teamSyncStatusLabel,
   type TeamBranchEntry,
   type TeamCommitDetail,
+  type TeamConflictFilePreview,
   type TeamGitSetupContext,
   type TeamHistoryPage,
   type TeamFetchRemoteCatalogOptions,
@@ -410,6 +411,30 @@ export class TeamSyncService {
     this.statusState.set(status);
     await this.profiles.hydrate();
     await this.profiles.reloadWorkspaceFromDisk();
+  }
+
+  async getConflictFile(path: string): Promise<TeamConflictFilePreview | null> {
+    const bridge = this.electron.bridge();
+    if (!bridge?.team?.getConflictFile) {
+      return null;
+    }
+    return bridge.team.getConflictFile(path);
+  }
+
+  async resolveConflictFile(
+    path: string,
+    resolution: 'ours' | 'theirs' | 'merged',
+  ): Promise<void> {
+    const bridge = this.electron.bridge();
+    if (!bridge?.team?.resolveConflictFile) {
+      return;
+    }
+    const status = await bridge.team.resolveConflictFile({ path, resolution });
+    this.statusState.set(status);
+    if (status.status !== 'conflict') {
+      await this.profiles.hydrate();
+      await this.profiles.reloadWorkspaceFromDisk();
+    }
   }
 
   async pauseAutoSync(): Promise<TeamWorkspaceConfig | null> {

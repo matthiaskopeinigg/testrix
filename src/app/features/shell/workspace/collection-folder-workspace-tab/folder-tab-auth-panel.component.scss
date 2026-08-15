@@ -11,3 +11,15 @@
   line-height: 1.45;
   color: var(--tx-text-1);
 }
+
+.folder-auth-panel__token {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.folder-auth-panel__token-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}

@@ -14,6 +14,8 @@ import {
   MOCK_SERVER_FILE_NAME,
   PATHS_ANCHOR_FILE_NAME,
   PROFILES_FILE_NAME,
+  MONITORS_FILE_NAME,
+  QUERIES_FILE_NAME,
   REGRESSIONS_FILE_NAME,
   SESSION_FILE_NAME,
   SETTINGS_FILE_NAME,
@@ -43,6 +45,8 @@ export const WORKSPACE_FILE_DESCRIPTORS: readonly WorkspaceFileDescriptor[] = [
   { fileName: MOCK_SERVER_FILE_NAME, scope: 'profile', currentVersion: 2 },
   { fileName: CAPTURE_FILE_NAME, scope: 'profile', currentVersion: 3 },
   { fileName: INTERCEPTOR_FILE_NAME, scope: 'profile', currentVersion: 1 },
+  { fileName: QUERIES_FILE_NAME, scope: 'profile', currentVersion: 1 },
+  { fileName: MONITORS_FILE_NAME, scope: 'profile', currentVersion: 1 },
 ];
 
 export interface ReadWorkspaceFileMetaInput {

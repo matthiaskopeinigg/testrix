@@ -27,6 +27,13 @@
         [panelOutputs]="codeSnippetModalOutputs"
       />
     }
+    @if (resolvedPreviewOpen()) {
+      <app-request-tab-dynamic-outlet
+        [componentType]="resolvedPreviewModalComponent()"
+        [panelInputs]="resolvedPreviewModalInputs()"
+        [panelOutputs]="resolvedPreviewModalOutputs"
+      />
+    }
   </section>
 } @else {
   <section
@@ -79,6 +86,16 @@
           />
         </tx-form-field>
         @if (useSidebarLayout()) {
+          <button
+            type="button"
+            class="request-tab__code-btn"
+            title="Preview resolved URL, headers, and body"
+            aria-label="Preview resolved request"
+            (click)="handleOpenResolvedPreview()"
+          >
+            <tx-icon name="eye" [size]="14" aria-hidden="true" />
+            <span>Preview</span>
+          </button>
           <button
             type="button"
             class="request-tab__code-btn"
@@ -136,6 +153,16 @@
               </button>
             }
           </nav>
+          <button
+            type="button"
+            class="request-tab__code-btn"
+            title="Preview resolved URL, headers, and body"
+            aria-label="Preview resolved request"
+            (click)="handleOpenResolvedPreview()"
+          >
+            <tx-icon name="eye" [size]="14" aria-hidden="true" />
+            <span>Preview</span>
+          </button>
           <button
             type="button"
             class="request-tab__code-btn"
@@ -319,6 +346,13 @@
         [componentType]="codeSnippetModalComponent()"
         [panelInputs]="codeSnippetModalInputs()"
         [panelOutputs]="codeSnippetModalOutputs"
+      />
+    }
+    @if (resolvedPreviewOpen()) {
+      <app-request-tab-dynamic-outlet
+        [componentType]="resolvedPreviewModalComponent()"
+        [panelInputs]="resolvedPreviewModalInputs()"
+        [panelOutputs]="resolvedPreviewModalOutputs"
       />
     }
   </section>

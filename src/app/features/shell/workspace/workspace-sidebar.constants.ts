@@ -5,6 +5,7 @@ export const WORKSPACE_SIDEBAR_MAIN_ITEMS: readonly TxSidebarItem[] = [
   { id: 'collections', label: 'Collections', icon: 'folder' },
   { id: 'environments', label: 'Environments', icon: 'globe' },
   { id: 'testing', label: 'Testing', icon: 'testing' },
+  { id: 'data', label: 'Database', icon: 'database' },
   { id: 'development', label: 'Development', icon: 'development' },
 ];
 

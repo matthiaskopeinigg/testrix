@@ -7,7 +7,7 @@ describe('settingsSectionMatchesQuery', () => {
     expect(settingsSectionMatchesQuery('httpRequest', 'timeout')).toBe(true);
     expect(settingsSectionMatchesQuery('appearance', 'dracula')).toBe(true);
     expect(settingsSectionMatchesQuery('logging', 'trace')).toBe(true);
-    expect(settingsSectionMatchesQuery('databases', 'postgresql')).toBe(true);
+    expect(settingsSectionMatchesQuery('dataConfig', 'profile')).toBe(true);
   });
 
   it('does not match unrelated sections', () => {

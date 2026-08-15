@@ -1,0 +1,51 @@
+@use './dev-tool-layout';
+
+:host {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.request-diff-tool__panes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  min-height: 0;
+}
+
+.request-diff-tool__rows {
+  display: flex;
+  flex-direction: column;
+  min-height: 8rem;
+  overflow: auto;
+  border: 1px solid var(--tx-border-0);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--tx-surface-1) 90%, transparent);
+}
+
+.request-diff-tool__row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+.request-diff-tool__cell {
+  margin: 0;
+  padding: 0.15rem 0.5rem;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  word-break: break-word;
+
+  &[data-kind='add'] {
+    background: color-mix(in srgb, var(--tx-success) 18%, transparent);
+  }
+
+  &[data-kind='remove'] {
+    background: color-mix(in srgb, var(--tx-danger) 18%, transparent);
+  }
+
+  &[data-kind='change'] {
+    background: color-mix(in srgb, var(--tx-warning) 16%, transparent);
+  }
+}

@@ -8,7 +8,7 @@ export const HELP_WIKI_DEVELOPMENT_SECTIONS: readonly HelpWikiSection[] = [
     label: 'UUID Generator',
     icon: 'hash',
     title: 'UUID Generator',
-    description: 'Bulk UUID v4 generation.',
+    description: 'Bulk UUID v4, v7, ULID, and NanoID generation.',
     blocks: [
       {
         type: 'paragraph',
@@ -73,7 +73,7 @@ export const HELP_WIKI_DEVELOPMENT_SECTIONS: readonly HelpWikiSection[] = [
     blocks: [
       {
         type: 'paragraph',
-        text: 'Edit cron fields or pick presets; human-readable description and upcoming run times update live.',
+        text: 'Edit cron fields or pick presets; human-readable description and upcoming run times update live. Use in monitor… opens Testing → Monitors with the current expression.',
       },
     ],
   }),
@@ -134,6 +134,62 @@ export const HELP_WIKI_DEVELOPMENT_SECTIONS: readonly HelpWikiSection[] = [
       {
         type: 'paragraph',
         text: 'Edit OpenAPI 3 specs in JSON or YAML with outline navigation and validation feedback.',
+      },
+    ],
+  }),
+  wikiSection({
+    id: 'dev-hash',
+    groupId: 'development',
+    label: 'Hash / HMAC',
+    icon: 'hash',
+    title: 'Hash / HMAC',
+    description: 'MD5, SHA family, and HMAC-SHA256.',
+    blocks: [
+      {
+        type: 'paragraph',
+        text: 'Hash text with MD5 or SHA algorithms. HMAC-SHA256 uses a key kept in memory for the session.',
+      },
+    ],
+  }),
+  wikiSection({
+    id: 'dev-jsonpath',
+    groupId: 'development',
+    label: 'JSONPath',
+    icon: 'search',
+    title: 'JSONPath Tester',
+    description: 'Evaluate JSONPath against a JSON document.',
+    blocks: [
+      {
+        type: 'paragraph',
+        text: 'Paste JSON and a path such as $.user.name or $.items[0].id. The same extractor is used when capturing a response value into an environment variable.',
+      },
+    ],
+  }),
+  wikiSection({
+    id: 'dev-cert-inspector',
+    groupId: 'development',
+    label: 'Certificates',
+    icon: 'shield',
+    title: 'Certificate Inspector',
+    description: 'Inspect PEM certificates, CSRs, and keys.',
+    blocks: [
+      {
+        type: 'paragraph',
+        text: 'Paste PEM blocks to see type, DER size, and SHA-256 fingerprint. Private key material is not decoded beyond the PEM envelope.',
+      },
+    ],
+  }),
+  wikiSection({
+    id: 'dev-request-diff',
+    groupId: 'development',
+    label: 'Request Diff',
+    icon: 'layers',
+    title: 'Request / Response Diff',
+    description: 'Side-by-side text comparison.',
+    blocks: [
+      {
+        type: 'paragraph',
+        text: 'Compare two payloads side by side using the same line-diff engine as HTTP response diffs.',
       },
     ],
   }),

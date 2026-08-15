@@ -1,0 +1,46 @@
+<app-dev-tool-layout toolId="hash">
+  <app-dev-tool-toolbar devToolToolbar>
+    <div leading class="dev-tool-tab__options">
+      <tx-form-field label="Algorithm">
+        <tx-dropdown
+          [options]="algorithmOptions"
+          [ngModel]="state().algorithm"
+          (ngModelChange)="state.update((s) => ({ ...s, algorithm: $event, output: '' }))"
+        />
+      </tx-form-field>
+    </div>
+    <div trailing>
+      <tx-button variant="primary" (click)="handleHash()">Hash</tx-button>
+      <tx-button variant="secondary" (click)="handleCopy()">Copy</tx-button>
+    </div>
+  </app-dev-tool-toolbar>
+
+  <app-dev-tool-stat-strip>
+    <tx-tag>{{ state().algorithm }}</tx-tag>
+    @if (state().output) {
+      <tx-tag>{{ state().output.length }} hex chars</tx-tag>
+    }
+  </app-dev-tool-stat-strip>
+
+  <tx-form-field label="Input">
+    <tx-textarea
+      [rows]="6"
+      [ngModel]="state().input"
+      (ngModelChange)="state.update((s) => ({ ...s, input: $event }))"
+    />
+  </tx-form-field>
+
+  @if (isHmac()) {
+    <tx-form-field label="HMAC key (memory only)">
+      <tx-input
+        type="password"
+        [ngModel]="state().key"
+        (ngModelChange)="state.update((s) => ({ ...s, key: $event }))"
+      />
+    </tx-form-field>
+  }
+
+  <tx-form-field label="Digest">
+    <tx-input [ngModel]="state().output" (ngModelChange)="state.update((s) => ({ ...s, output: $event }))" />
+  </tx-form-field>
+</app-dev-tool-layout>

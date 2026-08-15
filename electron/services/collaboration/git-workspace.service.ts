@@ -3,7 +3,9 @@ import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 
 import type { TeamBranchEntry, TeamCommitDetail, TeamCommitFileChange, TeamCommitFileStatus, TeamHistoryEntry } from '../../../shared/collaboration';
+import { COLLECTIONS_FILE_NAME, ENVIRONMENTS_FILE_NAME } from '../../../shared/config/constants';
 import { splitUnifiedDiffByFile } from '../../../shared/collaboration/unified-diff';
+import { createTwoFilesPatch } from 'diff';
 
 export interface GitRepoStatus {
   readonly branch: string | null;
@@ -503,6 +505,76 @@ export class GitWorkspaceService {
       }
     }
     await this.runGit(['rebase', '--continue'], workspaceDir);
+  }
+
+  /** Reads ours/theirs/base stages for one conflicted file and a unified diff. */
+  async getConflictFilePreview(
+    workspaceDir: string,
+    file: string,
+  ): Promise<{
+    readonly path: string;
+    readonly ours: string;
+    readonly theirs: string;
+    readonly base: string | null;
+    readonly diff: string;
+    readonly mergeable: boolean;
+  }> {
+    const safe = this.requireSafeRepoPath(file);
+    const ours = await this.showStage(workspaceDir, 2, safe);
+    const theirs = await this.showStage(workspaceDir, 3, safe);
+    const baseResult = await this.runGit(['show', `:1:${safe}`], workspaceDir);
+    const base = baseResult.ok ? baseResult.stdout : null;
+    const diff = createTwoFilesPatch(safe, safe, ours, theirs, 'local', 'remote');
+    const baseName = path.posix.basename(safe);
+    return {
+      path: safe,
+      ours,
+      theirs,
+      base,
+      diff,
+      mergeable: baseName === COLLECTIONS_FILE_NAME || baseName === ENVIRONMENTS_FILE_NAME,
+    };
+  }
+
+  /** Resolves one conflicted file, then continues the rebase when none remain. */
+  async resolveConflictFile(
+    workspaceDir: string,
+    file: string,
+    resolution: 'ours' | 'theirs',
+  ): Promise<void> {
+    const safe = this.requireSafeRepoPath(file);
+    const strategy = resolution === 'ours' ? '--ours' : '--theirs';
+    await this.runGit(['checkout', strategy, '--', safe], workspaceDir);
+    await this.runGit(['add', '--', safe], workspaceDir);
+    await this.continueRebaseIfResolved(workspaceDir);
+  }
+
+  /** Writes merged file contents, stages them, and continues when the conflict is fully resolved. */
+  async resolveConflictWithContent(workspaceDir: string, file: string, content: string): Promise<void> {
+    const safe = this.requireSafeRepoPath(file);
+    await fs.writeFile(path.join(workspaceDir, safe), content, 'utf8');
+    await this.runGit(['add', '--', safe], workspaceDir);
+    await this.continueRebaseIfResolved(workspaceDir);
+  }
+
+  private async continueRebaseIfResolved(workspaceDir: string): Promise<void> {
+    const remaining = await this.listConflictedFiles(workspaceDir);
+    if (remaining.length === 0) {
+      await this.runGit(['rebase', '--continue'], workspaceDir);
+    }
+  }
+
+  private requireSafeRepoPath(file: string): string {
+    const safe = file.replace(/\\/g, '/').replace(/^\/+/, '');
+    if (!safe || safe.includes('..') || path.isAbsolute(file)) {
+      throw new Error('Invalid conflict file path');
+    }
+    return safe;
+  }
+
+  private async showStage(workspaceDir: string, stage: 1 | 2 | 3, file: string): Promise<string> {
+    const result = await this.runGit(['show', `:${stage}:${file}`], workspaceDir);
+    return result.ok ? result.stdout : '';
   }
 
   buildAuthEnv(token: string | null): NodeJS.ProcessEnv {

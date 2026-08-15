@@ -65,6 +65,8 @@ export const loadTestRunRecordSchema = z.object({
   status: loadTestRunStatusSchema.default('running'),
   profileSnapshot: loadTestProfileSchema,
   thresholdsSnapshot: loadTestThresholdsSchema.default({}),
+  environmentId: z.string().nullable().optional(),
+  environmentName: boundedText(256).optional(),
   summary: loadTestRunSummarySchema,
   samples: z.array(loadTestMetricsSampleSchema).max(LOAD_TEST_RUN_SAMPLES_MAX).default([]),
   thresholdResults: z.array(loadTestThresholdResultSchema).default([]),
@@ -81,6 +83,13 @@ export const loadTestArtifactSchema = z.object({
   targetSource: z.enum(LOAD_TEST_TARGET_SOURCE_IDS).default('collection'),
   targetRequestId: z.string().optional(),
   manualTarget: loadTestManualTargetSchema.optional(),
+  /**
+   * Environment used when sending the load-test target.
+   * `null` / omit — inherit from the collection request (or none for manual).
+   * `""` — force no environment.
+   * Profile id — override.
+   */
+  environmentId: z.string().nullable().optional(),
   profile: loadTestProfileSchema,
   thresholds: loadTestThresholdsSchema.default({}),
   runs: z.array(loadTestRunRecordSchema).max(LOAD_TEST_RUN_HISTORY_MAX).default([]),

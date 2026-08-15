@@ -9,6 +9,8 @@ export interface EnvironmentTreeNodeMeta {
   readonly key?: string;
   readonly value?: string;
   readonly description?: string;
+  readonly secret?: boolean;
+  readonly vaultRef?: string;
 }
 
 export type EnvironmentTreeNode = TxTreeNode<EnvironmentTreeNodeMeta>;

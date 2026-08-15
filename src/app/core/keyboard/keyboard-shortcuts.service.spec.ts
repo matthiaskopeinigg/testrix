@@ -29,6 +29,7 @@ describe('KeyboardShortcutsService', () => {
       const catalog = service.getCatalog();
       expect(catalog).toBe(KEYBOARD_SHORTCUT_CATALOG);
       expect(catalog.length).toBeGreaterThan(0);
+      expect(catalog.some((entry) => entry.id === 'database.runQuery')).toBe(true);
     });
   });
 

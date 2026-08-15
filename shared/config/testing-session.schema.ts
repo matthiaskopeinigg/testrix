@@ -36,6 +36,7 @@ export const TESTING_SUBPANEL_IDS = [
   'mock-server',
   'capture',
   'interceptor',
+  'monitors',
 ] as const;
 export type TestingSubpanelId = (typeof TESTING_SUBPANEL_IDS)[number];
 

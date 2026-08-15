@@ -16,7 +16,21 @@ describe('help wiki catalog', () => {
 
   it('parses the full catalog', () => {
     expect(HELP_WIKI_CATALOG.sections.length).toBeGreaterThan(0);
-    expect(HELP_WIKI_CATALOG.groups.length).toBe(8);
+    expect(HELP_WIKI_CATALOG.groups.length).toBe(10);
+  });
+
+  it('includes a Database group with sidebar pages', () => {
+    const group = HELP_WIKI_CATALOG.groups.find((item) => item.id === 'database');
+    expect(group?.label).toBe('Database');
+    const ids = HELP_WIKI_SECTIONS.filter((section) => section.groupId === 'database').map(
+      (section) => section.id,
+    );
+    expect(ids).toEqual([
+      'database-workspace',
+      'database-connections',
+      'database-queries',
+      'database-table-data',
+    ]);
   });
 
   it('validates each section against the schema', () => {

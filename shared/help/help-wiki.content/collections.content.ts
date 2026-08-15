@@ -17,6 +17,8 @@ export const HELP_WIKI_COLLECTIONS_SECTIONS: readonly HelpWikiSection[] = [
       {
         type: 'list',
         items: [
+          'Paste a curl command into the URL bar to fill method, URL, headers, and body.',
+          'Use Preview for the fully resolved request, or Code for client snippets (including Java, Kotlin, PHP, Ruby, and PowerShell).',
           'Search filters the tree by name, method, URL, and tags.',
           'Filter and sort menus refine visible items (method, kind, tags).',
           'Right-click for context actions: new folder/request, duplicate, delete, export.',
@@ -36,7 +38,7 @@ export const HELP_WIKI_COLLECTIONS_SECTIONS: readonly HelpWikiSection[] = [
     blocks: [
       {
         type: 'paragraph',
-        text: 'Each HTTP request tab combines method, URL, section panels, and a response viewer. Click Send to execute; results appear below with status, timing, headers, and body.',
+        text: 'Each HTTP request tab combines method, URL, section panels, and a response viewer. Click Send to execute; results appear below with status, timing, headers, and body. Paste cURL into the URL bar, or use Import cURL from clipboard in the command palette.',
       },
       {
         type: 'note',
@@ -142,6 +144,10 @@ export const HELP_WIKI_COLLECTIONS_SECTIONS: readonly HelpWikiSection[] = [
       {
         type: 'paragraph',
         text: 'Configure auth mode and credentials on the request. Auth headers or query params are applied when the request is built for send.',
+      },
+      {
+        type: 'paragraph',
+        text: 'OAuth 2.0 supports authorization code (PKCE S256 by default), client credentials, and password grants. Get Token opens the identity provider (or posts to the token URL) and stores the access and refresh tokens in the local vault — never in collections.json. Send refreshes an expired token automatically and applies Authorization: Bearer. Resolved request preview masks the token.',
       },
     ],
   }),

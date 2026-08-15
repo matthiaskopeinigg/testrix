@@ -1,0 +1,168 @@
+<section class="db-conn tx-workspace-tab" aria-label="Database connection">
+  @if (!connection()) {
+    <tx-banner variant="warning" title="Connection not found">
+      This tab is not linked to a saved connection. Open one from the Database sidebar.
+    </tx-banner>
+  } @else {
+    @let conn = connection()!;
+    <header class="db-conn__head">
+      <div>
+        <h2 class="db-conn__title">{{ conn.name || 'Untitled connection' }}</h2>
+        <p class="db-conn__meta">{{ typeLabel(conn.type) }}</p>
+      </div>
+      <tx-tag [variant]="statusTagVariant(conn)" casing="normal">{{ statusLabel(conn) }}</tx-tag>
+    </header>
+
+    <div class="db-conn__grid">
+      <tx-form-field label="Name" controlId="db-conn-name">
+        <tx-input
+          id="db-conn-name"
+          [ngModel]="conn.name"
+          (ngModelChange)="handlePatch({ name: $event })"
+        />
+      </tx-form-field>
+      <tx-form-field label="Type" controlId="db-conn-type">
+        <tx-dropdown
+          id="db-conn-type"
+          [options]="typeOptions"
+          [ngModel]="conn.type"
+          (ngModelChange)="handleTypeChange($event)"
+        />
+      </tx-form-field>
+      <tx-form-field label="Folder" controlId="db-conn-folder">
+        <tx-dropdown
+          id="db-conn-folder"
+          [options]="folderOptions()"
+          [ngModel]="folderValue()"
+          (ngModelChange)="handleFolderChange($event)"
+        />
+      </tx-form-field>
+    </div>
+
+    <tx-toggle
+      label="Connect on app startup"
+      [ngModel]="conn.connectOnBoot"
+      (ngModelChange)="handlePatch({ connectOnBoot: $event })"
+    />
+
+    @if (conn.type === 'sqlite') {
+      <tx-form-field label="File path" controlId="db-conn-file">
+        <div class="db-conn__file-row">
+          <tx-input
+            id="db-conn-file"
+            [ngModel]="conn.filePath ?? ''"
+            (ngModelChange)="handlePatch({ filePath: $event || undefined })"
+            placeholder="C:\path\to\database.sqlite"
+          />
+          @if (canPickFile()) {
+            <tx-button variant="secondary" (pressed)="handlePickSqliteFile()">Browse</tx-button>
+          }
+        </div>
+      </tx-form-field>
+      <tx-form-field label="Busy timeout (ms)" controlId="db-conn-busy">
+        <tx-input
+          id="db-conn-busy"
+          type="number"
+          [ngModel]="conn.busyTimeoutMs ?? ''"
+          (ngModelChange)="handlePatch({ busyTimeoutMs: $event ? +$event : undefined })"
+        />
+      </tx-form-field>
+    } @else {
+      <div class="db-conn__grid">
+        <tx-form-field label="Host" controlId="db-conn-host">
+          <tx-input
+            id="db-conn-host"
+            [ngModel]="conn.host"
+            (ngModelChange)="handlePatch({ host: $event })"
+          />
+        </tx-form-field>
+        <tx-form-field label="Port" controlId="db-conn-port">
+          <tx-input
+            id="db-conn-port"
+            type="number"
+            [ngModel]="conn.port"
+            (ngModelChange)="handlePatch({ port: +$event })"
+          />
+        </tx-form-field>
+      </div>
+      <div class="db-conn__grid">
+        <tx-form-field label="User" controlId="db-conn-user">
+          <tx-input
+            id="db-conn-user"
+            [ngModel]="conn.user ?? ''"
+            (ngModelChange)="handlePatch({ user: $event || undefined })"
+          />
+        </tx-form-field>
+        <tx-form-field label="Password" controlId="db-conn-pass">
+          <tx-input
+            id="db-conn-pass"
+            type="password"
+            [ngModel]="conn.password ?? ''"
+            (ngModelChange)="handlePatch({ password: $event || undefined })"
+          />
+        </tx-form-field>
+      </div>
+      <div class="db-conn__grid">
+        <tx-form-field
+          [label]="conn.type === 'redis' ? 'Database index' : 'Database name'"
+          controlId="db-conn-database"
+        >
+          <tx-input
+            id="db-conn-database"
+            [ngModel]="conn.database ?? ''"
+            (ngModelChange)="handlePatch({ database: $event || undefined })"
+          />
+        </tx-form-field>
+        <div class="db-conn__toggle-slot">
+          <tx-toggle
+            label="Use TLS"
+            [ngModel]="conn.tls ?? false"
+            (ngModelChange)="handlePatch({ tls: $event })"
+          />
+        </div>
+      </div>
+      <div class="db-conn__grid">
+        <tx-form-field label="Connect timeout (ms)" controlId="db-conn-timeout">
+          <tx-input
+            id="db-conn-timeout"
+            type="number"
+            [ngModel]="conn.connectTimeoutMs ?? ''"
+            (ngModelChange)="handlePatch({ connectTimeoutMs: $event ? +$event : undefined })"
+          />
+        </tx-form-field>
+        <tx-form-field label="Command timeout (ms)" controlId="db-conn-cmd">
+          <tx-input
+            id="db-conn-cmd"
+            type="number"
+            [ngModel]="conn.commandTimeoutMs ?? ''"
+            (ngModelChange)="handlePatch({ commandTimeoutMs: $event ? +$event : undefined })"
+          />
+        </tx-form-field>
+      </div>
+    }
+
+    <div class="db-conn__actions">
+      <tx-button
+        variant="secondary"
+        [loading]="testing()"
+        loadingLabel="Testing connection"
+        (pressed)="handleTestConnection()"
+      >
+        Test connection
+      </tx-button>
+    </div>
+
+    @if (testOutcome(); as outcome) {
+      <tx-banner
+        [variant]="outcome.kind === 'success' ? 'success' : 'error'"
+        [title]="outcome.kind === 'success' ? 'Connection OK' : 'Connection failed'"
+      >
+        {{ outcome.message }}
+      </tx-banner>
+    } @else if (statusFor(conn)?.state === 'error' && statusFor(conn)?.message) {
+      <tx-banner variant="error" title="Last check failed">
+        {{ statusFor(conn)!.message }}
+      </tx-banner>
+    }
+  }
+</section>

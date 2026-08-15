@@ -16,6 +16,11 @@ import {
   type LoadTestTabSectionId,
   type WorkspaceEditorLayoutId,
 } from '@shared/config';
+import {
+  findCollectionRequestInTree,
+  getEnvironmentDefinition,
+  resolveCollectionRequestEnvironmentId,
+} from '@shared/config';
 import type {
   LoadTestManualTarget,
   LoadTestProfile,
@@ -29,13 +34,17 @@ import {
   createLoadTestRunRecord,
   createStartingLoadTestRunMetrics,
   isLoadTestTargetReady,
+  loadTestEnvironmentSummary,
   parseLoadTestIpcId,
+  resolveLoadTestEffectiveEnvironmentId,
   type LoadTestRunMetrics,
   type LoadTestStartOptions,
 } from '@shared/testing';
 
 import { CollectionsService } from '@app/core/collections/collections.service';
 import { ConfigService } from '@app/core/config/config.service';
+import { EnvironmentsService } from '@app/core/environments/environments.service';
+import { fromTreeNodes } from '@app/features/shell/collections/collection-tree.adapter';
 import { resolveTabEditorLayout } from '@app/core/config/workspace-tab-editor-layout';
 import { TestingSessionService } from '@app/core/testing/testing-session.service';
 import { ElectronService } from '@app/core/electron/electron.service';
@@ -106,6 +115,7 @@ const METRICS_POLL_MS = 500;
 })
 export class LoadTestWorkspaceTabComponent {
   private readonly collectionsService = inject(CollectionsService);
+  private readonly environmentsService = inject(EnvironmentsService);
   private readonly configService = inject(ConfigService);
   private readonly testingSession = inject(TestingSessionService);
   private readonly loadTest = inject(LoadTestService);
@@ -184,6 +194,22 @@ export class LoadTestWorkspaceTabComponent {
       collectionRequestLabel(this.collectionsService.nodes(), artifact.targetRequestId) ||
       'No collection request selected'
     );
+  });
+
+  protected readonly environmentSummary = computed(() => {
+    const artifact = this.artifact();
+    if (!artifact) {
+      return '—';
+    }
+    const envId = artifact.environmentId;
+    const envName = envId
+      ? getEnvironmentDefinition(this.environmentsService.environments(), envId)?.name
+      : null;
+    return loadTestEnvironmentSummary({
+      environmentId: envId,
+      targetSource: artifact.targetSource,
+      environmentName: envName,
+    });
   });
 
   protected readonly runState = computed((): LtRunState => {
@@ -336,6 +362,11 @@ export class LoadTestWorkspaceTabComponent {
       targetSource: 'manual',
       manualTarget,
     });
+  }
+
+  /** Persists the load-test environment selection. */
+  protected handleEnvironmentChange(environmentId: string | null): void {
+    this.scheduleArtifactPatch({ environmentId });
   }
 
   protected handleProfileChange(patch: Partial<LoadTestProfile>): void {
@@ -514,6 +545,7 @@ export class LoadTestWorkspaceTabComponent {
       targetSource: artifact.targetSource,
       manualTarget: artifact.manualTarget,
       loadTestId: artifact.id,
+      environmentId: artifact.environmentId,
       virtualUsers: profile.virtualUsers,
       durationSec: profile.durationSec,
       rampUpSec: profile.rampUpSec,
@@ -587,6 +619,14 @@ export class LoadTestWorkspaceTabComponent {
     }
 
     const status = this.runCancelled ? 'cancelled' : 'passed';
+    const inheritedId =
+      artifact.targetSource === 'collection' && artifact.targetRequestId
+        ? this.resolveInheritedCollectionEnvironmentId(artifact.targetRequestId)
+        : null;
+    const environmentId = resolveLoadTestEffectiveEnvironmentId(artifact.environmentId, inheritedId);
+    const environmentName = environmentId
+      ? getEnvironmentDefinition(this.environmentsService.environments(), environmentId)?.name
+      : undefined;
     const record = createLoadTestRunRecord({
       id: runId,
       metrics: snapshot,
@@ -594,11 +634,21 @@ export class LoadTestWorkspaceTabComponent {
       thresholds: artifact.thresholds,
       startedAt,
       status,
+      environmentId,
+      environmentName,
     });
 
     this.loadTest.appendRun(artifactId, record);
     this.selectedRunId.set(runId);
     this.resetRunTracking();
+  }
+
+  private resolveInheritedCollectionEnvironmentId(requestId: string): string | null {
+    const loc = findCollectionRequestInTree(fromTreeNodes(this.collectionsService.nodes()), requestId);
+    if (!loc) {
+      return null;
+    }
+    return resolveCollectionRequestEnvironmentId(loc.request.settings.environmentId, loc.ancestorFolders);
   }
 
   private resetLiveMetrics(): void {

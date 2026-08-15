@@ -22,6 +22,33 @@ describe('migrateSession', () => {
     expect(migrated.workspace.environments.expandedFolderIds).toEqual([]);
     expect(migrated.workspace.designSystem.activePillar).toBe('style-guide');
     expect(migrated.workspace.designSystem.expandedPillars.length).toBe(5);
+    expect(migrated.workspace.database.connectionsExpanded).toBe(true);
+    expect(migrated.workspace.database.queriesExpanded).toBe(true);
+    expect(migrated.workspace.database.queryExpandedIds).toEqual([]);
+    expect(migrated.workspace.database.connectionExpandedIds).toEqual([]);
+    expect(migrated.workspace.database.showSystemObjects).toBe(false);
+  });
+
+  it('preserves database sidebar expansion when present', () => {
+    const session = createDefaultSession();
+    const withDatabase = {
+      ...session,
+      workspace: {
+        ...session.workspace,
+        database: {
+          connectionsExpanded: true,
+          queriesExpanded: false,
+          queryExpandedIds: ['q-folder'],
+          connectionExpandedIds: ['c-folder'],
+        },
+      },
+    };
+
+    const migrated = migrateSession(withDatabase);
+    expect(migrated.workspace.database.connectionsExpanded).toBe(true);
+    expect(migrated.workspace.database.queriesExpanded).toBe(false);
+    expect(migrated.workspace.database.queryExpandedIds).toEqual(['q-folder']);
+    expect(migrated.workspace.database.connectionExpandedIds).toEqual(['c-folder']);
   });
 
   it('preserves environments expandedFolderIds when present', () => {

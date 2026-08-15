@@ -45,6 +45,21 @@ describe('load-test-run-finalize', () => {
     expect(record.status).toBe('cancelled');
   });
 
+  it('snapshots environment id and name on the run record', () => {
+    const record = createLoadTestRunRecord({
+      id: 'run-env',
+      metrics,
+      profile: { durationSec: 60, virtualUsers: 10, rampUpSec: 0 },
+      thresholds: {},
+      startedAt: '2026-01-01T00:00:00.000Z',
+      status: 'passed',
+      environmentId: 'env-prod',
+      environmentName: 'Production',
+    });
+    expect(record.environmentId).toBe('env-prod');
+    expect(record.environmentName).toBe('Production');
+  });
+
   it('prepends runs and trims to max', () => {
     const base = createLoadTestRunRecord({
       id: 'run-a',

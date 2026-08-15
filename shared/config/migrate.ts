@@ -52,6 +52,7 @@ import {
 import { workspaceDevelopmentSchema } from './development-session.schema';
 import { workspaceHistorySidebarSchema } from './history-sidebar';
 import { workspaceTestingSchema } from './testing-session.schema';
+import { workspaceDatabaseSchema } from './database-session.schema';
 import { sessionFileSchema } from './session.schema';
 import {
   createDefaultWorkspaceEditor,
@@ -627,6 +628,16 @@ export function migrateSession(data: unknown): SessionFile {
     ...testingRaw,
   });
 
+  const databaseRaw =
+    typeof workspaceRaw['database'] === 'object' && workspaceRaw['database'] !== null
+      ? (workspaceRaw['database'] as Record<string, unknown>)
+      : {};
+
+  const database = workspaceDatabaseSchema.parse({
+    ...defaults.workspace.database,
+    ...databaseRaw,
+  });
+
   const historyRaw =
     typeof workspaceRaw['history'] === 'object' && workspaceRaw['history'] !== null
       ? (workspaceRaw['history'] as Record<string, unknown>)
@@ -738,6 +749,7 @@ export function migrateSession(data: unknown): SessionFile {
       development,
       history,
       testing,
+      database,
     },
   });
 }

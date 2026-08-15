@@ -18,6 +18,8 @@ export interface CreateLoadTestRunRecordInput {
   readonly startedAt: string;
   readonly status: LoadTestRunStatus;
   readonly finishedAt?: string;
+  readonly environmentId?: string | null;
+  readonly environmentName?: string;
 }
 
 /** Builds threshold pass/fail rows for a completed run. */
@@ -90,7 +92,8 @@ export function trimLoadTestRunSamples(
 
 /** Builds a persisted run record from live metrics. */
 export function createLoadTestRunRecord(input: CreateLoadTestRunRecordInput): LoadTestRunRecord {
-  const { metrics, profile, thresholds, startedAt, status, id, finishedAt } = input;
+  const { metrics, profile, thresholds, startedAt, status, id, finishedAt, environmentId, environmentName } =
+    input;
   const thresholdResults = buildThresholdResults(metrics, thresholds);
   const resolvedStatus: LoadTestRunStatus =
     status === 'cancelled' ? 'cancelled' : evaluateLoadTestRunStatus(metrics, thresholds);
@@ -114,6 +117,8 @@ export function createLoadTestRunRecord(input: CreateLoadTestRunRecordInput): Lo
     status: resolvedStatus,
     profileSnapshot: profile,
     thresholdsSnapshot: thresholds,
+    environmentId: environmentId ?? null,
+    ...(environmentName?.trim() ? { environmentName: environmentName.trim() } : {}),
     summary,
     samples: trimLoadTestRunSamples(metrics.samples),
     thresholdResults,

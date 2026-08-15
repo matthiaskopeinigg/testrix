@@ -6,6 +6,7 @@ import { TxButtonComponent } from '@app/shared/components/forms/tx-button/tx-but
 import { TxCodeEditorComponent } from '@app/shared/components/editors/tx-code-editor/tx-code-editor.component';
 import { TxTagComponent } from '@app/shared/components/forms/tx-tag/tx-tag.component';
 
+import { CaptureEntryActionsService } from '@app/core/testing/capture-entry-actions.service';
 import { DevToolClipboardService } from '../shell/dev-tool-clipboard.service';
 import { DevToolLayoutComponent } from '../shell/dev-tool-layout.component';
 import { DevToolModeChipComponent } from '../shell/dev-tool-mode-chip.component';
@@ -39,6 +40,7 @@ import {
 })
 export class OpenApiDevToolComponent {
   private readonly clipboard = inject(DevToolClipboardService);
+  private readonly captureActions = inject(CaptureEntryActionsService);
   protected readonly state = createDevToolStateBinding('openapi');
 
   protected readonly validation = computed(() =>
@@ -65,6 +67,10 @@ export class OpenApiDevToolComponent {
     if (!result.error) {
       this.state.update((s) => ({ ...s, content: result.content }));
     }
+  }
+
+  protected handleCreateMocks(): void {
+    void this.captureActions.generateMockEndpointsFromOpenApi(this.state().content);
   }
 
   protected handleImportPetstore(): void {

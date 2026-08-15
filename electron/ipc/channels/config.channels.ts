@@ -27,6 +27,7 @@ export const ConfigChannels = {
   linkProfileToDirectory: 'config:linkProfileToDirectory',
   createLinkedProfile: 'config:createLinkedProfile',
   getWorkspaceFileInventory: 'config:getWorkspaceFileInventory',
+  vaultEncryptionAvailable: 'config:vaultEncryptionAvailable',
 } as const;
 
 export type ConfigChannel = (typeof ConfigChannels)[keyof typeof ConfigChannels];

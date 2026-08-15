@@ -49,4 +49,19 @@ describe('ErrorNotificationService', () => {
     vi.advanceTimersByTime(ERROR_BANNER_AUTO_DISMISS_MS);
     expect(service.banner()).toBeNull();
   });
+
+  it('shows a user-facing title instead of IPC_HANDLER_FAILED', () => {
+    const service = new ErrorNotificationService();
+    service.reportUnknown(
+      new Error(
+        "Error invoking remote method 'db:query': TestrixError: DATABASE_CONNECTION_FAILED: relation \"users\" does not exist",
+      ),
+    );
+
+    expect(service.banner()?.title).toBe('Database error');
+    expect(service.banner()?.title).not.toMatch(/IPC/i);
+    expect(service.banner()?.detail).toBe('relation "users" does not exist');
+    expect(service.banner()?.detail).not.toContain('TestrixError');
+    expect(JSON.stringify(service.banner())).not.toContain('IPC_HANDLER_FAILED');
+  });
 });

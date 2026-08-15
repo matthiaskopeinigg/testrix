@@ -6,3 +6,19 @@
   min-width: 0;
   overflow: hidden;
 }
+
+.request-response-panel__capture {
+  display: flex;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.65rem;
+  padding: 0.55rem 0.75rem;
+  border-top: 1px solid var(--tx-border-0);
+  background: color-mix(in srgb, var(--tx-surface-1) 88%, transparent);
+
+  tx-form-field {
+    min-width: 10rem;
+    flex: 1 1 10rem;
+  }
+}

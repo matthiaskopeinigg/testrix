@@ -21,6 +21,7 @@ export const HELP_WIKI_REFERENCE_SECTIONS: readonly HelpWikiSection[] = [
           'Ctrl+K (Cmd+K) — toggle command palette (search commands and quick-open workspace items).',
           'Ctrl+Shift+T (Cmd+Shift+T) — toggle Teams panel.',
           'Ctrl+W (Cmd+W) — close active workspace tab.',
+          'Ctrl+Enter (Cmd+Enter) — run the focused Database query (statement at the caret, or the selection).',
           'Ctrl+Tab / Ctrl+Shift+Tab — next / previous tab in the focused pane.',
           'Escape — close modals, settings, help, and the command palette.',
         ],
@@ -37,7 +38,7 @@ export const HELP_WIKI_REFERENCE_SECTIONS: readonly HelpWikiSection[] = [
     blocks: [
       {
         type: 'paragraph',
-        text: 'Press Ctrl+K (Cmd+K) to open the command palette. Type to fuzzy-search static shell commands and dynamically indexed workspace targets (requests, environments, test flows, dev tools, and more).',
+        text: 'Press Ctrl+K (Cmd+K) to open the command palette. Type to fuzzy-search static shell commands and dynamically indexed workspace targets (requests, environments, Database connections and queries, test flows, dev tools, and more).',
       },
       {
         type: 'list',

@@ -1,3 +1,11 @@
+@use './ts-flow-step-panel.shared';
+
+.ts-flow-database-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
 .ts-flow-database-panel__query {
   display: flex;
   flex-direction: column;

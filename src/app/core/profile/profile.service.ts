@@ -19,6 +19,8 @@ import { TestSuiteService } from '../testing/test-suite.service';
 import { TestingSessionService } from '../testing/testing-session.service';
 import { WorkspaceSidebarSessionService } from '../workspace/workspace-sidebar-session.service';
 import { WorkspaceEditorService } from '../workspace/workspace-editor.service';
+import { DatabaseQueriesService } from '../database/database-queries.service';
+import { MonitorsService } from '../testing/monitors.service';
 
 @Injectable({ providedIn: 'root' })
 export class ProfileService {
@@ -37,6 +39,8 @@ export class ProfileService {
   private readonly mockServer = inject(MockServerService);
   private readonly capture = inject(CaptureWorkbenchStore);
   private readonly interceptor = inject(InterceptorWorkspaceStore);
+  private readonly databaseQueries = inject(DatabaseQueriesService);
+  private readonly monitors = inject(MonitorsService);
 
   private readonly profilesState = signal<readonly ProfileEntry[]>([]);
   private readonly activeProfileIdState = signal<string | null>(null);
@@ -217,6 +221,8 @@ export class ProfileService {
       this.mockServer.hydrate(),
       this.capture.hydrate(),
       this.interceptor.hydrate(),
+      this.databaseQueries.hydrate(),
+      this.monitors.hydrate(),
     ]);
     await this.configService.hydrateSession();
     this.testingSession.rehydrateFromSession();

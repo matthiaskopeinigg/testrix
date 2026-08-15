@@ -60,6 +60,14 @@ export class FileDialogService {
   }
 
   async saveJson(content: string, defaultPath = 'testrix-export.json'): Promise<string | null> {
+    return this.saveText(content, defaultPath, [{ name: 'JSON', extensions: ['json'] }]);
+  }
+
+  async saveText(
+    content: string,
+    defaultPath: string,
+    filters: readonly { readonly name: string; readonly extensions: readonly string[] }[],
+  ): Promise<string | null> {
     const bridge = this.electron.bridge();
     if (!bridge) {
       return null;
@@ -67,7 +75,7 @@ export class FileDialogService {
     const saved = await bridge.shell.saveFile({
       content,
       defaultPath,
-      filters: [{ name: 'JSON', extensions: ['json'] }],
+      filters,
     });
     return saved?.filePath ?? null;
   }

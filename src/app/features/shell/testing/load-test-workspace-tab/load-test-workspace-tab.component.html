@@ -118,6 +118,7 @@
                     [tags]="artifact()?.tags ?? []"
                     [profile]="artifact()?.profile"
                     [targetSummary]="targetLabel()"
+                    [environmentSummary]="environmentSummary()"
                     [runs]="artifact()?.runs ?? []"
                     [pinnedBaselineRunId]="pinnedBaselineRunId()"
                     (descriptionChange)="handleDescriptionChange($event)"
@@ -139,9 +140,11 @@
                     [targetSource]="artifact()?.targetSource ?? 'collection'"
                     [targetRequestId]="artifact()?.targetRequestId"
                     [manualTarget]="artifact()?.manualTarget"
+                    [environmentId]="artifact()?.environmentId"
                     (targetSourceChange)="handleTargetSourceChange($event)"
                     (targetRequestIdChange)="handleTargetChange($event)"
                     (manualTargetChange)="handleManualTargetChange($event)"
+                    (environmentIdChange)="handleEnvironmentChange($event)"
                     (openRequest)="handleOpenTargetRequest()"
                   />
                 </div>
@@ -200,6 +203,7 @@
             [metrics]="metrics()"
             [thresholds]="artifact()?.thresholds ?? {}"
             [runs]="artifact()?.runs ?? []"
+            [artifact]="artifact() ?? null"
             [resultsView]="resultsView()"
             [selectedRunId]="selectedRunId()"
             [pinnedBaselineRunId]="pinnedBaselineRunId()"

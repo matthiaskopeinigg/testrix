@@ -11,6 +11,12 @@ export const loadTestStartOptionsSchema = z
     targetSource: z.enum(LOAD_TEST_TARGET_SOURCE_IDS).default('collection'),
     manualTarget: loadTestManualTargetSchema.optional(),
     loadTestId: z.string().min(1),
+    /**
+     * `null` / omit — inherit from the collection request (or none for manual).
+     * `""` — force no environment.
+     * Profile id — override.
+     */
+    environmentId: z.string().nullable().optional(),
     virtualUsers: z.number().int().min(1).max(10_000).default(10),
     durationSec: z.number().int().min(1).max(86_400).default(60),
     rampUpSec: z.number().int().min(0).default(0),

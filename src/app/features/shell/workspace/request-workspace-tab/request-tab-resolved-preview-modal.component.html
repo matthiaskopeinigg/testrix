@@ -1,0 +1,34 @@
+<tx-modal
+  [open]="open()"
+  title="Resolved request"
+  ariaLabel="Preview resolved request"
+  layer="stacked"
+  cardSize="wide"
+  (closed)="handleClose()"
+>
+  <div class="request-code-snippet-modal__content">
+    <p class="request-code-snippet-modal__hint">
+      Final URL, headers, and body after environment and dynamic variables. Secrets and tokens are masked.
+    </p>
+
+    <div class="request-code-snippet-modal__editor">
+      <tx-code-editor
+        language="plaintext"
+        languageBadgeLabel="Preview"
+        [readOnly]="true"
+        [hideToolbarActions]="true"
+        [framed]="true"
+        [autoFormat]="false"
+        [ngModel]="editorText()"
+      />
+    </div>
+
+    <div class="request-code-snippet-modal__actions">
+      <tx-button variant="secondary" (pressed)="handleClose()">Close</tx-button>
+      <tx-button variant="primary" (pressed)="handleCopy()">
+        <tx-icon name="copy" [size]="14" aria-hidden="true" />
+        Copy
+      </tx-button>
+    </div>
+  </div>
+</tx-modal>

@@ -22,4 +22,19 @@ describe('formatDatabaseConnectionError', () => {
     const message = formatDatabaseConnectionError(new Error('timeout expired'));
     expect(message).toMatch(/timed out|timeout expired/i);
   });
+
+  it('does not treat a missing table as a missing database', () => {
+    const wrapped = new Error(
+      'Error invoking remote method \'db:query\': TestrixError: DATABASE_CONNECTION_FAILED: relation "users" does not exist',
+    );
+    expect(formatDatabaseConnectionError(wrapped)).toBe(
+      'Table or view "users" does not exist. Check the name and schema.',
+    );
+  });
+
+  it('formats a missing database name', () => {
+    expect(
+      formatDatabaseConnectionError(new Error('database "testrix" does not exist')),
+    ).toBe('Database does not exist. Check the database name or create it first.');
+  });
 });

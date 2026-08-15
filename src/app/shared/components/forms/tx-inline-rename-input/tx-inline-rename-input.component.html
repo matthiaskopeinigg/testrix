@@ -2,6 +2,7 @@
   #inputEl
   class="tx-inline-rename-input"
   type="text"
+  [attr.size]="density() === 'cell' ? 1 : null"
   [attr.aria-label]="ariaLabel()"
   [value]="draft()"
   (input)="handleInput($event)"

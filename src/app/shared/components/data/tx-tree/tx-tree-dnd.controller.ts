@@ -40,6 +40,60 @@ function suppressTxTreeOutsideInteractionBriefly(): void {
   outsideInteractionSuppressUntil = performance.now() + TX_TREE_OUTSIDE_INTERACTION_SUPPRESS_MS;
 }
 
+interface TxTreeDnDLiveHandle {
+  isGestureInProgress(): boolean;
+  abort(): void;
+}
+
+const liveDnDControllers = new Set<TxTreeDnDLiveHandle>();
+let documentSafetyInstalled = false;
+
+/** Removes leftover tree-drag cursor/ghost after a controller is destroyed mid-gesture. */
+export function clearTxTreeDnDDocumentChrome(): void {
+  document.body.classList.remove('tx-tree-dnd-active');
+  document.querySelectorAll('.tx-tree-ghost').forEach((element) => element.remove());
+}
+
+function anyTxTreeGestureInProgress(): boolean {
+  for (const controller of liveDnDControllers) {
+    if (controller.isGestureInProgress()) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function installTxTreeDnDDocumentSafety(): void {
+  if (documentSafetyInstalled || typeof document === 'undefined') {
+    return;
+  }
+  documentSafetyInstalled = true;
+  const abortOrphans = (): void => {
+    if (!document.body.classList.contains('tx-tree-dnd-active')) {
+      return;
+    }
+    if (anyTxTreeGestureInProgress()) {
+      return;
+    }
+    clearTxTreeDnDDocumentChrome();
+  };
+  document.addEventListener('pointerup', abortOrphans, true);
+  document.addEventListener('pointercancel', abortOrphans, true);
+  document.addEventListener(
+    'keydown',
+    (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') {
+        return;
+      }
+      for (const controller of liveDnDControllers) {
+        controller.abort();
+      }
+      clearTxTreeDnDDocumentChrome();
+    },
+    true,
+  );
+}
+
 export interface TxTreeDnDCallbacks {
   readonly onStateChange: (state: TxTreeDnDState) => void;
   readonly getDebugEnabled?: () => boolean;
@@ -91,16 +145,34 @@ export class TxTreeDnDController<TMeta = unknown> {
   private pendingDrag: PendingDrag | null = null;
   private dragActivated = false;
   private suppressClick = false;
+  private captureTarget: HTMLElement | null = null;
+  private endingDrag = false;
 
   private readonly boundMove = (event: PointerEvent) => this.schedulePointerMove(event);
   private readonly boundUp = (event: PointerEvent) => this.handleDocumentPointerUp(event);
   private readonly boundCancel = (event: PointerEvent) => this.handleDocumentPointerUp(event);
+  private readonly boundKeyDown = (event: KeyboardEvent) => this.handleDocumentKeyDown(event);
+  private readonly boundWindowBlur = () => this.endDrag(false);
+  private readonly boundVisibilityChange = () => {
+    if (document.visibilityState !== 'visible') {
+      this.endDrag(false);
+    }
+  };
+  private readonly boundLostPointerCapture = () => this.endDrag(false);
+
+  private readonly liveHandle: TxTreeDnDLiveHandle = {
+    isGestureInProgress: () => this.isGestureInProgress(),
+    abort: () => this.abort(),
+  };
 
   constructor(
     private readonly model: TxTreeModel<TMeta>,
     private getConfig: () => TxTreeConfig<TMeta>,
     private readonly callbacks: TxTreeDnDCallbacks,
-  ) {}
+  ) {
+    liveDnDControllers.add(this.liveHandle);
+    installTxTreeDnDDocumentSafety();
+  }
 
   getState(): TxTreeDnDState {
     return this.state;
@@ -109,6 +181,16 @@ export class TxTreeDnDController<TMeta = unknown> {
   /** Whether a drag gesture is in progress. */
   isActive(): boolean {
     return this.state.draggingId !== null;
+  }
+
+  /** True while a pointer-down may still become a drag, or a drag is active. */
+  isGestureInProgress(): boolean {
+    return this.pendingDrag !== null || this.dragActivated || this.state.draggingId !== null;
+  }
+
+  /** Cancels an in-progress gesture without unregistering the controller. */
+  abort(): void {
+    this.endDrag(false);
   }
 
   /** Returns true once after a drag gesture so row click handlers can skip activation. */
@@ -128,8 +210,13 @@ export class TxTreeDnDController<TMeta = unknown> {
   }
 
   unregisterRow(nodeId: string): void {
+    const aborting =
+      this.state.draggingId === nodeId || this.pendingDrag?.nodeId === nodeId;
     this.rowElements.delete(nodeId);
     this.rowMeta.delete(nodeId);
+    if (aborting) {
+      this.endDrag(false);
+    }
   }
 
   /** Refreshes cached row metadata (call after visible rows change during drag). */
@@ -142,10 +229,11 @@ export class TxTreeDnDController<TMeta = unknown> {
   }
 
   destroy(): void {
+    liveDnDControllers.delete(this.liveHandle);
     this.endDrag(false);
-    this.cancelPendingDrag();
     this.rowElements.clear();
     this.rowMeta.clear();
+    clearTxTreeDnDDocumentChrome();
   }
 
   handlePointerDown(event: PointerEvent, nodeId: string, fromHandle: boolean): void {
@@ -160,7 +248,11 @@ export class TxTreeDnDController<TMeta = unknown> {
       return;
     }
 
-    this.cancelPendingDrag();
+    if (this.dragActivated || this.state.draggingId !== null) {
+      this.endDrag(false);
+    } else {
+      this.cancelPendingDrag();
+    }
     this.pendingDrag = {
       nodeId,
       fromHandle,
@@ -173,9 +265,23 @@ export class TxTreeDnDController<TMeta = unknown> {
     this.pendingClientX = event.clientX;
     this.pendingClientY = event.clientY;
 
+    this.addDocumentDragListeners();
+  }
+
+  private addDocumentDragListeners(): void {
     document.addEventListener('pointermove', this.boundMove, { passive: true });
     document.addEventListener('pointerup', this.boundUp);
     document.addEventListener('pointercancel', this.boundCancel);
+    document.addEventListener('keydown', this.boundKeyDown);
+    window.addEventListener('blur', this.boundWindowBlur);
+    document.addEventListener('visibilitychange', this.boundVisibilityChange);
+  }
+
+  private handleDocumentKeyDown(event: KeyboardEvent): void {
+    if (event.key !== 'Escape') {
+      return;
+    }
+    this.endDrag(false);
   }
 
   private schedulePointerMove(event: PointerEvent): void {
@@ -228,7 +334,8 @@ export class TxTreeDnDController<TMeta = unknown> {
     this.dragActivated = true;
     this.suppressClick = true;
     this.pointerId = pending.pointerId;
-    pending.captureTarget?.setPointerCapture?.(pending.pointerId);
+    this.captureTarget = pending.captureTarget;
+    this.trySetPointerCapture(pending.captureTarget, pending.pointerId);
 
     this.syncRowMetaFromModel();
     this.setState({
@@ -460,27 +567,71 @@ export class TxTreeDnDController<TMeta = unknown> {
     document.removeEventListener('pointermove', this.boundMove);
     document.removeEventListener('pointerup', this.boundUp);
     document.removeEventListener('pointercancel', this.boundCancel);
+    document.removeEventListener('keydown', this.boundKeyDown);
+    window.removeEventListener('blur', this.boundWindowBlur);
+    document.removeEventListener('visibilitychange', this.boundVisibilityChange);
     this.pendingDrag = null;
     this.dragActivated = false;
   }
 
   private endDrag(completed: boolean, dropEvent?: TxTreeNodeDropEvent): void {
-    const wasDragging = this.dragActivated;
-    this.cancelPendingDrag();
-    this.clearHoverExpand();
-    if (this.rafId !== null) {
-      cancelAnimationFrame(this.rafId);
-      this.rafId = null;
+    if (this.endingDrag) {
+      return;
     }
-    document.body.classList.remove('tx-tree-dnd-active');
-    this.pointerId = null;
-    this.removeGhost();
-    this.setState({ ...TX_TREE_INITIAL_DND_STATE });
-    this.emitDebugTrace(null, null);
-    if (wasDragging) {
-      suppressTxTreeOutsideInteractionBriefly();
+    const wasDragging = this.dragActivated || this.state.draggingId !== null;
+    this.endingDrag = true;
+    try {
+      this.releasePointerCapture();
+      this.cancelPendingDrag();
+      this.clearHoverExpand();
+      if (this.rafId !== null) {
+        cancelAnimationFrame(this.rafId);
+        this.rafId = null;
+      }
+      clearTxTreeDnDDocumentChrome();
+      this.pointerId = null;
+      this.removeGhost();
+      this.setState({ ...TX_TREE_INITIAL_DND_STATE });
+      this.emitDebugTrace(null, null);
+      if (wasDragging) {
+        suppressTxTreeOutsideInteractionBriefly();
+        this.callbacks.onDragEnd?.({ completed, dropEvent });
+      }
+    } finally {
+      this.endingDrag = false;
     }
-    this.callbacks.onDragEnd?.({ completed, dropEvent });
+  }
+
+  private trySetPointerCapture(target: HTMLElement | null, pointerId: number): void {
+    if (!target) {
+      return;
+    }
+    try {
+      target.addEventListener('lostpointercapture', this.boundLostPointerCapture);
+      target.setPointerCapture(pointerId);
+    } catch {
+      target.removeEventListener('lostpointercapture', this.boundLostPointerCapture);
+    }
+  }
+
+  private releasePointerCapture(): void {
+    const target = this.captureTarget;
+    const pointerId = this.pointerId;
+    this.captureTarget = null;
+    if (!target) {
+      return;
+    }
+    target.removeEventListener('lostpointercapture', this.boundLostPointerCapture);
+    if (pointerId === null) {
+      return;
+    }
+    try {
+      if (target.hasPointerCapture?.(pointerId)) {
+        target.releasePointerCapture(pointerId);
+      }
+    } catch {
+      /* already released or node detached */
+    }
   }
 
   private emitDebugTrace(clientX: number | null, clientY: number | null): void {

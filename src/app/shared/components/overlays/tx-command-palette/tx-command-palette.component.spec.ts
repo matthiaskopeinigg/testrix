@@ -91,4 +91,36 @@ describe('TxCommandPaletteComponent', () => {
 
     expect(run).toHaveBeenCalled();
   });
+
+  it('selects the first result when the query changes without a pointer move', () => {
+    commands$$.next([
+      { id: 'code-editor', label: 'Code Editor', category: 'Development', run: vi.fn() },
+      { id: 'uuid', label: 'UUID Generator', category: 'Development', run: vi.fn() },
+    ]);
+    fixture.componentRef.setInput('open', true);
+    fixture.detectChanges();
+
+    fixture.componentInstance['activeIndex'].set(1);
+    fixture.componentInstance['handleQueryChange']('editor');
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance['activeIndex']()).toBe(0);
+    fixture.componentInstance['handleItemHover'](1);
+    expect(fixture.componentInstance['activeIndex']()).toBe(0);
+  });
+
+  it('follows the pointer after it moves', () => {
+    commands$$.next([
+      { id: 'code-editor', label: 'Code Editor', category: 'Development', run: vi.fn() },
+      { id: 'uuid', label: 'UUID Generator', category: 'Development', run: vi.fn() },
+    ]);
+    fixture.componentRef.setInput('open', true);
+    fixture.detectChanges();
+
+    fixture.componentInstance['handleQueryChange']('editor');
+    fixture.componentInstance['handleListMouseMove']();
+    fixture.componentInstance['handleItemHover'](1);
+
+    expect(fixture.componentInstance['activeIndex']()).toBe(1);
+  });
 });

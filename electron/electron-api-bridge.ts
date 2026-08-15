@@ -9,6 +9,13 @@ import type {
   SettingsFile,
 } from '../shared/config';
 import type { DatabaseConnectionStatusMap } from '../shared/database/connection-status.schema';
+import type {
+  DatabaseIntrospectLevel,
+  DatabaseIntrospectResult,
+  DatabaseQueryEnvelope,
+  DatabaseQueryPage,
+  SavedQueriesFile,
+} from '../shared/database';
 import type { IpcErrorPayload } from '../shared/errors';
 import type { UpdateChannel, UpdaterStatus } from '../shared/updater/updater-status.schema';
 import type { OutgoingHttpResponse } from '../shared/http/outgoing-request.schema';
@@ -128,6 +135,7 @@ export interface ElectronAPI {
     setCollections: (data: CollectionsFile) => Promise<CollectionsFile>;
     getEnvironments: () => Promise<EnvironmentsFile>;
     setEnvironments: (data: EnvironmentsFile) => Promise<EnvironmentsFile>;
+    vaultEncryptionAvailable: () => Promise<boolean>;
     getHistory: () => Promise<HistoryFile>;
     setHistory: (data: HistoryFile) => Promise<HistoryFile>;
     onHistoryUpdated: (listener: (payload: unknown) => void) => () => void;
@@ -170,14 +178,38 @@ export interface ElectronAPI {
     send: (payload: SendHttpRequestPayload) => Promise<OutgoingHttpResponse>;
     cancel: (requestId: string) => Promise<void>;
   };
+  oauth: {
+    ensureToken: (payload: { readonly ownerId: string; readonly auth: unknown }) => Promise<string>;
+    clearToken: (ownerId: string) => Promise<void>;
+    tokenStatus: (ownerId: string) => Promise<{
+      readonly ownerId: string;
+      readonly hasAccessToken: boolean;
+      readonly expiresAt: number | null;
+      readonly expired: boolean;
+    }>;
+  };
   database: {
     query: (payload: {
       readonly connection: DatabaseConnection;
       readonly query: string;
       readonly timeoutMs?: number;
-    }) => Promise<unknown>;
+      readonly page?: DatabaseQueryPage;
+    }) => Promise<DatabaseQueryEnvelope>;
+    explain: (payload: {
+      readonly connection: DatabaseConnection;
+      readonly query: string;
+      readonly timeoutMs?: number;
+    }) => Promise<DatabaseQueryEnvelope>;
+    introspect: (payload: {
+      readonly connection: DatabaseConnection;
+      readonly level: DatabaseIntrospectLevel;
+      readonly schema?: string;
+      readonly table?: string;
+    }) => Promise<DatabaseIntrospectResult>;
     testConnection: (connection: DatabaseConnection) => Promise<{ readonly ok: true }>;
     getConnectionStatuses: () => Promise<DatabaseConnectionStatusMap>;
+    getQueries: () => Promise<SavedQueriesFile>;
+    setQueries: (data: SavedQueriesFile) => Promise<SavedQueriesFile>;
   };
   cookies: {
     getAll: () => Promise<readonly StoredCookie[]>;
@@ -198,6 +230,10 @@ export interface ElectronAPI {
     setCapture: (data: CaptureFile) => Promise<CaptureFile>;
     getInterceptor: () => Promise<InterceptorFile>;
     setInterceptor: (data: InterceptorFile) => Promise<InterceptorFile>;
+    getMonitors: () => Promise<import('@shared/testing').MonitorsFile>;
+    setMonitors: (data: import('@shared/testing').MonitorsFile) => Promise<import('@shared/testing').MonitorsFile>;
+    monitorRunNow: (monitorId: string) => Promise<import('@shared/testing').MonitorResult | null>;
+    onMonitorResult: (listener: (result: import('@shared/testing').MonitorResult) => void) => () => void;
     mockStatus: () => Promise<import('@shared/testing').MockServerRuntimeStatus>;
     mockStart: () => Promise<import('@shared/testing').MockServerRuntimeStatus>;
     mockStop: () => Promise<import('@shared/testing').MockServerRuntimeStatus>;
@@ -283,6 +319,11 @@ export interface ElectronAPI {
     switchBranch: (name: string) => Promise<readonly TeamBranchEntry[]>;
     deleteBranch: (name: string) => Promise<readonly TeamBranchEntry[]>;
     resolveConflict: (resolution: 'ours' | 'theirs' | 'abort') => Promise<TeamSyncStatus>;
+    getConflictFile: (path: string) => Promise<import('@shared/collaboration').TeamConflictFilePreview>;
+    resolveConflictFile: (payload: {
+      readonly path: string;
+      readonly resolution: 'ours' | 'theirs' | 'merged';
+    }) => Promise<TeamSyncStatus>;
     linkWorkspace: () => Promise<TeamSyncStatus>;
     disconnect: () => Promise<TeamSyncStatus>;
     listRepoDirectories: () => Promise<readonly string[]>;

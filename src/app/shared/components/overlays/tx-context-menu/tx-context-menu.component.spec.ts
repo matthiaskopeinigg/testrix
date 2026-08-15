@@ -25,6 +25,11 @@ describe('TxContextMenuComponent', () => {
 
     const panel = document.body.querySelector('.tx-context-menu');
     expect(panel?.textContent).toContain('Action A');
+
+    fixture.componentRef.setInput('open', false);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(document.body.querySelector('.tx-context-menu')).toBeNull();
   });
 
   it('renders delete items with danger styling', async () => {

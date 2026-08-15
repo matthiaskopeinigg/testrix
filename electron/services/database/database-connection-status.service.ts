@@ -37,8 +37,9 @@ export class DatabaseConnectionStatusService {
    */
   async testAndRecord(connection: DatabaseConnection): Promise<void> {
     this.setStatus(connection.id, { state: 'checking' });
+    const timeoutMs = connectTimeoutMs(connection);
     try {
-      await databaseQueryService.testConnection(connection);
+      await withTimeout(databaseQueryService.testConnection(connection), timeoutMs, 'Connection test');
       this.setStatus(connection.id, {
         state: 'connected',
         checkedAt: new Date().toISOString(),
@@ -74,4 +75,21 @@ export const databaseConnectionStatusService = new DatabaseConnectionStatusServi
  */
 export function warmDatabaseConnectionsOnBoot(connections: readonly DatabaseConnection[]): void {
   databaseConnectionStatusService.warmConnectionsOnBoot(connections);
+}
+
+function connectTimeoutMs(conn: DatabaseConnection): number {
+  const n = Number(conn.connectTimeoutMs);
+  return Number.isFinite(n) && n > 0 ? Math.min(Math.floor(n), 600_000) : 10_000;
+}
+
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms);
+  });
+  return Promise.race([promise, timeoutPromise]).finally(() => {
+    if (timer) {
+      clearTimeout(timer);
+    }
+  });
 }

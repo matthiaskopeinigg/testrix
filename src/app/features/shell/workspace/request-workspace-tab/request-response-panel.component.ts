@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 
 import {
   resolveRequestRunSession,
@@ -7,13 +8,24 @@ import {
 
 import { ConfigService } from '@app/core/config/config.service';
 import { HttpRequestService } from '@app/core/http/http-request.service';
+import { TxNotificationService } from '@app/core/notifications/tx-notification.service';
+import { TxButtonComponent } from '@app/shared/components/forms/tx-button/tx-button.component';
+import { TxFormFieldComponent } from '@app/shared/components/forms/tx-form-field/tx-form-field.component';
+import { TxInputComponent } from '@app/shared/components/forms/tx-input/tx-input.component';
 import { TxPromptDialogComponent } from '@app/shared/components/overlays/tx-prompt-dialog/tx-prompt-dialog.component';
 import { TxResponseViewerComponent } from '@app/shared/components/editors/tx-response-viewer/tx-response-viewer.component';
 
 @Component({
   selector: 'app-request-response-panel',
   standalone: true,
-  imports: [TxPromptDialogComponent, TxResponseViewerComponent],
+  imports: [
+    FormsModule,
+    TxPromptDialogComponent,
+    TxResponseViewerComponent,
+    TxButtonComponent,
+    TxFormFieldComponent,
+    TxInputComponent,
+  ],
   template: `
     <tx-response-viewer
       [snapshot]="http.selectedSnapshot()"
@@ -32,6 +44,28 @@ import { TxResponseViewerComponent } from '@app/shared/components/editors/tx-res
       (pinBaseline)="handlePinBaseline($event)"
     />
 
+    @if (http.selectedSnapshot()?.body?.text) {
+      <div class="request-response-panel__capture">
+        <tx-form-field label="JSONPath" controlId="response-jsonpath">
+          <tx-input
+            id="response-jsonpath"
+            [ngModel]="jsonPath()"
+            (ngModelChange)="jsonPath.set($event)"
+            placeholder="$.data.id"
+          />
+        </tx-form-field>
+        <tx-form-field label="Environment variable" controlId="response-env-key">
+          <tx-input
+            id="response-env-key"
+            [ngModel]="variableKey()"
+            (ngModelChange)="variableKey.set($event)"
+            placeholder="lastId"
+          />
+        </tx-form-field>
+        <tx-button variant="secondary" (pressed)="handleCaptureJsonPath()">Set env var</tx-button>
+      </div>
+    }
+
     <tx-prompt-dialog
       [open]="namePromptOpen()"
       title="Save as example"
@@ -47,11 +81,14 @@ import { TxResponseViewerComponent } from '@app/shared/components/editors/tx-res
 })
 export class RequestResponsePanelComponent {
   private readonly configService = inject(ConfigService);
+  private readonly notifications = inject(TxNotificationService);
   protected readonly http = inject(HttpRequestService);
 
   readonly requestId = input.required<string>();
 
   protected readonly namePromptOpen = signal(false);
+  protected readonly jsonPath = signal('$.');
+  protected readonly variableKey = signal('lastValue');
 
   protected readonly activeTab = computed((): RequestResponseTabId => {
     const session = this.configService.session();
@@ -107,5 +144,16 @@ export class RequestResponsePanelComponent {
 
   protected handlePinBaseline(snapshotId: string): void {
     this.http.pinBaseline(snapshotId);
+  }
+
+  protected handleCaptureJsonPath(): void {
+    const ok = this.http.captureJsonPathToEnvironment(
+      this.requestId(),
+      this.jsonPath(),
+      this.variableKey(),
+    );
+    if (ok) {
+      this.notifications.showSuccess(`Saved ${this.variableKey()} from JSONPath`);
+    }
   }
 }

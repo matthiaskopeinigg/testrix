@@ -32,6 +32,10 @@ describe('collectionFolderSettingsSchema', () => {
       clientSecret: 'secret',
       scope: 'read',
       redirectUri: 'https://app/callback',
+      usePkce: false,
+      tokenType: 'Bearer',
+      username: '',
+      password: '',
     };
     expect(collectionFolderSettingsSchema.parse(settings).auth.type).toBe('oauth2');
   });

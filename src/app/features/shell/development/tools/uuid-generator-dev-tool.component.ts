@@ -2,6 +2,8 @@ import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/c
 import { FormsModule } from '@angular/forms';
 
 import { TxButtonComponent } from '@app/shared/components/forms/tx-button/tx-button.component';
+import { TxDropdownComponent } from '@app/shared/components/forms/tx-dropdown/tx-dropdown.component';
+import type { TxDropdownOption } from '@app/shared/components/forms/tx-dropdown/tx-dropdown.types';
 import { TxFormFieldComponent } from '@app/shared/components/forms/tx-form-field/tx-form-field.component';
 import { TxInputComponent } from '@app/shared/components/forms/tx-input/tx-input.component';
 import { TxTagComponent } from '@app/shared/components/forms/tx-tag/tx-tag.component';
@@ -23,17 +25,31 @@ import { generateUuids, NIL_UUID } from './logic/uuid.logic';
     DevToolToolbarComponent,
     DevToolStatStripComponent,
     TxButtonComponent,
+    TxDropdownComponent,
     TxFormFieldComponent,
     TxInputComponent,
     TxToggleComponent,
     TxTagComponent,
   ],
   templateUrl: './uuid-generator-dev-tool.component.html',
+  styleUrl: './uuid-generator-dev-tool.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class UuidGeneratorDevToolComponent {
   private readonly clipboard = inject(DevToolClipboardService);
   protected readonly state = createDevToolStateBinding('uuid-generator');
+
+  protected readonly versionOptions: readonly TxDropdownOption[] = [
+    { value: 'v4', label: 'UUID v4' },
+    { value: 'v7', label: 'UUID v7' },
+    { value: 'ulid', label: 'ULID' },
+    { value: 'nanoid', label: 'NanoID' },
+  ];
+
+  protected readonly versionLabel = computed(() => {
+    const version = this.state().version;
+    return this.versionOptions.find((option) => option.value === version)?.label ?? 'UUID v4';
+  });
 
   protected readonly lines = computed(() => {
     const s = this.state();
@@ -44,6 +60,7 @@ export class UuidGeneratorDevToolComponent {
       count: s.count,
       uppercase: s.uppercase,
       stripHyphens: s.stripHyphens,
+      version: s.version,
     });
   });
 
@@ -65,6 +82,7 @@ export class UuidGeneratorDevToolComponent {
       count: s.count,
       uppercase: s.uppercase,
       stripHyphens: s.stripHyphens,
+      version: s.version,
     }).join('\n');
     this.state.update((prev) => ({ ...prev, output }));
   }

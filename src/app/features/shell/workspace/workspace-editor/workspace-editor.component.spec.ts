@@ -94,6 +94,9 @@ describe('WorkspaceEditorComponent mount cache', () => {
             tabsForGroup: (groupId: string) => editorState().groups[groupId]?.tabs ?? [],
             activateTab,
             closeTab,
+            closeActiveTab: vi.fn(),
+            splitFocusedPane: vi.fn(),
+            cycleTabInFocusedGroup: vi.fn(),
             focusGroup: vi.fn(),
             hasMultiplePanes: () => false,
             motion: {

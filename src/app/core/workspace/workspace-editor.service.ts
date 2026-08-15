@@ -30,6 +30,7 @@ import {
   splitLayoutAtGroup,
   workspaceEditorHasAnyTabs,
 } from '@shared/config';
+import { parseDatabaseConnectionTabResourceId, parseDatabaseTableTabResourceId } from '@shared/database';
 import {
   mapSplitZoneToLayout,
   type WorkspaceEditorSplitZone,
@@ -53,6 +54,8 @@ import { LoadTestService } from '@app/core/testing/load-test.service';
 import { MockServerService } from '@app/core/testing/mock-server.service';
 import { RegressionService } from '@app/core/testing/regression.service';
 import { TestSuiteService } from '@app/core/testing/test-suite.service';
+import { DatabaseConnectionsService } from '@app/core/database/database-connections.service';
+import { DatabaseQueriesService } from '@app/core/database/database-queries.service';
 
 import { WorkspaceEditorMotionService } from './workspace-editor-motion.service';
 import {
@@ -89,6 +92,8 @@ export class WorkspaceEditorService {
   private readonly mockServer = inject(MockServerService);
   private readonly capture = inject(CaptureWorkbenchStore);
   private readonly interceptor = inject(InterceptorWorkspaceStore);
+  private readonly databaseQueries = inject(DatabaseQueriesService);
+  private readonly databaseConnections = inject(DatabaseConnectionsService);
   private readonly environmentsService = inject(EnvironmentsService);
   readonly motion = inject(WorkspaceEditorMotionService);
 
@@ -166,6 +171,8 @@ export class WorkspaceEditorService {
       mockServer: this.mockServer,
       capture: this.capture,
       interceptor: this.interceptor,
+      databases: this.databaseConnections,
+      databaseQueries: this.databaseQueries,
     };
   }
 
@@ -235,6 +242,20 @@ export class WorkspaceEditorService {
     if (kind === 'interceptor-rule') {
       return { label: this.interceptor.labelForResource(resourceId) };
     }
+    if (kind === 'database') {
+      const connectionId = parseDatabaseConnectionTabResourceId(resourceId);
+      if (connectionId) {
+        const name =
+          this.configService.settings()?.databases.connections.find((conn) => conn.id === connectionId)
+            ?.name ?? 'Connection';
+        return { label: name };
+      }
+      const tableTab = parseDatabaseTableTabResourceId(resourceId);
+      if (tableTab) {
+        return { label: tableTab.table };
+      }
+      return { label: this.databaseQueries.labelForResource(resourceId) };
+    }
 
     if (kind === 'environment') {
       const environment = getEnvironmentDefinition(this.environmentsService.environments(), resourceId);
@@ -303,7 +324,8 @@ export class WorkspaceEditorService {
   }
 
   focusGroup(groupId: string): void {
-    if (!this.editorState().groups[groupId]) {
+    const editor = this.editorState();
+    if (!editor.groups[groupId] || editor.focusedGroupId === groupId) {
       return;
     }
     this.mutate((state) => ({ ...state, focusedGroupId: groupId }));
@@ -576,49 +598,45 @@ export class WorkspaceEditorService {
     this.schedulePersist();
   }
 
-  splitFocusedPane(zone: WorkspaceEditorSplitZone): void {
-    const { direction, placement } = mapSplitZoneToLayout(zone);
+  /**
+   * Splits the focused pane and moves `tabId` (or the active tab) into the new pane.
+   * Does not clone the tab.
+   */
+  splitFocusedPane(zone: WorkspaceEditorSplitZone, tabId?: string): void {
     const editor = this.editorState();
     const groupId = editor.focusedGroupId;
+    const group = editor.groups[groupId];
+    const moveId = tabId ?? group?.activeTabId ?? null;
+    if (moveId && group?.tabs.some((tab) => tab.id === moveId)) {
+      this.moveTabToSplitPane(moveId, groupId, groupId, zone);
+      return;
+    }
+
+    const { direction, placement } = mapSplitZoneToLayout(zone);
     const newGroupId = createWorkspaceGroupId();
-    const activeTab = editor.groups[groupId]?.activeTabId
-      ? editor.groups[groupId]!.tabs.find((t) => t.id === editor.groups[groupId]!.activeTabId)
-      : null;
-
-    const newGroupTabs: WorkspaceTab[] = activeTab
-      ? [
-          {
-            ...activeTab,
-            id: createWorkspaceTabId(),
-          },
-        ]
-      : [];
-
-    const openedTabId = newGroupTabs[0]?.id;
     this.motion.runSplitTransition([newGroupId], () => {
-      this.mutate((state) => {
-        const layout = splitLayoutAtGroup(
-          state.layout,
-          groupId,
-          direction,
-          newGroupId,
-          0.5,
-          placement,
-        );
-        const groups = {
-          ...state.groups,
-          [newGroupId]: {
-            tabs: newGroupTabs,
-            activeTabId: newGroupTabs[0]?.id ?? null,
-          },
-        };
-        return {
-          ...state,
-          layout,
-          groups: pruneEditorGroups(layout, groups),
-          focusedGroupId: newGroupId,
-        };
-      });
+      this.mutate(
+        (state) => {
+          const layout = splitLayoutAtGroup(
+            state.layout,
+            groupId,
+            direction,
+            newGroupId,
+            0.5,
+            placement,
+          );
+          return {
+            ...state,
+            layout,
+            groups: pruneEditorGroups(layout, {
+              ...state.groups,
+              [newGroupId]: { tabs: [], activeTabId: null },
+            }),
+            focusedGroupId: newGroupId,
+          };
+        },
+        { collapseEmpty: false },
+      );
     });
   }
 
@@ -775,7 +793,7 @@ export class WorkspaceEditorService {
     options?: { readonly collapseEmpty?: boolean },
   ): void {
     let next = updater(this.editorState());
-    if (options?.collapseEmpty !== false) {
+    if (options?.collapseEmpty === true) {
       next = collapseEmptyEditorPanes(next);
     }
     next = normalizeWorkspaceEditorState(next);

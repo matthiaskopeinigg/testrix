@@ -18,6 +18,7 @@ import {
 } from '@shared/config';
 
 import { EnvironmentsService } from '@app/core/environments/environments.service';
+import { TxNotificationService } from '@app/core/notifications/tx-notification.service';
 import { FileDialogService } from '@app/core/platform/file-dialog.service';
 import { TxBannerComponent } from '@app/shared/components/feedback/tx-banner/tx-banner.component';
 import { TxButtonComponent } from '@app/shared/components/forms/tx-button/tx-button.component';
@@ -82,6 +83,7 @@ import {
 export class JwtDevToolComponent {
   private readonly clipboard = inject(DevToolClipboardService);
   private readonly environmentsService = inject(EnvironmentsService);
+  private readonly notifications = inject(TxNotificationService);
   private readonly fileDialog = inject(FileDialogService);
 
   protected readonly state = createDevToolStateBinding('jwt');
@@ -93,6 +95,7 @@ export class JwtDevToolComponent {
   protected readonly validateIssues = signal<readonly JwtValidateIssue[]>([]);
   protected readonly validateOk = signal<boolean | null>(null);
   protected readonly generatedToken = signal('');
+  protected readonly insertVariableKey = signal('JWT_TOKEN');
 
   protected readonly algorithmOptions: readonly TxDropdownOption<JwtAlgorithm>[] =
     JWT_ALGORITHM_OPTIONS.map((opt) => ({ value: opt.value, label: opt.label }));
@@ -399,6 +402,31 @@ export class JwtDevToolComponent {
         ? this.generatedToken() || this.state().token
         : this.state().token;
     await this.copyTokenText(text);
+  }
+
+  protected handleInsertTokenIntoEnvironment(): void {
+    const token = (this.generatedToken() || this.state().token).trim();
+    const environmentId = this.activeProfile()?.environmentId?.trim();
+    const key = this.insertVariableKey().trim();
+    if (!token) {
+      this.actionError.set('Generate or paste a token first.');
+      return;
+    }
+    if (!environmentId) {
+      this.actionError.set('Select an environment on this profile.');
+      return;
+    }
+    if (!key) {
+      this.actionError.set('Enter a variable name to insert into.');
+      return;
+    }
+    const ok = this.environmentsService.upsertVariableByKey(environmentId, key, token);
+    if (ok) {
+      this.actionError.set(null);
+      this.notifications.showSuccess(`Saved token to ${key}`);
+      return;
+    }
+    this.actionError.set('Could not write the token to the selected environment.');
   }
 
   private async copyTokenText(token: string): Promise<void> {

@@ -25,7 +25,7 @@ export const TEAM_SHARE_CATALOG: readonly TeamShareCatalogEntry[] = [
     key: 'environments',
     group: 'core',
     label: 'Environments',
-    description: 'Shared environment variables and configs',
+    description: 'Keys and non-secret values (secret values stay in each machine’s vault)',
     fileName: 'environments.json',
   },
   {

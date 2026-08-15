@@ -133,6 +133,10 @@ export type ValidationStepConfig = z.infer<typeof validationStepConfigSchema>;
 export const databaseStepConfigSchema = z.object({
   connectionId: z.string().default(''),
   query: z.string().default(''),
+  /** Whether the step uses inline SQL or a saved Database sidebar query. */
+  querySource: z.enum(['manual', 'saved']).optional(),
+  /** Saved query id from the Database sidebar (`queries.json`). */
+  savedQueryId: z.string().optional(),
   cacheAs: z.string().optional(),
   timeoutMs: z.union([z.number(), z.string()]).optional(),
 });
@@ -260,7 +264,7 @@ export function createDefaultCacheStepConfig(): CacheStepConfig {
 }
 
 export function createDefaultDatabaseStepConfig(): z.infer<typeof databaseStepConfigSchema> {
-  return databaseStepConfigSchema.parse({ connectionId: '', query: '' });
+  return databaseStepConfigSchema.parse({ connectionId: '', query: '', querySource: 'manual' });
 }
 
 export function createDefaultE2eStepConfig(): z.infer<typeof e2eStepConfigSchema> {

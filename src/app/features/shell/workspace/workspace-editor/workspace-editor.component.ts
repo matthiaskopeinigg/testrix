@@ -113,15 +113,11 @@ export class WorkspaceEditorComponent {
     prefetchRequestTabSections('overview');
 
     const unregisterShortcuts = [
-      this.keyboardShortcuts.register('global.closeTab', () => {
-        const editorState = this.editor.editor();
-        const group = editorState.groups[editorState.focusedGroupId];
-        const activeId = group?.activeTabId;
-        if (activeId) {
-          this.evictTabMount(editorState.focusedGroupId, activeId);
-        }
-        this.editor.closeActiveTab();
-      }),
+      this.keyboardShortcuts.register('global.closeTab', () => this.closeFocusedTab()),
+      this.keyboardShortcuts.register('global.splitTabRight', () => this.editor.splitFocusedPane('right')),
+      this.keyboardShortcuts.register('global.splitTabLeft', () => this.editor.splitFocusedPane('left')),
+      this.keyboardShortcuts.register('global.splitTabUp', () => this.editor.splitFocusedPane('top')),
+      this.keyboardShortcuts.register('global.splitTabDown', () => this.editor.splitFocusedPane('bottom')),
       this.keyboardShortcuts.register('global.cycleTabForward', () => {
         this.editor.cycleTabInFocusedGroup(false);
       }),
@@ -319,6 +315,16 @@ export class WorkspaceEditorComponent {
   protected handleTabClose(groupId: string, tabId: string): void {
     this.evictTabMount(groupId, tabId);
     this.editor.closeTab(groupId, tabId);
+  }
+
+  private closeFocusedTab(): void {
+    const editorState = this.editor.editor();
+    const group = editorState.groups[editorState.focusedGroupId];
+    const activeId = group?.activeTabId;
+    if (activeId) {
+      this.evictTabMount(editorState.focusedGroupId, activeId);
+    }
+    this.editor.closeActiveTab();
   }
 
   protected handleTabPinToggle(groupId: string, tabId: string): void {
@@ -549,7 +555,7 @@ export class WorkspaceEditorComponent {
         const splitZone = parseSplitContextMenuAction(actionId);
         if (splitZone) {
           this.editor.focusGroup(groupId);
-          this.editor.splitFocusedPane(splitZone);
+          this.editor.splitFocusedPane(splitZone, tabId);
         }
         break;
       }

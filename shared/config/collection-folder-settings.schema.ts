@@ -68,6 +68,10 @@ export const collectionFolderAuthOAuth2Schema = z.object({
   clientSecret: z.string(),
   scope: z.string(),
   redirectUri: z.string(),
+  usePkce: z.boolean().default(true),
+  tokenType: z.string().default('Bearer'),
+  username: z.string().default(''),
+  password: z.string().default(''),
 });
 
 export const collectionFolderAuthSchema = z.discriminatedUnion('type', [

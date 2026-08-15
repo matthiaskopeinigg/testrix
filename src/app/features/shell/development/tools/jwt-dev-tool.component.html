@@ -22,6 +22,7 @@
         <tx-button variant="primary" (pressed)="handleValidate()">Run validation</tx-button>
       }
       <tx-button variant="secondary" (pressed)="handleCopyToken()">Copy token</tx-button>
+      <tx-button variant="secondary" (pressed)="handleInsertTokenIntoEnvironment()">Insert into env</tx-button>
       @if (state().mode === 'decode') {
         <tx-button variant="secondary" (pressed)="handleCopyHeader()">Copy header</tx-button>
         <tx-button variant="secondary" (pressed)="handleCopyPayload()">Copy payload</tx-button>
@@ -117,6 +118,14 @@
             [options]="environmentOptions()"
             [ngModel]="environmentDropdownValue()"
             (ngModelChange)="handleEnvironmentChange($event)"
+          />
+        </tx-form-field>
+        <tx-form-field label="Insert as variable" controlId="jwt-insert-key">
+          <tx-input
+            controlId="jwt-insert-key"
+            placeholder="JWT_TOKEN"
+            [ngModel]="insertVariableKey()"
+            (ngModelChange)="insertVariableKey.set($event)"
           />
         </tx-form-field>
         <div class="jwt-tool__inline-actions">

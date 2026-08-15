@@ -76,6 +76,14 @@
     </button>
 
     @if (row().node.icon && !nodeBodyTemplate()) {
+      @if (row().node.statusDot; as status) {
+        <span
+          class="tx-tree-row__status"
+          [attr.data-status]="status"
+          [attr.title]="status"
+          aria-hidden="true"
+        ></span>
+      }
       <span class="tx-tree-row__icon" aria-hidden="true">
         <tx-icon [name]="row().node.icon!" [size]="rowIconSize()" />
       </span>

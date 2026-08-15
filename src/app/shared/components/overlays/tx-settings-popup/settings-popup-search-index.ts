@@ -31,15 +31,6 @@ const COLLECTION_SIBLING_SORT_LABELS: Record<(typeof COLLECTION_SIBLING_SORT_IDS
   manual: 'Manual (drag only)',
 };
 
-const DATABASE_TYPE_LABELS = [
-  'PostgreSQL',
-  'MySQL',
-  'MariaDB',
-  'SQL Server',
-  'SQLite',
-  'Redis',
-] as const;
-
 function optionLabels(
   options: readonly { readonly label: string }[],
 ): readonly string[] {
@@ -241,30 +232,6 @@ const SETTINGS_SECTION_SEARCH_TERMS: Record<SettingsPopupSection, readonly strin
     optionLabels(LOG_LEVEL_OPTIONS),
     LOG_LEVEL_OPTIONS.map((entry) => entry.id),
   ),
-  databases: flattenTerms(
-    'Database Connections',
-    'Databases',
-    'Configure connection profiles',
-    'test suite flows',
-    'flow variables',
-    'Add connection',
-    'Name',
-    'Type',
-    'Connect on app startup',
-    'File path',
-    'Busy timeout',
-    'Host',
-    'Port',
-    'User',
-    'Password',
-    'Database index',
-    'Database name',
-    'Use TLS',
-    'Connect timeout',
-    'Command timeout',
-    'Test connection',
-    DATABASE_TYPE_LABELS,
-  ),
   dataConfig: flattenTerms(
     'Data & Config',
     'Workspace profile',
@@ -293,6 +260,8 @@ const SETTINGS_SECTION_SEARCH_TERMS: Record<SettingsPopupSection, readonly strin
     'Reload when files change externally',
     'Import workspace',
     'Export workspace',
+    'Database connections',
+    'Saved queries',
     'Config files metadata',
     'Reset settings',
     'Reset session',

@@ -47,11 +47,14 @@ export function environmentIdFromDropdownValue(value: string): string | null {
  */
 export function buildCollectionEnvironmentDropdownOptions(
   environments: readonly { readonly id: string; readonly name: string }[],
-  options?: { readonly includeInherit?: boolean },
+  options?: { readonly includeInherit?: boolean; readonly inheritLabel?: string },
 ): readonly CollectionEnvironmentDropdownOption[] {
   const out: CollectionEnvironmentDropdownOption[] = [];
   if (options?.includeInherit !== false) {
-    out.push({ value: COLLECTION_ENVIRONMENT_INHERIT, label: 'Inherit from folder' });
+    out.push({
+      value: COLLECTION_ENVIRONMENT_INHERIT,
+      label: options?.inheritLabel ?? 'Inherit from folder',
+    });
   }
   out.push({ value: COLLECTION_ENVIRONMENT_NONE, label: 'No environment' });
   for (const environment of environments) {

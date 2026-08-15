@@ -1,8 +1,10 @@
 import { z } from 'zod';
 
 import type { CollectionsFile } from '../config/collections.schema';
+import type { DatabaseSettings } from '../config/database-settings.schema';
 import type { EnvironmentsFile } from '../config/environments.schema';
 import type { SettingsFile } from '../config/settings.schema';
+import type { SavedQueriesFile } from '../database/saved-queries.schema';
 import type { CaptureFile } from '../testing/capture.schema';
 import type { InterceptorFile } from '../testing/interceptor.schema';
 import type { LoadTestsFile } from '../testing/load-tests.schema';
@@ -17,6 +19,17 @@ import type { TestSuitesFile } from '../testing/test-suites.schema';
 export const TESTRIX_BUNDLE_SCHEMA_V1 = 'testrix/v1' as const;
 
 export type TestrixBundleSchemaV1 = typeof TESTRIX_BUNDLE_SCHEMA_V1;
+
+/**
+ * Database workspace payload: connection tree plus saved queries.
+ * Replaces the old Settings → Databases blob so users can pick individual items.
+ */
+export interface TestrixBundleDatabases {
+  /** Connection folders and leaves from `settings.databases`. */
+  readonly connections?: DatabaseSettings;
+  /** Profile-local saved SQL/Redis queries (`queries.json`). */
+  readonly queries?: SavedQueriesFile;
+}
 
 /**
  * Single-file native export. Each section is optional so users can export any subset
@@ -37,6 +50,7 @@ export interface TestrixBundleV1 {
   mockServer?: MockServerFile;
   capture?: CaptureFile;
   interceptor?: InterceptorFile;
+  databases?: TestrixBundleDatabases;
 
   /** Partial settings: only the keys the user opted into are present. */
   settings?: Partial<SettingsFile>;
@@ -55,6 +69,7 @@ export const TESTRIX_BUNDLE_SECTION_KEYS = [
   'mockServer',
   'capture',
   'interceptor',
+  'databases',
   'settings',
   'cookieJar',
 ] as const satisfies ReadonlyArray<keyof TestrixBundleV1>;
@@ -75,7 +90,6 @@ export const SETTINGS_SECTION_KEYS = [
   'testSuite',
   'editor',
   'http',
-  'databases',
 ] as const satisfies ReadonlyArray<keyof SettingsFile>;
 
 export type SettingsSectionKey = (typeof SETTINGS_SECTION_KEYS)[number];
@@ -92,6 +106,7 @@ export const testrixBundleSchemaV1 = z.object({
   mockServer: z.custom<MockServerFile>().optional(),
   capture: z.custom<CaptureFile>().optional(),
   interceptor: z.custom<InterceptorFile>().optional(),
+  databases: z.custom<TestrixBundleDatabases>().optional(),
   settings: z.custom<Partial<SettingsFile>>().optional(),
   cookieJar: z.record(z.string(), z.unknown()).optional(),
 });

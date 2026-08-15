@@ -14,6 +14,8 @@ export const TeamChannels = {
   switchBranch: 'team:switchBranch',
   deleteBranch: 'team:deleteBranch',
   resolveConflict: 'team:resolveConflict',
+  getConflictFile: 'team:getConflictFile',
+  resolveConflictFile: 'team:resolveConflictFile',
   listRepoDirectories: 'team:listRepoDirectories',
   linkWorkspace: 'team:linkWorkspace',
   disconnect: 'team:disconnect',

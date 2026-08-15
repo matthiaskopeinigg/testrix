@@ -1,0 +1,80 @@
+:host {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.db-data {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 0.85rem;
+  min-height: 0;
+  padding: 0.85rem 1rem 1rem;
+}
+
+.db-data__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.db-data__title {
+  margin: 0 0 0.15rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.db-data__meta,
+.db-data__status,
+.db-data__empty {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--tx-text-1);
+}
+
+.db-data__actions,
+.db-data__result-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 0.5rem;
+}
+
+.db-data__result {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  gap: 0.5rem;
+}
+
+.db-data__result-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.db-data__result-actions tx-form-field {
+  min-width: 8rem;
+}
+
+.db-data__where {
+  display: block;
+  min-width: 0;
+
+  :deep(.tx-field),
+  :deep(.tx-field__control) {
+    min-width: 0;
+    width: 100%;
+  }
+}
+
+.db-data__result tx-data-grid {
+  flex: 1 1 auto;
+  min-height: 0;
+}

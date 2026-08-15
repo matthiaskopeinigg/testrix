@@ -39,7 +39,7 @@ export const HELP_WIKI_COLLABORATION_SECTIONS: readonly HelpWikiSection[] = [
         items: [
           'Use the Branches tab in the Teams panel to list, create, and switch branches.',
           'Switching branches reloads workspace data from disk.',
-          'Conflicts surface in the Teams panel — choose Use local or Use remote for conflicted files.',
+          'Conflicts surface in the Teams panel with a per-file diff. Choose Use local file or Use remote file, or Entity merge for collections.json and environments.json (nodes by id). Use local (all) / Use remote (all) still resolve every file at once.',
         ],
       },
     ],
@@ -55,7 +55,9 @@ export const HELP_WIKI_COLLABORATION_SECTIONS: readonly HelpWikiSection[] = [
       {
         type: 'list',
         items: [
-          'Shared: collections, environments, test suites, load tests, regressions, mock server (per team profile toggles).',
+          'Shared: collections, environments (keys and non-secret values), test suites, load tests, regressions, mock server (per team profile toggles).',
+          'Secret environment values stay in each machine’s local vault (`vault.bin`) and are never pushed.',
+          'Testrix scans staged JSON before push and blocks private keys, AWS keys, and inline secret values.',
           'Set a default scope on Team profiles, or a custom scope per team profile.',
           'The team profile list is published in the Git repo (`team-profiles.json`) so teammates can import profiles.',
           'Local profiles never sync unless you publish them as team profiles.',

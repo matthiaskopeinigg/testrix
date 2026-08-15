@@ -328,4 +328,165 @@ describe('TxTreeDnDController', () => {
     }
     controller.destroy();
   });
+
+  it('releases pointer capture and clears drag chrome on Escape', async () => {
+    const model = new TxTreeModel(mergeTxTreeConfig());
+    model.setNodes(SAMPLE);
+
+    const controller = new TxTreeDnDController(model, () => mergeTxTreeConfig(), {
+      onStateChange: vi.fn(),
+      onDrop: vi.fn(),
+      onDeny: vi.fn(),
+      onExpandNode: vi.fn(),
+    });
+
+    const row = document.createElement('div');
+    row.getBoundingClientRect = () =>
+      ({
+        left: 0,
+        top: 0,
+        width: 200,
+        height: 32,
+        right: 200,
+        bottom: 32,
+      }) as DOMRect;
+    const setPointerCapture = vi.fn();
+    const releasePointerCapture = vi.fn();
+    row.setPointerCapture = setPointerCapture;
+    row.releasePointerCapture = releasePointerCapture;
+    row.hasPointerCapture = () => true;
+    document.body.appendChild(row);
+    controller.registerRow('a', row);
+
+    const down = new PointerEvent('pointerdown', {
+      clientX: 100,
+      clientY: 100,
+      pointerId: 7,
+      bubbles: true,
+    });
+    Object.defineProperty(down, 'currentTarget', { value: row });
+    controller.handlePointerDown(down, 'a', false);
+
+    document.dispatchEvent(
+      new PointerEvent('pointermove', {
+        clientX: 100 + TX_TREE_DRAG_ACTIVATION_DISTANCE_PX,
+        clientY: 100,
+        pointerId: 7,
+        bubbles: true,
+      }),
+    );
+    await flushAnimationFrames();
+
+    expect(controller.getState().draggingId).toBe('a');
+    expect(document.body.classList.contains('tx-tree-dnd-active')).toBe(true);
+    expect(setPointerCapture).toHaveBeenCalledWith(7);
+
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+
+    expect(controller.getState().draggingId).toBeNull();
+    expect(document.body.classList.contains('tx-tree-dnd-active')).toBe(false);
+    expect(releasePointerCapture).toHaveBeenCalledWith(7);
+
+    row.remove();
+    controller.destroy();
+  });
+
+  it('clears drag chrome when destroyed mid-drag', async () => {
+    const model = new TxTreeModel(mergeTxTreeConfig());
+    model.setNodes(SAMPLE);
+    const controller = new TxTreeDnDController(model, () => mergeTxTreeConfig(), {
+      onStateChange: vi.fn(),
+      onDrop: vi.fn(),
+      onDeny: vi.fn(),
+      onExpandNode: vi.fn(),
+    });
+
+    const row = document.createElement('div');
+    row.getBoundingClientRect = () =>
+      ({
+        left: 0,
+        top: 0,
+        width: 200,
+        height: 32,
+        right: 200,
+        bottom: 32,
+      }) as DOMRect;
+    document.body.appendChild(row);
+    controller.registerRow('a', row);
+
+    const down = new PointerEvent('pointerdown', {
+      clientX: 100,
+      clientY: 100,
+      pointerId: 8,
+      bubbles: true,
+    });
+    Object.defineProperty(down, 'currentTarget', { value: row });
+    controller.handlePointerDown(down, 'a', false);
+    document.dispatchEvent(
+      new PointerEvent('pointermove', {
+        clientX: 100 + TX_TREE_DRAG_ACTIVATION_DISTANCE_PX,
+        clientY: 100,
+        pointerId: 8,
+        bubbles: true,
+      }),
+    );
+    await flushAnimationFrames();
+    expect(document.body.classList.contains('tx-tree-dnd-active')).toBe(true);
+
+    controller.destroy();
+    expect(controller.getState().draggingId).toBeNull();
+    expect(document.body.classList.contains('tx-tree-dnd-active')).toBe(false);
+
+    row.remove();
+  });
+
+  it('aborts the gesture when the dragging row unregisters', async () => {
+    const model = new TxTreeModel(mergeTxTreeConfig());
+    model.setNodes(SAMPLE);
+    const controller = new TxTreeDnDController(model, () => mergeTxTreeConfig(), {
+      onStateChange: vi.fn(),
+      onDrop: vi.fn(),
+      onDeny: vi.fn(),
+      onExpandNode: vi.fn(),
+    });
+
+    const row = document.createElement('div');
+    row.getBoundingClientRect = () =>
+      ({
+        left: 0,
+        top: 0,
+        width: 200,
+        height: 32,
+        right: 200,
+        bottom: 32,
+      }) as DOMRect;
+    document.body.appendChild(row);
+    controller.registerRow('a', row);
+
+    const down = new PointerEvent('pointerdown', {
+      clientX: 100,
+      clientY: 100,
+      pointerId: 9,
+      bubbles: true,
+    });
+    Object.defineProperty(down, 'currentTarget', { value: row });
+    controller.handlePointerDown(down, 'a', false);
+    document.dispatchEvent(
+      new PointerEvent('pointermove', {
+        clientX: 100 + TX_TREE_DRAG_ACTIVATION_DISTANCE_PX,
+        clientY: 100,
+        pointerId: 9,
+        bubbles: true,
+      }),
+    );
+    await flushAnimationFrames();
+    expect(controller.getState().draggingId).toBe('a');
+
+    controller.unregisterRow('a');
+    expect(controller.getState().draggingId).toBeNull();
+    expect(document.body.classList.contains('tx-tree-dnd-active')).toBe(false);
+
+    row.remove();
+    controller.destroy();
+  });
 });
