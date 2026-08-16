@@ -146,6 +146,39 @@ describe('TxTreeSelectComponent', () => {
     expect(collapsed).not.toContain('Primary');
     expect(trigger.getAttribute('aria-expanded')).toBe('true');
   });
+
+  it('selects a folder and closes when selectMode is folder', async () => {
+    fixture.componentRef.setInput('selectMode', 'folder');
+    fixture.detectChanges();
+    const host = fixture.nativeElement as HTMLElement;
+    const trigger = host.querySelector('.tx-tree-select__trigger') as HTMLButtonElement;
+    trigger.click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const folderRow = [...(queryOpenPanel()?.querySelectorAll('.tx-tree-row') ?? [])].find((row) =>
+      row.textContent?.includes('Prod'),
+    ) as HTMLElement;
+    folderRow.click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(trigger.getAttribute('aria-expanded')).toBe('false');
+    expect(trigger.textContent).toContain('Prod');
+    expect(queryOpenPanel()).toBeNull();
+  });
+
+  it('shows ancestor labels on the closed trigger when showAncestorPath is set', () => {
+    fixture.componentRef.setInput('showAncestorPath', true);
+    fixture.componentInstance.writeValue('conn-1');
+    fixture.detectChanges();
+    const trigger = (fixture.nativeElement as HTMLElement).querySelector(
+      '.tx-tree-select__trigger',
+    ) as HTMLButtonElement;
+    expect(trigger.textContent?.replace(/\s+/g, ' ').trim()).toContain('Prod / Primary');
+  });
 });
 
 describe('TxTreeSelectComponent inside tx-form-field', () => {

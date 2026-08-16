@@ -28,28 +28,33 @@ import {
   resolveDatabaseStepQueryBinding,
   cacheEntryExtractFailureMessage,
   validationFailureMessage,
+  resolveTriggerTargetFlows,
+  triggerFlowCycleMessage,
   type FlowRunProgressEvent,
   type FlowStepRunCapture,
   type TestSuiteAncestorFolderRef,
   type TestSuiteFlow,
+  type TestSuiteFlowLocation,
   type TestSuiteFlowStep,
   type TestSuiteStepStatus,
+  type TestSuiteTreeItem,
 } from '../../../shared/testing';
-import type {
-  CacheStepConfig,
-  DatabaseStepConfig,
-  E2eStepConfig,
-  HttpInterceptorStepConfig,
-  HttpListenerStepConfig,
-  ManualStepConfig,
-  RequestStepConfig,
-  ValidationRule,
-  ValidationStepConfig,
-  WaitStepConfig,
+import {
+  type CacheStepConfig,
+  type DatabaseStepConfig,
+  type E2eStepConfig,
+  type HttpInterceptorStepConfig,
+  type HttpListenerStepConfig,
+  type ManualStepConfig,
+  type RequestStepConfig,
+  triggerStepConfigSchema,
+  type ValidationRule,
+  type ValidationStepConfig,
+  type WaitStepConfig,
 } from '../../../shared/testing/test-suite-steps.schema';
 import type { FlowManualInputRequest, FlowManualInputResult } from '../../../shared/testing/flow-manual-input.schema';
 import { migrateTestSuitesFile } from '../../../shared/testing/test-suite-migrate';
-import { isTestSuiteFlow, TEST_SUITE_ROOT_ID } from '../../../shared/testing/test-suites.schema';
+import { TEST_SUITE_ROOT_ID } from '../../../shared/testing/test-suites.schema';
 
 import type { ConfigFileService } from '../config/config-file.service';
 import { databaseQueryService } from '../database/database-query.service';
@@ -84,6 +89,26 @@ export interface TestSuiteFlowExecuteOptions {
   readonly requestManualInput?: (request: FlowManualInputRequest) => Promise<FlowManualInputResult>;
 }
 
+/** Shared runtime for a root flow run and nested TRIGGER targets. */
+interface FlowStepContext {
+  readonly flowId: string;
+  readonly requestManualInput?: (request: FlowManualInputRequest) => Promise<FlowManualInputResult>;
+  readonly collections: readonly import('@shared/config').CollectionNode[];
+  readonly http: import('@shared/config').HttpSettings;
+  readonly environments: import('@shared/config').EnvironmentsFile;
+  readonly databaseConnections: readonly DatabaseConnection[];
+  readonly savedQueryNodes: readonly SavedQueryTreeItem[];
+  readonly appVersion: string;
+  readonly showBrowser: boolean;
+  readonly e2eScreenshotFolder: string;
+  readonly e2eIgnoreInvalidSsl: boolean;
+  readonly environmentIdOverride?: string | null;
+  readonly ancestorFolders: readonly TestSuiteAncestorFolderRef[];
+  readonly environmentVariableKeys: import('@shared/http/collection-execution.schema').EnvironmentVariableKeyMode;
+  readonly ancestorFlowIds: readonly string[];
+  readonly suiteItems: readonly TestSuiteTreeItem[];
+}
+
 /**
  * Executes test suite flows with real HTTP for REQUEST steps and browser automation for E2E steps.
  */
@@ -116,7 +141,8 @@ export class TestSuiteFlowExecutor {
     this.activeInterceptorStepIds.clear();
     this.browserSessionReady = false;
 
-    const flowLoaded = await this.loadFlow(flowId, files);
+    const suiteItems = await this.loadSuiteItems(files);
+    const flowLoaded = findTestSuiteFlowInTree(suiteItems, flowId);
     if (!flowLoaded) {
       return {
         ok: false,
@@ -148,7 +174,6 @@ export class TestSuiteFlowExecutor {
       };
     }
 
-    const hasE2eSteps = steps.some((step) => step.stepType === 'E2E');
     const needsBrowserRunner = flowNeedsBrowserRunner(steps);
     const showBrowser = options.e2eShowWindowOverride ?? flow.e2eShowWindow !== false;
     const keepBrowserOpen = options.e2eKeepWindowOpenOverride ?? flow.e2eKeepWindowOpen === true;
@@ -241,6 +266,8 @@ export class TestSuiteFlowExecutor {
             environmentVariableKeys: {
               useFolderPathInKeys: settings.environments.useFolderPathInKeys,
             },
+            ancestorFlowIds: [flow.id],
+            suiteItems,
           });
           await this.refreshPendingInterceptorCaptures(showBrowser);
           stepDurations[step.id] = Date.now() - stepStartedAt;
@@ -266,7 +293,7 @@ export class TestSuiteFlowExecutor {
         this.e2eRunner.teardownHttpCaptures();
       }
       const keepOpen = keepBrowserOpen || Boolean(options.stopBeforeStepId);
-      if (needsBrowserRunner && this.e2eRunner && !keepOpen) {
+      if (this.e2eRunner && this.browserSessionReady && !keepOpen) {
         await this.e2eRunner.closeRunner().catch(() => undefined);
       }
       if (!options.stopBeforeStepId) {
@@ -275,39 +302,18 @@ export class TestSuiteFlowExecutor {
     }
   }
 
-  private async loadFlow(
-    flowId: string,
-    files: ConfigFileService,
-  ): Promise<{ readonly flow: TestSuiteFlow; readonly ancestorFolders: readonly TestSuiteAncestorFolderRef[] } | null> {
+  /** Loads the suite tree used to resolve TRIGGER targets and the current flow. */
+  private async loadSuiteItems(files: ConfigFileService): Promise<readonly TestSuiteTreeItem[]> {
     const raw = await files.readTestSuites();
     const file = migrateTestSuitesFile(raw);
     const root = file.suites.find((s) => s.id === TEST_SUITE_ROOT_ID) ?? file.suites[0];
-    if (!root) {
-      return null;
-    }
-    const location = findTestSuiteFlowInTree(root.flows, flowId);
-    return location ? { flow: location.flow, ancestorFolders: location.ancestorFolders } : null;
+    return root?.flows ?? [];
   }
 
   private async executeStep(
     step: TestSuiteFlowStep,
     flow: TestSuiteFlow,
-    ctx: {
-      readonly flowId: string;
-      readonly requestManualInput?: (request: FlowManualInputRequest) => Promise<FlowManualInputResult>;
-      readonly collections: readonly import('@shared/config').CollectionNode[];
-      readonly http: import('@shared/config').HttpSettings;
-      readonly environments: import('@shared/config').EnvironmentsFile;
-      readonly databaseConnections: readonly DatabaseConnection[];
-      readonly savedQueryNodes: readonly SavedQueryTreeItem[];
-      readonly appVersion: string;
-      readonly showBrowser: boolean;
-      readonly e2eScreenshotFolder: string;
-      readonly e2eIgnoreInvalidSsl: boolean;
-      readonly environmentIdOverride?: string | null;
-      readonly ancestorFolders: readonly TestSuiteAncestorFolderRef[];
-      readonly environmentVariableKeys: import('@shared/http/collection-execution.schema').EnvironmentVariableKeyMode;
-    },
+    ctx: FlowStepContext,
   ): Promise<void> {
     switch (step.stepType) {
       case 'REQUEST':
@@ -338,9 +344,70 @@ export class TestSuiteFlowExecutor {
         await this.executeManual(step, ctx);
         return;
       case 'TRIGGER':
-        throw new Error(`${step.stepType} execution is not yet implemented in Testrix.`);
+        await this.executeTrigger(step, ctx);
+        return;
       default:
         throw new Error(`Unknown step type: ${step.stepType}`);
+    }
+  }
+
+  /**
+   * Runs another flow or every descendant flow under a folder on this executor
+   * (shared captures and variables; no nested teardown).
+   */
+  private async executeTrigger(step: TestSuiteFlowStep, ctx: FlowStepContext): Promise<void> {
+    const parsed = triggerStepConfigSchema.safeParse(step.config ?? {});
+    const target = parsed.success
+      ? { targetType: parsed.data.targetType, targetId: parsed.data.targetId }
+      : { targetType: 'flow' as const, targetId: '' };
+    const resolved = resolveTriggerTargetFlows(ctx.suiteItems, target);
+    if (!resolved.ok) {
+      throw new Error(resolved.message);
+    }
+    for (const location of resolved.locations) {
+      const cycle = triggerFlowCycleMessage(ctx.ancestorFlowIds, location.flow.id, location.flow.name);
+      if (cycle) {
+        throw new Error(cycle);
+      }
+      await this.runNestedFlow(location, ctx);
+    }
+  }
+
+  /** Executes a triggered flow without resetting or tearing down the parent run. */
+  private async runNestedFlow(
+    location: TestSuiteFlowLocation,
+    parentCtx: FlowStepContext,
+  ): Promise<void> {
+    let flow = location.flow;
+    if (parentCtx.environmentIdOverride !== undefined) {
+      flow = { ...flow, environmentId: parentCtx.environmentIdOverride };
+    }
+    const steps = flattenEnabledFlowSteps(flow.nodes);
+    if (steps.length === 0) {
+      throw new Error(`Flow "${flow.name}" has no enabled steps to run.`);
+    }
+    if (flowNeedsBrowserRunner(steps) && !this.e2eRunner) {
+      throw new Error('E2E runner is not available.');
+    }
+
+    const ctx: FlowStepContext = {
+      ...parentCtx,
+      flowId: flow.id,
+      ancestorFolders: location.ancestorFolders,
+      ancestorFlowIds: [...parentCtx.ancestorFlowIds, flow.id],
+    };
+
+    for (const nestedStep of steps) {
+      if (this.cancelled) {
+        throw new Error('Run cancelled.');
+      }
+      try {
+        await this.executeStep(nestedStep, flow, ctx);
+        await this.refreshPendingInterceptorCaptures(ctx.showBrowser);
+      } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : 'Step failed';
+        throw new Error(`${flow.name} / ${nestedStep.name}: ${message}`);
+      }
     }
   }
 

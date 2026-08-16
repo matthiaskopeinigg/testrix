@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.2-beta.7] - 2026-08-16
+
+### Added
+
+- Test Suite TRIGGER steps run another flow, or every descendant flow under a folder (fail-fast), inheriting variables and captures
+- TRIGGER target picker is a searchable folder tree (path shown on the closed control)
+- Auto-update shows a Setup “Updating Testrix” window (progress) instead of a blank desktop after the app closes
+
+### Changed
+
+- Theme and layout setup overlay no longer allows selecting text
+- In-app update overlay stays until Setup’s updating window is visible, then the app exits
+
+### Fixed
+
+- Update check on a beta install no longer follows a stale Stable channel (there is no GitHub “latest” stable release)
+- `npm run test:updater` silent-downgrades to the previous published beta (GitHub builds ignore the simulated-version env var)
+
 ## [1.0.2-beta.6] - 2026-08-16
 
 ### Fixed
@@ -239,7 +257,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Initial public beta of Testrix: local-first desktop API client (HTTP, WebSocket, collections, environments, test suites, load tests, mocks, and capture).
 
-[Unreleased]: https://github.com/matthiaskopeinigg/testrix/compare/v1.0.2-beta.6...HEAD
+[Unreleased]: https://github.com/matthiaskopeinigg/testrix/compare/v1.0.2-beta.7...HEAD
+[1.0.2-beta.7]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.2-beta.7
 [1.0.2-beta.6]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.2-beta.6
 [1.0.2-beta.5]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.2-beta.5
 [1.0.2-beta.4]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.2-beta.4

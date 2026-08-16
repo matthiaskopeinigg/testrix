@@ -107,7 +107,8 @@
         @case ('TRIGGER') {
           <app-ts-flow-trigger-step-panel
             [config]="s.config"
-            [targetOptions]="triggerTargetOptions()"
+            [suiteItems]="suiteItems()"
+            [currentFlowId]="flow()?.id ?? ''"
             (configChange)="patchConfig($event)"
           />
         }

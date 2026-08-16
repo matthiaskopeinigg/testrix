@@ -7,6 +7,8 @@ $tx-layout-accent: color-mix(in srgb, var(--tx-primary) 72%, var(--tx-secondary,
   inset: 0;
   z-index: var(--tx-z-layout-onboarding, 1400);
   opacity: 0;
+  user-select: none;
+  -webkit-user-select: none;
   transition: opacity var(--tx-duration-base, 180ms) var(--tx-ease-out-expo, ease);
 
   &.tx-layout-onboarding-overlay-host--visible {
@@ -29,6 +31,8 @@ $tx-layout-accent: color-mix(in srgb, var(--tx-primary) 72%, var(--tx-secondary,
   place-items: center;
   padding: 24px;
   box-sizing: border-box;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .tx-layout-onboarding-overlay__scrim {

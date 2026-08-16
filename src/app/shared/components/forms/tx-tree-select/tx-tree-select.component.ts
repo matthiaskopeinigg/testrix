@@ -25,7 +25,8 @@ import { TxInputComponent } from '../tx-input/tx-input.component';
 import type { TxIconName } from '../../../icons/tx-icon.registry';
 
 /**
- * Dropdown that picks a leaf from a `tx-tree` (folders expand, leaves select).
+ * Dropdown that picks a node from a `tx-tree`.
+ * Default `selectMode` is `'leaf'` (folders expand). `'folder'` selects folder rows instead.
  */
 @Component({
   selector: 'tx-tree-select',
@@ -63,6 +64,10 @@ export class TxTreeSelectComponent implements ControlValueAccessor {
   readonly emptyLabel = input('No items');
   readonly searchPlaceholder = input('Filter…');
   readonly ariaLabel = input('');
+  /** `'leaf'` selects non-folders; `'folder'` selects folder rows (leaves stay visible but not selectable). */
+  readonly selectMode = input<'leaf' | 'folder'>('leaf');
+  /** When true, the closed trigger shows ancestor labels joined with ` / `. */
+  readonly showAncestorPath = input(false);
 
   readonly valueChange = output<string>();
 
@@ -127,7 +132,17 @@ export class TxTreeSelectComponent implements ControlValueAccessor {
 
   protected readonly selectedNode = computed(() => findTreeNode(this.nodes(), this.value()));
 
-  protected readonly triggerLabel = computed(() => this.selectedNode()?.label ?? this.placeholder());
+  protected readonly triggerLabel = computed(() => {
+    const selected = this.selectedNode();
+    if (!selected) {
+      return this.placeholder();
+    }
+    if (!this.showAncestorPath()) {
+      return selected.label;
+    }
+    const path = findTreeNodePath(this.nodes(), this.value());
+    return path?.map((node) => node.label).join(' / ') ?? selected.label;
+  });
 
   protected readonly triggerIcon = computed((): TxIconName | null => {
     const icon = this.selectedNode()?.icon;
@@ -150,7 +165,7 @@ export class TxTreeSelectComponent implements ControlValueAccessor {
       drop: { enabled: false },
       selection: {
         mode: 'single',
-        canSelect: (ctx) => !isFolderNode(ctx.node),
+        canSelect: (ctx) => canSelectNode(ctx.node, this.selectMode()),
       },
       visual: { indentPx: 12, animateExpand: false, animateMove: false },
     }),
@@ -198,8 +213,10 @@ export class TxTreeSelectComponent implements ControlValueAccessor {
     if (!node) {
       return;
     }
-    if (isFolderNode(node)) {
-      this.toggleFolderExpanded(node.id);
+    if (!canSelectNode(node, this.selectMode())) {
+      if (isFolderNode(node)) {
+        this.toggleFolderExpanded(node.id);
+      }
       return;
     }
     this.value.set(node.id);
@@ -292,6 +309,11 @@ function asPickerNodes(nodes: readonly TxTreeNode[]): TxTreeNode[] {
   });
 }
 
+function canSelectNode(node: TxTreeNode, mode: 'leaf' | 'folder'): boolean {
+  const folder = isFolderNode(node);
+  return mode === 'folder' ? folder : !folder;
+}
+
 function isFolderNode(node: TxTreeNode): boolean {
   if (node.kind === 'folder') {
     return true;
@@ -314,6 +336,24 @@ function findTreeNode(nodes: readonly TxTreeNode[], id: string | null): TxTreeNo
       const found = findTreeNode(node.children, id);
       if (found) {
         return found;
+      }
+    }
+  }
+  return null;
+}
+
+function findTreeNodePath(nodes: readonly TxTreeNode[], id: string | null): TxTreeNode[] | null {
+  if (!id) {
+    return null;
+  }
+  for (const node of nodes) {
+    if (node.id === id) {
+      return [node];
+    }
+    if (node.children?.length) {
+      const nested = findTreeNodePath(node.children, id);
+      if (nested) {
+        return [node, ...nested];
       }
     }
   }
@@ -343,9 +383,10 @@ function filterTreeNodes(nodes: readonly TxTreeNode[], query: string): TxTreeNod
     const out: TxTreeNode[] = [];
     for (const node of list) {
       const labelMatch = node.label.toLowerCase().includes(q);
+      const subtitleMatch = (node.subtitle ?? '').toLowerCase().includes(q);
       const children = node.children ? filterNodes(node.children) : undefined;
       const childMatch = !!children?.length;
-      if (labelMatch || childMatch) {
+      if (labelMatch || subtitleMatch || childMatch) {
         out.push({ ...node, children: childMatch ? children : node.children });
       }
     }

@@ -90,6 +90,7 @@ describe('TxSettingsPopupComponent about section', () => {
     expect(text).toContain('Version 1.0.0-beta.1');
     expect(text).toContain('Application');
     expect(text).toContain('1.0.0-beta.1');
+    expect(text).toContain('no Stable GitHub release');
     expect(text).not.toContain('Version (dev)');
   });
 

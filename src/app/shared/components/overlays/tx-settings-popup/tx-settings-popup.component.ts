@@ -57,6 +57,7 @@ import {
   type UiLineHeightId,
 } from '@shared/theme';
 
+import { isPrereleaseVersion } from '@shared/updater/release-version';
 import type { UpdateChannel } from '@shared/updater/updater-status.schema';
 
 import { TxBannerComponent } from '../../feedback/tx-banner/tx-banner.component';
@@ -271,6 +272,11 @@ export class TxSettingsPopupComponent {
   protected readonly appVersionLabel = computed(() => {
     const app = this.displayAppVersion();
     return app ? `Version ${app}` : 'Version (dev)';
+  });
+
+  protected readonly showStableChannelBlockedHint = computed(() => {
+    const version = this.displayAppVersion();
+    return Boolean(version && isPrereleaseVersion(version) && this.isUpdatesChannel('stable'));
   });
 
   protected readonly showUpdateStatusBanner = computed(() => {
@@ -642,7 +648,14 @@ export class TxSettingsPopupComponent {
   }
 
   protected handleCheckForUpdates(): void {
-    void this.updateService.checkNow();
+    void this.runUpdateCheck();
+  }
+
+  private async runUpdateCheck(): Promise<void> {
+    if (this.showStableChannelBlockedHint()) {
+      await this.patchUpdatesChannel('beta');
+    }
+    await this.updateService.checkNow();
   }
 
   protected handleDownloadAndInstallUpdate(): void {

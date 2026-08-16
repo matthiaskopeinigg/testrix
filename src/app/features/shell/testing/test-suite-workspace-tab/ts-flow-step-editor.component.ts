@@ -19,7 +19,7 @@ import { TxTextareaComponent } from '@app/shared/components/forms/tx-textarea/tx
 import { TxToggleComponent } from '@app/shared/components/forms/tx-toggle/tx-toggle.component';
 
 import { collectPriorFlowPlaceholderKeys } from './flow-step-variable-catalog';
-import { buildTriggerTargetOptions, buildValidationRefStepOptions } from './flow-step-picker-options';
+import { buildValidationRefStepOptions } from './flow-step-picker-options';
 import {
   FLOW_STEP_ADD_ICONS,
   FLOW_STEP_GUIDED_TITLES,
@@ -166,18 +166,6 @@ export class TsFlowStepEditorComponent {
       return [];
     }
     return buildValidationRefStepOptions(flow, step.id);
-  });
-
-  protected readonly triggerTargetOptions = computed(() => {
-    const step = this.step();
-    if (!step || step.stepType !== 'TRIGGER') {
-      return [];
-    }
-    const targetType = (step.config as { targetType?: string }).targetType ?? 'flow';
-    return buildTriggerTargetOptions(
-      this.suiteItems(),
-      targetType === 'folder' ? 'folder' : 'flow',
-    );
   });
 
   protected patch(patch: Partial<TestSuiteFlowStep>): void {

@@ -10,6 +10,7 @@ export * from './validation-value-extract';
 export * from './flow-http-middleware-config';
 export * from './flow-database-step-query';
 export * from './collect-test-suite-ancestor-folders';
+export * from './collect-trigger-targets';
 export * from './resolve-test-suite-flow-environment';
 export * from './test-suite-steps.schema';
 export * from './test-suite-migrate';

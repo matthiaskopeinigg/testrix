@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; script-src 'self'"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="dark" />
+    <title>Updating Testrix</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="installer updating" role="alertdialog" aria-labelledby="updating-title" aria-describedby="updating-status">
+      <div class="updating-body">
+        <img class="updating-logo" src="./assets/logo.svg" width="72" height="72" alt="" />
+        <h1 id="updating-title" class="updating-title">Updating Testrix</h1>
+        <p id="updating-status" class="updating-status">Starting Setup…</p>
+        <div class="progress-wrap updating-progress" aria-live="polite">
+          <div id="progress-track" class="progress-track indeterminate" role="progressbar" aria-valuemin="0" aria-valuemax="100">
+            <div id="progress-fill" class="progress-fill"></div>
+          </div>
+          <p id="progress-percent" class="progress-percent updating-percent" aria-hidden="true"></p>
+        </div>
+      </div>
+    </div>
+    <script src="./updating.js"></script>
+  </body>
+</html>

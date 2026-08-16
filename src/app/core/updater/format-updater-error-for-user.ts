@@ -81,8 +81,22 @@ export function getUpdaterErrorDisplay(raw: string | undefined | null): UpdaterE
     };
   }
 
+  if (
+    lower.includes('not found') ||
+    lower.includes('update check failed') ||
+    lower.includes('cannot find channel') ||
+    lower.includes('latest.yml')
+  ) {
+    return {
+      message:
+        'No matching GitHub release was found. If you are on a beta build, switch the release channel to Beta and try again.',
+      showWebsiteDownloadLink: true,
+    };
+  }
+
   return {
-    message: 'Something went wrong while checking for updates. Try again later.',
+    message:
+      'Something went wrong while checking for updates. If you are on a beta build, switch the release channel to Beta. You can also install the latest Setup from GitHub.',
     showWebsiteDownloadLink: true,
   };
 }

@@ -70,7 +70,7 @@ export const HELP_WIKI_TESTING_SECTIONS: readonly HelpWikiSection[] = [
           'HTTP_INTERCEPTOR — apply intercept rules during the step.',
           'WAIT — pause for a duration.',
           'MANUAL — set a flow variable or manual checkpoint.',
-          'TRIGGER — start another flow or external trigger.',
+          'TRIGGER — run another flow, or every descendant flow under a folder (fail-fast). Nested runs inherit variables and captures; cycles are rejected.',
         ],
       },
     ],

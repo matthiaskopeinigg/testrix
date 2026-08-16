@@ -102,11 +102,6 @@ export class UpdateService {
       return;
     }
 
-    const channel = this.config.settings()?.updates.channel;
-    if (channel) {
-      await this.setChannel(channel);
-    }
-
     const devCheckVersion = this.resolveDevGitHubCheckVersion();
     if (devCheckVersion) {
       await this.runDevVersionCheck(devCheckVersion);
@@ -114,8 +109,16 @@ export class UpdateService {
     }
 
     this.statusState.set({ state: 'checking', info: null });
-    const status = await bridge.check();
-    this.statusState.set(status);
+    try {
+      const status = await bridge.check();
+      this.statusState.set(status);
+    } catch (error: unknown) {
+      this.statusState.set({
+        state: 'error',
+        info: null,
+        message: error instanceof Error ? error.message : 'Update check failed',
+      });
+    }
   }
 
   /**

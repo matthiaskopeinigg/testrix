@@ -9,6 +9,9 @@ import {
 
 import type { TxDropdownOption } from '@app/shared/components/forms/tx-dropdown/tx-dropdown.types';
 
+import { toTestSuiteTreeNodes } from '../test-suite-sidebar-panel/test-suite-tree.adapter';
+import type { TestSuiteTreeNode } from '../test-suite-sidebar-panel/test-suite-tree.types';
+
 import { FLOW_STEP_GUIDED_TITLES } from './flow-step-labels';
 
 /** Prior capturable steps in run order before the current step (for validation ref picker). */
@@ -47,27 +50,38 @@ export function buildPriorStepOptions(flow: TestSuiteFlow, currentStepId: string
   return options;
 }
 
-/** Lists flows or folders from the test suite tree for trigger targets. */
-export function buildTriggerTargetOptions(
+/** Drops a flow from the suite tree (used so a TRIGGER cannot pick its own flow). */
+export function omitFlowFromSuiteTree(
+  items: readonly TestSuiteTreeItem[],
+  flowId: string,
+): TestSuiteTreeItem[] {
+  const out: TestSuiteTreeItem[] = [];
+  for (const item of items) {
+    if (isTestSuiteFlow(item)) {
+      if (item.id !== flowId) {
+        out.push(item);
+      }
+      continue;
+    }
+    if (isTestSuiteFolder(item)) {
+      out.push({
+        ...item,
+        children: omitFlowFromSuiteTree(item.children, flowId),
+      });
+    }
+  }
+  return out;
+}
+
+/** Suite tree for the TRIGGER target picker (searchable folders + flows). */
+export function buildTriggerTargetTree(
   items: readonly TestSuiteTreeItem[],
   targetType: 'flow' | 'folder',
-): readonly TxDropdownOption[] {
-  const options: TxDropdownOption[] = [];
-
-  const walk = (nodes: readonly TestSuiteTreeItem[]): void => {
-    for (const node of nodes) {
-      if (targetType === 'flow' && isTestSuiteFlow(node)) {
-        options.push({ value: node.id, label: node.name });
-      }
-      if (isTestSuiteFolder(node)) {
-        if (targetType === 'folder') {
-          options.push({ value: node.id, label: node.name });
-        }
-        walk(node.children);
-      }
-    }
-  };
-
-  walk(items);
-  return options;
+  currentFlowId: string,
+): TestSuiteTreeNode[] {
+  const source =
+    targetType === 'flow' && currentFlowId.trim()
+      ? omitFlowFromSuiteTree(items, currentFlowId)
+      : items;
+  return toTestSuiteTreeNodes(source);
 }

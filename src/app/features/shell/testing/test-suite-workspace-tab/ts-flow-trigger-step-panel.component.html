@@ -1,20 +1,28 @@
 <div class="request-panel ts-flow-step-panel">
-  <p class="request-panel__hint">Run another flow or folder when this step executes.</p>
+  <p class="request-panel__hint">
+    Run another flow, or every flow under a folder (nested folders included), when this step
+    executes. Nested runs inherit this flow’s variables and captures.
+  </p>
   <tx-form-field label="Target type" controlId="ts-trg-type">
     <tx-dropdown
       controlId="ts-trg-type"
       [options]="targetTypeOptions"
-      [ngModel]="cfg().targetType"
+      [ngModel]="targetType()"
       (ngModelChange)="patch({ targetType: $event, targetId: '' })"
     />
   </tx-form-field>
   <tx-form-field label="Target" controlId="ts-trg-id">
-    <tx-dropdown
-      controlId="ts-trg-id"
-      [options]="targetOptions()"
+    <tx-tree-select
+      id="ts-trg-id"
+      [nodes]="targetTree()"
+      [selectMode]="selectMode()"
+      [showAncestorPath]="true"
       placeholder="Select target…"
-      [ngModel]="cfg().targetId"
-      (ngModelChange)="patch({ targetId: $event })"
+      searchPlaceholder="Search flows and folders…"
+      emptyLabel="No matching items"
+      ariaLabel="Trigger target"
+      [ngModel]="targetId()"
+      (ngModelChange)="patch({ targetId: $event ?? '' })"
     />
   </tx-form-field>
 </div>

@@ -38,6 +38,11 @@ describe('TxLayoutOnboardingOverlayComponent', () => {
     fixture.detectChanges();
   });
 
+  it('disables text selection on the overlay', () => {
+    const overlay = fixture.nativeElement.querySelector('.tx-layout-onboarding-overlay');
+    expect(getComputedStyle(overlay).userSelect).toBe('none');
+  });
+
   it('starts on the theme selection step', () => {
     const title = fixture.nativeElement.querySelector('#tx-layout-onboarding-title');
     expect(title?.textContent?.trim()).toContain('Choose your theme');

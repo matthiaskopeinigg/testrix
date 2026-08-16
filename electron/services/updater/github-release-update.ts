@@ -56,7 +56,7 @@ export async function fetchLatestGitHubRelease(
     const candidate = selectNewestReleaseForChannel(releases, channel);
     return candidate ? mapRelease(candidate) : null;
   } catch (error: unknown) {
-    if (error instanceof GitHubApiError && error.status === 404) {
+    if (isGitHubNotFound(error)) {
       return null;
     }
     throw error;
@@ -79,7 +79,7 @@ export async function fetchGitHubReleaseByTag(tagName: string): Promise<GitHubRe
     }
     return mapRelease(release);
   } catch (error: unknown) {
-    if (error instanceof GitHubApiError && error.status === 404) {
+    if (isGitHubNotFound(error)) {
       return null;
     }
     throw error;
@@ -117,6 +117,23 @@ export function formatInstallerAssetError(version: string, assetNames: readonly 
     runtimeUpdaterPlatform(),
     assetNames.map((name) => ({ name })),
   );
+}
+
+/**
+ * Returns true when a GitHub API failure is a missing release (HTTP 404).
+ *
+ * Duck-types `status` so bundled copies of `GitHubApiError` still match.
+ *
+ * @param error Rejection from `fetchGitHubJson` or Chromium `session.fetch`.
+ */
+function isGitHubNotFound(error: unknown): boolean {
+  if (typeof error === 'object' && error !== null && 'status' in error) {
+    if ((error as { status: unknown }).status === 404) {
+      return true;
+    }
+  }
+  const message = error instanceof Error ? error.message : String(error ?? '');
+  return /\b404\b/.test(message);
 }
 
 class GitHubApiError extends Error {

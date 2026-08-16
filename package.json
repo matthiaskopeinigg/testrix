@@ -1,6 +1,6 @@
 {
   "name": "testrix",
-  "version": "1.0.2-beta.6",
+  "version": "1.0.2-beta.7",
   "description": "Testrix — local-first API client for HTTP, WebSocket, collections, environments, and test suites",
   "license": "MIT",
   "main": "dist/electron/main.js",
@@ -45,7 +45,8 @@
     "watch": "ng build --watch --configuration development",
     "test": "ng test --watch=false",
     "test:interactive": "ng test",
-    "test:electron": "tsc -p tsconfig.electron.json --noEmit"
+    "test:electron": "tsc -p tsconfig.electron.json --noEmit",
+    "test:updater": "node scripts/test-auto-updater.mjs"
   },
   "dependencies": {
     "@angular/common": "^21.2.20",

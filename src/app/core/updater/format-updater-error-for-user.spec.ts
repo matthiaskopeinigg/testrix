@@ -20,4 +20,10 @@ describe('formatUpdaterErrorForUser', () => {
       ),
     ).toContain('GitHub releases are unavailable');
   });
+
+  it('maps a missing latest feed to the beta-channel hint', () => {
+    expect(formatUpdaterErrorForUser('Cannot find channel latest.yml')).toContain(
+      'switch the release channel to Beta',
+    );
+  });
 });

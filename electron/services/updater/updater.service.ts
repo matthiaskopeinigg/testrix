@@ -14,6 +14,8 @@ import {
 import { updateCheckCacheSchema } from '../../../shared/updater/updater-status.schema';
 import { isUpdaterCacheStatusStale, isUpdaterCacheStatusUsable } from '../../../shared/updater/updater-cache';
 import { DEFAULT_DEV_SIM_VERSION } from '../../../shared/updater/dev-update-sim';
+import { resolveUpdateChannelForVersion } from '../../../shared/updater/release-version';
+import { waitForUpdateReadyFile } from '../../../shared/updater/update-ready-file';
 
 import { isDevMode } from '../../config/environment';
 import { logError } from '../../errors/logger';
@@ -121,10 +123,13 @@ export class UpdaterService {
 
     autoUpdater.on('error', (error) => {
       logError(this.getPathFn(), 'updater error', error);
+      if (this.checkInFlight || this.downloadInFlight) {
+        return;
+      }
       this.pushStatus({
         state: 'error',
         info: null,
-        message: error.message,
+        message: error.message || 'Update check failed',
       });
     });
 
@@ -176,7 +181,7 @@ export class UpdaterService {
     }
 
     this.devSimulatedVersion = trimmed;
-    const channel = this.readSettings().updates.channel;
+    const channel = this.resolveCheckChannel(this.readSettings().updates.channel, trimmed);
     this.applyChannel(channel);
 
     if (this.checkInFlight) {
@@ -208,9 +213,10 @@ export class UpdaterService {
     }
 
     const settings = this.readSettings();
-    this.applyChannel(settings.updates.channel);
+    const channel = this.resolveCheckChannel(settings.updates.channel);
+    this.applyChannel(channel);
 
-    const cacheKey = this.buildCacheKey(settings.updates.channel);
+    const cacheKey = this.buildCacheKey(channel);
     const force = options?.force === true;
     if (!force && !this.shouldHitNetwork(cacheKey, false)) {
       const cached = this.readDiskCache();
@@ -225,7 +231,7 @@ export class UpdaterService {
     try {
       this.lastHttpAt = Date.now();
       this.lastHttpKey = cacheKey;
-      const status = await this.checkGitHubRelease(settings.updates.channel);
+      const status = await this.checkGitHubRelease(channel);
       this.pushStatus(status);
       this.writeDiskCache(status);
       return this.lastStatus;
@@ -459,10 +465,18 @@ export class UpdaterService {
       const install =
         resolveInstallLocation(electronApp) ??
         resolveInstallLocationFromExecutableDir(electronApp);
-      await launchDownloadedInstaller(
-        localPath,
-        buildSilentUpdateLaunchOptions(install),
-      );
+      const launchOptions = buildSilentUpdateLaunchOptions(install);
+      if (launchOptions.readyFile) {
+        try {
+          fs.unlinkSync(launchOptions.readyFile);
+        } catch {
+          // No leftover handshake from a previous attempt.
+        }
+      }
+      await launchDownloadedInstaller(localPath, launchOptions);
+      if (launchOptions.readyFile) {
+        await waitForUpdateReadyFile(launchOptions.readyFile);
+      }
       if (process.platform !== 'darwin') {
         electronApp.exit(0);
         return;
@@ -486,6 +500,20 @@ export class UpdaterService {
     this.clearDiskCache();
     this.lastHttpKey = '';
     this.lastHttpAt = 0;
+  }
+
+  /**
+   * Beta installs always check the beta feed. GitHub has no Stable "latest"
+   * release, and a stale Stable setting would 404 `/releases/latest` on older builds.
+   *
+   * @param settingsChannel Channel persisted in settings.
+   * @param version Installed or simulated semver used for the check.
+   */
+  private resolveCheckChannel(
+    settingsChannel: UpdateChannel,
+    version = this.resolveCurrentVersion(),
+  ): UpdateChannel {
+    return resolveUpdateChannelForVersion(version) === 'beta' ? 'beta' : settingsChannel;
   }
 
   private applyChannel(channel: UpdateChannel): void {
@@ -526,6 +554,10 @@ export class UpdaterService {
   }
 
   private resolveCurrentVersion(): string {
+    const override = process.env.TESTRIX_UPDATER_CURRENT_VERSION?.trim();
+    if (override) {
+      return override.replace(/^v/i, '');
+    }
     if (isDevMode() && this.devSimulatedVersion) {
       return this.devSimulatedVersion;
     }
@@ -540,7 +572,7 @@ export class UpdaterService {
     const disk = this.readDiskCache();
     if (disk && isUpdaterCacheStatusUsable(disk.status, this.resolveCurrentVersion())) {
       const age = Date.now() - new Date(disk.checkedAt).getTime();
-      if (age < CACHE_TTL_MS && disk.channel === this.readSettings().updates.channel) {
+      if (age < CACHE_TTL_MS && disk.channel === this.resolveCheckChannel(this.readSettings().updates.channel)) {
         return false;
       }
     }
@@ -574,7 +606,7 @@ export class UpdaterService {
       return;
     }
 
-    const cacheKey = this.buildCacheKey(settings.updates.channel);
+    const cacheKey = this.buildCacheKey(this.resolveCheckChannel(settings.updates.channel));
     if (!this.shouldHitNetwork(cacheKey, true)) {
       const cached = this.readDiskCache();
       if (cached) {
@@ -655,7 +687,7 @@ export class UpdaterService {
     try {
       const payload = updateCheckCacheSchema.parse({
         checkedAt: new Date().toISOString(),
-        channel: this.readSettings().updates.channel,
+        channel: this.resolveCheckChannel(this.readSettings().updates.channel),
         status,
       });
       fs.mkdirSync(this.getConfigDir(), { recursive: true });

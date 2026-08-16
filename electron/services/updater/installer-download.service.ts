@@ -15,6 +15,8 @@ export interface LaunchInstallerOptions {
   readonly installDir?: string;
   /** PID of the running app to wait for before replacing files. */
   readonly parentPid?: number;
+  /** Handshake file Setup writes when the Updating window is visible. */
+  readonly readyFile?: string;
 }
 
 export interface InstallerDownloadProgress {
@@ -173,6 +175,7 @@ export async function launchDownloadedInstaller(
         TESTRIX_SILENT_UPDATE: '1',
         ...(options.installDir ? { TESTRIX_INSTALL_DIR: options.installDir } : {}),
         ...(options.parentPid ? { TESTRIX_PARENT_PID: String(options.parentPid) } : {}),
+        ...(options.readyFile ? { TESTRIX_UPDATE_READY_FILE: options.readyFile } : {}),
       }
     : {};
 
@@ -242,5 +245,6 @@ export function buildSilentUpdateLaunchOptions(
     silentUpdate: true,
     installDir: install.installDir,
     parentPid: process.pid,
+    readyFile: path.join(app.getPath('temp'), 'testrix-updates', `ready-${process.pid}.flag`),
   };
 }

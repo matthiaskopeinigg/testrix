@@ -22,6 +22,7 @@ npm install
 | `npm test` | Vitest unit tests (non-watch) |
 | `npm run test:interactive` | Vitest watch |
 | `npm run test:electron` | `tsc -p tsconfig.electron.json --noEmit` |
+| `npm run test:updater` | Silent-downgrade the installed app to the previous GitHub beta, then relaunch so Check for updates can offer the latest |
 | `npm run sync:brand` | Sync SVG branding and generated icon/BMP assets |
 
 Pack/release internals (`electron:build:*:payload|setup`, signing helpers) stay in `package.json` for CI; see [releasing.md](releasing.md).
@@ -38,6 +39,7 @@ Pack/release internals (`electron:build:*:payload|setup`, signing helpers) stay 
 
 - Renderer/shared unit tests: `npm test` (Angular Vitest + jsdom)
 - Electron typecheck: `npm run test:electron`
+- Real auto-update against GitHub betas: `npm run test:updater` (silent-downgrades to the previous published beta; `--list`, `--from v1.0.2-beta.4`, `--simulate-only`)
 - CI runs the reusable [test-gate](../.github/workflows/test-gate.yml) workflow, then build smoke on Windows/macOS
 
 ## Conventions
