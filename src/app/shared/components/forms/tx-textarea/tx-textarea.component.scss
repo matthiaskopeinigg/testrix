@@ -9,6 +9,8 @@
   line-height: 1.5;
   resize: none;
   min-height: calc(var(--tx-control-height-md, 36px) * 2.25);
+  -webkit-user-select: text;
+  user-select: text;
 
   @include surface.control-surface;
 

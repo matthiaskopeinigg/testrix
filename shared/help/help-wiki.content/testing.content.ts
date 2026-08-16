@@ -64,6 +64,7 @@ export const HELP_WIKI_TESTING_SECTIONS: readonly HelpWikiSection[] = [
         items: [
           'REQUEST — send an HTTP request from the step config.',
           'VALIDATION — assert on prior step response (status, body, headers).',
+          'CACHE — generate a value ($uuid, templates) or extract from a prior step into {{variables}} for later E2E and DATABASE steps.',
           'DATABASE — write SQL/Redis inline, or select a saved query from the Database sidebar.',
           'E2E — browser automation screenshot/step (when configured).',
           'HTTP_LISTENER — wait for an incoming HTTP callback.',

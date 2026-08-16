@@ -1,3 +1,4 @@
+@use '../testing-sidebar-shared' as testing;
 @use '../../workspace/workspace-tab-chrome' as tab-chrome;
 
 :host {
@@ -8,6 +9,7 @@
   height: 100%;
   min-height: 0;
   min-width: 0;
+  @include testing.testing-no-select;
 }
 
 .cap-tab {

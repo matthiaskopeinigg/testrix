@@ -2,9 +2,11 @@ import { COMMON_HTTP_HEADER_NAMES } from '@shared/http/common-http-header-names'
 import { COMMON_HTTP_QUERY_PARAM_NAMES } from '@shared/http/common-http-query-param-names';
 import {
   cacheSourcesForReferenceStepType,
+  GENERATED_CACHE_SOURCE,
+  isGeneratedCacheSource,
+  type CacheStepEntry,
   type TestSuiteStepType,
 } from '@shared/testing';
-import type { CacheStepEntry } from '@shared/testing';
 
 import type { TxDropdownOption } from '@app/shared/components/forms/tx-dropdown/tx-dropdown.types';
 
@@ -20,6 +22,13 @@ const CACHE_SOURCE_LABELS: Record<CacheStepEntry['source'], string> = {
   e2e_element_html: 'Element HTML',
   e2e_selector_exists: 'Element exists',
   e2e_page_url: 'Page URL / redirect',
+  [GENERATED_CACHE_SOURCE]: 'Generated value',
+};
+
+/** None option so a CACHE step can generate values without extracting from a prior step. */
+export const CACHE_NO_REFERENCE_OPTION: TxDropdownOption = {
+  value: '',
+  label: 'None — generate a value',
 };
 
 /** Dropdown options for cache entry sources based on the reference step type. */
@@ -32,25 +41,35 @@ export function buildCacheSourceOptions(
   }));
 }
 
+/** Reference-step dropdown including the generate-only option. */
+export function buildCacheRefStepOptions(
+  priorSteps: readonly TxDropdownOption[],
+): readonly TxDropdownOption[] {
+  return [CACHE_NO_REFERENCE_OPTION, ...priorSteps];
+}
+
 /** Hint shown under the reference step field. */
 export function cacheReferenceHint(refStepType: TestSuiteStepType | null | undefined): string {
   switch (refStepType) {
     case 'E2E':
-      return 'Save element text, HTML, or page URL from the referenced browser step.';
+      return 'Save element text, HTML, or page URL from the referenced browser step. You can also add generated values.';
     case 'REQUEST':
-      return 'Save HTTP response fields from the referenced request for later steps.';
+      return 'Save HTTP response fields from the referenced request for later steps. You can also add generated values.';
     case 'HTTP_LISTENER':
     case 'HTTP_INTERCEPTOR':
-      return 'Save captured HTTP traffic fields from the referenced step.';
+      return 'Save captured HTTP traffic fields from the referenced step. You can also add generated values.';
     case 'DATABASE':
-      return 'Save the cached query result from the referenced database step.';
+      return 'Save the cached query result from the referenced database step. You can also add generated values.';
     default:
-      return 'Pick a prior step, then define variables to extract from its capture.';
+      return 'Generate a value now ($uuid, $randomString, {{vars}}), or pick a prior step to extract from its capture.';
   }
 }
 
 /** Label for the expression field (header name, etc.). */
 export function cacheExpressionLabel(source: CacheStepEntry['source']): string | null {
+  if (isGeneratedCacheSource(source)) {
+    return null;
+  }
   switch (source) {
     case 'response_header':
     case 'request_header':
@@ -66,6 +85,9 @@ export function cacheExpressionLabel(source: CacheStepEntry['source']): string |
 export function cacheExpressionSuggestions(
   source: CacheStepEntry['source'],
 ): readonly string[] | null {
+  if (isGeneratedCacheSource(source)) {
+    return null;
+  }
   switch (source) {
     case 'response_header':
     case 'request_header':

@@ -84,6 +84,8 @@
   font: inherit;
   font-size: 0.875rem;
   line-height: 1.4;
+  -webkit-user-select: text;
+  user-select: text;
 
   @include surface.control-surface;
   @include motion.tx-interactive-transition;

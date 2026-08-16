@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.2-beta.9] - 2026-08-16
+
+### Added
+
+- Test Suite CACHE steps can generate values (for example `test-$uuid@gmail.com`) without a reference step, then reuse them as `{{email}}` in E2E and DATABASE/Redis steps
+
+### Changed
+
+- Test Suite, Regression, Load Test, Mock Server, Capture, Interceptor, and Monitors chrome no longer allows selecting labels and tree text (inputs, editors, and run/error output stay selectable)
+
 ## [1.0.2-beta.8] - 2026-08-16
 
 ### Fixed
@@ -263,7 +273,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Initial public beta of Testrix: local-first desktop API client (HTTP, WebSocket, collections, environments, test suites, load tests, mocks, and capture).
 
-[Unreleased]: https://github.com/matthiaskopeinigg/testrix/compare/v1.0.2-beta.8...HEAD
+[Unreleased]: https://github.com/matthiaskopeinigg/testrix/compare/v1.0.2-beta.9...HEAD
+[1.0.2-beta.9]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.2-beta.9
 [1.0.2-beta.8]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.2-beta.8
 [1.0.2-beta.7]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.2-beta.7
 [1.0.2-beta.6]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.2-beta.6

@@ -36,4 +36,21 @@ describe('flow-step-labels', () => {
       'Intercept outgoing request · Modify · POST **/login',
     );
   });
+
+  it('builds cache tree subtitle from generated variable names', () => {
+    const step = createFlowStep('CACHE', 'Random email');
+    step.config = {
+      refStepId: null,
+      entries: [
+        {
+          variableName: 'email',
+          source: 'generated',
+          expression: '',
+          value: 'test-$uuid@gmail.com',
+        },
+      ],
+    };
+
+    expect(flowStepTreeSubtitle(step)).toBe('Save values for later · Sets {{email}}');
+  });
 });

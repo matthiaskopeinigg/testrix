@@ -1,15 +1,18 @@
 import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
+import type { DynamicVariableCatalogItem } from '@shared/dynamic-variables';
 import {
   defaultCacheEntryForReferenceStepType,
   findFlowStepById,
+  GENERATED_CACHE_SOURCE,
+  isGeneratedCacheEntry,
   sanitizeCacheEntriesForReferenceStepType,
   type FlowStepRunCapture,
   type TestSuiteFlow,
   type TestSuiteStepType,
 } from '@shared/testing';
-import type { CacheStepConfig } from '@shared/testing/test-suite-steps.schema';
+import type { CacheStepConfig, CacheStepEntry } from '@shared/testing/test-suite-steps.schema';
 import type { TxDropdownOption } from '@app/shared/components/forms/tx-dropdown/tx-dropdown.types';
 
 import { TxButtonComponent } from '@app/shared/components/forms/tx-button/tx-button.component';
@@ -18,9 +21,11 @@ import { TxDropdownComponent } from '@app/shared/components/forms/tx-dropdown/tx
 import { TxFormFieldComponent } from '@app/shared/components/forms/tx-form-field/tx-form-field.component';
 import { TxInputComponent } from '@app/shared/components/forms/tx-input/tx-input.component';
 import { TxSuggestInputComponent } from '@app/shared/components/forms/tx-suggest-input/tx-suggest-input.component';
+import { TxVariableInputComponent } from '@app/shared/components/editors/tx-variable-input/tx-variable-input.component';
 
 import { FLOW_STEP_VALIDATION_EXTRACT_KIND_OPTIONS } from './flow-step-editor-options';
 import {
+  buildCacheRefStepOptions,
   buildCacheSourceOptions,
   cacheExpressionLabel,
   cacheExpressionSuggestions,
@@ -38,6 +43,7 @@ import {
     TxDropdownComponent,
     TxButtonComponent,
     TxIconComponent,
+    TxVariableInputComponent,
   ],
   templateUrl: './ts-flow-cache-step-panel.component.html',
   styleUrl: './ts-flow-step-panel.shared.scss',
@@ -47,10 +53,13 @@ export class TsFlowCacheStepPanelComponent {
   readonly config = input<Record<string, unknown>>({});
   readonly flow = input<TestSuiteFlow | null>(null);
   readonly refStepOptions = input<readonly TxDropdownOption[]>([]);
+  readonly variableCatalog = input<readonly DynamicVariableCatalogItem[]>([]);
 
   readonly configChange = output<Record<string, unknown>>();
 
   protected readonly extractKindOptions = FLOW_STEP_VALIDATION_EXTRACT_KIND_OPTIONS;
+
+  protected readonly cacheRefOptions = computed(() => buildCacheRefStepOptions(this.refStepOptions()));
 
   protected readonly refStepType = computed((): TestSuiteStepType | null => {
     const flow = this.flow();
@@ -86,19 +95,21 @@ export class TsFlowCacheStepPanelComponent {
     this.configChange.emit({ ...this.cfg(), ...patch });
   }
 
-  protected patchEntry(index: number, patch: Partial<CacheStepConfig['entries'][number]>): void {
+  protected patchEntry(index: number, patch: Partial<CacheStepEntry>): void {
     const entries = [...this.entries()];
     entries[index] = { ...entries[index], ...patch };
     this.patch({ entries });
   }
 
-  protected expressionLabel(source: CacheStepConfig['entries'][number]['source']): string | null {
+  protected isGenerated(entry: CacheStepEntry): boolean {
+    return isGeneratedCacheEntry(entry);
+  }
+
+  protected expressionLabel(source: CacheStepEntry['source']): string | null {
     return cacheExpressionLabel(source);
   }
 
-  protected expressionSuggestions(
-    source: CacheStepConfig['entries'][number]['source'],
-  ): readonly string[] | null {
+  protected expressionSuggestions(source: CacheStepEntry['source']): readonly string[] | null {
     return cacheExpressionSuggestions(source);
   }
 
@@ -106,23 +117,18 @@ export class TsFlowCacheStepPanelComponent {
     const nextRefId = refStepId || null;
     const flow = this.flow();
     const refStep = nextRefId && flow ? findFlowStepById(flow.nodes, nextRefId) : null;
-    const entries = nextRefId
-      ? sanitizeCacheEntriesForReferenceStepType(refStep?.stepType, this.entries())
-      : [];
-    if (entries.length === 0) {
-      const fallback = defaultCacheEntryForReferenceStepType(refStep?.stepType);
-      this.patch({ refStepId: nextRefId, entries: fallback ? [fallback] : [] });
-      return;
-    }
+    const entries = sanitizeCacheEntriesForReferenceStepType(refStep?.stepType ?? null, this.entries());
     this.patch({ refStepId: nextRefId, entries });
   }
 
+  protected handleGeneratedValueChange(index: number, value: string): void {
+    this.patchEntry(index, { source: GENERATED_CACHE_SOURCE, value });
+  }
+
   protected handleAddEntry(): void {
-    const fallback = defaultCacheEntryForReferenceStepType(this.refStepType());
-    if (!fallback) {
-      return;
-    }
-    this.patch({ entries: [...this.entries(), fallback] });
+    this.patch({
+      entries: [...this.entries(), defaultCacheEntryForReferenceStepType(this.refStepType())],
+    });
   }
 
   protected handleRemoveEntry(index: number): void {

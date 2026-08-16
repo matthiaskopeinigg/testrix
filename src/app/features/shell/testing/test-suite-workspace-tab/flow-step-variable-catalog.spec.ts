@@ -133,4 +133,41 @@ describe('collectPriorFlowPlaceholderKeys', () => {
 
     expect(catalog.some((item) => item.label === '{{userId}}')).toBe(true);
   });
+
+  it('includes generated cache placeholders from prior steps', () => {
+    const flow = baseFlow([
+      {
+        id: 'step-1',
+        type: 'step',
+        parentId: null,
+        stepType: 'CACHE',
+        name: 'Cache email',
+        enabled: true,
+        config: {
+          refStepId: null,
+          entries: [
+            {
+              variableName: 'email',
+              source: 'generated',
+              expression: '',
+              value: 'test-$uuid@gmail.com',
+            },
+          ],
+        },
+      },
+      {
+        id: 'step-2',
+        type: 'step',
+        parentId: null,
+        stepType: 'E2E',
+        name: 'Type email',
+        enabled: true,
+        config: {},
+      },
+    ]);
+
+    const catalog = collectPriorFlowPlaceholderKeys(flow, 'step-2', null);
+
+    expect(catalog.some((item) => item.label === '{{email}}')).toBe(true);
+  });
 });

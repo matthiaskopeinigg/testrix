@@ -251,6 +251,8 @@
   border: 1px solid color-mix(in srgb, var(--tx-border-0) 48%, transparent);
   border-radius: var(--tx-radius-sm, 8px);
   background: color-mix(in srgb, var(--tx-surface-0) 82%, transparent);
+  -webkit-user-select: text;
+  user-select: text;
 }
 
 .ts-flow-run-panel__details-head {

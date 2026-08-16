@@ -102,6 +102,21 @@
     auto;
 }
 
+.ts-flow-step-panel__rule-main--cache-generated {
+  grid-template-columns:
+    minmax(0, 0.9fr)
+    minmax(0, 1fr)
+    minmax(0, 2fr)
+    auto;
+}
+
+.ts-flow-step-panel__rule-main--cache-generated-only {
+  grid-template-columns:
+    minmax(0, 0.9fr)
+    minmax(0, 2fr)
+    auto;
+}
+
 .ts-flow-step-panel__capture-preview {
   margin: 0 0 0.75rem;
   padding: 0.45rem 0.6rem;
@@ -126,7 +141,9 @@
 
 @media (max-width: 48rem) {
   .ts-flow-step-panel__rule-main,
-  .ts-flow-step-panel__rule-main--cache {
+  .ts-flow-step-panel__rule-main--cache,
+  .ts-flow-step-panel__rule-main--cache-generated,
+  .ts-flow-step-panel__rule-main--cache-generated-only {
     grid-template-columns: 1fr;
   }
 }

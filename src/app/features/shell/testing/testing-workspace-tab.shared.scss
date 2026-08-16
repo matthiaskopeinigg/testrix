@@ -1,3 +1,5 @@
+@use './testing-sidebar-shared' as testing;
+
 :host,
 .testing-workspace-tab-host {
   display: flex;
@@ -8,4 +10,5 @@
   min-height: 0;
   min-width: 0;
   overflow: hidden;
+  @include testing.testing-no-select;
 }

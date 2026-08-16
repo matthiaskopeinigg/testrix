@@ -68,6 +68,11 @@ tbody .tx-data-grid__gutter {
   overflow: hidden;
 }
 
+tbody td:not(.tx-data-grid__gutter) {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
 thead th {
   position: sticky;
   top: 0;

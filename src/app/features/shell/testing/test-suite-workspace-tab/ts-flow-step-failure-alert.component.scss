@@ -86,6 +86,8 @@
   color: var(--tx-text-0);
   overflow-wrap: anywhere;
   word-break: break-word;
+  -webkit-user-select: text;
+  user-select: text;
 }
 
 @keyframes ts-flow-step-failure-callout-in {

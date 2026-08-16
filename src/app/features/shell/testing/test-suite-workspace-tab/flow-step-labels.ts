@@ -21,7 +21,7 @@ export const FLOW_STEP_GUIDED_TITLES: Record<TestSuiteStepType, string> = {
 export const FLOW_STEP_ADD_HINTS: Record<TestSuiteStepType, string> = {
   REQUEST: 'Call an API and store the response.',
   VALIDATION: 'Assert a prior response or value.',
-  CACHE: 'Extract values from a prior step into flow variables.',
+  CACHE: 'Generate a value or extract from a prior step into flow variables.',
   DATABASE: 'Write a query or select a saved query, then cache the result.',
   E2E: 'Drive the browser (navigate, click, type).',
   HTTP_LISTENER: 'Wait for a matching HTTP request.',
@@ -85,10 +85,18 @@ export function flowStepTreeSubtitle(
   const prefix = trimmed.length > 0 ? guided : undefined;
 
   if (step.stepType === 'VALIDATION' || step.stepType === 'CACHE') {
-    const refId = String(
-      (step.config as ValidationStepConfig | CacheStepConfig).refStepId ?? '',
-    ).trim();
+    const config = step.config as ValidationStepConfig | CacheStepConfig;
+    const refId = String(config.refStepId ?? '').trim();
     if (!refId) {
+      if (step.stepType === 'CACHE') {
+        const names = (config as CacheStepConfig).entries
+          ?.map((entry) => entry.variableName.trim())
+          .filter((name) => name.length > 0)
+          .map((name) => `{{${name}}}`);
+        const detail =
+          names && names.length > 0 ? `Sets ${names.join(', ')}` : 'Generates flow variables';
+        return prefix ? `${prefix} · ${detail}` : detail;
+      }
       return prefix;
     }
     const refStep = stepById?.get(refId);

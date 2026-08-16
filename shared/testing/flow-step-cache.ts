@@ -1,6 +1,9 @@
-import type { CacheStepEntry } from './test-suite-steps.schema';
-import type { ValidationRule } from './test-suite-steps.schema';
-import type { TestSuiteStepType } from './test-suite-steps.schema';
+import {
+  GENERATED_CACHE_SOURCE,
+  type CacheStepEntry,
+  type ValidationRule,
+  type TestSuiteStepType,
+} from './test-suite-steps.schema';
 import type { FlowStepRunCapture } from './flow-step-capture';
 import {
   resolveValidationActualValue,
@@ -17,6 +20,38 @@ export const HTTP_FLOW_CACHE_SOURCES = [
   'response_header',
 ] as const satisfies readonly CacheEntrySource[];
 
+/**
+ * Returns true when the cache source stores a generated template instead of a capture extract.
+ */
+export function isGeneratedCacheSource(
+  source: CacheEntrySource,
+): source is typeof GENERATED_CACHE_SOURCE {
+  return source === GENERATED_CACHE_SOURCE;
+}
+
+/**
+ * Returns true when the cache entry stores a generated template instead of a capture extract.
+ */
+export function isGeneratedCacheEntry(entry: CacheStepEntry): boolean {
+  return isGeneratedCacheSource(entry.source);
+}
+
+/**
+ * Template string for a generated cache entry (`$uuid`, `{{vars}}`).
+ */
+export function generatedCacheEntryTemplate(entry: CacheStepEntry): string {
+  return String(entry.value ?? '');
+}
+
+function withGeneratedCacheSource(
+  sources: readonly CacheEntrySource[],
+): readonly CacheEntrySource[] {
+  if (sources.includes(GENERATED_CACHE_SOURCE)) {
+    return sources;
+  }
+  return [...sources, GENERATED_CACHE_SOURCE];
+}
+
 /** Maps reference step types to cacheable source fields. */
 export function cacheSourcesForReferenceStepType(
   stepType: TestSuiteStepType | null | undefined,
@@ -25,13 +60,13 @@ export function cacheSourcesForReferenceStepType(
     case 'REQUEST':
     case 'HTTP_LISTENER':
     case 'HTTP_INTERCEPTOR':
-      return HTTP_FLOW_CACHE_SOURCES;
+      return withGeneratedCacheSource(HTTP_FLOW_CACHE_SOURCES);
     case 'E2E':
-      return validationSourcesForReferenceStepType(stepType);
+      return withGeneratedCacheSource(validationSourcesForReferenceStepType(stepType));
     case 'DATABASE':
-      return validationSourcesForReferenceStepType(stepType);
+      return withGeneratedCacheSource(validationSourcesForReferenceStepType(stepType));
     default:
-      return [];
+      return [GENERATED_CACHE_SOURCE];
   }
 }
 
@@ -40,6 +75,9 @@ export function normalizeCacheEntryForReferenceStepType(
   stepType: TestSuiteStepType | null | undefined,
   entry: CacheStepEntry,
 ): CacheStepEntry {
+  if (isGeneratedCacheEntry(entry)) {
+    return entry;
+  }
   if (
     stepType === 'REQUEST' ||
     stepType === 'HTTP_LISTENER' ||
@@ -69,9 +107,24 @@ export function cacheEntryExtractFailureMessage(
   return `Could not cache a value for flow variable "{{${variableName}}}".`;
 }
 
+/** Default generated-value cache entry (no reference step required). */
+export function defaultGeneratedCacheEntry(): CacheStepEntry {
+  return {
+    variableName: '',
+    source: GENERATED_CACHE_SOURCE,
+    expression: '',
+    value: '',
+    extractKind: 'full',
+    extract: '',
+  };
+}
+
+/**
+ * Default cache entry for a reference step type, or a generated value when none is selected.
+ */
 export function defaultCacheEntryForReferenceStepType(
   stepType: TestSuiteStepType | null | undefined,
-): CacheStepEntry | null {
+): CacheStepEntry {
   switch (stepType) {
     case 'REQUEST':
     case 'HTTP_LISTENER':
@@ -80,6 +133,7 @@ export function defaultCacheEntryForReferenceStepType(
         variableName: '',
         source: 'response_body',
         expression: '',
+        value: '',
         extractKind: 'jsonpath',
         extract: '',
       };
@@ -88,6 +142,7 @@ export function defaultCacheEntryForReferenceStepType(
         variableName: '',
         source: 'cached_value',
         expression: '',
+        value: '',
         extractKind: 'jsonpath',
         extract: '',
       };
@@ -96,14 +151,18 @@ export function defaultCacheEntryForReferenceStepType(
         variableName: '',
         source: 'e2e_element_text',
         expression: '',
+        value: '',
         extractKind: 'full',
         extract: '',
       };
     default:
-      return null;
+      return defaultGeneratedCacheEntry();
   }
 }
 
+/**
+ * Drops cache entries whose source is not valid for the reference step, then falls back to a default.
+ */
 export function sanitizeCacheEntriesForReferenceStepType(
   stepType: TestSuiteStepType | null | undefined,
   entries: readonly CacheStepEntry[],
@@ -115,13 +174,16 @@ export function sanitizeCacheEntriesForReferenceStepType(
   if (filtered.length > 0) {
     return [...filtered];
   }
-  const fallback = defaultCacheEntryForReferenceStepType(stepType);
-  return fallback ? [fallback] : [];
+  return [defaultCacheEntryForReferenceStepType(stepType)];
 }
 
 function cacheEntryAsValidationRule(entry: CacheStepEntry): ValidationRule {
+  const source = entry.source;
+  if (isGeneratedCacheSource(source)) {
+    throw new Error('Generated cache entries do not read a prior step capture.');
+  }
   return {
-    source: entry.source,
+    source,
     expression: entry.expression ?? '',
     operator: 'equals',
     expected: '',
@@ -149,6 +211,9 @@ export function resolveCacheEntryValue(
   capture: FlowStepRunCapture,
   entry: CacheStepEntry,
 ): string | null {
+  if (isGeneratedCacheEntry(entry)) {
+    return generatedCacheEntryTemplate(entry);
+  }
   const raw = resolveCacheEntryRawValue(capture, entry);
   return extractFlowCachedValue(raw, cacheEntryAsExtractInput(entry));
 }

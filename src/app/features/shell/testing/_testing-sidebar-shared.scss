@@ -1,5 +1,15 @@
 @use '../workspace/workspace-panel-chrome' as panel;
 
+@mixin testing-no-select {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+@mixin testing-selectable-text {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
 @mixin testing-sidebar-host {
   display: flex;
   flex: 1 1 auto;
@@ -7,6 +17,7 @@
   min-height: 0;
   min-width: 0;
   width: 100%;
+  @include testing-no-select;
 }
 
 @mixin testing-sidebar-shell {

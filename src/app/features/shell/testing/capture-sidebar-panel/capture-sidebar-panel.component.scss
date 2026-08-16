@@ -1,11 +1,8 @@
 @use '../../workspace/workspace-sidebar-tree' as sidebar-tree;
+@use '../testing-sidebar-shared' as shared;
 
 :host {
-  display: flex;
-  flex: 1 1 auto;
-  flex-direction: column;
-  min-height: 0;
-  min-width: 0;
+  @include shared.testing-sidebar-host;
 }
 
 .capture-sidebar-panel {

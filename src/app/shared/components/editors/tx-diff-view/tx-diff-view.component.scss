@@ -122,6 +122,8 @@
   white-space: pre-wrap;
   word-break: break-word;
   color: var(--tx-text-0);
+  -webkit-user-select: text;
+  user-select: text;
 }
 
 .tx-diff-view__json {
@@ -129,6 +131,8 @@
   min-height: 0;
   overflow: auto;
   padding: 0.5rem 0.75rem;
+  -webkit-user-select: text;
+  user-select: text;
 }
 
 .tx-diff-view__paths {

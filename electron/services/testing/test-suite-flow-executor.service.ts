@@ -25,6 +25,8 @@ import {
   sanitizeValidationRulesForReferenceStepType,
   sanitizeCacheEntriesForReferenceStepType,
   resolveCacheEntryValue,
+  isGeneratedCacheEntry,
+  generatedCacheEntryTemplate,
   resolveDatabaseStepQueryBinding,
   cacheEntryExtractFailureMessage,
   validationFailureMessage,
@@ -41,6 +43,7 @@ import {
 } from '../../../shared/testing';
 import {
   type CacheStepConfig,
+  type CacheStepEntry,
   type DatabaseStepConfig,
   type E2eStepConfig,
   type HttpInterceptorStepConfig,
@@ -326,7 +329,7 @@ export class TestSuiteFlowExecutor {
         await this.executeValidation(step, flow, ctx.showBrowser);
         return;
       case 'CACHE':
-        await this.executeCache(step, flow, ctx.showBrowser);
+        await this.executeCache(step, flow, ctx);
         return;
       case 'E2E':
         await this.executeE2e(step, flow, ctx);
@@ -1167,12 +1170,19 @@ export class TestSuiteFlowExecutor {
   private async executeCache(
     step: TestSuiteFlowStep,
     flow: TestSuiteFlow,
-    showBrowser: boolean,
+    ctx: FlowStepContext,
   ): Promise<void> {
     const cfg = step.config as CacheStepConfig;
     const refId = cfg.refStepId;
+    const rawEntries = cfg.entries ?? [];
+    const extractEntries = rawEntries.filter((entry) => !isGeneratedCacheEntry(entry));
+
     if (!refId) {
-      throw new Error('Cache step needs a reference step.');
+      if (extractEntries.length > 0) {
+        throw new Error('Cache step needs a reference step to extract values.');
+      }
+      this.applyGeneratedCacheEntries(rawEntries, flow, ctx);
+      return;
     }
 
     const refStep = findFlowStepById(flow.nodes, refId);
@@ -1180,17 +1190,29 @@ export class TestSuiteFlowExecutor {
       throw new Error('Reference step was not found in this flow.');
     }
 
-    const entries = sanitizeCacheEntriesForReferenceStepType(refStep.stepType, cfg.entries ?? []);
+    const entries = sanitizeCacheEntriesForReferenceStepType(refStep.stepType, rawEntries);
     if (entries.length === 0) {
       return;
     }
 
-    const capture = await this.resolveValidationReferenceCapture(refStep, refId, [], showBrowser);
+    const needsCapture = entries.some((entry) => !isGeneratedCacheEntry(entry));
+    const capture = needsCapture
+      ? await this.resolveValidationReferenceCapture(refStep, refId, [], ctx.showBrowser)
+      : null;
 
     for (const entry of entries) {
       const variableName = String(entry.variableName ?? '').trim();
       if (!variableName) {
         continue;
+      }
+
+      if (isGeneratedCacheEntry(entry)) {
+        this.flowVariables.set(variableName, this.resolveGeneratedCacheValue(entry, flow, ctx));
+        continue;
+      }
+
+      if (!capture) {
+        throw new Error(cacheEntryExtractFailureMessage(entry, variableName));
       }
 
       const value = resolveCacheEntryValue(capture, entry);
@@ -1200,6 +1222,40 @@ export class TestSuiteFlowExecutor {
 
       this.flowVariables.set(variableName, value);
     }
+  }
+
+  /** Resolves `$uuid` / `{{vars}}` in generated cache entries and stores them as flow variables. */
+  private applyGeneratedCacheEntries(
+    entries: readonly CacheStepEntry[],
+    flow: TestSuiteFlow,
+    ctx: FlowStepContext,
+  ): void {
+    for (const entry of entries) {
+      if (!isGeneratedCacheEntry(entry)) {
+        continue;
+      }
+      const variableName = String(entry.variableName ?? '').trim();
+      if (!variableName) {
+        continue;
+      }
+      this.flowVariables.set(variableName, this.resolveGeneratedCacheValue(entry, flow, ctx));
+    }
+  }
+
+  /** Resolves a generated cache template against the current flow variable context. */
+  private resolveGeneratedCacheValue(
+    entry: CacheStepEntry,
+    flow: TestSuiteFlow,
+    ctx: FlowStepContext,
+  ): string {
+    return this.resolveFlowTemplate(
+      generatedCacheEntryTemplate(entry),
+      flow,
+      ctx.environments,
+      ctx.environmentIdOverride,
+      ctx.ancestorFolders,
+      ctx.environmentVariableKeys,
+    );
   }
 }
 

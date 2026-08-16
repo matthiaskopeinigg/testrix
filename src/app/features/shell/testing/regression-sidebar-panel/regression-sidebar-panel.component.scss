@@ -1,12 +1,9 @@
 @use '../../workspace/workspace-panel-chrome' as panel;
 @use '../../workspace/workspace-sidebar-tree' as sidebar-tree;
+@use '../testing-sidebar-shared' as shared;
 
 :host {
-  display: flex;
-  flex: 1 1 auto;
-  flex-direction: column;
-  min-height: 0;
-  min-width: 0;
+  @include shared.testing-sidebar-host;
 }
 
 .regression-sidebar-panel {

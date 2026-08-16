@@ -104,14 +104,25 @@ export const validationRuleSchema = z.object({
 
 export type ValidationRule = z.infer<typeof validationRuleSchema>;
 
+/** Cache entry that stores a generated/literal template instead of extracting a capture. */
+export const GENERATED_CACHE_SOURCE = 'generated' as const;
+
+/** Capture sources plus generated templates for CACHE step entries. */
+export const cacheStepEntrySourceSchema = z.union([
+  validationRuleSchema.shape.source,
+  z.literal(GENERATED_CACHE_SOURCE),
+]);
+
 export const cacheStepEntrySchema = z.object({
   variableName: z.string().default(''),
-  source: validationRuleSchema.shape.source,
+  source: cacheStepEntrySourceSchema,
   expression: z.string().default(''),
   extractKind: z
     .enum(['full', 'json_pointer', 'jsonpath', 'xpath', 'text_regex', 'form_field', 'url_param', 'binary_metric'])
     .optional(),
   extract: z.string().optional(),
+  /** Template for `generated` entries (`$uuid`, `{{vars}}`). Ignored for extract sources. */
+  value: z.string().optional(),
 });
 
 export type CacheStepEntry = z.infer<typeof cacheStepEntrySchema>;
@@ -254,9 +265,10 @@ export function createDefaultCacheStepConfig(): CacheStepConfig {
     entries: [
       {
         variableName: '',
-        source: 'response_body',
+        source: GENERATED_CACHE_SOURCE,
         expression: '',
-        extractKind: 'jsonpath',
+        value: '',
+        extractKind: 'full',
         extract: '',
       },
     ],

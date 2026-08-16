@@ -4,8 +4,8 @@
   <tx-form-field label="Reference step" controlId="ts-cache-ref">
     <tx-dropdown
       controlId="ts-cache-ref"
-      [options]="refStepOptions()"
-      placeholder="Select prior step…"
+      [options]="cacheRefOptions()"
+      placeholder="None — generate a value"
       [ngModel]="cfg().refStepId ?? ''"
       (ngModelChange)="handleRefStepChange($event)"
     />
@@ -29,21 +29,24 @@
     </p>
   }
 
-  @if (sourceOptions().length === 0) {
-    <p class="ts-flow-step-panel__hint-inline">Select a reference step to configure cache entries.</p>
-  } @else {
-    <div class="ts-flow-step-panel__rules">
-      @for (entry of entries(); track $index) {
-        <div class="ts-flow-step-panel__rule">
-          <div class="ts-flow-step-panel__rule-main ts-flow-step-panel__rule-main--cache">
-            <tx-form-field label="Variable name" [controlId]="'ts-cache-var-' + $index">
-              <tx-input
-                [controlId]="'ts-cache-var-' + $index"
-                [ngModel]="entry.variableName"
-                (ngModelChange)="patchEntry($index, { variableName: $event })"
-                placeholder="userId"
-              />
-            </tx-form-field>
+  <div class="ts-flow-step-panel__rules">
+    @for (entry of entries(); track $index) {
+      <div class="ts-flow-step-panel__rule">
+        <div
+          class="ts-flow-step-panel__rule-main"
+          [class.ts-flow-step-panel__rule-main--cache]="refStepType() && !isGenerated(entry)"
+          [class.ts-flow-step-panel__rule-main--cache-generated]="!!refStepType() && isGenerated(entry)"
+          [class.ts-flow-step-panel__rule-main--cache-generated-only]="!refStepType()"
+        >
+          <tx-form-field label="Variable name" [controlId]="'ts-cache-var-' + $index">
+            <tx-input
+              [controlId]="'ts-cache-var-' + $index"
+              [ngModel]="entry.variableName"
+              (ngModelChange)="patchEntry($index, { variableName: $event })"
+              placeholder="email"
+            />
+          </tx-form-field>
+          @if (refStepType()) {
             <tx-form-field label="Source" [controlId]="'ts-cache-src-' + $index">
               <tx-dropdown
                 [controlId]="'ts-cache-src-' + $index"
@@ -52,6 +55,18 @@
                 (ngModelChange)="patchEntry($index, { source: $event })"
               />
             </tx-form-field>
+          }
+          @if (!refStepType() || isGenerated(entry)) {
+            <tx-form-field label="Value" [controlId]="'ts-cache-value-' + $index">
+              <tx-variable-input
+                [controlId]="'ts-cache-value-' + $index"
+                [catalog]="variableCatalog()"
+                [ngModel]="entry.value ?? ''"
+                (ngModelChange)="handleGeneratedValueChange($index, $event)"
+                placeholder="test-$uuid@gmail.com"
+              />
+            </tx-form-field>
+          } @else {
             @if (expressionLabel(entry.source); as exprLabel) {
               <tx-form-field [label]="exprLabel" [controlId]="'ts-cache-expr-' + $index">
                 @if (expressionSuggestions(entry.source); as catalog) {
@@ -87,14 +102,14 @@
                 (ngModelChange)="patchEntry($index, { extractKind: $event })"
               />
             </tx-form-field>
-            <tx-button variant="secondary" size="icon" ariaLabel="Remove entry" (pressed)="handleRemoveEntry($index)">
-              <tx-icon name="close" [size]="14" aria-hidden="true" />
-            </tx-button>
-          </div>
+          }
+          <tx-button variant="secondary" size="icon" ariaLabel="Remove entry" (pressed)="handleRemoveEntry($index)">
+            <tx-icon name="close" [size]="14" aria-hidden="true" />
+          </tx-button>
         </div>
-      }
-    </div>
+      </div>
+    }
+  </div>
 
-    <tx-button variant="add" [disabled]="!refStepType()" (pressed)="handleAddEntry()">Add variable</tx-button>
-  }
+  <tx-button variant="add" (pressed)="handleAddEntry()">Add variable</tx-button>
 </div>

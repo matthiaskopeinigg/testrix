@@ -131,6 +131,8 @@
   background: transparent;
   outline: none;
   scroll-padding-inline: var(--tx-variable-input-pad-x);
+  -webkit-user-select: text;
+  user-select: text;
 
   &::-webkit-scrollbar {
     display: none;
