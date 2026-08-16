@@ -135,6 +135,17 @@ export function resolveTeamRepoRelativePath(
 }
 
 /**
+ * Git-relative directory for one team profile inside the repository.
+ */
+export function resolveTeamRepoProfileRelativePath(profileId: string, repoDataDir?: string): string {
+  const prefix = resolveTeamRepoDataDirPrefix(repoDataDir);
+  if (prefix.length === 0) {
+    return profileId;
+  }
+  return `${prefix}/${profileId}`;
+}
+
+/**
  * Git-relative path to the team profiles manifest inside the repository.
  */
 export function resolveTeamProfilesManifestRelativePath(repoDataDir?: string): string {

@@ -46,3 +46,19 @@ export function asTeamProfile(entry: ProfileEntry): ProfileEntry {
 export function asLocalProfile(entry: ProfileEntry): ProfileEntry {
   return { ...entry, profileKind: 'local' as ProfileKind, teamEnabled: false };
 }
+
+/**
+ * Returns whether a leftover profileSync entry should become a team profile.
+ *
+ * Local profiles stay local even if an older config listed them for sync.
+ * Legacy rows with `teamEnabled: true` still promote.
+ */
+export function shouldPromoteLegacyTeamProfile(
+  entry: Pick<ProfileEntry, 'profileKind' | 'teamEnabled'>,
+  listedInProfileSync: boolean,
+): boolean {
+  if (!listedInProfileSync || isTeamProfile(entry)) {
+    return false;
+  }
+  return entry.teamEnabled === true;
+}

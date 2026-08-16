@@ -35,6 +35,14 @@ describe('team-profile-catalog.helpers', () => {
     expect(ids).toEqual(['remote-1']);
   });
 
+  it('does not auto-import a remote catalog id that already exists as a local profile', () => {
+    const ids = listImportableRemoteProfileIds(
+      [{ id: 'local-1', name: 'Local', shareScopeLabel: 'All shared workspace files' }],
+      [localProfile('local-1', 'Local')],
+    );
+    expect(ids).toEqual([]);
+  });
+
   it('lists publishable local profiles only', () => {
     const profiles = [
       localProfile('local-1', 'Local'),

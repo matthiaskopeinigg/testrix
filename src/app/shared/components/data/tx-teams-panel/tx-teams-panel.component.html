@@ -286,8 +286,8 @@
               }
             } @else {
               @if (!teamSync.isActiveTeamProfile()) {
-                <tx-banner variant="info" title="Local profile active">
-                  Switch to a team profile in the titlebar to push and pull changes with Git.
+                <tx-banner variant="info" title="Sync paused">
+                  A local profile is active. Git sync is paused until you switch back to a team profile.
                 </tx-banner>
               }
               <div class="tx-teams-panel__card tx-teams-panel__card--intro">
@@ -359,7 +359,11 @@
                 </p>
               }
 
-              <tx-button variant="primary" [disabled]="loading() || status().status === 'syncing'" (pressed)="handleSyncNow()">
+              <tx-button
+                variant="primary"
+                [disabled]="loading() || status().status === 'syncing' || !teamSync.isActiveTeamProfile()"
+                (pressed)="handleSyncNow()"
+              >
                 Sync now
               </tx-button>
 
@@ -599,6 +603,9 @@
                   (submitted)="handleCreateBranch()"
                 />
               </tx-form-field>
+              <p class="tx-teams-panel__hint tx-teams-panel__hint--muted">
+                Created from master or main. Your current team profile files stay on the new branch.
+              </p>
               <tx-button
                 variant="secondary"
                 [loading]="branchBusy()?.action === 'create'"

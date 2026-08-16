@@ -5,6 +5,7 @@ import * as path from 'node:path';
 import type { TeamBranchEntry, TeamCommitDetail, TeamCommitFileChange, TeamCommitFileStatus, TeamHistoryEntry } from '../../../shared/collaboration';
 import { COLLECTIONS_FILE_NAME, ENVIRONMENTS_FILE_NAME } from '../../../shared/config/constants';
 import { splitUnifiedDiffByFile } from '../../../shared/collaboration/unified-diff';
+import { normalizeBranchName, resolveFeatureBranchStartPoint as pickFeatureBranchStartPoint } from '../../../shared/collaboration/git-branch-start-point';
 import { createTwoFilesPatch } from 'diff';
 
 export interface GitRepoStatus {
@@ -238,6 +239,19 @@ export class GitWorkspaceService {
     }
   }
 
+  /**
+   * Removes tracked paths from the Git index and working tree.
+   */
+  async removeTrackedPaths(workspaceDir: string, paths: readonly string[]): Promise<void> {
+    if (paths.length === 0) {
+      return;
+    }
+    const result = await this.runGit(['rm', '-r', '--ignore-unmatch', '--', ...paths], workspaceDir);
+    if (!result.ok) {
+      throw new Error(result.stderr || 'git rm failed');
+    }
+  }
+
   async commit(
     workspaceDir: string,
     message: string,
@@ -310,6 +324,13 @@ export class GitWorkspaceService {
 
   async fetch(workspaceDir: string, env?: NodeJS.ProcessEnv): Promise<GitRunResult> {
     return this.runGit(['fetch', 'origin'], workspaceDir, env);
+  }
+
+  /**
+   * Points `origin/HEAD` at the remote default branch (`master` or `main`) when possible.
+   */
+  async ensureOriginHead(workspaceDir: string, env?: NodeJS.ProcessEnv): Promise<void> {
+    await this.runGit(['remote', 'set-head', 'origin', '-a'], workspaceDir, env);
   }
 
   async log(workspaceDir: string, limit: number, skip: number): Promise<TeamHistoryEntry[]> {
@@ -436,11 +457,78 @@ export class GitWorkspaceService {
       .sort((a, b) => a.localeCompare(b));
   }
 
-  async createBranch(workspaceDir: string, name: string): Promise<void> {
-    const result = await this.runGit(['checkout', '-b', name], workspaceDir);
-    if (!result.ok) {
-      throw new Error(result.stderr || 'git checkout -b failed');
+  /**
+   * Creates and checks out a new branch, optionally from `origin/master` or `origin/main`.
+   *
+   * Uses `--force` so a dirty Git working tree does not block the switch; callers remirror
+   * current team profile files onto the new branch afterwards.
+   */
+  async createBranch(workspaceDir: string, name: string, startPoint?: string | null): Promise<void> {
+    if (!isValidGitBranchName(name)) {
+      throw new Error('Invalid branch name.');
     }
+
+    const args = startPoint
+      ? ['checkout', '--no-track', '-f', '-b', name, startPoint]
+      : ['checkout', '-f', '-b', name];
+    const result = await this.runGit(args, workspaceDir);
+    if (!result.ok) {
+      throw new Error(result.stderr.trim() || 'git checkout -b failed');
+    }
+  }
+
+  /**
+   * Resolves `origin/master` or `origin/main` (or the local equivalent) for a new feature branch.
+   */
+  async resolveFeatureBranchStartPoint(workspaceDir: string): Promise<string | null> {
+    const originHead = await this.readOriginHeadBranch(workspaceDir);
+    const remoteBranches = await this.listRemoteBranchNames(workspaceDir);
+    const localBranches = await this.listLocalBranchNames(workspaceDir);
+    return pickFeatureBranchStartPoint({
+      originHead,
+      remoteBranches,
+      localBranches,
+    });
+  }
+
+  private async readOriginHeadBranch(workspaceDir: string): Promise<string | null> {
+    const result = await this.runGit(['symbolic-ref', '--quiet', 'refs/remotes/origin/HEAD'], workspaceDir);
+    if (!result.ok) {
+      return null;
+    }
+    const ref = result.stdout.trim();
+    const prefix = 'refs/remotes/origin/';
+    if (ref.startsWith(prefix)) {
+      return normalizeBranchName(ref.slice(prefix.length));
+    }
+    return normalizeBranchName(ref);
+  }
+
+  private async listRemoteBranchNames(workspaceDir: string): Promise<readonly string[]> {
+    const result = await this.runGit(['branch', '-r', '--format=%(refname:short)'], workspaceDir);
+    if (!result.ok) {
+      return [];
+    }
+    const names: string[] = [];
+    for (const line of result.stdout.split('\n')) {
+      const name = normalizeBranchName(line);
+      if (!name || name === 'HEAD') {
+        continue;
+      }
+      names.push(name);
+    }
+    return names;
+  }
+
+  private async listLocalBranchNames(workspaceDir: string): Promise<readonly string[]> {
+    const result = await this.runGit(['branch', '--format=%(refname:short)'], workspaceDir);
+    if (!result.ok) {
+      return [];
+    }
+    return result.stdout
+      .split('\n')
+      .map((line) => line.trim())
+      .filter((name) => name.length > 0 && isValidGitBranchName(name));
   }
 
   async checkoutBranch(workspaceDir: string, name: string): Promise<void> {

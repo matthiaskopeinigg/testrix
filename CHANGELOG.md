@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.3-beta.4] - 2026-08-16
+
+### Fixed
+
+- Team Git sync pauses while a local workspace profile is active, and local profiles are no longer auto-imported or pushed to the team repo
+- Creating a team branch starts from `master` or `main` and keeps the current team profile files on the new branch
+
 ## [1.0.3-beta.3] - 2026-08-16
 
 ### Changed
@@ -307,7 +314,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Initial public beta of Testrix: local-first desktop API client (HTTP, WebSocket, collections, environments, test suites, load tests, mocks, and capture).
 
-[Unreleased]: https://github.com/matthiaskopeinigg/testrix/compare/v1.0.3-beta.3...HEAD
+[Unreleased]: https://github.com/matthiaskopeinigg/testrix/compare/v1.0.3-beta.4...HEAD
+[1.0.3-beta.4]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.3-beta.4
 [1.0.3-beta.3]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.3-beta.3
 [1.0.3-beta.2]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.3-beta.2
 [1.0.3-beta.1]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.3-beta.1

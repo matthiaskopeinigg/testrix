@@ -12,7 +12,7 @@ import {
   tryEntityMergeWorkspaceFile,
   type TeamWorkspaceConfig,
 } from '../../../shared/collaboration';
-import type { ProfilesState } from '../../../shared/config';
+import { shouldPromoteLegacyTeamProfile, type ProfilesState } from '../../../shared/config';
 
 import { configFileWatcherService } from '../../services/collaboration/config-file-watcher.service';
 import { gitWorkspaceService } from '../../services/collaboration/git-workspace.service';
@@ -399,11 +399,18 @@ export async function initTeamSyncFromBoot(deps: TeamHandlerDeps): Promise<void>
   teamSyncEngine.setMainWindow(deps.getMainWindow());
   await deps.initTeamSync();
   const config = teamSyncEngine.getConfig();
-  const legacyTeamIds = config.profileSync.entries.map((entry) => entry.profileId);
+  const state = await deps.getProfilesState();
+  const legacyTeamIds = config.profileSync.entries
+    .map((entry) => entry.profileId)
+    .filter((id) => {
+      const profile = state.profiles.find((entry) => entry.id === id);
+      return Boolean(profile && shouldPromoteLegacyTeamProfile(profile, true));
+    });
   if (legacyTeamIds.length > 0) {
     await deps.migrateLegacyTeamProfileKinds(legacyTeamIds);
   }
   await refreshTeamSyncWatchers(deps);
+  await teamSyncEngine.onActiveProfileChanged();
 }
 
 export async function refreshTeamSyncOnProfileSwitch(deps: Pick<TeamHandlerDeps, 'getProfilesState'>): Promise<void> {

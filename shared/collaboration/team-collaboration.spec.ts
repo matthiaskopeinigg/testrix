@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { resolveShareScopeFileNames } from './share-scope-files';
 import { DEFAULT_TEAM_SHARE_SCOPE } from './team-workspace.schema';
-import { createDefaultTeamSyncStatus, deriveTeamSyncStatusId } from './team-sync-status.schema';
+import { createDefaultTeamSyncStatus, deriveTeamSyncStatusId, teamSyncStatusLabel } from './team-sync-status.schema';
 
 describe('share-scope-files', () => {
   it('maps enabled scopes to file names', () => {
@@ -58,5 +58,10 @@ describe('team-sync-status', () => {
         anyPending: false,
       }),
     ).toBe('dirty');
+  });
+
+  it('labels sync as paused for a local profile', () => {
+    expect(teamSyncStatusLabel('synced', { localProfilePaused: true })).toBe('Paused');
+    expect(teamSyncStatusLabel('syncing', { localProfilePaused: true })).toBe('Syncing…');
   });
 });

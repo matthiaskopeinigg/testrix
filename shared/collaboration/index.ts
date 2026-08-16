@@ -1,6 +1,7 @@
 export * from './team-workspace.schema';
 export * from './team-share-catalog';
 export * from './git-remote-url';
+export * from './git-branch-start-point';
 export * from './team-profile-sync.helpers';
 export * from './team-repo-paths';
 export * from './team-profiles-manifest.schema';

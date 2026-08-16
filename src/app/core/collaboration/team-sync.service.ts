@@ -63,15 +63,24 @@ export class TeamSyncService {
     return Boolean(config?.enabled && !config.autoSync.enabled);
   });
 
+  readonly isLocalProfileSyncPaused = computed(() => {
+    const config = this.configState();
+    return Boolean(config?.enabled && config.remoteUrl && !this.isActiveTeamProfile());
+  });
+
   readonly statusLabel = computed(() =>
     teamSyncStatusLabel(this.statusState().status, {
       autoSyncPaused: this.isAutoSyncPaused(),
+      localProfilePaused: this.isLocalProfileSyncPaused(),
     }),
   );
 
   /** Status id for titlebar chrome (includes pause overlay). */
   readonly indicatorStatus = computed(() => {
-    if (this.isAutoSyncPaused() && this.statusState().status !== 'syncing') {
+    if (
+      (this.isAutoSyncPaused() || this.isLocalProfileSyncPaused()) &&
+      this.statusState().status !== 'syncing'
+    ) {
       return 'paused' as const;
     }
     return this.statusState().status;
@@ -168,6 +177,9 @@ export class TeamSyncService {
   }
 
   async syncNow(): Promise<TeamSyncStatus> {
+    if (!this.isActiveTeamProfile()) {
+      return this.statusState();
+    }
     const bridge = this.electron.bridge();
     if (!bridge?.team) {
       return this.statusState();

@@ -12,7 +12,7 @@ import {
   enrichTeamWorkspaceConfig,
   isActiveTeamProfileSyncEnabled,
   isSshGitRemoteUrl,
-  resolveActiveTeamSyncTarget,
+  listImportableRemoteProfileIds,
   resolveEffectiveShareScope,
   resolveShareScopeFileNames,
   resolveLegacyTeamProfilesManifestPath,
@@ -20,7 +20,10 @@ import {
   resolveTeamRepoDataDirPath,
   resolveTeamProfilesManifestPath,
   resolveTeamProfilesManifestRelativePath,
+  resolveTeamRepoProfileDir,
+  resolveTeamRepoProfileRelativePath,
   resolveTeamRepoRelativePath,
+  shouldRunTeamSyncCycle,
   summarizeShareScope,
   teamProfilesManifestSchema,
   teamWorkspaceConfigSchema,
@@ -350,6 +353,7 @@ export class TeamSyncEngine {
     return this.status;
   }
 
+  /** Creates a feature branch from master/main, keeps current team files, and pushes it. */
   async createBranch(name: string): Promise<readonly TeamBranchEntry[]> {
     if (!this.workspaceDir) {
       throw new Error('Team workspace is not initialized');
@@ -363,12 +367,23 @@ export class TeamSyncEngine {
     this.updateStatusPartial({ status: 'syncing', operation: 'creating branch', lastError: null });
 
     try {
+      await this.ensureGitSetup(this.workspaceDir);
       if (this.config.enabled && this.config.remoteUrl) {
-        await this.syncNow();
+        const token = await teamCredentialsService.loadToken(this.workspaceDir);
+        const env = gitWorkspaceService.buildAuthEnv(token);
+        await gitWorkspaceService.fetch(this.workspaceDir, env);
+        await gitWorkspaceService.ensureOriginHead(this.workspaceDir, env);
       }
 
-      await gitWorkspaceService.createBranch(this.workspaceDir, trimmed);
+      const startPoint = await gitWorkspaceService.resolveFeatureBranchStartPoint(this.workspaceDir);
+      await gitWorkspaceService.createBranch(this.workspaceDir, trimmed, startPoint);
       this.config = await this.saveConfig({ ...this.config, defaultBranch: trimmed });
+
+      const teamTarget = await this.getActiveTeamSyncTarget();
+      if (teamTarget) {
+        await this.runSyncCycle('create-branch', undefined, teamTarget.profileId);
+      }
+
       await this.publishBranch(trimmed);
 
       await this.refreshStatus();
@@ -526,7 +541,8 @@ export class TeamSyncEngine {
     let importedProfileIds: readonly string[] = [];
 
     if (options?.importMissing) {
-      const missingIds = catalog.profiles.filter((profile) => !profile.imported).map((profile) => profile.id);
+      const state = await this.getProfilesState();
+      const missingIds = listImportableRemoteProfileIds(catalog.profiles, state.profiles);
       importedProfileIds = await this.importProfilesIntoRegistry(missingIds);
       if (importedProfileIds.length > 0) {
         catalog = await this.readRemoteCatalog();
@@ -579,6 +595,7 @@ export class TeamSyncEngine {
     await this.publishLocalProfile(profileId);
     await this.afterTeamProfilesChanged([profileId]);
     await this.runSyncCycle('publish', undefined, profileId);
+    await this.onActiveProfileChanged();
     return { profileId };
   }
 
@@ -590,6 +607,7 @@ export class TeamSyncEngine {
     const { profileId } = await this.createTeamProfile(name);
     await this.afterTeamProfilesChanged([profileId]);
     await this.runSyncCycle('create-team-profile', undefined, profileId);
+    this.startPullInterval();
     return { profileId };
   }
 
@@ -601,7 +619,9 @@ export class TeamSyncEngine {
     await this.unpublishProfile(profileId);
     const entries = this.config.profileSync.entries.filter((entry) => entry.profileId !== profileId);
     this.config = await this.saveConfig({ ...this.config, profileSync: { entries } });
+    await this.removeUnpublishedProfileFromRepo(profileId);
     await this.runSyncCycle('unpublish', undefined, profileId);
+    await this.onActiveProfileChanged();
     return { profileId };
   }
 
@@ -609,11 +629,14 @@ export class TeamSyncEngine {
   async onActiveProfileChanged(): Promise<void> {
     const state = await this.getProfilesState();
     if (!isActiveTeamProfileSyncEnabled(state.profiles, state.activeProfileId)) {
+      this.pauseBackgroundSync();
+      await this.refreshStatus();
       return;
     }
     if (!this.config.enabled || !this.config.remoteUrl) {
       return;
     }
+    this.startPullInterval();
     await this.runSyncCycle('profile-switch');
   }
 
@@ -790,6 +813,25 @@ export class TeamSyncEngine {
     }
   }
 
+  /**
+   * Stops interval, save, and retry timers while a local profile is active.
+   */
+  private pauseBackgroundSync(): void {
+    if (this.commitTimer !== null) {
+      clearTimeout(this.commitTimer);
+      this.commitTimer = null;
+    }
+    if (this.pullInterval !== null) {
+      clearInterval(this.pullInterval);
+      this.pullInterval = null;
+    }
+    if (this.pushRetryTimer !== null) {
+      clearTimeout(this.pushRetryTimer);
+      this.pushRetryTimer = null;
+    }
+    this.syncRescheduleRequested = false;
+  }
+
   private startPullInterval(): void {
     if (this.pullInterval !== null) {
       clearInterval(this.pullInterval);
@@ -893,6 +935,17 @@ export class TeamSyncEngine {
       return;
     }
 
+    const profilesState = await this.getProfilesState();
+    const teamProfileActive = isActiveTeamProfileSyncEnabled(
+      profilesState.profiles,
+      profilesState.activeProfileId,
+    );
+    if (!shouldRunTeamSyncCycle(trigger, teamProfileActive)) {
+      this.pauseBackgroundSync();
+      await this.refreshStatus();
+      return;
+    }
+
     const targets = await this.resolveSyncCycleTargets(localProfileDir, profileIdOverride);
 
     if (this.syncInProgress) {
@@ -937,7 +990,8 @@ export class TeamSyncEngine {
             trigger === 'publish' ||
             trigger === 'create-team-profile' ||
             trigger === 'setup' ||
-            trigger === 'import';
+            trigger === 'import' ||
+            trigger === 'create-branch';
 
           const filesToMirror =
             pendingForProfile.length > 0 ? pendingForProfile : forceFullMirror ? shareFiles : [];
@@ -965,6 +1019,7 @@ export class TeamSyncEngine {
         trigger === 'import';
 
       if (shouldUpdateManifest) {
+        await this.pruneLocalOnlyProfilesFromRepo();
         await this.writeTeamProfilesManifest();
         repoPathsToStage.add(resolveTeamProfilesManifestRelativePath(this.config.repoDataDir));
       }
@@ -1130,9 +1185,11 @@ export class TeamSyncEngine {
       }
 
       const catalogAfterPull = await this.readRemoteCatalog();
-      const missingAfterPull = catalogAfterPull.profiles
-        .filter((profile) => !profile.imported)
-        .map((profile) => profile.id);
+      const stateAfterPull = await this.getProfilesState();
+      const missingAfterPull = listImportableRemoteProfileIds(
+        catalogAfterPull.profiles,
+        stateAfterPull.profiles,
+      );
       await this.importProfilesIntoRegistry(missingAfterPull, { runSync: false });
       await this.applyPullToLocalProfiles();
       this.authReady = true;
@@ -1181,6 +1238,41 @@ export class TeamSyncEngine {
       `${JSON.stringify(manifest, null, 2)}\n`,
       'utf8',
     );
+  }
+
+  /**
+   * Drops an unpublished profile's mirrored files from the team Git repo.
+   */
+  private async removeUnpublishedProfileFromRepo(profileId: string): Promise<void> {
+    if (!this.workspaceDir) {
+      return;
+    }
+
+    const relativeDir = resolveTeamRepoProfileRelativePath(profileId, this.config.repoDataDir);
+    const absoluteDir = resolveTeamRepoProfileDir(this.workspaceDir, profileId, this.config.repoDataDir);
+    try {
+      await gitWorkspaceService.removeTrackedPaths(this.workspaceDir, [relativeDir]);
+    } catch {
+      /* path may never have been tracked */
+    }
+    try {
+      await fs.rm(absoluteDir, { recursive: true, force: true });
+    } catch {
+      /* directory may already be gone */
+    }
+  }
+
+  /**
+   * Removes mirrored folders for local-only profiles so they are not kept in Git.
+   */
+  private async pruneLocalOnlyProfilesFromRepo(): Promise<void> {
+    const state = await this.getProfilesState();
+    for (const profile of state.profiles) {
+      if (isTeamProfile(profile)) {
+        continue;
+      }
+      await this.removeUnpublishedProfileFromRepo(profile.id);
+    }
   }
 
   private async applyPullToLocalProfiles(): Promise<void> {

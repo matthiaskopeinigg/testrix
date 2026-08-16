@@ -85,9 +85,9 @@ export function deriveTeamSyncStatusId(input: TeamSyncStatusDerivationInput): Te
 
 export function teamSyncStatusLabel(
   status: TeamSyncStatusId,
-  options?: { readonly autoSyncPaused?: boolean },
+  options?: { readonly autoSyncPaused?: boolean; readonly localProfilePaused?: boolean },
 ): string {
-  if (options?.autoSyncPaused && status !== 'syncing') {
+  if ((options?.autoSyncPaused || options?.localProfilePaused) && status !== 'syncing') {
     return 'Paused';
   }
   switch (status) {

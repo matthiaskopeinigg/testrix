@@ -13,6 +13,7 @@ import {
   asTeamProfile,
   isTeamProfile,
   normalizeProfileKind,
+  shouldPromoteLegacyTeamProfile,
   type PathsAnchor,
   type ProfileEntry,
   type ProfilesManifest,
@@ -67,7 +68,7 @@ export class ProfileConfigService {
     let changed = false;
     const profiles = manifest.profiles.map((entry) => {
       const normalized = normalizeProfileKind(entry);
-      if (teamIdSet.has(entry.id) && !isTeamProfile(normalized)) {
+      if (shouldPromoteLegacyTeamProfile(normalized, teamIdSet.has(entry.id))) {
         changed = true;
         return asTeamProfile(normalized);
       }

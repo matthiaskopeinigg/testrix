@@ -86,6 +86,28 @@ export function isActiveTeamProfileSyncEnabled(
   return active ? isTeamProfile(active) : false;
 }
 
+/** Git operations that may run even while a local profile is active. */
+export const TEAM_SYNC_EXPLICIT_TRIGGERS = new Set([
+  'publish',
+  'create-team-profile',
+  'unpublish',
+  'import',
+  'create-branch',
+]);
+
+/**
+ * Returns whether a sync cycle should talk to Git for this trigger.
+ *
+ * Background sync (interval, focus, save, manual, retry) runs only while a
+ * team profile is active. Publish, import, create, and unpublish still run.
+ */
+export function shouldRunTeamSyncCycle(trigger: string, isActiveTeamProfile: boolean): boolean {
+  if (TEAM_SYNC_EXPLICIT_TRIGGERS.has(trigger)) {
+    return true;
+  }
+  return isActiveTeamProfile;
+}
+
 /**
  * @deprecated Use isActiveTeamProfileSyncEnabled. Kept for transitional UI reads.
  */

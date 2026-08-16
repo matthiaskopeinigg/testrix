@@ -153,7 +153,7 @@ export class TxTeamsPanelComponent {
   protected readonly gitSetup = this.teamSync.gitSetup;
 
   protected readonly statusVariant = computed((): 'success' | 'warning' | 'error' | 'info' | 'default' => {
-    if (this.isSyncPaused()) {
+    if (this.isSyncPaused() || this.teamSync.isLocalProfileSyncPaused()) {
       return 'warning';
     }
     switch (this.status().status) {
@@ -207,9 +207,11 @@ export class TxTeamsPanelComponent {
     return config?.remoteUrl ?? setup.gitRemoteUrl ?? setup.remoteUrl ?? 'Git remote';
   });
 
-  protected readonly importableRemoteProfiles = computed(
-    () => this.remoteCatalog()?.profiles.filter((profile) => !profile.imported) ?? [],
-  );
+  protected readonly importableRemoteProfiles = computed(() => {
+    const catalog = this.remoteCatalog()?.profiles.filter((profile) => !profile.imported) ?? [];
+    const localIds = new Set(this.profiles.profiles().map((profile) => profile.id));
+    return catalog.filter((profile) => !localIds.has(profile.id));
+  });
 
   protected readonly publishableLocalProfiles = computed(() =>
     listPublishableLocalProfiles(this.profiles.profiles()),
@@ -422,6 +424,10 @@ export class TxTeamsPanelComponent {
   }
 
   protected async handleSyncNow(): Promise<void> {
+    if (!this.teamSync.isActiveTeamProfile()) {
+      this.notifications.showInfo('Switch to a team profile to sync');
+      return;
+    }
     this.loading.set(true);
     try {
       await this.teamSync.syncNow();
