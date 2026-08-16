@@ -51,6 +51,7 @@ jobs:
         with:
           name: windows-installer
           path: release/Testrix-Setup.exe
+          if-no-files-found: error
 
   pack-linux:
     name: Pack Linux
@@ -69,6 +70,7 @@ jobs:
         with:
           name: linux-installer
           path: release/Testrix-Setup.AppImage
+          if-no-files-found: error
 
   pack-macos:
     name: Pack macOS
@@ -87,11 +89,13 @@ jobs:
         with:
           name: mac-installer
           path: release/Testrix-Setup.dmg
+          if-no-files-found: error
 
   publish-release:
     name: Publish GitHub Release
     needs: [pack-windows, pack-linux, pack-macos]
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
         with:
@@ -104,13 +108,7 @@ jobs:
       - name: Extract changelog notes
         run: node scripts/changelog-release-notes.mjs --tag "${{ env.RELEASE_TAG }}" --out release-notes.md
       - name: Publish GitHub Release
-        uses: softprops/action-gh-release@v3
-        with:
-          tag_name: ${{ env.RELEASE_TAG }}
-          name: Testrix ${{ env.RELEASE_TAG }}
-          body_path: release-notes.md
-          generate_release_notes: false
-          prerelease: ${{ contains(env.RELEASE_TAG, '-') }}
-          files: |
-            artifacts/**/*
-          fail_on_unmatched_files: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ env.RELEASE_TAG }}
+        run: node scripts/publish-github-release.mjs

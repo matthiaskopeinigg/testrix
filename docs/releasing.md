@@ -18,8 +18,9 @@ Pushing a `v*` tag runs [.github/workflows/release.yml](../.github/workflows/rel
 
 1. **Test gate** — unit tests + Electron typecheck
 2. **Pack** Windows / Linux / macOS installers
-3. **Publish** a GitHub Release with artifacts. Release notes are the matching
-   `CHANGELOG.md` section for that version (not GitHub-generated commit lists).
+3. **Publish** a GitHub Release with artifacts. The job creates a **draft**,
+   uploads Windows / macOS / Linux installers (with retries), and only then
+   publishes. Release notes are the matching `CHANGELOG.md` section.
 
 Tags containing `-` (for example `beta`) are marked **prerelease**. Stable tags without a hyphen may require Windows code-signing secrets (`WIN_CSC_LINK`, `WIN_CSC_KEY_PASSWORD`).
 
