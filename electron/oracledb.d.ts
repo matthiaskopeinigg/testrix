@@ -21,10 +21,15 @@ declare module 'oracledb' {
     close(): Promise<void>;
   }
 
+  export interface Metadata {
+    readonly name?: string;
+    readonly dbTypeName?: string;
+  }
+
   export interface Result {
     readonly rows?: unknown[];
     readonly rowsAffected?: number;
-    readonly metaData?: readonly { readonly dbTypeName?: string }[];
+    readonly metaData?: readonly Metadata[];
   }
 
   export function initOracleClient(options?: {

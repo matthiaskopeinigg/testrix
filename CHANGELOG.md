@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.2-beta.4] - 2026-08-16
+
+### Fixed
+
+- Electron typecheck for Oracle query column names (`v1.0.2-beta.3` failed the release test gate)
+
 ## [1.0.2-beta.3] - 2026-08-16
 
 ### Added
@@ -219,7 +225,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Initial public beta of Testrix: local-first desktop API client (HTTP, WebSocket, collections, environments, test suites, load tests, mocks, and capture).
 
-[Unreleased]: https://github.com/matthiaskopeinigg/testrix/compare/v1.0.2-beta.3...HEAD
+[Unreleased]: https://github.com/matthiaskopeinigg/testrix/compare/v1.0.2-beta.4...HEAD
+[1.0.2-beta.4]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.2-beta.4
 [1.0.2-beta.3]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.2-beta.3
 [1.0.2-beta.2]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.2-beta.2
 [1.0.2-beta.1]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.2-beta.1
