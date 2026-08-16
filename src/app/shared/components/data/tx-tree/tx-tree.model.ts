@@ -482,6 +482,9 @@ export class TxTreeModel<TMeta = unknown> {
 }
 
 function hasChildrenCapability<TMeta>(node: TxTreeNode<TMeta>): boolean {
+  if (node.expandable === false) {
+    return false;
+  }
   if (node.kind === 'request' || node.kind === 'websocket') {
     return false;
   }

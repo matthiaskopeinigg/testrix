@@ -2,6 +2,7 @@ import {
   CAPTURE_FILE_NAME,
   COLLECTIONS_FILE_NAME,
   COOKIE_JAR_FILE_NAME,
+  DATABASES_FILE_NAME,
   ENVIRONMENTS_FILE_NAME,
   HISTORY_FILE_NAME,
   INTERCEPTOR_FILE_NAME,
@@ -25,7 +26,6 @@ export const TEAM_ALWAYS_EXCLUDED_FILES = [
   HISTORY_FILE_NAME,
   COOKIE_JAR_FILE_NAME,
   VAULT_FILE_NAME,
-  QUERIES_FILE_NAME,
   MONITORS_FILE_NAME,
 ] as const;
 
@@ -50,6 +50,12 @@ export function resolveShareScopeFileNames(scope: TeamShareScope): readonly stri
   if (scope.mockServer) {
     files.push(MOCK_SERVER_FILE_NAME);
   }
+  if (scope.savedQueries) {
+    files.push(QUERIES_FILE_NAME);
+  }
+  if (scope.databaseConnections) {
+    files.push(DATABASES_FILE_NAME);
+  }
   if (scope.profiles) {
     files.push(PROFILES_FILE_NAME);
   }
@@ -72,7 +78,6 @@ export const TEAM_GITIGNORE_LINES = [
   HISTORY_FILE_NAME,
   COOKIE_JAR_FILE_NAME,
   VAULT_FILE_NAME,
-  QUERIES_FILE_NAME,
   MONITORS_FILE_NAME,
   'testrix.team.json',
   '.testrix/',

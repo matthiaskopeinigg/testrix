@@ -40,6 +40,7 @@ export interface TeamHandlerDeps {
   readonly unpublishProfile: (profileId: string) => Promise<ProfilesState>;
   readonly migrateLegacyTeamProfileKinds: (teamProfileIds: readonly string[]) => Promise<ProfilesState>;
   readonly initTeamSync: () => Promise<void>;
+  readonly mergeIncomingTeamDatabases: (profileDir: string) => Promise<boolean>;
 }
 
 export async function refreshTeamSyncWatchers(deps: Pick<TeamHandlerDeps, 'getProfilesState'>): Promise<void> {
@@ -68,6 +69,9 @@ export function registerTeamHandlers(ipc: IpcMainBinder, deps: TeamHandlerDeps):
   teamSyncEngine.setPublishLocalProfileHandler(deps.publishLocalProfile);
   teamSyncEngine.setCreateTeamProfileHandler(deps.createTeamProfile);
   teamSyncEngine.setUnpublishProfileHandler(deps.unpublishProfile);
+  teamSyncEngine.setApplyIncomingDatabasesHandler(async (profileDir) => {
+    await deps.mergeIncomingTeamDatabases(profileDir);
+  });
   teamSyncEngine.setSyncTargetsResolver(async () => {
     const state = await deps.getProfilesState();
     return listProfileSyncTargets(

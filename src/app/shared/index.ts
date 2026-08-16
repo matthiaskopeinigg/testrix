@@ -60,6 +60,8 @@ export type {
 export * from './components/forms/tx-dropdown/tx-dropdown.component';
 export type { TxDropdownOption, TxDropdownPlacement } from './components/forms/tx-dropdown/tx-dropdown.types';
 
+export * from './components/forms/tx-tree-select/tx-tree-select.component';
+
 export * from './components/overlays/tx-context-menu/tx-context-menu.component';
 export type { TxContextMenuItem, TxContextMenuPosition } from './components/overlays/tx-context-menu/tx-context-menu.types';
 

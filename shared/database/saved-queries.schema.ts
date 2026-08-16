@@ -17,6 +17,7 @@ export const savedDatabaseQuerySchema = z.object({
   query: z.string().max(512_000).default(''),
   updatedAt: z.string(),
   readOnly: z.boolean().optional(),
+  environmentId: z.string().optional(),
 });
 
 export type SavedDatabaseQuery = z.infer<typeof savedDatabaseQuerySchema>;

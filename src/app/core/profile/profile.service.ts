@@ -223,6 +223,7 @@ export class ProfileService {
       this.interceptor.hydrate(),
       this.databaseQueries.hydrate(),
       this.monitors.hydrate(),
+      this.configService.hydrate(),
     ]);
     await this.configService.hydrateSession();
     this.testingSession.rehydrateFromSession();

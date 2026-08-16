@@ -14,7 +14,6 @@ import {
   type DatabaseStepConfig,
   type FlowDatabaseStepQuerySource,
 } from '@shared/testing';
-import { formatDatabaseConnectionPickerLabel } from '@shared/config';
 
 import { ConfigService } from '@app/core/config/config.service';
 import { DatabaseQueriesService } from '@app/core/database/database-queries.service';
@@ -24,6 +23,9 @@ import type { TxCodeEditorCompletionItem } from '@app/shared/components/editors/
 import { TxDropdownComponent } from '@app/shared/components/forms/tx-dropdown/tx-dropdown.component';
 import { TxFormFieldComponent } from '@app/shared/components/forms/tx-form-field/tx-form-field.component';
 import { TxInputComponent } from '@app/shared/components/forms/tx-input/tx-input.component';
+import { TxTreeSelectComponent } from '@app/shared/components/forms/tx-tree-select/tx-tree-select.component';
+
+import { toConnectionTreeNodes } from '@app/features/shell/database/connection-tree.adapter';
 
 import {
   FLOW_DATABASE_QUERY_SOURCE_OPTIONS,
@@ -40,6 +42,7 @@ import {
     TxDropdownComponent,
     TxFormFieldComponent,
     TxInputComponent,
+    TxTreeSelectComponent,
   ],
   templateUrl: './ts-flow-database-step-panel.component.html',
   styleUrl: './ts-flow-database-step-panel.component.scss',
@@ -59,16 +62,13 @@ export class TsFlowDatabaseStepPanelComponent {
 
   protected readonly querySource = computed(() => resolveDatabaseStepQuerySource(this.cfg()));
 
-  protected readonly connectionOptions = computed(() => {
-    const databases = this.configService.settings()?.databases;
-    const nodes = databases?.nodes ?? [];
-    return (databases?.connections ?? []).map((conn) => ({
-      value: conn.id,
-      label: formatDatabaseConnectionPickerLabel(nodes, conn),
-    }));
-  });
+  protected readonly connectionTreeNodes = computed(() =>
+    toConnectionTreeNodes(this.configService.settings()?.databases?.nodes ?? []),
+  );
 
-  protected readonly hasConnections = computed(() => this.connectionOptions().length > 0);
+  protected readonly hasConnections = computed(
+    () => (this.configService.settings()?.databases?.connections ?? []).length > 0,
+  );
 
   protected readonly savedQueryOptions = computed(() => savedQueryDropdownOptions(this.queries.nodes()));
 

@@ -29,6 +29,7 @@ import { TxInputComponent } from '@app/shared/components/forms/tx-input/tx-input
 import { TxVariableInputComponent } from '@app/shared/components/editors/tx-variable-input/tx-variable-input.component';
 import { TxDropdownComponent } from '@app/shared/components/forms/tx-dropdown/tx-dropdown.component';
 import type { TxDropdownOption } from '@app/shared/components/forms/tx-dropdown/tx-dropdown.types';
+import { TxTreeSelectComponent } from '@app/shared/components/forms/tx-tree-select/tx-tree-select.component';
 import { TxSliderComponent } from '@app/shared/components/forms/tx-slider/tx-slider.component';
 import { TxTextareaComponent } from '@app/shared/components/forms/tx-textarea/tx-textarea.component';
 import { TxToggleComponent } from '@app/shared/components/forms/tx-toggle/tx-toggle.component';
@@ -139,6 +140,7 @@ const BUTTON_DEMO_SPECS: readonly ButtonDemoSpec[] = [
     TxInputComponent,
     TxVariableInputComponent,
     TxDropdownComponent,
+    TxTreeSelectComponent,
     TxSliderComponent,
     TxSpinnerComponent,
     TxTagComponent,
@@ -176,6 +178,7 @@ export class DsComponentsPanelComponent {
     { value: 'text', label: 'Plain text', icon: 'fileText' },
   ];
   readonly dropdownEmptyOptions: readonly TxDropdownOption[] = [];
+  readonly treeSelectDemo = signal<string | null>('login');
   readonly textareaDemo = signal('{\n  "name": "Testrix"\n}');
   readonly codeEditorLanguages = TX_CODE_EDITOR_LANGUAGES;
   readonly codeEditorLanguageLabel = txCodeEditorLanguageLabel;

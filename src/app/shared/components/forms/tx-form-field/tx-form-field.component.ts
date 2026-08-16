@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, ContentChild, input } from '@angular/core';
 
 import { TxDropdownComponent } from '../tx-dropdown/tx-dropdown.component';
+import { TxTreeSelectComponent } from '../tx-tree-select/tx-tree-select.component';
 
 @Component({
   selector: 'tx-form-field',
@@ -16,6 +17,9 @@ export class TxFormFieldComponent {
 
   @ContentChild(TxDropdownComponent)
   protected readonly dropdownContent?: TxDropdownComponent;
+
+  @ContentChild(TxTreeSelectComponent)
+  protected readonly treeSelectContent?: TxTreeSelectComponent;
 
   protected captionElementId(): string | null {
     const id = this.controlId()?.trim();

@@ -29,6 +29,8 @@ const dbQueryPayloadSchema = z.object({
   query: z.string(),
   timeoutMs: z.number().int().positive().optional(),
   page: databaseQueryPageSchema.optional(),
+  paramNames: z.array(z.string().min(1)).optional(),
+  paramValues: z.array(z.unknown()).optional(),
 });
 
 const dbIntrospectPayloadSchema = z.object({
@@ -56,9 +58,9 @@ export function registerDbHandlers(ipc: IpcMainBinder, deps: DbHandlerDeps): voi
           'Invalid database query payload',
         );
       }
-      const { connection, query, timeoutMs, page } = parsed.data;
+      const { connection, query, timeoutMs, page, paramNames, paramValues } = parsed.data;
       try {
-        return await runPagedQuery(connection, query, timeoutMs, page);
+        return await runPagedQuery(connection, query, timeoutMs, page, paramNames, paramValues);
       } catch (error: unknown) {
         throw new TestrixError(
           ErrorCodes.DATABASE_CONNECTION_FAILED,
@@ -72,7 +74,9 @@ export function registerDbHandlers(ipc: IpcMainBinder, deps: DbHandlerDeps): voi
   ipc.handle(
     DbChannels.explain,
     wrapInvokeHandler(DbChannels.explain, async (_event: IpcMainInvokeEvent, raw: unknown) => {
-      const parsed = dbQueryPayloadSchema.pick({ connection: true, query: true, timeoutMs: true }).safeParse(raw);
+      const parsed = dbQueryPayloadSchema
+        .pick({ connection: true, query: true, timeoutMs: true, paramNames: true, paramValues: true })
+        .safeParse(raw);
       if (!parsed.success) {
         throw new TestrixError(
           ErrorCodes.CONFIG_VALIDATION_FAILED,
@@ -89,6 +93,8 @@ export function registerDbHandlers(ipc: IpcMainBinder, deps: DbHandlerDeps): voi
       try {
         return await databaseQueryService.query(parsed.data.connection, explainSql, {
           stepTimeoutMs: parsed.data.timeoutMs,
+          paramNames: parsed.data.paramNames,
+          paramValues: parsed.data.paramValues,
         });
       } catch (error: unknown) {
         throw new TestrixError(
@@ -170,6 +176,8 @@ async function runPagedQuery(
   query: string,
   timeoutMs: number | undefined,
   page: z.infer<typeof databaseQueryPageSchema> | undefined,
+  paramNames: readonly string[] | undefined,
+  paramValues: readonly unknown[] | undefined,
 ): Promise<z.infer<typeof databaseQueryEnvelopeSchema>> {
   const canPage = Boolean(page && canPageSqlSelect(query, connection.type));
   const fetchLimit = page && canPage ? page.limit + 1 : page?.limit;
@@ -177,7 +185,11 @@ async function runPagedQuery(
     page && canPage && fetchLimit
       ? wrapSqlSelectPage(query, fetchLimit, page.offset, connection.type)
       : query;
-  const result = await databaseQueryService.query(connection, sql, { stepTimeoutMs: timeoutMs });
+  const result = await databaseQueryService.query(connection, sql, {
+    stepTimeoutMs: timeoutMs,
+    paramNames,
+    paramValues,
+  });
   if (!page) {
     return result;
   }

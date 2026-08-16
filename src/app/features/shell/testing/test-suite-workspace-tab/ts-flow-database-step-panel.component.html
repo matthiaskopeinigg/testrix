@@ -15,12 +15,14 @@
   </tx-form-field>
 
   <tx-form-field label="Connection" controlId="ts-db-conn">
-    <tx-dropdown
+    <tx-tree-select
       id="ts-db-conn"
-      [options]="connectionOptions()"
+      [nodes]="connectionTreeNodes()"
       [ngModel]="cfg().connectionId"
       (ngModelChange)="patch({ connectionId: $event })"
+      placeholder="Select a connection"
       emptyLabel="Select a connection"
+      ariaLabel="Connection"
     />
   </tx-form-field>
 

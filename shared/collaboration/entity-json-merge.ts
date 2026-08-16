@@ -1,6 +1,8 @@
 import {
   COLLECTIONS_FILE_NAME,
+  DATABASES_FILE_NAME,
   ENVIRONMENTS_FILE_NAME,
+  QUERIES_FILE_NAME,
 } from '../config/constants';
 
 export interface EntityJsonMergeResult {
@@ -227,6 +229,12 @@ export function tryEntityMergeWorkspaceFile(
   theirs: unknown,
 ): EntityJsonMergeResult | null {
   if (fileName === COLLECTIONS_FILE_NAME || fileName.endsWith(`/${COLLECTIONS_FILE_NAME}`)) {
+    return mergeCollectionsJson(base, ours, theirs);
+  }
+  if (fileName === QUERIES_FILE_NAME || fileName.endsWith(`/${QUERIES_FILE_NAME}`)) {
+    return mergeCollectionsJson(base, ours, theirs);
+  }
+  if (fileName === DATABASES_FILE_NAME || fileName.endsWith(`/${DATABASES_FILE_NAME}`)) {
     return mergeCollectionsJson(base, ours, theirs);
   }
   if (fileName === ENVIRONMENTS_FILE_NAME || fileName.endsWith(`/${ENVIRONMENTS_FILE_NAME}`)) {

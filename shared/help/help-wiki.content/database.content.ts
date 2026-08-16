@@ -23,7 +23,7 @@ export const HELP_WIKI_DATABASE_SECTIONS: readonly HelpWikiSection[] = [
         type: 'list',
         items: [
           'Connections and Queries each collapse independently. Both start expanded.',
-          'Search filters connection and query names. Filter and sort menus refine the Queries list.',
+          'Search filters connection names and query names or SQL. Filter by kind or connection, and sort both lists.',
           'Right-click a connection → Schemas…, or click “N Schemas selected”, to choose which schemas appear. None are selected by default. Hide schema removes one from the tree.',
           'Right-click empty space in a section to create a folder or item at the root.',
           'Double-click a folder, connection, or query name to rename it inline.',
@@ -33,7 +33,7 @@ export const HELP_WIKI_DATABASE_SECTIONS: readonly HelpWikiSection[] = [
       {
         type: 'note',
         title: 'Where data is stored',
-        text: 'Connections are shared in settings.json (all profiles). Saved queries are profile-local in queries.json. Export both from Settings → Data & Config → Export, under the Database section. Settings → Database controls idle disconnect for pooled connections.',
+        text: 'Connections are shared in settings.json (all profiles). Teams can also sync a sanitized databases.json snapshot (no passwords) plus saved queries in queries.json. Export both from Settings → Data & Config → Export, under the Database section. Settings → Database controls idle disconnect for pooled connections.',
       },
     ],
   }),
@@ -52,9 +52,9 @@ export const HELP_WIKI_DATABASE_SECTIONS: readonly HelpWikiSection[] = [
       {
         type: 'list',
         items: [
-          'New folder / New connection — right-click the Connections list or a folder. New connections stay unsaved until you click Save; Cancel discards the draft. The connection editor can also move a connection into an existing folder.',
+          'New folder / New connection — right-click the Connections list or a folder. Connection settings stay unsaved until you click Save; Cancel reverts a saved profile or discards a new draft. The editor can also move a connection into an existing folder.',
           'Connection settings — host, port, user, password, database name, Oracle service name / SID, SQLite file path, TLS, and timeouts (context menu).',
-          'Test connection — probes the server without running a query and does not save the profile.',
+          'Test connection — probes the current form values without saving them.',
           'Connect on boot — Testrix probes the connection when the app starts.',
           'Click a connection to show its selected schemas; click again to hide them. Click “N Schemas selected” to pick schemas — none are selected by default.',
           'Open catalog — expands schemas and objects. Refresh reloads the catalog.',
@@ -90,12 +90,13 @@ export const HELP_WIKI_DATABASE_SECTIONS: readonly HelpWikiSection[] = [
       {
         type: 'list',
         items: [
-          'Press Ctrl+Enter (⌘Enter on macOS) to run the statement at the caret, or the selected text.',
+          'Press Ctrl+Enter (⌘Enter on macOS) to run SQL. A selection runs as-is. If the editor has several statements, a list appears so you can run the query at the caret or all queries. Arrow keys move, Enter runs, Escape cancels.',
           'The result grid shows row numbers and NULL cells. Select a range to copy or export a slice.',
           'Export the grid as CSV, TSV, JSON, Markdown, or HTML.',
           'Drag the split between editor and results, or hide the result pane. Height is remembered per query.',
           'Right-click a query to open, rename, duplicate, or delete it. Folders can nest.',
           'A Test Suite DATABASE step can select a saved query instead of writing SQL on the step.',
+          'Use {{environment}} placeholders and :named parameters. Run prompts for :name values and confirms UPDATE, DELETE, DROP, TRUNCATE, and ALTER.',
         ],
       },
       {

@@ -60,4 +60,15 @@ describe('normalizeDatabaseQueryResult', () => {
     expect(table.columnTypes).toEqual(['int4']);
     expect(table.hasMore).toBe(true);
   });
+
+  it('keeps envelope column names when the result has no rows', () => {
+    const table = normalizeDatabaseQueryResult({
+      rows: [],
+      columns: ['id', 'email'],
+      columnTypes: ['int4', 'text'],
+    });
+    expect(table.columns).toEqual(['id', 'email']);
+    expect(table.rows).toEqual([]);
+    expect(table.columnTypes).toEqual(['int4', 'text']);
+  });
 });

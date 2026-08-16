@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.2-beta.3] - 2026-08-16
+
+### Added
+
+- Named SQL parameters (`:name`) with a bind dialog before Run
+- Team share of saved queries, plus a sanitized connection list (passwords stay local)
+- Query connection picker as a folder tree, with per-query environment variables
+- Ctrl+Enter execute chooser when several statements exist (run from caret vs run all)
+- Confirm UPDATE/DELETE/DROP/TRUNCATE; block those on read-only queries
+
+### Changed
+
+- Query results toolbar matches the table data view (pager chips, filter, icon copy/export)
+- Existing connection editor uses Save and Cancel; Test connection never writes the profile
+- Empty SELECT results show column headers instead of a blank message
+
+### Fixed
+
+- Connection picker hover and clicks no longer fall through to the SQL editor
+- Execute chooser highlights the statement at the caret (including after `;`); Esc restores the caret
+- Connection picker no longer shows expand chevrons on leaf connections
+
 ## [1.0.2-beta.2] - 2026-08-16
 
 ### Added
@@ -197,7 +219,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Initial public beta of Testrix: local-first desktop API client (HTTP, WebSocket, collections, environments, test suites, load tests, mocks, and capture).
 
-[Unreleased]: https://github.com/matthiaskopeinigg/testrix/compare/v1.0.2-beta.2...HEAD
+[Unreleased]: https://github.com/matthiaskopeinigg/testrix/compare/v1.0.2-beta.3...HEAD
+[1.0.2-beta.3]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.2-beta.3
 [1.0.2-beta.2]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.2-beta.2
 [1.0.2-beta.1]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.2-beta.1
 [1.0.1-beta.9]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.1-beta.9

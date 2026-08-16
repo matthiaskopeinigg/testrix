@@ -2,7 +2,6 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
-  DestroyRef,
   effect,
   inject,
   input,
@@ -13,6 +12,7 @@ import { FormsModule } from '@angular/forms';
 import {
   collectDatabaseConnectionFolders,
   defaultPortForDatabaseType,
+  findDatabaseConnection,
   type DatabaseConnection,
   type DatabaseType,
 } from '@shared/config';
@@ -79,7 +79,6 @@ export class DatabaseConnectionEditorComponent {
   private readonly connections = inject(DatabaseConnectionsService);
   private readonly electron = inject(ElectronService);
   private readonly workspaceEditor = inject(WorkspaceEditorService);
-  private readonly destroyRef = inject(DestroyRef);
 
   readonly resourceId = input.required<string>();
   readonly active = input(false);
@@ -95,15 +94,29 @@ export class DatabaseConnectionEditorComponent {
   protected readonly statusById = signal<DatabaseConnectionStatusMap>({});
   protected readonly draft = signal<DatabaseConnection | null>(null);
 
-  private saveTimer: ReturnType<typeof setTimeout> | null = null;
-
   protected readonly connectionId = computed(() => parseDatabaseConnectionTabResourceId(this.resourceId()));
 
   protected readonly connection = computed(() => this.draft());
 
-  protected readonly isUnsaved = computed(() => {
+  protected readonly storedConnection = computed(() => {
     const id = this.connectionId();
-    return id != null && this.connections.isDraft(id);
+    if (!id) {
+      return null;
+    }
+    return findDatabaseConnection(this.connections.persistedNodes(), id);
+  });
+
+  /** True when the form differs from the last saved profile (or is a new draft). */
+  protected readonly isDirty = computed(() => {
+    const draft = this.draft();
+    if (!draft) {
+      return false;
+    }
+    if (this.connections.isDraft(draft.id)) {
+      return true;
+    }
+    const stored = this.storedConnection();
+    return stored != null && !connectionEditorEquals(stored, draft);
   });
 
   protected readonly canPickFile = computed(() => Boolean(this.electron.bridge()?.shell?.pickFile));
@@ -138,12 +151,6 @@ export class DatabaseConnectionEditorComponent {
     effect(() => {
       if (this.connection()) {
         void this.refreshStatusesFromMain();
-      }
-    });
-    this.destroyRef.onDestroy(() => {
-      if (this.saveTimer !== null) {
-        clearTimeout(this.saveTimer);
-        this.saveTimer = null;
       }
     });
   }
@@ -208,9 +215,7 @@ export class DatabaseConnectionEditorComponent {
     this.testOutcome.set(null);
     if (this.connections.isDraft(next.id)) {
       void this.connections.patchConnection(next.id, connectionPersistPatch(next));
-      return;
     }
-    this.persist();
   }
 
   protected handleTypeChange(type: DatabaseType): void {
@@ -295,37 +300,31 @@ export class DatabaseConnectionEditorComponent {
 
   protected async handleSave(): Promise<void> {
     const latest = this.draft();
-    if (!latest || !this.connections.isDraft(latest.id)) {
+    if (!latest || !this.isDirty()) {
       return;
     }
-    if (this.saveTimer !== null) {
-      clearTimeout(this.saveTimer);
-      this.saveTimer = null;
+    if (this.connections.isDraft(latest.id)) {
+      await this.connections.commitDraft(latest);
+      return;
     }
-    await this.connections.commitDraft(latest);
+    await this.connections.patchConnection(latest.id, connectionPersistPatch(latest));
   }
 
   protected handleCancel(): void {
     const id = this.connectionId();
-    if (!id || !this.connections.isDraft(id)) {
+    if (!id) {
       return;
     }
-    this.connections.discardDraft(id);
-    this.workspaceEditor.closeTabsForResourceIds([this.resourceId()]);
-  }
-
-  private persist(): void {
-    if (this.saveTimer !== null) {
-      clearTimeout(this.saveTimer);
+    if (this.connections.isDraft(id)) {
+      this.connections.discardDraft(id);
+      this.workspaceEditor.closeTabsForResourceIds([this.resourceId()]);
+      return;
     }
-    this.saveTimer = setTimeout(() => {
-      this.saveTimer = null;
-      const latest = this.draft();
-      if (!latest || !this.connections.find(latest.id) || this.connections.isDraft(latest.id)) {
-        return;
-      }
-      void this.connections.patchConnection(latest.id, connectionPersistPatch(latest));
-    }, 300);
+    const stored = this.storedConnection();
+    if (stored) {
+      this.draft.set({ ...stored });
+    }
+    this.testOutcome.set(null);
   }
 
   private async refreshStatusesFromMain(): Promise<void> {
@@ -339,6 +338,10 @@ export class DatabaseConnectionEditorComponent {
       /* statuses are optional UI hints */
     }
   }
+}
+
+function connectionEditorEquals(a: DatabaseConnection, b: DatabaseConnection): boolean {
+  return JSON.stringify(connectionPersistPatch(a)) === JSON.stringify(connectionPersistPatch(b));
 }
 
 function connectionPersistPatch(

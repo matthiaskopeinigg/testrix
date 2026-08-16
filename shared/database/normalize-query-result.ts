@@ -39,8 +39,10 @@ export function stringifyDatabaseQueryCell(value: unknown): string | null {
 export function normalizeDatabaseQueryResult(raw: unknown): DatabaseQueryTable {
   if (isQueryEnvelope(raw)) {
     const table = normalizeDatabaseQueryResult(raw.rows);
+    const columns = table.columns.length > 0 ? table.columns : (raw.columns ?? []);
     return {
       ...table,
+      columns,
       affectedRows: raw.affectedRows,
       columnTypes: raw.columnTypes,
       hasMore: raw.hasMore,
@@ -88,6 +90,7 @@ function isQueryEnvelope(
   raw: unknown,
 ): raw is {
   readonly rows: unknown;
+  readonly columns?: readonly string[];
   readonly affectedRows?: number;
   readonly columnTypes?: readonly string[];
   readonly hasMore?: boolean;
@@ -97,6 +100,10 @@ function isQueryEnvelope(
   }
   const keys = Object.keys(raw as object);
   return keys.every((key) =>
-    key === 'rows' || key === 'affectedRows' || key === 'columnTypes' || key === 'hasMore',
+    key === 'rows' ||
+    key === 'columns' ||
+    key === 'affectedRows' ||
+    key === 'columnTypes' ||
+    key === 'hasMore',
   );
 }

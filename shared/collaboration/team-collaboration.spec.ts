@@ -9,6 +9,8 @@ describe('share-scope-files', () => {
     const files = resolveShareScopeFileNames(DEFAULT_TEAM_SHARE_SCOPE);
     expect(files).toContain('collections.json');
     expect(files).toContain('environments.json');
+    expect(files).toContain('queries.json');
+    expect(files).toContain('databases.json');
     expect(files).not.toContain('profiles.json');
   });
 });

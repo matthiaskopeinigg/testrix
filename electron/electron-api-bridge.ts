@@ -194,11 +194,15 @@ export interface ElectronAPI {
       readonly query: string;
       readonly timeoutMs?: number;
       readonly page?: DatabaseQueryPage;
+      readonly paramNames?: readonly string[];
+      readonly paramValues?: readonly unknown[];
     }) => Promise<DatabaseQueryEnvelope>;
     explain: (payload: {
       readonly connection: DatabaseConnection;
       readonly query: string;
       readonly timeoutMs?: number;
+      readonly paramNames?: readonly string[];
+      readonly paramValues?: readonly unknown[];
     }) => Promise<DatabaseQueryEnvelope>;
     introspect: (payload: {
       readonly connection: DatabaseConnection;

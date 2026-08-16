@@ -28,6 +28,11 @@ export interface TxTreeNode<TMeta = unknown> {
   readonly httpMethod?: string;
   readonly icon?: TxIconName;
   readonly kind?: string;
+  /**
+   * When false, the row is a leaf (no expand chevron) even if `kind` is normally expandable.
+   * Used by pickers that reuse connection nodes without a catalog subtree.
+   */
+  readonly expandable?: boolean;
   /** Optional connection/status indicator shown before the row icon. */
   readonly statusDot?: 'connected' | 'error' | 'idle' | 'unknown' | 'checking';
   readonly children?: readonly TxTreeNode<TMeta>[];

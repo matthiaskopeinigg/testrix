@@ -64,6 +64,13 @@
   gap: 0.65rem;
 }
 
+.db-conn__actions-end {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  margin-left: auto;
+}
+
 @media (max-width: 720px) {
   .db-conn__grid {
     grid-template-columns: 1fr;

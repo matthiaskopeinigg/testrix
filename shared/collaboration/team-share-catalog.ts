@@ -71,6 +71,21 @@ export const TEAM_SHARE_CATALOG: readonly TeamShareCatalogEntry[] = [
     fileName: 'mock.json',
   },
   {
+    key: 'savedQueries',
+    group: 'core',
+    label: 'Saved queries',
+    description: 'SQL and database query text (connection passwords are not included)',
+    fileName: 'queries.json',
+  },
+  {
+    key: 'databaseConnections',
+    group: 'core',
+    label: 'Database connections',
+    description: 'Connection folders and hosts without passwords',
+    fileName: 'databases.json',
+    sensitive: true,
+  },
+  {
     key: 'capture',
     group: 'advanced',
     label: 'Capture workbench',

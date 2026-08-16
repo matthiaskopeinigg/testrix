@@ -213,11 +213,15 @@ export interface ElectronRendererBridge {
       readonly query: string;
       readonly timeoutMs?: number;
       readonly page?: import('@shared/database').DatabaseQueryPage;
+      readonly paramNames?: readonly string[];
+      readonly paramValues?: readonly unknown[];
     }) => Promise<import('@shared/database').DatabaseQueryEnvelope>;
     explain: (payload: {
       readonly connection: DatabaseConnection;
       readonly query: string;
       readonly timeoutMs?: number;
+      readonly paramNames?: readonly string[];
+      readonly paramValues?: readonly unknown[];
     }) => Promise<import('@shared/database').DatabaseQueryEnvelope>;
     introspect: (payload: {
       readonly connection: DatabaseConnection;

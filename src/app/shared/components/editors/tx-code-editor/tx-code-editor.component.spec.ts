@@ -217,4 +217,26 @@ describe('TxCodeEditorComponent', () => {
     textarea.dispatchEvent(new Event('input'));
     expect(onChange).toHaveBeenCalledWith('{"ok":true}');
   });
+
+  it('paints execute highlight bars for the given range', () => {
+    const fixture = TestBed.createComponent(TxCodeEditorComponent);
+    fixture.componentRef.setInput('language', 'sql');
+    fixture.componentInstance.writeValue('SELECT 1;\nSELECT 2;');
+    fixture.componentRef.setInput('executeHighlight', [{ start: 10, end: 19 }]);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelectorAll('.tx-code-editor__execute-hl-line').length).toBe(1);
+    expect(fixture.nativeElement.querySelectorAll('.tx-code-editor__gutter-row--execute').length).toBe(1);
+  });
+
+  it('restores caret and focus when setLiveSelection is called', () => {
+    const fixture = TestBed.createComponent(TxCodeEditorComponent);
+    fixture.detectChanges();
+    const textarea: HTMLTextAreaElement = fixture.nativeElement.querySelector('textarea');
+    textarea.value = 'SELECT 1;';
+    textarea.blur();
+    fixture.componentInstance.setLiveSelection(9, 9);
+    expect(document.activeElement).toBe(textarea);
+    expect(textarea.selectionStart).toBe(9);
+    expect(textarea.selectionEnd).toBe(9);
+  });
 });

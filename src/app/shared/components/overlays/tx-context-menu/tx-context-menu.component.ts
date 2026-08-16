@@ -34,6 +34,14 @@ export class TxContextMenuComponent {
 
   readonly itemSelect = output<string>();
   readonly closed = output<void>();
+  /** Emits the highlighted item id when the menu opens or arrow keys move. */
+  readonly activeChange = output<string>();
+
+  /**
+   * When true, focuses the panel so Arrow/Enter work without a pointer.
+   * Used for keyboard-first popups (DataGrip-style execute chooser).
+   */
+  readonly autoFocus = input(false);
 
   private readonly document = inject(DOCUMENT);
   private readonly destroyRef = inject(DestroyRef);
@@ -61,6 +69,10 @@ export class TxContextMenuComponent {
         }
         this.portalPanelToBody();
         this.clampToViewport();
+        this.emitActive();
+        if (this.autoFocus()) {
+          this.panelRef()?.nativeElement.focus();
+        }
       });
     });
 
@@ -98,6 +110,19 @@ export class TxContextMenuComponent {
     return active?.id === item.id;
   }
 
+  protected handleItemHover(item: TxContextMenuItem): void {
+    if (item.disabled || item.separator) {
+      return;
+    }
+    const actionable = this.actionableItems();
+    const index = actionable.findIndex((entry) => entry.id === item.id);
+    if (index < 0 || index === this.activeIndex()) {
+      return;
+    }
+    this.activeIndex.set(index);
+    this.emitActive();
+  }
+
   protected handleItemClick(item: TxContextMenuItem, event: Event): void {
     event.stopPropagation();
     if (item.disabled || item.separator) {
@@ -116,12 +141,14 @@ export class TxContextMenuComponent {
     if (event.key === 'ArrowDown') {
       event.preventDefault();
       this.activeIndex.update((i) => (i + 1) % actionable.length);
+      this.emitActive();
       return;
     }
 
     if (event.key === 'ArrowUp') {
       event.preventDefault();
       this.activeIndex.update((i) => (i - 1 + actionable.length) % actionable.length);
+      this.emitActive();
       return;
     }
 
@@ -156,6 +183,13 @@ export class TxContextMenuComponent {
 
   private close(): void {
     this.closed.emit();
+  }
+
+  private emitActive(): void {
+    const item = this.actionableItems()[this.activeIndex()];
+    if (item) {
+      this.activeChange.emit(item.id);
+    }
   }
 
   /** Escapes sidebar overflow clipping by mounting the panel on `document.body`. */

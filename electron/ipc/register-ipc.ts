@@ -39,6 +39,7 @@ export function registerAllIpcHandlers(
     unpublishProfile: configDeps.unpublishProfile,
     migrateLegacyTeamProfileKinds: configDeps.migrateLegacyTeamProfileKinds,
     initTeamSync: configDeps.initTeamSync,
+    mergeIncomingTeamDatabases: (profileDir) => configDeps.files.mergeIncomingTeamDatabases(profileDir),
   });
   registerLoggingHandlers(ipc, { getPath: appRef.getPath.bind(appRef) });
   registerUpdaterHandlers(ipc);

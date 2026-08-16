@@ -36,7 +36,10 @@
     @if (!hideLineNumbers()) {
       <div class="tx-code-editor__gutter" aria-hidden="true" (wheel)="handleGutterWheel($event)">
         @for (line of lineNumbers(); track $index) {
-          <div class="tx-code-editor__gutter-row">
+          <div
+            class="tx-code-editor__gutter-row"
+            [class.tx-code-editor__gutter-row--execute]="isExecuteHighlightLine($index)"
+          >
             @if (codeFolding() && foldRegionAtLine($index); as region) {
               <button
                 type="button"
@@ -68,6 +71,18 @@
     >
       @if (showPlaceholder()) {
         <div class="tx-code-editor__placeholder" aria-hidden="true">{{ placeholder() }}</div>
+      }
+      @if (executeHighlightLines().length > 0) {
+        <div class="tx-code-editor__execute-hl" aria-hidden="true">
+          <div class="tx-code-editor__execute-hl-shift">
+            @for (line of executeHighlightLines(); track line) {
+              <div
+                class="tx-code-editor__execute-hl-line"
+                [style.top]="executeHighlightLineTop(line)"
+              ></div>
+            }
+          </div>
+        </div>
       }
       <textarea
         #textarea

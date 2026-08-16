@@ -65,7 +65,7 @@ export function databaseQueryEditorPlaceholder(type: DatabaseType | null | undef
   if (type === 'mongodb') {
     return 'db.users.find({})';
   }
-  return 'SELECT * FROM users WHERE id = {{userId}}';
+  return 'SELECT * FROM users WHERE id = {{userId}} AND email = :email';
 }
 
 const SQL_COMPLETIONS: readonly DatabaseQueryCompletionItem[] = [
@@ -83,7 +83,7 @@ const SQL_COMPLETIONS: readonly DatabaseQueryCompletionItem[] = [
   { label: 'COUNT(*)', insert: 'COUNT(*)', detail: 'Aggregate count' },
   {
     label: 'SELECT * FROM …',
-    insert: 'SELECT * FROM table_name WHERE id = {{userId}}',
+    insert: 'SELECT * FROM table_name WHERE id = {{userId}} AND email = :email',
     detail: 'Template query',
   },
   {

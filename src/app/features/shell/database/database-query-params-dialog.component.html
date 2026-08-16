@@ -1,0 +1,37 @@
+<tx-modal
+  layer="stacked"
+  [open]="open()"
+  title="Query parameters"
+  ariaLabel="Query parameters"
+  (closed)="handleCancel()"
+>
+  <form class="db-query-params" (ngSubmit)="handleSubmit()">
+    @for (name of names(); track name; let i = $index) {
+      <tx-form-field [label]="':' + name" [controlId]="'db-query-param-' + name">
+        @if (i === 0) {
+          <tx-input
+            [controlId]="'db-query-param-' + name"
+            [placeholder]="name"
+            [ngModel]="values()[name]"
+            (ngModelChange)="handleValueChange(name, $event)"
+            [ngModelOptions]="{ standalone: true }"
+            txAutofocus
+          />
+        } @else {
+          <tx-input
+            [controlId]="'db-query-param-' + name"
+            [placeholder]="name"
+            [ngModel]="values()[name]"
+            (ngModelChange)="handleValueChange(name, $event)"
+            [ngModelOptions]="{ standalone: true }"
+          />
+        }
+      </tx-form-field>
+    }
+
+    <div class="db-query-params__actions">
+      <tx-button buttonType="button" variant="secondary" (pressed)="handleCancel()">Cancel</tx-button>
+      <tx-button buttonType="submit" variant="primary">Run</tx-button>
+    </div>
+  </form>
+</tx-modal>

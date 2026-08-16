@@ -258,6 +258,11 @@
   justify-content: flex-end;
   gap: 2px;
   height: 1.5em;
+
+  &--execute {
+    background: color-mix(in srgb, var(--tx-primary) 22%, transparent);
+    box-shadow: inset 2px 0 0 var(--tx-primary);
+  }
 }
 
 .tx-code-editor__fold {
@@ -325,6 +330,28 @@
   opacity: 0.55;
   font: inherit;
   line-height: inherit;
+}
+
+.tx-code-editor__execute-hl {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.tx-code-editor__execute-hl-shift {
+  position: absolute;
+  inset: 0;
+}
+
+.tx-code-editor__execute-hl-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1.5em;
+  background: color-mix(in srgb, var(--tx-primary) 22%, transparent);
+  box-shadow: inset 2px 0 0 var(--tx-primary);
 }
 
 .tx-code-editor__input,

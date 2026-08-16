@@ -171,10 +171,14 @@
       >
         Test connection
       </tx-button>
-      @if (isUnsaved()) {
-        <tx-button variant="secondary" (pressed)="handleCancel()">Cancel</tx-button>
-        <tx-button variant="primary" (pressed)="handleSave()">Save</tx-button>
-      }
+      <div class="db-conn__actions-end">
+        <tx-button variant="secondary" [disabled]="!isDirty()" (pressed)="handleCancel()">
+          Cancel
+        </tx-button>
+        <tx-button variant="primary" [disabled]="!isDirty() || testing()" (pressed)="handleSave()">
+          Save
+        </tx-button>
+      </div>
     </div>
 
     @if (testOutcome(); as outcome) {

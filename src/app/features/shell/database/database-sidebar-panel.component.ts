@@ -67,7 +67,7 @@ import {
   isConnectionLeafNode,
 } from './connection-tree.mutations';
 import type { ConnectionTreeKind, ConnectionTreeNode, ConnectionTreeNodeMeta } from './connection-tree.types';
-import { filterConnectionTree } from './connection-tree.view';
+import { applyConnectionTreeView } from './connection-tree.view';
 import {
   DatabaseSchemaPickerDialogComponent,
   type DatabaseSchemaPickerState,
@@ -81,8 +81,10 @@ import {
   buildDatabaseSortMenuItems,
   DEFAULT_DATABASE_SIDEBAR_FILTER,
   DEFAULT_DATABASE_SIDEBAR_SORT_BY,
+  isDatabaseConnectionFilterAction,
   isDatabaseKindFilterAction,
   isDatabaseSortAction,
+  parseDatabaseConnectionFilterAction,
   type DatabaseSidebarFilter,
   type DatabaseSidebarSortBy,
 } from './database-sidebar-menus';
@@ -137,6 +139,7 @@ export class DatabaseSidebarPanelComponent {
   protected readonly navFilter = signal('');
   private readonly navFilterDebounced = signal('');
   protected readonly kindFilter = signal<DatabaseSidebarFilter>(DEFAULT_DATABASE_SIDEBAR_FILTER);
+  protected readonly connectionFilterIds = signal<readonly string[]>([]);
   protected readonly sortBy = signal<DatabaseSidebarSortBy>(DEFAULT_DATABASE_SIDEBAR_SORT_BY);
   protected readonly connectionsExpanded = signal(true);
   protected readonly queriesExpanded = signal(true);
@@ -150,6 +153,7 @@ export class DatabaseSidebarPanelComponent {
   private readonly connectionFocusNodeId = signal<string | null>(null);
 
   protected readonly filterMenuOpen = signal(false);
+  private keepFilterMenuOpen = false;
   protected readonly sortMenuOpen = signal(false);
   protected readonly filterMenuPosition = signal({ x: 0, y: 0 });
   protected readonly sortMenuPosition = signal({ x: 0, y: 0 });
@@ -204,23 +208,41 @@ export class DatabaseSidebarPanelComponent {
       query: this.navFilterDebounced(),
       kindFilter: this.kindFilter(),
       sortBy: this.sortBy(),
+      connectionIds: this.connectionFilterIds(),
     }),
   );
 
   protected readonly filteredConnectionNodes = computed(() =>
-    filterConnectionTree(this.connectionTreeNodes(), this.navFilterDebounced()),
+    applyConnectionTreeView(this.connectionTreeNodes(), {
+      query: this.navFilterDebounced(),
+      sortBy: this.sortBy(),
+    }),
   );
 
-  private readonly connectionDragEnabled = computed(() => this.navFilter().trim().length === 0);
+  private readonly connectionDragEnabled = computed(
+    () =>
+      this.navFilter().trim().length === 0 && this.sortBy() === DEFAULT_DATABASE_SIDEBAR_SORT_BY,
+  );
 
   protected readonly filterMenuItems = computed(() =>
-    buildDatabaseFilterMenuItems(this.kindFilter(), this.showSystemObjects()),
+    buildDatabaseFilterMenuItems(
+      this.kindFilter(),
+      this.showSystemObjects(),
+      this.connections
+        .connections()
+        .map((conn) => ({ id: conn.id, name: conn.name }))
+        .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })),
+      this.connectionFilterIds(),
+    ),
   );
 
   protected readonly sortMenuItems = computed(() => buildDatabaseSortMenuItems(this.sortBy()));
 
   protected readonly filterToolbarActive = computed(
-    () => this.kindFilter() !== DEFAULT_DATABASE_SIDEBAR_FILTER || this.showSystemObjects(),
+    () =>
+      this.kindFilter() !== DEFAULT_DATABASE_SIDEBAR_FILTER ||
+      this.showSystemObjects() ||
+      this.connectionFilterIds().length > 0,
   );
 
   protected readonly sortToolbarActive = computed(
@@ -240,8 +262,10 @@ export class DatabaseSidebarPanelComponent {
     }),
   );
 
-  protected readonly connectionTreeConfig = computed(() =>
-    mergeTxTreeConfig<ConnectionTreeNodeMeta>({
+  protected readonly connectionTreeConfig = computed(() => {
+    const largeTree =
+      countConnectionTreeNodes(this.filteredConnectionNodes()) > LARGE_TREE_NODE_THRESHOLD;
+    return mergeTxTreeConfig<ConnectionTreeNodeMeta>({
       ariaLabel: 'Database connections',
       sort: { siblingSort: 'manual' },
       drop: {
@@ -257,9 +281,13 @@ export class DatabaseSidebarPanelComponent {
           ctx.node.kind === 'folder' ||
           ctx.node.kind === 'connection',
       },
-      visual: { indentPx: 12, animateExpand: false },
-    }),
-  );
+      visual: {
+        indentPx: 12,
+        animateExpand: !largeTree,
+        animateMove: !largeTree,
+      },
+    });
+  });
 
   protected readonly treeSelectionIds = computed(() => {
     const tab = this.workspaceEditor.activeTab();
@@ -308,8 +336,12 @@ export class DatabaseSidebarPanelComponent {
     if (this.treeNodes().length === 0) {
       return 'No saved queries yet. Right-click to add a folder or query.';
     }
-    if (this.navFilterDebounced().trim() || this.kindFilter() !== DEFAULT_DATABASE_SIDEBAR_FILTER) {
-      return 'No queries match your search.';
+    if (
+      this.navFilterDebounced().trim() ||
+      this.kindFilter() !== DEFAULT_DATABASE_SIDEBAR_FILTER ||
+      this.connectionFilterIds().length > 0
+    ) {
+      return 'No queries match your filters.';
     }
     return 'No queries.';
   });
@@ -392,7 +424,7 @@ export class DatabaseSidebarPanelComponent {
   }
 
   protected handleConnectionNodesChange(nodes: readonly ConnectionTreeNode[]): void {
-    if (this.navFilter().trim().length > 0) {
+    if (this.navFilter().trim().length > 0 || this.sortBy() !== DEFAULT_DATABASE_SIDEBAR_SORT_BY) {
       return;
     }
     void this.connections.saveVisibleTree(
@@ -557,10 +589,21 @@ export class DatabaseSidebarPanelComponent {
     if (actionId === 'show-system-objects') {
       this.showSystemObjects.update((value) => !value);
       this.scheduleSessionSave();
+      this.filterMenuOpen.set(false);
     } else if (isDatabaseKindFilterAction(actionId)) {
       this.kindFilter.set(actionId);
+      this.filterMenuOpen.set(false);
+    } else if (isDatabaseConnectionFilterAction(actionId)) {
+      const connectionId = parseDatabaseConnectionFilterAction(actionId);
+      if (connectionId) {
+        this.connectionFilterIds.update((current) =>
+          current.includes(connectionId)
+            ? current.filter((id) => id !== connectionId)
+            : [...current, connectionId],
+        );
+        this.keepFilterMenuOpen = true;
+      }
     }
-    this.filterMenuOpen.set(false);
     this.cdr.markForCheck();
   }
 
@@ -573,6 +616,11 @@ export class DatabaseSidebarPanelComponent {
   }
 
   protected handleFilterMenuClosed(): void {
+    if (this.keepFilterMenuOpen) {
+      this.keepFilterMenuOpen = false;
+      this.filterMenuOpen.set(true);
+      return;
+    }
     this.filterMenuOpen.set(false);
   }
 
@@ -1061,6 +1109,7 @@ export class DatabaseSidebarPanelComponent {
     return (
       this.sortBy() === DEFAULT_DATABASE_SIDEBAR_SORT_BY &&
       this.kindFilter() === DEFAULT_DATABASE_SIDEBAR_FILTER &&
+      this.connectionFilterIds().length === 0 &&
       this.navFilter().trim().length === 0
     );
   }
@@ -1306,6 +1355,22 @@ export class DatabaseSidebarPanelComponent {
       /* ignore */
     }
   }
+}
+
+const LARGE_TREE_NODE_THRESHOLD = 40;
+
+function countConnectionTreeNodes(nodes: readonly ConnectionTreeNode[]): number {
+  let total = 0;
+  const walk = (list: readonly ConnectionTreeNode[]): void => {
+    for (const node of list) {
+      total += 1;
+      if (node.children?.length) {
+        walk(node.children);
+      }
+    }
+  };
+  walk(nodes);
+  return total;
 }
 
 function toggleId(ids: readonly string[], id: string, expanded: boolean): string[] {

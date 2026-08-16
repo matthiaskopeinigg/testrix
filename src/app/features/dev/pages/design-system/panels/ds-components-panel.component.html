@@ -236,6 +236,22 @@
           }
         </div>
       }
+      @case ('tree-select') {
+        <div class="ds-demo ds-demo--stack">
+          <tx-form-field label="Connection" controlId="ds-tree-select">
+            <tx-tree-select
+              id="ds-tree-select"
+              [nodes]="treeDemoNodes()"
+              [ngModel]="treeSelectDemo()"
+              (ngModelChange)="treeSelectDemo.set($event)"
+              placeholder="Select a request"
+              emptyLabel="No items"
+              ariaLabel="Tree select demo"
+            />
+          </tx-form-field>
+          <p class="ds-lede">Selected: <code>{{ treeSelectDemo() || 'none' }}</code></p>
+        </div>
+      }
       @case ('tag') {
         <div class="ds-demo">
           <tx-tag>Default</tx-tag>

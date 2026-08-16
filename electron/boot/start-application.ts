@@ -268,6 +268,7 @@ export async function startApplication(getBootSplash?: () => BrowserWindow | nul
         createTeamProfile: (name) => profiles.createTeamProfile(name),
         unpublishProfile: (profileId) => profiles.unpublishProfile(profileId),
         migrateLegacyTeamProfileKinds: (ids) => profiles.migrateLegacyTeamProfileKinds(ids),
+        mergeIncomingTeamDatabases: (profileDir) => files.mergeIncomingTeamDatabases(profileDir),
         initTeamSync: async () => {
           await teamSyncEngine.initTeamSync({
             sharedConfigDir: sharedConfigDirRef,

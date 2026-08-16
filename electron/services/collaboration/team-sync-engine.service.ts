@@ -43,7 +43,7 @@ import {
   secretScanShouldBlock,
 } from '../../../shared/collaboration/secret-scan';
 import { ErrorCodes, TestrixError } from '../../../shared/errors';
-import { isTeamProfile, resolveProfileDir, type ProfilesState } from '../../../shared/config';
+import { DATABASES_FILE_NAME, isTeamProfile, resolveProfileDir, type ProfilesState } from '../../../shared/config';
 
 import { gitWorkspaceService } from './git-workspace.service';
 import { teamCredentialsService } from './team-credentials.service';
@@ -71,6 +71,7 @@ type ImportTeamProfilesHandler = (
 type PublishLocalProfileHandler = (profileId: string) => Promise<ProfilesState>;
 type CreateTeamProfileHandler = (name: string) => Promise<{ readonly state: ProfilesState; readonly profileId: string }>;
 type UnpublishProfileHandler = (profileId: string) => Promise<ProfilesState>;
+type ApplyIncomingDatabasesHandler = (profileDir: string) => Promise<void>;
 
 const COMMIT_DEBOUNCE_MS = 2000;
 
@@ -124,6 +125,7 @@ export class TeamSyncEngine {
   private unpublishProfile: UnpublishProfileHandler = async (profileId) => {
     throw new Error(`Unpublish handler not configured for profile ${profileId}`);
   };
+  private applyIncomingDatabases: ApplyIncomingDatabasesHandler = async () => undefined;
 
   setMainWindow(win: BrowserWindow | null): void {
     this.mainWindow = win;
@@ -159,6 +161,10 @@ export class TeamSyncEngine {
 
   setUnpublishProfileHandler(handler: UnpublishProfileHandler): void {
     this.unpublishProfile = handler;
+  }
+
+  setApplyIncomingDatabasesHandler(handler: ApplyIncomingDatabasesHandler): void {
+    this.applyIncomingDatabases = handler;
   }
 
   onProfilesMerged(listener: TeamProfilesMergedListener): () => void {
@@ -707,12 +713,7 @@ export class TeamSyncEngine {
       shareScope,
       repoDataDir: this.config.repoDataDir,
     });
-    for (const fileName of mirrored) {
-      const payload = { fileName, workspaceDir: target.dir };
-      for (const listener of this.externalChangeListeners) {
-        listener(payload);
-      }
-    }
+    await this.notifyMirroredFiles(target, mirrored);
   }
 
   async getGitSetupContext(): Promise<TeamGitSetupContext> {
@@ -865,10 +866,13 @@ export class TeamSyncEngine {
       /* new */
     }
     const marker = '# Testrix — personal / local-only';
-    if (existing.includes(marker)) {
-      return;
+    let next = existing.replace(/^\s*queries\.json\s*$/gm, '').replace(/\n{3,}/g, '\n\n');
+    if (!next.includes(marker)) {
+      next = `${next}\n${TEAM_GITIGNORE_LINES.join('\n')}\n`;
     }
-    await fs.writeFile(gitignorePath, `${existing}\n${TEAM_GITIGNORE_LINES.join('\n')}\n`, 'utf8');
+    if (next !== existing) {
+      await fs.writeFile(gitignorePath, next, 'utf8');
+    }
   }
 
   private async resolveSyncCycleTargets(
@@ -1197,6 +1201,16 @@ export class TeamSyncEngine {
       shareScope,
       repoDataDir: this.config.repoDataDir,
     });
+    await this.notifyMirroredFiles(target, mirrored);
+  }
+
+  private async notifyMirroredFiles(
+    target: ProfileSyncTarget,
+    mirrored: readonly string[],
+  ): Promise<void> {
+    if (mirrored.includes(DATABASES_FILE_NAME)) {
+      await this.applyIncomingDatabases(target.dir);
+    }
     for (const fileName of mirrored) {
       const payload = { fileName, workspaceDir: target.dir };
       for (const listener of this.externalChangeListeners) {

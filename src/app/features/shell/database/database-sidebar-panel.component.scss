@@ -94,7 +94,7 @@
 .database-sidebar-panel__section-chevron {
   flex-shrink: 0;
   color: color-mix(in srgb, var(--tx-text-1) 80%, transparent);
-  transition: transform var(--tx-duration-fast, 140ms) ease;
+  transition: transform var(--tx-duration-fast) var(--tx-ease-standard);
 
   &.is-collapsed {
     transform: rotate(-90deg);

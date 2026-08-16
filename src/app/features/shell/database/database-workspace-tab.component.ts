@@ -18,7 +18,9 @@ import { ConfigService } from '@app/core/config/config.service';
 import { DatabaseCatalogService } from '@app/core/database/database-catalog.service';
 import { DatabaseQueriesService } from '@app/core/database/database-queries.service';
 import { ElectronService } from '@app/core/electron/electron.service';
+import { EnvironmentsService } from '@app/core/environments/environments.service';
 import { ErrorNotificationService } from '@app/core/errors/error-notification.service';
+import { HttpRequestService } from '@app/core/http/http-request.service';
 import { formatChordForDisplay } from '@app/core/keyboard/keyboard-shortcut-catalog';
 import { KeyboardShortcutsService } from '@app/core/keyboard/keyboard-shortcuts.service';
 import { TxNotificationService } from '@app/core/notifications/tx-notification.service';
@@ -35,7 +37,9 @@ import { TxSpinnerComponent } from '@app/shared/components/feedback/tx-spinner/t
 import { TxButtonComponent } from '@app/shared/components/forms/tx-button/tx-button.component';
 import { TxDropdownComponent } from '@app/shared/components/forms/tx-dropdown/tx-dropdown.component';
 import { TxFormFieldComponent } from '@app/shared/components/forms/tx-form-field/tx-form-field.component';
+import { TxIconComponent } from '@app/shared/components/forms/tx-icon/tx-icon.component';
 import { TxInputComponent } from '@app/shared/components/forms/tx-input/tx-input.component';
+import { TxTreeSelectComponent } from '@app/shared/components/forms/tx-tree-select/tx-tree-select.component';
 import { TxVerticalSplitPaneComponent } from '@app/shared/components/chrome/tx-vertical-split-pane/tx-vertical-split-pane.component';
 import { TxConfirmDialogComponent } from '@app/shared/components/overlays/tx-confirm-dialog/tx-confirm-dialog.component';
 import { TxContextMenuComponent } from '@app/shared/components/overlays/tx-context-menu/tx-context-menu.component';
@@ -54,21 +58,39 @@ import {
   formatDatabaseQueryResult,
   catalogPrefetchTarget,
   databaseQueryEditorCompletions,
+  databaseEngineFamily,
+  detectDestructiveSql,
+  extractNamedParameterNames,
   isFullDatabaseQuerySelection,
+  isSqlDatabaseType,
   mergeDatabaseQueryCompletions,
   normalizeDatabaseQueryResult,
   parseDatabaseConnectionTabResourceId,
   parseDatabaseQueryTabResourceId,
   parseDatabaseTableTabResourceId,
   resolveDatabaseExecuteQuery,
+  resolveDatabaseExecuteHighlightRanges,
+  shouldPromptDatabaseExecuteChooser,
+  rewriteNamedParameters,
   type DatabaseQueryCellRange,
   type DatabaseQueryExportFormat,
   type DatabaseQueryTable,
 } from '@shared/database';
-import { resolveDatabaseQueryTabSession, formatDatabaseConnectionPickerLabel } from '@shared/config';
+import {
+  buildCollectionEnvironmentDropdownOptions,
+  environmentIdFromDropdownValue,
+  getEnvironmentDefinition,
+  resolveDatabaseQueryTabSession,
+  resolveRequestVariables,
+  toEnvironmentDropdownValue,
+} from '@shared/config';
+import { resolveDynamicVariables } from '@shared/dynamic-variables/dynamic-variables';
+import { resolveTemplateVariables } from '@shared/dynamic-variables/template-variables';
 
 import { DatabaseConnectionEditorComponent } from './database-connection-editor.component';
+import { DatabaseQueryParamsDialogComponent } from './database-query-params-dialog.component';
 import { DatabaseTableDataTabComponent } from './database-table-data-tab.component';
+import { toConnectionTreeNodes } from './connection-tree.adapter';
 
 @Component({
   selector: 'app-database-workspace-tab',
@@ -80,12 +102,15 @@ import { DatabaseTableDataTabComponent } from './database-table-data-tab.compone
     TxCodeEditorComponent,
     TxDropdownComponent,
     TxFormFieldComponent,
+    TxIconComponent,
     TxInputComponent,
+    TxTreeSelectComponent,
     TxSpinnerComponent,
     TxDataGridComponent,
     TxContextMenuComponent,
     TxConfirmDialogComponent,
     DatabaseConnectionEditorComponent,
+    DatabaseQueryParamsDialogComponent,
     DatabaseTableDataTabComponent,
     TxVerticalSplitPaneComponent,
   ],
@@ -99,6 +124,8 @@ export class DatabaseWorkspaceTabComponent {
   private readonly queries = inject(DatabaseQueriesService);
   private readonly catalog = inject(DatabaseCatalogService);
   private readonly config = inject(ConfigService);
+  private readonly environments = inject(EnvironmentsService);
+  private readonly httpRequest = inject(HttpRequestService);
   private readonly electron = inject(ElectronService);
   private readonly errors = inject(ErrorNotificationService);
   private readonly files = inject(FileDialogService);
@@ -124,7 +151,7 @@ export class DatabaseWorkspaceTabComponent {
     () => parseDatabaseTableTabResourceId(this.resourceId()) !== null,
   );
 
-  protected readonly resultPanelHeight = signal(320);
+  protected readonly resultPanelHeight = signal(200);
   protected readonly resultPanelHidden = signal(false);
   private resultPanelHeightSaveTimer: ReturnType<typeof setTimeout> | null = null;
   private sessionUiLoadKey: string | null = null;
@@ -138,14 +165,39 @@ export class DatabaseWorkspaceTabComponent {
   protected readonly pageSize = signal(DATABASE_QUERY_PAGE_SIZE_DEFAULT);
   protected readonly pageOffset = signal(0);
   protected readonly loadAllOpen = signal(false);
+  protected readonly paramsOpen = signal(false);
+  protected readonly paramNames = signal<readonly string[]>([]);
+  protected readonly paramInitialValues = signal<Readonly<Record<string, string>>>({});
+  protected readonly destructiveOpen = signal(false);
+  protected readonly destructiveTitle = signal('Run statement?');
+  protected readonly destructiveMessage = signal('');
   private lastExecutedQuery = '';
   private lastExplain = false;
+  private lastPrepared: PreparedDatabaseRun | null = null;
+  private pendingResolvedSql = '';
+  private pendingParamNames: readonly string[] = [];
+  private pendingExplain = false;
+  private pendingLoadAll = false;
+  private pendingPrepared: PreparedDatabaseRun | null = null;
+  private readonly paramMemoryByQueryId = new Map<string, Record<string, string>>();
   private prefetchTimer: ReturnType<typeof setTimeout> | null = null;
   private lastPrefetchKey = '';
   protected readonly gridSelection = signal<DatabaseQueryCellRange | null>(null);
   protected readonly exportMenuOpen = signal(false);
   protected readonly exportMenuPosition = signal<TxContextMenuPosition>({ x: 0, y: 0 });
   private readonly exportScope = signal<'all' | 'selection'>('all');
+  protected readonly executeChooserOpen = signal(false);
+  protected readonly executeChooserPosition = signal<TxContextMenuPosition>({ x: 0, y: 0 });
+  protected readonly executeChooserItems: readonly TxContextMenuItem[] = [
+    { id: 'caret', label: 'Run query from cursor', icon: 'play' },
+    { id: 'all', label: 'Run all queries', icon: 'play' },
+  ];
+  private executeChooserMode: 'caret' | 'all' = 'caret';
+  private executeChooserLive: { value: string; start: number; end: number } | null = null;
+  private executeChooserCommitted = false;
+  protected readonly executeHighlightRanges = signal<readonly { readonly start: number; readonly end: number }[]>(
+    [],
+  );
 
   protected readonly queryId = computed(() => parseDatabaseQueryTabResourceId(this.resourceId()));
 
@@ -154,14 +206,9 @@ export class DatabaseWorkspaceTabComponent {
     return id ? this.queries.find(id) : null;
   });
 
-  protected readonly connectionOptions = computed(() => {
-    const databases = this.config.settings()?.databases;
-    const nodes = databases?.nodes ?? [];
-    return (databases?.connections ?? []).map((conn) => ({
-      value: conn.id,
-      label: formatDatabaseConnectionPickerLabel(nodes, conn),
-    }));
-  });
+  protected readonly connectionTreeNodes = computed(() =>
+    toConnectionTreeNodes(this.config.settings()?.databases?.nodes ?? []),
+  );
 
   protected readonly selectedConnection = computed(() => {
     const connectionId = this.saved()?.connectionId;
@@ -169,6 +216,30 @@ export class DatabaseWorkspaceTabComponent {
       return null;
     }
     return this.config.settings()?.databases?.connections.find((conn) => conn.id === connectionId) ?? null;
+  });
+
+  protected readonly environmentOptions = computed(() =>
+    buildCollectionEnvironmentDropdownOptions(this.environments.environments(), {
+      includeInherit: false,
+    }),
+  );
+
+  protected readonly environmentDropdownValue = computed(() =>
+    toEnvironmentDropdownValue(this.saved()?.environmentId ?? ''),
+  );
+
+  protected readonly variableCatalog = computed(() => {
+    const environmentId = this.saved()?.environmentId?.trim() || null;
+    const environment = environmentId
+      ? getEnvironmentDefinition(this.environments.environments(), environmentId)
+      : null;
+    return this.httpRequest.buildVariableCatalog(
+      environment,
+      {
+        useFolderPathInKeys: this.config.settings()?.environments.useFolderPathInKeys ?? false,
+      },
+      environmentId,
+    );
   });
 
   protected readonly editorLanguage = computed(() =>
@@ -217,7 +288,7 @@ export class DatabaseWorkspaceTabComponent {
     return { ...table, rows };
   });
 
-  protected readonly resultMeta = computed(() => {
+  protected readonly rowRangeLabel = computed(() => {
     const table = this.table();
     if (!table) {
       return '';
@@ -225,12 +296,20 @@ export class DatabaseWorkspaceTabComponent {
     const from = table.rows.length === 0 ? 0 : this.pageOffset() + 1;
     const to = this.pageOffset() + table.rows.length;
     const total = table.hasMore ? `${to}+` : String(to);
-    const range = table.rows.length === 0 ? 'No rows' : `Showing ${from}–${to} of ${total}`;
-    const duration = this.durationMs() != null ? ` · ${this.durationMs()} ms` : '';
-    const affected =
-      table.affectedRows != null && table.affectedRows > 0 ? ` · ${table.affectedRows} rows affected` : '';
-    return `${range}${duration}${affected}`;
+    return table.rows.length === 0 ? '0 of 0' : `${from}–${to} of ${total}`;
   });
+
+  protected readonly durationLabel = computed(() => {
+    const ms = this.durationMs();
+    return ms == null ? '' : `${ms} ms`;
+  });
+
+  protected readonly affectedLabel = computed(() => {
+    const affected = this.table()?.affectedRows;
+    return affected != null && affected > 0 ? `${affected} rows affected` : '';
+  });
+
+  protected readonly resultFilterActive = computed(() => this.resultFilter().trim().length > 0);
 
   protected readonly canGoPrev = computed(() => this.pageOffset() > 0 && !this.running());
 
@@ -280,6 +359,7 @@ export class DatabaseWorkspaceTabComponent {
 
   constructor() {
     void this.queries.hydrate();
+    void this.environments.hydrate();
     effect(() => {
       this.resourceId();
       this.table.set(null);
@@ -310,7 +390,7 @@ export class DatabaseWorkspaceTabComponent {
       if (tab.resultPanelHeightPx != null) {
         this.resultPanelHeight.set(tab.resultPanelHeightPx);
       } else {
-        this.resultPanelHeight.set(320);
+        this.resultPanelHeight.set(200);
       }
       this.resultPanelHidden.set(tab.isResultPanelHidden ?? false);
     });
@@ -321,7 +401,7 @@ export class DatabaseWorkspaceTabComponent {
       id: 'database.runQuery',
       label: 'Run database query',
       category: 'Database',
-      hint: 'Execute the statement at the caret, or the selection',
+      hint: 'Execute the statement at the caret, or choose all queries when several exist',
       keywords: ['sql', 'redis', 'execute', 'datagrip'],
       shortcut: 'Ctrl+Enter',
       run: () => {
@@ -352,13 +432,22 @@ export class DatabaseWorkspaceTabComponent {
     this.queries.patchQuery(id, { name });
   }
 
-  protected handleConnectionChange(connectionId: string): void {
+  protected handleConnectionChange(connectionId: string | null): void {
     const id = this.queryId();
-    if (!id) {
+    if (!id || !connectionId) {
       return;
     }
     this.lastPrefetchKey = '';
     this.queries.patchQuery(id, { connectionId });
+  }
+
+  protected handleEnvironmentChange(value: string): void {
+    const id = this.queryId();
+    if (!id) {
+      return;
+    }
+    const parsed = environmentIdFromDropdownValue(value);
+    this.queries.patchQuery(id, { environmentId: parsed || undefined });
   }
 
   protected handleQueryChange(query: string): void {
@@ -381,6 +470,27 @@ export class DatabaseWorkspaceTabComponent {
     this.resultFilter.set(value);
   }
 
+  protected handleFirstPage(): void {
+    if (!this.canGoPrev()) {
+      return;
+    }
+    this.pageOffset.set(0);
+    void this.beginQueryRun(this.lastExecutedQuery, {
+      explain: this.lastExplain,
+      skipGuards: true,
+    });
+  }
+
+  protected handleRefreshResults(): void {
+    if (!this.lastExecutedQuery || this.running()) {
+      return;
+    }
+    void this.beginQueryRun(this.lastExecutedQuery, {
+      explain: this.lastExplain,
+      skipGuards: true,
+    });
+  }
+
   protected handlePageSizeChange(value: string): void {
     const size = Number(value);
     if (!DATABASE_QUERY_PAGE_SIZES.includes(size as (typeof DATABASE_QUERY_PAGE_SIZES)[number])) {
@@ -389,7 +499,10 @@ export class DatabaseWorkspaceTabComponent {
     this.pageSize.set(size);
     this.pageOffset.set(0);
     if (this.lastExecutedQuery) {
-      void this.executeQuery(this.lastExecutedQuery, { explain: this.lastExplain });
+      void this.beginQueryRun(this.lastExecutedQuery, {
+        explain: this.lastExplain,
+        skipGuards: true,
+      });
     }
   }
 
@@ -398,7 +511,10 @@ export class DatabaseWorkspaceTabComponent {
       return;
     }
     this.pageOffset.update((offset) => Math.max(0, offset - this.pageSize()));
-    void this.executeQuery(this.lastExecutedQuery, { explain: this.lastExplain });
+    void this.beginQueryRun(this.lastExecutedQuery, {
+      explain: this.lastExplain,
+      skipGuards: true,
+    });
   }
 
   protected handleNextPage(): void {
@@ -406,7 +522,10 @@ export class DatabaseWorkspaceTabComponent {
       return;
     }
     this.pageOffset.update((offset) => offset + this.pageSize());
-    void this.executeQuery(this.lastExecutedQuery, { explain: this.lastExplain });
+    void this.beginQueryRun(this.lastExecutedQuery, {
+      explain: this.lastExplain,
+      skipGuards: true,
+    });
   }
 
   protected handleLoadAll(): void {
@@ -414,12 +533,20 @@ export class DatabaseWorkspaceTabComponent {
       this.loadAllOpen.set(true);
       return;
     }
-    void this.executeQuery(this.lastExecutedQuery, { explain: this.lastExplain, loadAll: true });
+    void this.beginQueryRun(this.lastExecutedQuery, {
+      explain: this.lastExplain,
+      loadAll: true,
+      skipGuards: true,
+    });
   }
 
   protected handleLoadAllConfirmed(): void {
     this.loadAllOpen.set(false);
-    void this.executeQuery(this.lastExecutedQuery, { explain: this.lastExplain, loadAll: true });
+    void this.beginQueryRun(this.lastExecutedQuery, {
+      explain: this.lastExplain,
+      loadAll: true,
+      skipGuards: true,
+    });
   }
 
   protected handleLoadAllClosed(): void {
@@ -545,6 +672,10 @@ export class DatabaseWorkspaceTabComponent {
     if (!this.canHandleRunShortcut()) {
       return false;
     }
+    if (this.executeChooserOpen()) {
+      this.confirmExecuteChooser();
+      return true;
+    }
     this.executeFromEditor();
     return true;
   }
@@ -583,23 +714,132 @@ export class DatabaseWorkspaceTabComponent {
   }
 
   private executeFromEditor(options: { readonly explain?: boolean } = {}): void {
-    if (this.running()) {
+    if (this.running() || this.paramsOpen() || this.destructiveOpen()) {
+      return;
+    }
+    if (this.executeChooserOpen() && !options.explain) {
+      this.confirmExecuteChooser();
       return;
     }
     const live = this.queryEditor()?.getLiveSelection();
     const source = live?.value ?? this.saved()?.query ?? '';
+    const language = this.editorLanguage();
+    if (
+      !options.explain &&
+      shouldPromptDatabaseExecuteChooser({
+        source,
+        selectionStart: live?.start ?? 0,
+        selectionEnd: live?.end ?? 0,
+        language,
+      })
+    ) {
+      this.openExecuteChooser({
+        value: source,
+        start: live?.start ?? 0,
+        end: live?.end ?? 0,
+      });
+      return;
+    }
     const query = resolveDatabaseExecuteQuery({
       source,
       selectionStart: live?.start ?? 0,
       selectionEnd: live?.end ?? 0,
-      language: this.editorLanguage(),
+      language,
     });
     this.pageOffset.set(0);
-    void this.executeQuery(query, options);
+    void this.beginQueryRun(query, options);
+  }
+
+  private openExecuteChooser(live: { value: string; start: number; end: number }): void {
+    this.executeChooserCommitted = false;
+    this.executeChooserLive = live;
+    this.executeChooserMode = 'caret';
+    const caret = this.queryEditor()?.getCaretViewportPosition();
+    const host = this.hostRef.nativeElement.getBoundingClientRect();
+    this.executeChooserPosition.set(caret ?? { x: host.left + 48, y: host.top + 96 });
+    this.executeChooserOpen.set(true);
+    this.applyExecuteChooserHighlight('caret');
+  }
+
+  protected handleExecuteChooserActive(id: string): void {
+    if (id !== 'caret' && id !== 'all') {
+      return;
+    }
+    this.executeChooserMode = id;
+    this.applyExecuteChooserHighlight(id);
+  }
+
+  protected handleExecuteChooserSelect(id: string): void {
+    if (id !== 'caret' && id !== 'all') {
+      this.executeChooserOpen.set(false);
+      return;
+    }
+    this.executeChooserMode = id;
+    this.confirmExecuteChooser();
+  }
+
+  protected handleExecuteChooserClosed(): void {
+    if (!this.executeChooserCommitted) {
+      this.restoreExecuteChooserCaret();
+    }
+    this.executeChooserOpen.set(false);
+    this.executeChooserLive = null;
+    this.executeChooserCommitted = false;
+  }
+
+  private confirmExecuteChooser(): void {
+    const live = this.executeChooserLive;
+    const mode = this.executeChooserMode;
+    this.executeChooserCommitted = true;
+    this.executeChooserOpen.set(false);
+    this.restoreExecuteChooserCaret();
+    if (!live) {
+      return;
+    }
+    const language = this.editorLanguage();
+    const query = resolveDatabaseExecuteQuery({
+      source: live.value,
+      selectionStart: mode === 'all' ? 0 : live.start,
+      selectionEnd: mode === 'all' ? live.value.length : live.end,
+      language,
+    });
+    this.executeChooserLive = null;
+    this.pageOffset.set(0);
+    void this.beginQueryRun(query);
+  }
+
+  private applyExecuteChooserHighlight(mode: 'caret' | 'all'): void {
+    const live = this.executeChooserLive;
+    if (!live) {
+      return;
+    }
+    this.executeHighlightRanges.set(
+      resolveDatabaseExecuteHighlightRanges({
+        source: live.value,
+        selectionStart: live.start,
+        language: this.editorLanguage(),
+        mode,
+      }),
+    );
+  }
+
+  private restoreExecuteChooserCaret(): void {
+    this.executeHighlightRanges.set([]);
+    const live = this.executeChooserLive;
+    const editor = this.queryEditor();
+    if (!live || !editor) {
+      return;
+    }
+    queueMicrotask(() => {
+      editor.setLiveSelection(live.start, live.end);
+    });
   }
 
   private canHandleRunShortcut(): boolean {
     if (!this.active() || this.isConnectionTab() || this.isTableDataTab() || !this.saved()) {
+      return false;
+    }
+    if (this.paramsOpen() || this.destructiveOpen() || this.loadAllOpen()) {
       return false;
     }
     if (
@@ -624,14 +864,194 @@ export class DatabaseWorkspaceTabComponent {
     return true;
   }
 
-  private async executeQuery(
+  protected handleParamsSubmitted(values: Readonly<Record<string, string>>): void {
+    this.paramsOpen.set(false);
+    const resolvedSql = this.pendingResolvedSql;
+    const names = this.pendingParamNames;
+    const explain = this.pendingExplain;
+    const loadAll = this.pendingLoadAll;
+    this.clearPendingParams();
+    if (!resolvedSql) {
+      return;
+    }
+    this.paramMemoryByQueryId.set(this.resourceId(), { ...values });
+    const ordered = names.map((name) => values[name] ?? '');
+    const prepared = this.bindNamedSql(resolvedSql, names, ordered, explain, loadAll);
+    if (!prepared) {
+      return;
+    }
+    void this.confirmDestructiveThenRun(prepared);
+  }
+
+  protected handleParamsCancelled(): void {
+    this.paramsOpen.set(false);
+    this.clearPendingParams();
+  }
+
+  protected handleDestructiveConfirmed(): void {
+    this.destructiveOpen.set(false);
+    const prepared = this.pendingPrepared;
+    this.pendingPrepared = null;
+    if (prepared) {
+      void this.runPrepared(prepared);
+    }
+  }
+
+  protected handleDestructiveCancelled(): void {
+    this.destructiveOpen.set(false);
+    this.pendingPrepared = null;
+  }
+
+  private resolveQueryTemplates(query: string): string {
+    const environmentId = this.saved()?.environmentId?.trim() || null;
+    const environment = environmentId
+      ? getEnvironmentDefinition(this.environments.environments(), environmentId)
+      : null;
+    const variableContext = resolveRequestVariables(
+      [],
+      environment,
+      {},
+      {
+        useFolderPathInKeys: this.config.settings()?.environments.useFolderPathInKeys ?? false,
+      },
+    );
+    return resolveDynamicVariables(resolveTemplateVariables(query, { environment: variableContext }));
+  }
+
+  private bindNamedSql(
+    resolvedSql: string,
+    names: readonly string[],
+    values: readonly unknown[],
+    explain: boolean,
+    loadAll: boolean,
+  ): PreparedDatabaseRun | null {
+    const type = this.selectedConnection()?.type;
+    const family = databaseEngineFamily(type);
+    if (!family || !isSqlDatabaseType(type) || names.length === 0) {
+      return {
+        resolvedSql,
+        boundSql: resolvedSql,
+        paramNames: [],
+        paramValues: [],
+        explain,
+        loadAll,
+      };
+    }
+    const rewritten = rewriteNamedParameters(resolvedSql, family, names);
+    return {
+      resolvedSql,
+      boundSql: rewritten.sql,
+      paramNames: names,
+      paramValues: values,
+      explain,
+      loadAll,
+    };
+  }
+
+  private clearPendingParams(): void {
+    this.pendingResolvedSql = '';
+    this.pendingParamNames = [];
+    this.pendingExplain = false;
+    this.pendingLoadAll = false;
+  }
+
+  private async beginQueryRun(
     rawQuery: string,
-    options: { readonly explain?: boolean; readonly loadAll?: boolean } = {},
+    options: { readonly explain?: boolean; readonly loadAll?: boolean; readonly skipGuards?: boolean } = {},
   ): Promise<void> {
     const saved = this.saved();
     const connection = this.selectedConnection();
     const api = this.electron.bridge()?.database;
     const query = rawQuery.trim();
+    if (!saved || !connection || !api) {
+      this.error.set('Select a database connection before running.');
+      return;
+    }
+    if (!query && !options.skipGuards) {
+      this.error.set('Enter a query to run.');
+      return;
+    }
+    if (this.running()) {
+      return;
+    }
+    if (options.skipGuards && this.lastPrepared) {
+      await this.runPrepared({
+        ...this.lastPrepared,
+        explain: Boolean(options.explain),
+        loadAll: Boolean(options.loadAll),
+      });
+      return;
+    }
+    const resolvedSql = this.resolveQueryTemplates(query);
+    const explain = Boolean(options.explain);
+    const loadAll = Boolean(options.loadAll);
+    if (!isSqlDatabaseType(connection.type)) {
+      await this.runPrepared({
+        resolvedSql,
+        boundSql: resolvedSql,
+        paramNames: [],
+        paramValues: [],
+        explain,
+        loadAll,
+      });
+      return;
+    }
+    const names = extractNamedParameterNames(resolvedSql);
+    if (names.length > 0 && !options.skipGuards) {
+      const memory = this.paramMemoryByQueryId.get(this.resourceId()) ?? {};
+      this.pendingResolvedSql = resolvedSql;
+      this.pendingParamNames = names;
+      this.pendingExplain = explain;
+      this.pendingLoadAll = loadAll;
+      this.paramNames.set(names);
+      const initial: Record<string, string> = {};
+      for (const name of names) {
+        initial[name] = memory[name] ?? '';
+      }
+      this.paramInitialValues.set(initial);
+      this.paramsOpen.set(true);
+      return;
+    }
+    const memory = this.paramMemoryByQueryId.get(this.resourceId()) ?? {};
+    const values = names.map((name) => memory[name] ?? '');
+    const prepared = this.bindNamedSql(resolvedSql, names, values, explain, loadAll);
+    if (!prepared) {
+      return;
+    }
+    await this.confirmDestructiveThenRun(prepared);
+  }
+
+  private async confirmDestructiveThenRun(prepared: PreparedDatabaseRun): Promise<void> {
+    const saved = this.saved();
+    const connection = this.selectedConnection();
+    if (!saved || !connection) {
+      this.error.set('Select a database connection before running.');
+      return;
+    }
+    if (!isSqlDatabaseType(connection.type)) {
+      await this.runPrepared(prepared);
+      return;
+    }
+    const kind = detectDestructiveSql(prepared.resolvedSql);
+    if (!kind) {
+      await this.runPrepared(prepared);
+      return;
+    }
+    if (saved.readOnly) {
+      this.error.set(`This query is read-only. ${kind} statements cannot run.`);
+      return;
+    }
+    this.pendingPrepared = prepared;
+    this.destructiveTitle.set(`Run ${kind}?`);
+    this.destructiveMessage.set(`${kind} will run on ${connection.name}.`);
+    this.destructiveOpen.set(true);
+  }
+
+  private async runPrepared(prepared: PreparedDatabaseRun): Promise<void> {
+    const saved = this.saved();
+    const connection = this.selectedConnection();
+    const api = this.electron.bridge()?.database;
+    const query = prepared.boundSql.trim();
     if (!saved || !connection || !api) {
       this.error.set('Select a database connection before running.');
       return;
@@ -643,22 +1063,28 @@ export class DatabaseWorkspaceTabComponent {
     if (this.running()) {
       return;
     }
-    this.lastExecutedQuery = query;
-    this.lastExplain = Boolean(options.explain);
+    this.lastPrepared = prepared;
+    this.lastExecutedQuery = prepared.resolvedSql;
+    this.lastExplain = prepared.explain;
     const isScript = query.replace(/;+\s*$/g, '').includes(';');
     this.runningLabel.set(
-      options.explain ? 'Running explain' : isScript ? 'Running script' : 'Running statement',
+      prepared.explain ? 'Running explain' : isScript ? 'Running script' : 'Running statement',
     );
     this.running.set(true);
     this.error.set(null);
     const started = performance.now();
+    const bind =
+      prepared.paramNames.length > 0
+        ? { paramNames: prepared.paramNames, paramValues: prepared.paramValues }
+        : {};
     try {
-      const result = options.explain
-        ? await api.explain({ connection, query })
+      const result = prepared.explain
+        ? await api.explain({ connection, query, ...bind })
         : await api.query({
             connection,
             query,
-            page: options.loadAll
+            ...bind,
+            page: prepared.loadAll
               ? undefined
               : { limit: this.pageSize(), offset: this.pageOffset() },
           });
@@ -674,4 +1100,13 @@ export class DatabaseWorkspaceTabComponent {
       this.running.set(false);
     }
   }
+}
+
+interface PreparedDatabaseRun {
+  readonly resolvedSql: string;
+  readonly boundSql: string;
+  readonly paramNames: readonly string[];
+  readonly paramValues: readonly unknown[];
+  readonly explain: boolean;
+  readonly loadAll: boolean;
 }

@@ -148,4 +148,17 @@ describe('TxDataGridComponent', () => {
     expect([...select.options].map((option) => option.value).filter(Boolean)).toEqual(['true', 'false']);
     expect((fixture.nativeElement as HTMLElement).querySelector('tx-inline-rename-input')).toBeNull();
   });
+
+  it('renders column headers when there are no rows', () => {
+    fixture.componentRef.setInput('columns', ['id', 'email']);
+    fixture.componentRef.setInput('rows', []);
+    fixture.detectChanges();
+    const host = fixture.nativeElement as HTMLElement;
+    expect(host.querySelector('.tx-data-grid__empty')).toBeNull();
+    const headers = [...host.querySelectorAll('thead .tx-data-grid__header-label')].map((el) =>
+      el.textContent?.trim(),
+    );
+    expect(headers).toEqual(['id', 'email']);
+    expect(host.querySelectorAll('tbody tr').length).toBe(0);
+  });
 });

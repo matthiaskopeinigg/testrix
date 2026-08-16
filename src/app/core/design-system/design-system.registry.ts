@@ -187,12 +187,22 @@ export const DESIGN_SYSTEM_COMPONENTS: readonly DesignSystemComponentEntry[] = [
     kind: 'component',
   },
   {
+    id: 'tree-select',
+    label: 'Tree select',
+    selector: 'tx-tree-select',
+    importPath: '@app/shared/components/forms/tx-tree-select/tx-tree-select.component',
+    description:
+      'Dropdown that picks a leaf from a folder tree (expand folders, select connections or similar leaves).',
+    supportsDebug: true,
+    kind: 'component',
+  },
+  {
     id: 'context-menu',
     label: 'Context menu',
     selector: 'tx-context-menu',
     importPath: '@app/shared/components/overlays/tx-context-menu/tx-context-menu.component',
     description:
-      'Fixed-position action menu at cursor; keyboard navigation, click-outside and Escape dismiss.',
+      'Fixed-position action menu at cursor; keyboard navigation, click-outside and Escape dismiss. Set autoFocus for keyboard-first popups.',
     supportsDebug: false,
     kind: 'component',
   },

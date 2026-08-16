@@ -97,6 +97,7 @@ export type DatabaseQueryPage = z.infer<typeof databaseQueryPageSchema>;
 
 export const databaseQueryEnvelopeSchema = z.object({
   rows: z.unknown(),
+  columns: z.array(z.string()).optional(),
   affectedRows: z.number().int().nonnegative().optional(),
   columnTypes: z.array(z.string()).optional(),
   hasMore: z.boolean().optional(),

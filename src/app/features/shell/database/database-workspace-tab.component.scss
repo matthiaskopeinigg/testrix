@@ -1,3 +1,5 @@
+@use '../workspace/workspace-tab-chrome' as tab-chrome;
+
 :host {
   display: flex;
   flex: 1 1 auto;
@@ -32,10 +34,13 @@
 
 .db-tab__toolbar {
   display: grid;
-  grid-template-columns: minmax(8rem, 14rem) minmax(10rem, 1fr) auto;
+  grid-template-columns: minmax(7rem, 12rem) minmax(10rem, 1fr) minmax(8rem, 12rem) auto;
   gap: 0.75rem;
   align-items: end;
   flex: 0 0 auto;
+  position: relative;
+  z-index: 2;
+  overflow: visible;
 }
 
 .db-tab__actions {
@@ -45,8 +50,17 @@
 }
 
 .db-tab__editor {
-  min-height: 8rem;
+  display: flex;
   flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 16rem;
+  min-width: 0;
+}
+
+.db-tab__editor tx-code-editor {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
 }
 
 .db-tab__result {
@@ -56,37 +70,147 @@
   min-height: 0;
   min-width: 0;
   height: 100%;
-  gap: 0.5rem;
   overflow: hidden;
 }
 
+.db-tab__result-chrome {
+  flex-shrink: 0;
+}
+
 .db-tab__result-toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: end;
-  justify-content: space-between;
-  gap: 0.5rem;
+  @include tab-chrome.workspace-tab-toolbar-row;
+  @include tab-chrome.workspace-tab-toolbar-popover-row;
+  align-items: center;
+  border-bottom: 0;
+  padding-bottom: 0.25rem;
 }
 
-.db-tab__result-actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: end;
-  gap: 0.5rem;
+.db-tab__result-cluster {
+  @include tab-chrome.workspace-tab-bar-cluster;
+  align-items: center;
 }
 
-.db-tab__result-actions tx-form-field {
+.db-tab__result-pager {
+  flex: 0 1 auto;
+  flex-wrap: nowrap;
+}
+
+.db-tab__result-status {
+  margin: 0;
+  min-width: 6.5rem;
+  font-family: var(--tx-font-mono);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--tx-text-0);
+  white-space: nowrap;
+  text-align: center;
+}
+
+.db-tab__result-duration {
+  font-family: var(--tx-font-mono);
+  font-size: 0.6875rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--tx-text-1);
+  white-space: nowrap;
+}
+
+.db-tab__result-sep {
+  flex-shrink: 0;
+  width: 1px;
+  height: 1.1rem;
+  background: color-mix(in srgb, var(--tx-border-0) 70%, transparent);
+}
+
+.db-tab__result-filter {
+  display: flex;
+  flex: 1 1 12rem;
+  align-items: center;
+  gap: 0.5rem;
   min-width: 8rem;
+  padding: 0.2rem 0.45rem 0.2rem 0.35rem;
+
+  &.is-active,
+  &:focus-within {
+    border-color: color-mix(in srgb, var(--tx-primary) 48%, var(--tx-border-0));
+  }
+
+  &:focus-within {
+    box-shadow:
+      inset 0 1px 0 color-mix(in srgb, var(--tx-text-0) 5%, transparent),
+      0 0 0 3px color-mix(in srgb, var(--tx-focus-ring) 40%, transparent);
+  }
 }
 
-.db-tab__meta,
+.db-tab__result-filter-prefix {
+  flex-shrink: 0;
+  padding: 0.18rem 0.45rem;
+  border-radius: var(--tx-radius-sm, 8px);
+  background: color-mix(in srgb, var(--tx-text-0) 8%, transparent);
+  color: var(--tx-text-1);
+  font-family: var(--tx-font-mono);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+}
+
+.db-tab__result-filter tx-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-family: var(--tx-font-mono);
+  font-size: 0.8125rem;
+
+  :deep(.tx-input) {
+    min-height: 1.75rem;
+    padding: 0.2rem 0.45rem;
+    font: inherit;
+    font-size: inherit;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  :deep(.tx-input:hover:not(:disabled)),
+  :deep(.tx-input:focus) {
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+}
+
+.db-tab__result-trailing {
+  @include tab-chrome.workspace-tab-bar-cluster-trailing;
+  @include tab-chrome.workspace-tab-toolbar-dropdown;
+  margin-left: auto;
+}
+
+.db-tab__result-page-size {
+  width: 4.75rem;
+  min-width: 4.75rem;
+
+  :deep(.tx-dropdown__trigger) {
+    min-width: 0;
+    padding-inline: 0.45rem 0.35rem;
+  }
+}
+
+.db-tab__result-body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-height: 0;
+  min-width: 0;
+  padding: 0.35rem tab-chrome.$workspace-tab-inset-x 0.75rem;
+  overflow: hidden;
+}
+
 .db-tab__empty {
   margin: 0;
-  font-size: 0.8125rem;
+  font-size: 0.75rem;
   color: var(--tx-text-1);
 }
 
-.db-tab__result tx-data-grid {
+.db-tab__result-body tx-data-grid {
   flex: 1 1 auto;
   min-height: 0;
   min-width: 0;

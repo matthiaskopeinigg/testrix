@@ -26,6 +26,8 @@ import { findOracleInstantClientDir } from './find-oracle-instant-client';
 
 export interface DatabaseQueryOptions {
   readonly stepTimeoutMs?: number;
+  readonly paramNames?: readonly string[];
+  readonly paramValues?: readonly unknown[];
 }
 
 /**
@@ -75,22 +77,22 @@ export class DatabaseQueryService {
       return this.runRedis(connection, queryText, stepMs);
     }
     if (family === 'sqlite') {
-      return this.runSqlite(connection, queryText);
+      return this.runSqlite(connection, queryText, options);
     }
     if (family === 'postgresql') {
-      return this.runPostgres(connection, queryText, stepMs);
+      return this.runPostgres(connection, queryText, stepMs, options);
     }
     if (family === 'mysql') {
-      return this.runMysql(connection, queryText, stepMs);
+      return this.runMysql(connection, queryText, stepMs, options);
     }
     if (family === 'mssql') {
-      return this.runMssql(connection, queryText, stepMs);
+      return this.runMssql(connection, queryText, stepMs, options);
     }
     if (family === 'oracle') {
-      return this.runOracle(connection, queryText, stepMs);
+      return this.runOracle(connection, queryText, stepMs, options);
     }
     if (family === 'clickhouse') {
-      return this.runClickhouse(connection, queryText, stepMs);
+      return this.runClickhouse(connection, queryText, stepMs, options);
     }
     if (family === 'mongodb') {
       return this.runMongo(connection, queryText, stepMs);
@@ -607,22 +609,47 @@ export class DatabaseQueryService {
     return client;
   }
 
-  private runSqlite(config: DatabaseConnection, queryText: string): DatabaseQueryEnvelope {
+  private bindValues(options: DatabaseQueryOptions): unknown[] | undefined {
+    return options.paramValues?.length ? [...options.paramValues] : undefined;
+  }
+
+  private bindObject(options: DatabaseQueryOptions): Record<string, unknown> | undefined {
+    const names = options.paramNames;
+    const values = options.paramValues;
+    if (!names?.length || !values?.length) {
+      return undefined;
+    }
+    const out: Record<string, unknown> = {};
+    names.forEach((name, index) => {
+      out[name] = values[index] ?? '';
+    });
+    return out;
+  }
+
+  private runSqlite(
+    config: DatabaseConnection,
+    queryText: string,
+    options: DatabaseQueryOptions,
+  ): DatabaseQueryEnvelope {
     const db = this.getSqlite(config);
     const q = String(queryText).trim();
     if (!q) {
       return { rows: [] };
     }
     const lower = q.toLowerCase();
+    const stmt = db.prepare(q);
+    const named = this.bindObject(options);
+    const values = named ? undefined : this.bindValues(options);
     if (
       lower.startsWith('select') ||
       lower.startsWith('pragma') ||
       lower.startsWith('explain') ||
       lower.startsWith('with')
     ) {
-      return { rows: db.prepare(q).all() };
+      const rows = named ? stmt.all(named) : values ? stmt.all(...values) : stmt.all();
+      return { rows, columns: sqliteColumnNames(stmt) };
     }
-    const info = db.prepare(q).run();
+    const info = named ? stmt.run(named) : values ? stmt.run(...values) : stmt.run();
     return {
       rows: { changes: info.changes, lastInsertRowid: info.lastInsertRowid },
       affectedRows: info.changes,
@@ -633,14 +660,21 @@ export class DatabaseQueryService {
     config: DatabaseConnection,
     queryText: string,
     stepTimeoutMs: number | undefined,
+    options: DatabaseQueryOptions,
   ): Promise<DatabaseQueryEnvelope> {
     const pool = this.getPgPool(config);
     const cmdMs = this.effectiveCommandMs(config, stepTimeoutMs);
-    const res = await this.withOptionalTimeout(pool.query(queryText), cmdMs, 'Query');
+    const values = this.bindValues(options);
+    const res = await this.withOptionalTimeout(
+      values ? pool.query(queryText, values) : pool.query(queryText),
+      cmdMs,
+      'Query',
+    );
     const command = String(res.command ?? '').toUpperCase();
     const dml = command === 'INSERT' || command === 'UPDATE' || command === 'DELETE' || command === 'MERGE';
     return {
       rows: res.rows,
+      columns: namedColumns(res.fields),
       affectedRows: dml && typeof res.rowCount === 'number' ? res.rowCount : undefined,
       columnTypes: mapPgColumnTypes(res.fields),
     };
@@ -650,10 +684,16 @@ export class DatabaseQueryService {
     config: DatabaseConnection,
     queryText: string,
     stepTimeoutMs: number | undefined,
+    options: DatabaseQueryOptions,
   ): Promise<DatabaseQueryEnvelope> {
     const pool = await this.getMysqlPool(config);
     const cmdMs = this.effectiveCommandMs(config, stepTimeoutMs);
-    const [rows, fields] = await this.withOptionalTimeout(pool.query(queryText), cmdMs, 'Query');
+    const values = this.bindValues(options);
+    const [rows, fields] = await this.withOptionalTimeout(
+      values ? pool.query(queryText, values) : pool.query(queryText),
+      cmdMs,
+      'Query',
+    );
     if (rows && typeof rows === 'object' && !Array.isArray(rows) && 'affectedRows' in rows) {
       const header = rows as { affectedRows?: number; insertId?: number };
       return {
@@ -663,6 +703,7 @@ export class DatabaseQueryService {
     }
     return {
       rows,
+      columns: namedColumns(Array.isArray(fields) ? fields : undefined),
       columnTypes: mapMysqlColumnTypes(fields),
     };
   }
@@ -671,6 +712,7 @@ export class DatabaseQueryService {
     config: DatabaseConnection,
     queryText: string,
     stepTimeoutMs: number | undefined,
+    options: DatabaseQueryOptions,
   ): Promise<DatabaseQueryEnvelope> {
     const pool = await this.getMssqlPool(config);
     const cmdMs = this.effectiveCommandMs(config, stepTimeoutMs);
@@ -678,6 +720,11 @@ export class DatabaseQueryService {
     if (cmdMs) {
       (req as sqlMssql.Request & { timeout?: number }).timeout = cmdMs;
     }
+    const names = options.paramNames ?? [];
+    const values = options.paramValues ?? [];
+    names.forEach((name, index) => {
+      req.input(name, values[index] ?? '');
+    });
     const res = await req.query(queryText);
     const rows = res.recordset ?? [];
     const affected =
@@ -687,6 +734,7 @@ export class DatabaseQueryService {
     const dml = /^\s*(insert|update|delete|merge)\b/i.test(queryText);
     return {
       rows,
+      columns: mssqlColumnNames(res.recordset),
       affectedRows: dml ? affected : undefined,
     };
   }
@@ -695,17 +743,17 @@ export class DatabaseQueryService {
     config: DatabaseConnection,
     queryText: string,
     stepTimeoutMs: number | undefined,
+    options: DatabaseQueryOptions,
   ): Promise<DatabaseQueryEnvelope> {
     const sql = stripTrailingSqlSemicolons(queryText);
     const pool = await this.getOraclePool(config);
     const cmdMs = this.effectiveCommandMs(config, stepTimeoutMs);
     const connection = await pool.getConnection();
     try {
+      const named = this.bindObject(options);
+      const execOpts = { outFormat: oracledb.OUT_FORMAT_OBJECT, autoCommit: false } as const;
       const result = await this.withOptionalTimeout(
-        connection.execute(sql, [], {
-          outFormat: oracledb.OUT_FORMAT_OBJECT,
-          autoCommit: false,
-        }),
+        connection.execute(sql, (named ?? []) as never, execOpts),
         cmdMs,
         'Query',
       );
@@ -713,6 +761,7 @@ export class DatabaseQueryService {
       const dml = /^\s*(insert|update|delete|merge)\b/i.test(sql);
       return {
         rows,
+        columns: namedColumns(result.metaData),
         affectedRows: dml && typeof result.rowsAffected === 'number' ? result.rowsAffected : undefined,
         columnTypes: mapOracleColumnTypes(result.metaData),
       };
@@ -725,21 +774,31 @@ export class DatabaseQueryService {
     config: DatabaseConnection,
     queryText: string,
     stepTimeoutMs: number | undefined,
+    options: DatabaseQueryOptions,
   ): Promise<DatabaseQueryEnvelope> {
     const client = this.getClickhouseClient(config);
     const cmdMs = this.effectiveCommandMs(config, stepTimeoutMs);
     const trimmed = queryText.trim();
     const reads = /^(select|show|describe|desc|explain|with|exists|call)\b/i.test(trimmed);
+    const queryParams = this.bindObject(options);
     if (reads) {
       const result = await this.withOptionalTimeout(
-        client.query({ query: queryText, format: 'JSONEachRow' }),
+        client.query({
+          query: queryText,
+          format: 'JSONEachRow',
+          query_params: queryParams,
+        }),
         cmdMs,
         'Query',
       );
       const rows = await result.json();
       return { rows: Array.isArray(rows) ? rows : [] };
     }
-    await this.withOptionalTimeout(client.command({ query: queryText }), cmdMs, 'Query');
+    await this.withOptionalTimeout(
+      client.command({ query: queryText, query_params: queryParams }),
+      cmdMs,
+      'Query',
+    );
     return { rows: [] };
   }
 
@@ -883,6 +942,32 @@ export class DatabaseQueryService {
       rows: await this.withOptionalTimeout(Promise.resolve(exec as Promise<unknown>), cmdMs, 'Redis command'),
     };
   }
+}
+
+/** Column names from pg/mysql/oracle field metadata. */
+function namedColumns(fields: readonly { name?: string }[] | undefined): string[] | undefined {
+  if (!fields?.length) {
+    return undefined;
+  }
+  const names = fields.map((field) => String(field.name ?? ''));
+  return names.some((name) => name.length > 0) ? names : undefined;
+}
+
+/** Column names from a better-sqlite3 statement. */
+function sqliteColumnNames(stmt: { columns?: () => readonly { name?: string }[] }): string[] | undefined {
+  return namedColumns(typeof stmt.columns === 'function' ? stmt.columns() : undefined);
+}
+
+/** Column names from a tedious/mssql recordset, preserving ordinal order. */
+function mssqlColumnNames(
+  recordset: { columns?: Record<string, { index?: number; name?: string }> } | undefined,
+): string[] | undefined {
+  const cols = recordset?.columns;
+  if (!cols) {
+    return undefined;
+  }
+  const ordered = Object.values(cols).sort((a, b) => (a.index ?? 0) - (b.index ?? 0));
+  return namedColumns(ordered) ?? (Object.keys(cols).length > 0 ? Object.keys(cols) : undefined);
 }
 
 const PG_OID_NAMES: Record<number, string> = {

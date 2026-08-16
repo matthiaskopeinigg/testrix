@@ -1,0 +1,107 @@
+@use '../../../styles/control-surface' as surface;
+
+:host {
+  display: block;
+  position: relative;
+  width: 100%;
+}
+
+:host.tx-tree-select-host--open {
+  z-index: var(--tx-z-dropdown-panel, 200);
+}
+
+.tx-tree-select {
+  position: relative;
+  width: 100%;
+}
+
+.tx-tree-select__trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  width: 100%;
+  min-height: var(--tx-control-height-md, 36px);
+  padding: 0.45rem 0.65rem 0.45rem 0.75rem;
+  border: 0;
+  font: inherit;
+  font-size: 0.875rem;
+  text-align: left;
+  cursor: pointer;
+
+  @include surface.control-surface;
+  @include surface.interactive-press;
+
+  &:hover:not(:disabled) {
+    @include surface.control-surface-hover;
+  }
+
+  &:focus-visible {
+    @include surface.control-surface-focus;
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+  }
+}
+
+.tx-tree-select__icon {
+  flex-shrink: 0;
+}
+
+.tx-tree-select__value {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tx-tree-select__value--placeholder {
+  color: var(--tx-text-1);
+}
+
+.tx-tree-select__chevron {
+  flex-shrink: 0;
+  transition: transform var(--tx-duration-fast) var(--tx-ease-standard);
+
+  &.is-open {
+    transform: rotate(180deg);
+  }
+}
+
+.tx-tree-select__panel {
+  position: fixed;
+  z-index: var(--tx-z-context-menu, 1350);
+  cursor: default;
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  max-height: min(16rem, 42vh);
+  padding: 0.45rem;
+  overflow: auto;
+  border: 1px solid color-mix(in srgb, var(--tx-border-0) 88%, transparent);
+  border-radius: var(--tx-radius-md, 10px);
+  background: var(--tx-surface-1);
+  box-shadow:
+    var(--tx-shadow-md),
+    0 0 0 1px color-mix(in srgb, var(--tx-border-0) 35%, transparent);
+}
+
+.tx-tree-select__search {
+  flex: 0 0 auto;
+}
+
+.tx-tree-select__empty {
+  margin: 0;
+  padding: 0.5rem 0.35rem;
+  font-size: 0.8125rem;
+  color: var(--tx-text-1);
+}
+
+.tx-tree-select__panel tx-tree {
+  flex: 0 0 auto;
+  min-height: 0;
+}

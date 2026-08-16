@@ -21,7 +21,7 @@ export const HELP_WIKI_REFERENCE_SECTIONS: readonly HelpWikiSection[] = [
           'Ctrl+K (Cmd+K) — toggle command palette (search commands and quick-open workspace items).',
           'Ctrl+Shift+T (Cmd+Shift+T) — toggle Teams panel.',
           'Ctrl+W (Cmd+W) — close active workspace tab.',
-          'Ctrl+Enter (Cmd+Enter) — run the focused Database query (statement at the caret, or the selection).',
+          'Ctrl+Enter (Cmd+Enter) — run the focused Database query. If the editor has several statements, pick “Run query from cursor” or “Run all queries”, then press Enter.',
           'Ctrl+Tab / Ctrl+Shift+Tab — next / previous tab in the focused pane.',
           'Escape — close modals, settings, help, and the command palette.',
         ],

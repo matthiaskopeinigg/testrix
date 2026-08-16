@@ -1,0 +1,64 @@
+<div class="tx-tree-select">
+  <button
+    #trigger
+    type="button"
+    class="tx-tree-select__trigger"
+    [id]="autoId"
+    [disabled]="isDisabled()"
+    [attr.aria-label]="ariaLabel() || null"
+    [attr.aria-expanded]="isOpen()"
+    [attr.aria-haspopup]="'tree'"
+    (click)="handleTriggerClick()"
+  >
+    @if (triggerIcon(); as icon) {
+      <tx-icon class="tx-tree-select__icon" [name]="icon" [size]="16" aria-hidden="true" />
+    }
+    <span
+      class="tx-tree-select__value"
+      [class.tx-tree-select__value--placeholder]="!hasSelection()"
+    >
+      {{ triggerLabel() }}
+    </span>
+    <tx-icon
+      class="tx-tree-select__chevron"
+      [class.is-open]="isOpen()"
+      name="chevronDown"
+      [size]="16"
+      aria-hidden="true"
+    />
+  </button>
+
+  @if (isOpen()) {
+    <div
+      #panel
+      class="tx-tree-select__panel tx-menu-popover"
+      role="presentation"
+      [style.left.px]="panelStyle().left"
+      [style.top.px]="panelStyle().top"
+      [style.width.px]="panelStyle().width"
+      (click)="$event.stopPropagation()"
+    >
+      <tx-input
+        class="tx-tree-select__search"
+        [placeholder]="searchPlaceholder()"
+        [ngModel]="search()"
+        (ngModelChange)="search.set($event)"
+        [ngModelOptions]="{ standalone: true }"
+      />
+      @if (filteredNodes().length === 0) {
+        <p class="tx-tree-select__empty">{{ emptyLabel() }}</p>
+      } @else {
+        <tx-tree
+          [nodes]="filteredNodes()"
+          [config]="treeConfig()"
+          [expandedIds]="displayExpandedIds()"
+          [selectionIds]="selectionIds()"
+          [entranceStagger]="false"
+          (mousedown)="$event.preventDefault()"
+          (expandedChange)="handleExpandedChange($event)"
+          (nodeClick)="handleNodeClick($event)"
+        />
+      }
+    </div>
+  }
+</div>

@@ -32,4 +32,13 @@ describe('scanWorkspaceTextForSecrets', () => {
     expect(findings.some((f) => f.kind === 'inline-env-secret')).toBe(true);
     expect(secretScanShouldBlock(findings)).toBe(true);
   });
+
+  it('blocks connection passwords in databases.json', () => {
+    const raw = JSON.stringify({
+      nodes: [{ kind: 'connection', id: 'c1', password: 'hunter2' }],
+    });
+    const findings = scanWorkspaceTextForSecrets('databases.json', raw);
+    expect(findings.some((f) => f.kind === 'inline-db-password')).toBe(true);
+    expect(secretScanShouldBlock(findings)).toBe(true);
+  });
 });

@@ -1,6 +1,6 @@
 export interface SecretScanFinding {
   readonly fileName: string;
-  readonly kind: 'private-key' | 'aws-key' | 'jwt' | 'bearer' | 'inline-env-secret';
+  readonly kind: 'private-key' | 'aws-key' | 'jwt' | 'bearer' | 'inline-env-secret' | 'inline-db-password';
   readonly severity: 'block' | 'warn';
   readonly excerpt: string;
 }
@@ -88,6 +88,39 @@ export function scanWorkspaceTextForSecrets(
           kind: 'inline-env-secret',
           severity: 'block',
           excerpt: 'secret:true variable still has an inline value',
+        });
+      }
+    } catch {
+      /* ignore invalid JSON */
+    }
+  }
+  if (fileName.endsWith('databases.json')) {
+    try {
+      const parsed = JSON.parse(raw) as { nodes?: unknown[] };
+      const hasPassword = (nodes: unknown[] | undefined): boolean => {
+        if (!Array.isArray(nodes)) {
+          return false;
+        }
+        for (const node of nodes) {
+          if (!node || typeof node !== 'object') {
+            continue;
+          }
+          const record = node as { kind?: string; password?: string; children?: unknown[] };
+          if ((record.password ?? '').trim()) {
+            return true;
+          }
+          if (record.kind === 'folder' && hasPassword(record.children)) {
+            return true;
+          }
+        }
+        return false;
+      };
+      if (hasPassword(parsed.nodes)) {
+        findings.push({
+          fileName,
+          kind: 'inline-db-password',
+          severity: 'block',
+          excerpt: 'database connection password must stay local',
         });
       }
     } catch {

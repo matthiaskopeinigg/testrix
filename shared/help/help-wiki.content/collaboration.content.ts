@@ -55,8 +55,8 @@ export const HELP_WIKI_COLLABORATION_SECTIONS: readonly HelpWikiSection[] = [
       {
         type: 'list',
         items: [
-          'Shared: collections, environments (keys and non-secret values), test suites, load tests, regressions, mock server (per team profile toggles).',
-          'Secret environment values stay in each machine’s local vault (`vault.bin`) and are never pushed.',
+          'Shared: collections, environments (keys and non-secret values), saved queries, database connections (hosts and folders, never passwords), test suites, load tests, regressions, mock server (per team profile toggles).',
+          'Secret environment values stay in each machine’s local vault (`vault.bin`) and are never pushed. Database connection passwords stay on each machine.',
           'Testrix scans staged JSON before push and blocks private keys, AWS keys, and inline secret values.',
           'Set a default scope on Team profiles, or a custom scope per team profile.',
           'The team profile list is published in the Git repo (`team-profiles.json`) so teammates can import profiles.',

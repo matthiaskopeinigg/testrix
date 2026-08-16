@@ -30,6 +30,7 @@ import {
 } from '@shared/dynamic-variables';
 
 import { TxIconComponent } from '../../forms/tx-icon/tx-icon.component';
+import { textareaCaretViewportPosition, lineIndexesForCharacterRanges } from './tx-code-editor-caret-position';
 import {
   filterTxCodeEditorCompletions,
   txCodeEditorCompletionContext,
@@ -92,6 +93,15 @@ import {
 } from './tx-code-editor-keyboard';
 import { TxCodeEditorSanitizeHtmlPipe } from './tx-code-editor-sanitize-html.pipe';
 import { TxCodeEditorUndoStack, type TxCodeEditorUndoSnapshot } from './tx-code-editor-undo';
+
+/** Character range painted as an execute preview overlay. */
+export interface TxCodeEditorExecuteHighlightRange {
+  readonly start: number;
+  readonly end: number;
+}
+
+/** Named alias so `input<T[]>([])` is not parsed as `input<T>([])`. */
+export type TxCodeEditorExecuteHighlight = readonly TxCodeEditorExecuteHighlightRange[];
 
 @Component({
   selector: 'tx-code-editor',
@@ -172,6 +182,11 @@ export class TxCodeEditorComponent implements ControlValueAccessor, AfterViewIni
   /** VS Code–style shortcuts (copy, cut, paste, undo, Tab indent, Ctrl+/ comment, …). Overrides settings when set. */
   readonly keyboardShortcuts = input<boolean | undefined>(undefined);
   readonly ariaLabel = input('');
+  /**
+   * Character ranges to paint as the DataGrip-style execute preview.
+   * Independent of native selection so it stays visible while a popup has focus.
+   */
+  readonly executeHighlight = input<TxCodeEditorExecuteHighlight>([]);
 
   private readonly editorKeyboard = computed(() => ({
     ...createDefaultEditorKeyboardSettings(),
@@ -227,6 +242,15 @@ export class TxCodeEditorComponent implements ControlValueAccessor, AfterViewIni
   readonly blurred = output<void>();
   readonly environmentVariableClick = output<{ readonly key: string }>();
 
+  protected readonly executeHighlightLines = computed(() => {
+    const ranges = this.executeHighlight();
+    if (!ranges?.length) {
+      return [];
+    }
+    return lineIndexesForCharacterRanges(this.innerValue(), ranges);
+  });
+
+  protected readonly executeHighlightLineSet = computed(() => new Set(this.executeHighlightLines()));
   protected readonly innerValue = signal('');
   /** Full document text (unfolded); emitted via ControlValueAccessor. */
   private readonly canonicalValue = signal('');
@@ -321,6 +345,15 @@ export class TxCodeEditorComponent implements ControlValueAccessor, AfterViewIni
     });
 
     effect(() => {
+      const range = this.executeHighlight();
+      const lines = this.executeHighlightLines();
+      if (!range || lines.length === 0) {
+        return;
+      }
+      queueMicrotask(() => this.scrollExecuteHighlightIntoView(lines[0] ?? 0, lines[lines.length - 1] ?? 0));
+    });
+
+    effect(() => {
       if (!this.fillHeight()) {
         this.teardownFillSlotLayout();
         return;
@@ -375,7 +408,8 @@ export class TxCodeEditorComponent implements ControlValueAccessor, AfterViewIni
     while (el) {
       if (
         el.classList.contains('request-tab__pane') ||
-        el.classList.contains('tx-workspace-tab__pane')
+        el.classList.contains('tx-workspace-tab__pane') ||
+        el.classList.contains('db-tab__editor')
       ) {
         return el;
       }
@@ -582,6 +616,36 @@ export class TxCodeEditorComponent implements ControlValueAccessor, AfterViewIni
     };
   }
 
+  /** Restores caret/selection and focus after an overlay (execute chooser) closes. */
+  setLiveSelection(start: number, end: number): void {
+    const ta = this.textareaRef()?.nativeElement;
+    if (!ta) {
+      return;
+    }
+    const max = ta.value.length;
+    const from = Math.max(0, Math.min(start, max));
+    const to = Math.max(from, Math.min(end, max));
+    ta.focus({ preventScroll: true });
+    ta.setSelectionRange(from, to);
+  }
+
+  /** Viewport point just below the caret, for anchoring popups. */
+  getCaretViewportPosition(): { readonly x: number; readonly y: number } | null {
+    const ta = this.textareaRef()?.nativeElement;
+    if (!ta) {
+      return null;
+    }
+    return textareaCaretViewportPosition(ta);
+  }
+
+  protected isExecuteHighlightLine(index: number): boolean {
+    return this.executeHighlightLineSet().has(index);
+  }
+
+  protected executeHighlightLineTop(line: number): string {
+    return `calc(10px + ${line} * 1.5em)`;
+  }
+
   protected handleInput(event: Event): void {
     const ta = event.target as HTMLTextAreaElement;
     if (this.collapsedFoldIds().size > 0) {
@@ -766,6 +830,12 @@ export class TxCodeEditorComponent implements ControlValueAccessor, AfterViewIni
       }
     }
 
+    const executeShift = this.hostRef.nativeElement.querySelector('.tx-code-editor__execute-hl-shift');
+    if (executeShift instanceof HTMLElement) {
+      executeShift.style.transform =
+        offsetX || offsetY ? `translate(${-offsetX}px, ${-offsetY}px)` : '';
+    }
+
     const gutter = this.hostRef.nativeElement.querySelector('.tx-code-editor__gutter');
     if (gutter instanceof HTMLElement) {
       gutter.scrollTop = offsetY;
@@ -775,6 +845,25 @@ export class TxCodeEditorComponent implements ControlValueAccessor, AfterViewIni
   protected handleGutterWheel(ev: WheelEvent): void {
     this.scrollEditorBy(ev.deltaY, ev.deltaX);
     ev.preventDefault();
+  }
+
+  private scrollExecuteHighlightIntoView(fromLine: number, toLine: number): void {
+    const ta = this.textareaRef()?.nativeElement;
+    if (!ta) {
+      return;
+    }
+    const style = getComputedStyle(ta);
+    const fontSize = Number.parseFloat(style.fontSize) || 13;
+    const lineHeight = Number.parseFloat(style.lineHeight) || fontSize * 1.5;
+    const paddingTop = Number.parseFloat(style.paddingTop) || 10;
+    const top = paddingTop + fromLine * lineHeight;
+    const bottom = paddingTop + (toLine + 1) * lineHeight;
+    if (top < ta.scrollTop) {
+      ta.scrollTop = top;
+    } else if (bottom > ta.scrollTop + ta.clientHeight) {
+      ta.scrollTop = Math.max(0, bottom - ta.clientHeight);
+    }
+    this.handleScroll();
   }
 
   protected handleEditorWheel(ev: WheelEvent): void {

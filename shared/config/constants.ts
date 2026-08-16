@@ -22,6 +22,7 @@ export const MOCK_SERVER_FILE_NAME = 'mock.json';
 export const CAPTURE_FILE_NAME = 'capture.json';
 export const INTERCEPTOR_FILE_NAME = 'interceptor.json';
 export const QUERIES_FILE_NAME = 'queries.json';
+export const DATABASES_FILE_NAME = 'databases.json';
 export const MONITORS_FILE_NAME = 'monitors.json';
 
 /** Default `ng serve` port — avoids clashing with other Angular apps on 4200. */

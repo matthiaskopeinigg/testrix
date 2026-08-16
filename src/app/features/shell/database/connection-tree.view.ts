@@ -1,3 +1,5 @@
+import type { DatabaseSidebarSortBy } from './database-sidebar-menus';
+import { isConnectionFolderNode, isConnectionLeafNode } from './connection-tree.mutations';
 import type { ConnectionTreeNode } from './connection-tree.types';
 
 /**
@@ -34,4 +36,81 @@ export function filterConnectionTree(
   };
 
   return filterNodes(nodes);
+}
+
+function nodeUpdatedAt(node: ConnectionTreeNode): string {
+  if (node.data?.kind === 'folder') {
+    return node.data.updatedAt ?? '';
+  }
+  return '';
+}
+
+function compareConnectionNodes(
+  a: ConnectionTreeNode,
+  b: ConnectionTreeNode,
+  sortBy: DatabaseSidebarSortBy,
+): number {
+  if (sortBy === 'saved') {
+    return 0;
+  }
+  if (sortBy === 'name-asc') {
+    return a.label.localeCompare(b.label, undefined, { sensitivity: 'base' });
+  }
+  if (sortBy === 'name-desc') {
+    return b.label.localeCompare(a.label, undefined, { sensitivity: 'base' });
+  }
+  const aTs = nodeUpdatedAt(a);
+  const bTs = nodeUpdatedAt(b);
+  if (aTs || bTs) {
+    if (sortBy === 'date-new') {
+      return bTs.localeCompare(aTs);
+    }
+    return aTs.localeCompare(bTs);
+  }
+  return a.label.localeCompare(b.label, undefined, { sensitivity: 'base' });
+}
+
+/**
+ * Sorts folders and connections. Catalog children under a connection stay as-is.
+ */
+export function sortConnectionTree(
+  nodes: readonly ConnectionTreeNode[],
+  sortBy: DatabaseSidebarSortBy,
+): ConnectionTreeNode[] {
+  if (sortBy === 'saved') {
+    return nodes.map((node) => ({
+      ...node,
+      children: isConnectionFolderNode(node) && node.children
+        ? sortConnectionTree(node.children, sortBy)
+        : node.children,
+    }));
+  }
+  const folders = nodes
+    .filter((node) => isConnectionFolderNode(node))
+    .map((node) => ({
+      ...node,
+      children: node.children ? sortConnectionTree(node.children, sortBy) : undefined,
+    }))
+    .sort((a, b) => compareConnectionNodes(a, b, sortBy));
+  const connections = nodes
+    .filter((node) => isConnectionLeafNode(node))
+    .sort((a, b) => compareConnectionNodes(a, b, sortBy));
+  const rest = nodes.filter((node) => !isConnectionFolderNode(node) && !isConnectionLeafNode(node));
+  return [...folders, ...connections, ...rest];
+}
+
+export interface ConnectionTreeViewOptions {
+  readonly query: string;
+  readonly sortBy: DatabaseSidebarSortBy;
+}
+
+/** Applies presentation sort and search to the connections tree. */
+export function applyConnectionTreeView(
+  nodes: readonly ConnectionTreeNode[],
+  options: ConnectionTreeViewOptions,
+): ConnectionTreeNode[] {
+  if (options.sortBy === 'saved' && !options.query.trim()) {
+    return nodes as ConnectionTreeNode[];
+  }
+  return filterConnectionTree(sortConnectionTree(nodes, options.sortBy), options.query);
 }

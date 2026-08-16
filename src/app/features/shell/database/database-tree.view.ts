@@ -6,9 +6,10 @@ export interface DatabaseTreeViewOptions {
   readonly query: string;
   readonly kindFilter: DatabaseSidebarFilter;
   readonly sortBy: DatabaseSidebarSortBy;
+  readonly connectionIds?: readonly string[];
 }
 
-/** Filters the query tree by name, keeping ancestors of matches. */
+/** Filters the query tree by name or SQL body, keeping ancestors of matches. */
 export function filterDatabaseTree(nodes: readonly DatabaseTreeNode[], query: string): DatabaseTreeNode[] {
   const q = query.trim().toLowerCase();
   if (!q) {
@@ -19,9 +20,11 @@ export function filterDatabaseTree(nodes: readonly DatabaseTreeNode[], query: st
     const out: DatabaseTreeNode[] = [];
     for (const node of list) {
       const labelMatch = node.label.toLowerCase().includes(q);
+      const sqlMatch =
+        node.data?.kind === 'query' && (node.data.query ?? '').toLowerCase().includes(q);
       const children = node.children ? filterNodes(node.children) : undefined;
       const childMatch = !!children?.length;
-      if (labelMatch || childMatch) {
+      if (labelMatch || sqlMatch || childMatch) {
         out.push({
           ...node,
           children: childMatch ? children : node.children,
@@ -63,6 +66,35 @@ function filterDatabaseTreeByKind(
   return collectQueries(nodes);
 }
 
+/** Keeps queries whose connectionId is in `connectionIds`. Empty set means all. */
+export function filterDatabaseTreeByConnection(
+  nodes: readonly DatabaseTreeNode[],
+  connectionIds: readonly string[],
+): DatabaseTreeNode[] {
+  if (connectionIds.length === 0) {
+    return [...nodes];
+  }
+  const allowed = new Set(connectionIds);
+  const filterNodes = (list: readonly DatabaseTreeNode[]): DatabaseTreeNode[] => {
+    const out: DatabaseTreeNode[] = [];
+    for (const node of list) {
+      if (isDatabaseQueryNode(node)) {
+        const connectionId = node.data?.kind === 'query' ? node.data.connectionId : undefined;
+        if (connectionId && allowed.has(connectionId)) {
+          out.push(node);
+        }
+        continue;
+      }
+      const children = node.children ? filterNodes(node.children) : undefined;
+      if (children?.length) {
+        out.push({ ...node, children });
+      }
+    }
+    return out;
+  };
+  return filterNodes(nodes);
+}
+
 function compareNodes(a: DatabaseTreeNode, b: DatabaseTreeNode, sortBy: DatabaseSidebarSortBy): number {
   if (sortBy === 'saved') {
     return 0;
@@ -73,12 +105,22 @@ function compareNodes(a: DatabaseTreeNode, b: DatabaseTreeNode, sortBy: Database
   if (sortBy === 'name-desc') {
     return b.label.localeCompare(a.label, undefined, { sensitivity: 'base' });
   }
-  const aTs = a.data?.updatedAt ?? '';
-  const bTs = b.data?.updatedAt ?? '';
-  if (sortBy === 'date-new') {
-    return bTs.localeCompare(aTs);
+  const aTs = nodeUpdatedAt(a);
+  const bTs = nodeUpdatedAt(b);
+  if (aTs || bTs) {
+    if (sortBy === 'date-new') {
+      return bTs.localeCompare(aTs);
+    }
+    return aTs.localeCompare(bTs);
   }
-  return aTs.localeCompare(bTs);
+  return a.label.localeCompare(b.label, undefined, { sensitivity: 'base' });
+}
+
+function nodeUpdatedAt(node: DatabaseTreeNode): string {
+  if (node.data?.kind === 'folder' || node.data?.kind === 'query') {
+    return node.data.updatedAt ?? '';
+  }
+  return '';
 }
 
 function sortDatabaseTree(
@@ -102,12 +144,16 @@ function sortDatabaseTree(
   return [...folders, ...queries];
 }
 
-/** Applies kind filter, presentation sort, and search to the query tree. */
+/** Applies kind filter, connection filter, presentation sort, and search to the query tree. */
 export function applyDatabaseTreeView(
   nodes: readonly DatabaseTreeNode[],
   options: DatabaseTreeViewOptions,
 ): DatabaseTreeNode[] {
   const kindFiltered = filterDatabaseTreeByKind(nodes, options.kindFilter);
-  const sorted = sortDatabaseTree(kindFiltered, options.sortBy);
+  const connectionFiltered = filterDatabaseTreeByConnection(
+    kindFiltered,
+    options.connectionIds ?? [],
+  );
+  const sorted = sortDatabaseTree(connectionFiltered, options.sortBy);
   return filterDatabaseTree(sorted, options.query);
 }

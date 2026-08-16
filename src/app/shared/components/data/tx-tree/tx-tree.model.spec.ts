@@ -57,6 +57,12 @@ describe('TxTreeModel', () => {
     expect(model.getVisibleRows()[0]?.expanded).toBe(true);
   });
 
+  it('hides expansion when expandable is false', () => {
+    const model = new TxTreeModel(mergeTxTreeConfig());
+    model.setNodes([{ id: 'conn', label: 'Primary', kind: 'connection', expandable: false }]);
+    expect(model.getVisibleRows()[0]?.hasChildren).toBe(false);
+  });
+
   it('reorders siblings within the same parent', () => {
     const model = new TxTreeModel(mergeTxTreeConfig());
     model.setNodes(SAMPLE);

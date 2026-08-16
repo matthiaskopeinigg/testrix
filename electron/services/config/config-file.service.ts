@@ -11,6 +11,7 @@ import {
   LOAD_TESTS_FILE_NAME,
   MOCK_SERVER_FILE_NAME,
   QUERIES_FILE_NAME,
+  DATABASES_FILE_NAME,
   MONITORS_FILE_NAME,
   REGRESSIONS_FILE_NAME,
   SESSION_FILE_NAME,
@@ -77,10 +78,14 @@ import {
 } from '../../../shared/testing/monitors.schema';
 import {
   createDefaultSavedQueriesFile,
+  createDefaultTeamDatabasesFile,
+  createTeamDatabasesSnapshot,
+  mergeTeamDatabasesIntoSettings,
   parseSavedQueriesFile,
   savedQueriesFileSchema,
+  teamDatabasesFileSchema,
   type SavedQueriesFile,
-} from '../../../shared/database/saved-queries.schema';
+} from '../../../shared/database';
 
 import { ErrorCodes, TestrixError } from '../../../shared/errors';
 
@@ -160,6 +165,10 @@ export class ConfigFileService {
     return path.join(this.getActiveProfileDir(), QUERIES_FILE_NAME);
   }
 
+  private databasesSnapshotPath(profileDir = this.getActiveProfileDir()): string {
+    return path.join(profileDir, DATABASES_FILE_NAME);
+  }
+
   private monitorsPath(): string {
     return path.join(this.getActiveProfileDir(), MONITORS_FILE_NAME);
   }
@@ -179,6 +188,7 @@ export class ConfigFileService {
       { filePath: path.join(profileDir, CAPTURE_FILE_NAME), create: createDefaultCaptureFile },
       { filePath: path.join(profileDir, INTERCEPTOR_FILE_NAME), create: createDefaultInterceptorFile },
       { filePath: path.join(profileDir, QUERIES_FILE_NAME), create: createDefaultSavedQueriesFile },
+      { filePath: path.join(profileDir, DATABASES_FILE_NAME), create: createDefaultTeamDatabasesFile },
       { filePath: path.join(profileDir, MONITORS_FILE_NAME), create: createDefaultMonitorsFile },
     ];
     for (const { filePath, create } of probes) {
@@ -207,6 +217,8 @@ export class ConfigFileService {
     await this.runSerialized(filePath, async () => {
       await this.atomicWriteJson(filePath, data);
     });
+    setMainSettings(data);
+    await this.writeTeamDatabasesSnapshot(data);
   }
 
   async mergeSettingsPatch(patch: SettingsPatch): Promise<SettingsFile> {
@@ -227,6 +239,7 @@ export class ConfigFileService {
       });
       await this.atomicWriteJson(filePath, updated);
       setMainSettings(updated);
+      await this.writeTeamDatabasesSnapshot(updated);
       return updated;
     });
   }
@@ -478,7 +491,49 @@ export class ConfigFileService {
   async saveSavedQueries(data: SavedQueriesFile): Promise<SavedQueriesFile> {
     const updated = savedQueriesFileSchema.parse(data);
     await this.atomicWriteJson(this.queriesPath(), updated);
+    notifyTeamConfigFileSaved(this.getActiveProfileDir(), TEAM_SYNC_FILE_NAMES.savedQueries);
     return updated;
+  }
+
+  /**
+   * Writes a sanitized connection snapshot for Teams sync and notifies the mirror.
+   */
+  async writeTeamDatabasesSnapshot(settings: SettingsFile): Promise<void> {
+    const snapshot = createTeamDatabasesSnapshot(settings.databases);
+    await this.atomicWriteJson(this.databasesSnapshotPath(), snapshot);
+    notifyTeamConfigFileSaved(this.getActiveProfileDir(), TEAM_SYNC_FILE_NAMES.databaseConnections);
+  }
+
+  /**
+   * Merges a pulled `databases.json` into shared settings, keeping local passwords.
+   */
+  async mergeIncomingTeamDatabases(profileDir: string): Promise<boolean> {
+    const snapshotPath = this.databasesSnapshotPath(profileDir);
+    let incoming: ReturnType<typeof createDefaultTeamDatabasesFile>;
+    try {
+      const raw = await fs.readFile(snapshotPath, 'utf8');
+      incoming = teamDatabasesFileSchema.parse(JSON.parse(raw) as unknown);
+    } catch (err: unknown) {
+      if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
+        return false;
+      }
+      throw err;
+    }
+    const current = await this.readSettings();
+    const mergedDatabases = mergeTeamDatabasesIntoSettings(current.databases, incoming);
+    const next: SettingsFile = settingsFileSchema.parse({
+      ...current,
+      databases: mergedDatabases,
+      meta: {
+        ...current.meta,
+        updatedAt: new Date().toISOString(),
+      },
+    });
+    if (JSON.stringify(next.databases) === JSON.stringify(current.databases)) {
+      return false;
+    }
+    await this.writeSettings(next);
+    return true;
   }
 
   async readMonitors(): Promise<MonitorsFile> {
