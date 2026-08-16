@@ -15,7 +15,7 @@ import { updateCheckCacheSchema } from '../../../shared/updater/updater-status.s
 import { isUpdaterCacheStatusStale, isUpdaterCacheStatusUsable } from '../../../shared/updater/updater-cache';
 import { DEFAULT_DEV_SIM_VERSION } from '../../../shared/updater/dev-update-sim';
 import { resolveUpdateChannelForVersion } from '../../../shared/updater/release-version';
-import { waitForUpdateReadyFile } from '../../../shared/updater/update-ready-file';
+import { waitForUpdateReadyFile } from './update-ready-file';
 
 import { isDevMode } from '../../config/environment';
 import { logError } from '../../errors/logger';

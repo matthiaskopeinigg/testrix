@@ -2,6 +2,7 @@
   "extends": "./tsconfig.app.json",
   "exclude": [
     "src/**/*.spec.ts",
+    "shared/**/*.spec.ts",
     "src/app/features/dev/**/*.ts",
     "src/app/app.routes.dev.ts",
     "src/app/core/dev/register-dev-routes.ts",
