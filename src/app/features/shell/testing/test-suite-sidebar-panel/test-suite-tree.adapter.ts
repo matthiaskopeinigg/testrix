@@ -59,8 +59,13 @@ function toTestSuiteTreeNode(item: TestSuiteTreeItem): TestSuiteTreeNode {
   };
 }
 
-function fromTestSuiteTreeNode(node: TestSuiteTreeNode, existing?: TestSuiteTreeItem): TestSuiteTreeItem {
+/** Maps a sidebar tree node back to a persisted folder or flow, preserving existing fields. */
+function fromTestSuiteTreeNode(
+  node: TestSuiteTreeNode,
+  existingById: ReadonlyMap<string, TestSuiteTreeItem>,
+): TestSuiteTreeItem {
   const kind = node.data?.kind ?? (node.kind as TestSuiteTreeKind);
+  const existing = existingById.get(node.id);
   const ts = new Date().toISOString();
 
   if (kind === 'flow') {
@@ -89,16 +94,15 @@ function fromTestSuiteTreeNode(node: TestSuiteTreeNode, existing?: TestSuiteTree
     description: node.data?.description ?? prev?.description ?? '',
     tags: node.data?.tags ?? prev?.tags ?? [],
     environmentId: node.data?.environmentId ?? prev?.environmentId ?? null,
-    children: (node.children ?? []).map((child, index) => {
-      const prevChild = prev?.children[index];
-      const prevById = prev?.children.find((c) => c.id === child.id);
-      return fromTestSuiteTreeNode(child, prevById ?? prevChild);
-    }),
+    children: (node.children ?? []).map((child) => fromTestSuiteTreeNode(child, existingById)),
     updatedAt: prev?.updatedAt ?? ts,
   };
 }
 
-/** Merges tree structure with existing persisted items. */
+/**
+ * Merges sidebar tree structure with persisted items, looking up existing
+ * records by id anywhere in the suite (not by sibling index).
+ */
 export function fromTestSuiteTreeNodesWithExisting(
   treeNodes: readonly TestSuiteTreeNode[],
   existingItems: readonly TestSuiteTreeItem[],
@@ -113,5 +117,5 @@ export function fromTestSuiteTreeNodesWithExisting(
     }
   };
   indexExisting(existingItems);
-  return treeNodes.map((node) => fromTestSuiteTreeNode(node, existingById.get(node.id)));
+  return treeNodes.map((node) => fromTestSuiteTreeNode(node, existingById));
 }

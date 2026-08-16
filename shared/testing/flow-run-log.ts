@@ -7,6 +7,11 @@ import {
   resolveValidationActualValue,
   sanitizeValidationRulesForReferenceStepType,
 } from './flow-step-validation';
+import {
+  formatHttpBodyForPreview,
+  inferHttpBodySyntaxModeFromHeaders,
+} from '../http/http-body-editor-language';
+import { captureBodyToCodeEditorLanguage, type CaptureBodyCodeEditorLanguage } from './capture-format';
 
 const VALIDATION_SOURCE_LABELS: Record<ValidationRule['source'], string> = {
   response_status: 'Response status',
@@ -172,7 +177,7 @@ export interface FlowStepCaptureSummaryLine {
 
 export interface FlowStepCapturePreview {
   readonly title: string;
-  readonly language: 'plaintext' | 'json' | 'html';
+  readonly language: CaptureBodyCodeEditorLanguage;
   readonly content: string;
 }
 
@@ -257,11 +262,13 @@ function buildCapturePreview(
     if (!body) {
       return null;
     }
-    const language = body.startsWith('{') || body.startsWith('[') ? 'json' : 'plaintext';
+    const headerPairs = Object.entries(capture.headers).map(([key, value]) => ({ key, value }));
+    const mode = inferHttpBodySyntaxModeFromHeaders(headerPairs, capture.bodyText, false);
+    const formatted = formatHttpBodyForPreview(capture.bodyText, mode, false);
     return {
       title: 'Response body',
-      language,
-      content: truncatePreview(body),
+      language: captureBodyToCodeEditorLanguage(mode),
+      content: truncatePreview(formatted),
     };
   }
 

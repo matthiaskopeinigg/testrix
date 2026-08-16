@@ -134,6 +134,15 @@ export class TestSuiteSidebarPanelComponent {
 
   protected readonly nodes = computed(() => this.testSuite.nodes());
 
+  /** True when the sidebar shows saved order with no search/filter (safe to persist DnD). */
+  protected readonly treePersistableView = computed(
+    () =>
+      this.sortBy() === DEFAULT_TEST_SUITE_SIDEBAR_SORT_BY &&
+      this.kindFilter() === DEFAULT_TEST_SUITE_SIDEBAR_FILTER &&
+      this.tagFilter().length === 0 &&
+      this.searchQueryDebounced().trim().length === 0,
+  );
+
   protected readonly treeConfig = computed(() => {
     const testSuite = this.configService.settings()?.testSuite;
     const foldersFirst =
@@ -147,6 +156,7 @@ export class TestSuiteSidebarPanelComponent {
         expandFolderOnDrag: testSuite?.expandFolderOnDrag ?? false,
         expandFolderOnDrop: true,
       },
+      drag: { enabled: this.treePersistableView() },
       drop: { maxDepth: TEST_SUITE_MAX_FOLDER_DEPTH },
     });
   });
@@ -286,6 +296,9 @@ export class TestSuiteSidebarPanelComponent {
   }
 
   protected handleNodesChange(next: readonly TestSuiteTreeNode[]): void {
+    if (!this.treePersistableView()) {
+      return;
+    }
     this.testSuite.saveNodesFromTree([...next]);
     this.syncAllExpandedState();
     this.schedulePersistExpandedIds(this.expandedIds());

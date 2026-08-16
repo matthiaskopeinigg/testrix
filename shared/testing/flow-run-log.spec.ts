@@ -107,7 +107,8 @@ describe('buildFlowStepRunLogDetails', () => {
 
     expect(details.durationLabel).toBe('320 ms');
     expect(details.captureLines.some((line) => line.label === 'Status')).toBe(true);
-    expect(details.capturePreview?.content).toContain('{"ok":true}');
+    expect(details.capturePreview?.language).toBe('json');
+    expect(details.capturePreview?.content).toBe('{\n  "ok": true\n}');
     expect(formatFlowRunTimestamp('2026-01-01T12:30:00.000Z')).toMatch(/\d/);
   });
 });
