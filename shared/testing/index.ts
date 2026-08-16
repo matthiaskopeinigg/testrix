@@ -8,6 +8,7 @@ export * from './flow-step-validation';
 export * from './flow-step-cache';
 export * from './validation-value-extract';
 export * from './flow-http-middleware-config';
+export * from './flow-needs-browser-runner';
 export * from './flow-database-step-query';
 export * from './collect-test-suite-ancestor-folders';
 export * from './collect-trigger-targets';

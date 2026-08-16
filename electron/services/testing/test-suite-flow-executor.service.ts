@@ -8,7 +8,6 @@ import {
   buildFlowEnvironmentVariableContext,
   buildHttpCaptureFromE2eData,
   buildHttpCaptureRegisterSpec,
-  flowNeedsBrowserRunner,
   resolveHttpInterceptorStepConfig,
   resolveHttpListenerStepConfig,
 } from '../../../shared/testing/flow-http-middleware-config';
@@ -32,6 +31,9 @@ import {
   resolveDatabaseStepQueryBinding,
   cacheEntryExtractFailureMessage,
   validationFailureMessage,
+  flowNeedsBrowserRunnerDeep,
+  flowRunWantsKeepE2eWindow,
+  flowRunWantsVisibleE2eWindow,
   resolveTriggerTargetFlows,
   triggerFlowCycleMessage,
   type FlowRunProgressEvent,
@@ -112,6 +114,8 @@ interface FlowStepContext {
   readonly environmentVariableKeys: import('@shared/http/collection-execution.schema').EnvironmentVariableKeyMode;
   readonly ancestorFlowIds: readonly string[];
   readonly suiteItems: readonly TestSuiteTreeItem[];
+  /** True when the root run pinned `showBrowser` via `e2eShowWindowOverride`. */
+  readonly showBrowserLocked: boolean;
 }
 
 /**
@@ -179,9 +183,16 @@ export class TestSuiteFlowExecutor {
       };
     }
 
-    const needsBrowserRunner = flowNeedsBrowserRunner(steps);
-    const showBrowser = options.e2eShowWindowOverride ?? flow.e2eShowWindow !== false;
-    const keepBrowserOpen = options.e2eKeepWindowOpenOverride ?? flow.e2eKeepWindowOpen === true;
+    const needsBrowserRunner = flowNeedsBrowserRunnerDeep(steps, suiteItems, new Set([flow.id]));
+    const showBrowserLocked = options.e2eShowWindowOverride !== undefined;
+    const showBrowser =
+      options.e2eShowWindowOverride ??
+      (flow.e2eShowWindow !== false ||
+        flowRunWantsVisibleE2eWindow(flow, suiteItems, new Set([flow.id])));
+    const keepBrowserOpen =
+      options.e2eKeepWindowOpenOverride ??
+      (flow.e2eKeepWindowOpen === true ||
+        flowRunWantsKeepE2eWindow(flow, suiteItems, new Set([flow.id])));
     const lockVisibleRunnerInput = needsBrowserRunner && showBrowser;
 
     if (needsBrowserRunner && !this.e2eRunner) {
@@ -221,6 +232,10 @@ export class TestSuiteFlowExecutor {
     });
 
     emitProgress();
+
+    if (lockVisibleRunnerInput && this.e2eRunner) {
+      this.e2eRunner.acquireVisibleInputLock();
+    }
 
     const [collections, settings, environments, savedQueries] = await Promise.all([
       files.readCollections(),
@@ -273,6 +288,7 @@ export class TestSuiteFlowExecutor {
             },
             ancestorFlowIds: [flow.id],
             suiteItems,
+            showBrowserLocked,
           });
           await this.refreshPendingInterceptorCaptures(showBrowser);
           stepDurations[step.id] = Date.now() - stepStartedAt;
@@ -365,6 +381,7 @@ export class TestSuiteFlowExecutor {
     const target = parsed.success
       ? { targetType: parsed.data.targetType, targetId: parsed.data.targetId }
       : { targetType: 'flow' as const, targetId: '' };
+    const reuseE2eSession = parsed.success ? parsed.data.reuseE2eSession !== false : true;
     const resolved = resolveTriggerTargetFlows(ctx.suiteItems, target);
     if (!resolved.ok) {
       throw new Error(resolved.message);
@@ -373,6 +390,9 @@ export class TestSuiteFlowExecutor {
       const cycle = triggerFlowCycleMessage(ctx.ancestorFlowIds, location.flow.id, location.flow.name);
       if (cycle) {
         throw new Error(cycle);
+      }
+      if (!reuseE2eSession) {
+        await this.resetBrowserSessionForIsolatedTrigger();
       }
       await this.runNestedFlow(location, ctx);
     }
@@ -391,15 +411,23 @@ export class TestSuiteFlowExecutor {
     if (steps.length === 0) {
       throw new Error(`Flow "${flow.name}" has no enabled steps to run.`);
     }
-    if (flowNeedsBrowserRunner(steps) && !this.e2eRunner) {
+    if (
+      flowNeedsBrowserRunnerDeep(steps, parentCtx.suiteItems, new Set(parentCtx.ancestorFlowIds)) &&
+      !this.e2eRunner
+    ) {
       throw new Error('E2E runner is not available.');
     }
+
+    const showBrowser = parentCtx.showBrowserLocked
+      ? parentCtx.showBrowser
+      : parentCtx.showBrowser || flow.e2eShowWindow !== false;
 
     const ctx: FlowStepContext = {
       ...parentCtx,
       flowId: flow.id,
       ancestorFolders: location.ancestorFolders,
       ancestorFlowIds: [...parentCtx.ancestorFlowIds, flow.id],
+      showBrowser,
     };
 
     for (const nestedStep of steps) {
@@ -506,6 +534,20 @@ export class TestSuiteFlowExecutor {
     }
 
     this.captures.set(step.id, buildDatabaseStepCapture(textOut));
+  }
+
+  /**
+   * Drops the current E2E window and cookies so a TRIGGER with reuse disabled
+   * starts from a clean browser session.
+   */
+  private async resetBrowserSessionForIsolatedTrigger(): Promise<void> {
+    this.browserSessionReady = false;
+    const runner = this.e2eRunner;
+    if (!runner) {
+      return;
+    }
+    await runner.closeRunner().catch(() => undefined);
+    await runner.clearRunnerSession();
   }
 
   private async ensureBrowserSession(): Promise<void> {

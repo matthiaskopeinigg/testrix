@@ -1581,12 +1581,17 @@ class E2eService {
 
     if (showPreferenceChanged) {
       console.log(
-        `[E2E] Runner show preference changed (${this.lastRunnerShowPreference} → ${show}), recreating window...`,
+        `[E2E] Runner show preference changed (${this.lastRunnerShowPreference} → ${show}); keeping the same window.`,
       );
-      this.window.close();
-      this.window = null;
-      this.lastRunnerShowPreference = null;
-      this.lastExplicitScroll = null;
+      try {
+        if (show) {
+          clearE2eRunnerStealth(this.window);
+          if (!this.window.isVisible()) this.window.show();
+          this.window.focus();
+        } else {
+          applyE2eRunnerStealth(this.window);
+        }
+      } catch (_) {}
     }
 
     if (!this.window || this.window.isDestroyed()) {

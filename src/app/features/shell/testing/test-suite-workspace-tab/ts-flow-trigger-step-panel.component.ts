@@ -5,6 +5,7 @@ import type { TestSuiteTreeItem } from '@shared/testing';
 
 import { TxDropdownComponent } from '@app/shared/components/forms/tx-dropdown/tx-dropdown.component';
 import { TxFormFieldComponent } from '@app/shared/components/forms/tx-form-field/tx-form-field.component';
+import { TxToggleComponent } from '@app/shared/components/forms/tx-toggle/tx-toggle.component';
 import { TxTreeSelectComponent } from '@app/shared/components/forms/tx-tree-select/tx-tree-select.component';
 
 import { FLOW_STEP_TRIGGER_TARGET_OPTIONS } from './flow-step-editor-options';
@@ -14,13 +15,19 @@ import { buildTriggerTargetTree } from './flow-step-picker-options';
 @Component({
   selector: 'app-ts-flow-trigger-step-panel',
   standalone: true,
-  imports: [FormsModule, TxFormFieldComponent, TxDropdownComponent, TxTreeSelectComponent],
+  imports: [
+    FormsModule,
+    TxFormFieldComponent,
+    TxDropdownComponent,
+    TxToggleComponent,
+    TxTreeSelectComponent,
+  ],
   templateUrl: './ts-flow-trigger-step-panel.component.html',
   styleUrl: './ts-flow-step-panel.shared.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TsFlowTriggerStepPanelComponent {
-  /** Persisted TRIGGER config (`targetType`, `targetId`). */
+  /** Persisted TRIGGER config (`targetType`, `targetId`, `reuseE2eSession`). */
   readonly config = input<Record<string, unknown>>({});
   /** Suite sidebar tree used to pick a flow or folder. */
   readonly suiteItems = input<readonly TestSuiteTreeItem[]>([]);
@@ -40,6 +47,12 @@ export class TsFlowTriggerStepPanelComponent {
     String((this.config() as { targetId?: string }).targetId ?? ''),
   );
 
+  /** Defaults to true so login flows stay signed in for later steps. */
+  protected readonly reuseE2eSession = computed(() => {
+    const value = (this.config() as { reuseE2eSession?: boolean }).reuseE2eSession;
+    return value !== false;
+  });
+
   protected readonly targetTree = computed(() =>
     buildTriggerTargetTree(this.suiteItems(), this.targetType(), this.currentFlowId()),
   );
@@ -48,10 +61,11 @@ export class TsFlowTriggerStepPanelComponent {
     this.targetType() === 'folder' ? 'folder' : 'leaf',
   );
 
-  protected cfg(): { targetType: string; targetId: string } {
+  protected cfg(): { targetType: string; targetId: string; reuseE2eSession: boolean } {
     return {
       targetType: this.targetType(),
       targetId: this.targetId(),
+      reuseE2eSession: this.reuseE2eSession(),
     };
   }
 

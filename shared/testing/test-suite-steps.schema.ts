@@ -216,7 +216,14 @@ export type HttpInterceptorStepConfig = z.infer<typeof httpInterceptorStepConfig
 export const triggerStepConfigSchema = z.object({
   targetType: z.enum(['flow', 'folder']).default('flow'),
   targetId: z.string().default(''),
+  /**
+   * When true, nested E2E steps keep the parent run’s browser window, cookies, and
+   * in-page state (login). When false, the runner session is cleared before the target.
+   */
+  reuseE2eSession: z.boolean().default(true),
 });
+
+export type TriggerStepConfig = z.infer<typeof triggerStepConfigSchema>;
 
 export const testSuiteStepConfigSchema = z.union([
   requestStepConfigSchema,

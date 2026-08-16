@@ -1,5 +1,5 @@
 <div class="request-panel ts-flow-step-panel">
-  <p class="request-panel__hint">
+  <p class="ts-flow-step-panel__hint">
     Run another flow, or every flow under a folder (nested folders included), when this step
     executes. Nested runs inherit this flow’s variables and captures.
   </p>
@@ -25,4 +25,11 @@
       (ngModelChange)="patch({ targetId: $event ?? '' })"
     />
   </tx-form-field>
+  <tx-toggle
+    controlId="ts-trg-reuse-e2e"
+    label="Reuse E2E browser session"
+    hint="Keep the same browser window, cookies, and login for later steps in this flow"
+    [ngModel]="reuseE2eSession()"
+    (ngModelChange)="patch({ reuseE2eSession: $event })"
+  />
 </div>

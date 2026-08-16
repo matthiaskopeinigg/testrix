@@ -71,7 +71,7 @@ export const HELP_WIKI_TESTING_SECTIONS: readonly HelpWikiSection[] = [
           'HTTP_INTERCEPTOR — apply intercept rules during the step.',
           'WAIT — pause for a duration.',
           'MANUAL — set a flow variable or manual checkpoint.',
-          'TRIGGER — run another flow, or every descendant flow under a folder (fail-fast). Nested runs inherit variables and captures; cycles are rejected.',
+          'TRIGGER — run another flow, or every descendant flow under a folder (fail-fast). Nested runs inherit variables and captures; cycles are rejected. Reuse E2E browser session (on by default) keeps the same window, cookies, and login for later steps. Triggered flows with E2E steps show the runner when Show E2E is enabled on this flow or the target.',
         ],
       },
     ],

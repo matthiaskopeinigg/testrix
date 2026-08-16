@@ -273,7 +273,9 @@ export class TestSuiteWorkspaceTabComponent {
     return summary?.statusLabel ?? 'Not run';
   });
 
-  protected readonly flowHasE2eSteps = computed(() => flowHasE2eSteps(this.flow()?.nodes));
+  protected readonly flowHasE2eSteps = computed(() =>
+    flowHasE2eSteps(this.flow()?.nodes, this.suiteItems()),
+  );
 
   protected readonly environmentOptions = computed((): readonly TxDropdownOption[] =>
     buildCollectionEnvironmentDropdownOptions(this.environmentsService.environments(), {

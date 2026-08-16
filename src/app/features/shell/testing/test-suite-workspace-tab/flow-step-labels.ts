@@ -28,7 +28,7 @@ export const FLOW_STEP_ADD_HINTS: Record<TestSuiteStepType, string> = {
   HTTP_INTERCEPTOR: 'Capture and modify HTTP traffic.',
   WAIT: 'Delay before the next step.',
   MANUAL: 'Pause for human input.',
-  TRIGGER: 'Run another flow or folder.',
+  TRIGGER: 'Run another flow or folder, optionally reusing the E2E browser session.',
 };
 
 /** Icon name for add-step tiles (matches tree icons). */
