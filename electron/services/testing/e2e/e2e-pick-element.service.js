@@ -1,3 +1,4 @@
+const { ipcMain } = require('electron');
 const { logError, logInfo } = require('./logger.service');
 const { getRelayBootstrapScript, compileFramePickerScript } = require('./e2e-picker-frame-scripts');
 
