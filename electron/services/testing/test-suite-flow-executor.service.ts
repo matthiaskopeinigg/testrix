@@ -22,6 +22,7 @@ import {
   flattenEnabledFlowSteps,
   markRemainingFlowStepsSkipped,
   resolveGlobalE2eScreenshotDirectory,
+  resolveE2eUrlExpectation,
   resolveValidationActualValue,
   sanitizeValidationRulesForReferenceStepType,
   sanitizeCacheEntriesForReferenceStepType,
@@ -715,9 +716,14 @@ export class TestSuiteFlowExecutor {
     const value = resolve(String(config.value ?? ''));
     const timeout = resolveTimeoutMs(config.timeout, DEFAULT_E2E_TIMEOUT_MS);
 
+    const urlExpectation =
+      action === 'ASSERT_URL' || action === 'WAIT_FOR_URL'
+        ? resolveE2eUrlExpectation(selector, value)
+        : selector;
+
     const payload = {
       action,
-      selector,
+      selector: urlExpectation,
       value,
       timeout,
       show: ctx.showBrowser,
@@ -747,10 +753,10 @@ export class TestSuiteFlowExecutor {
     try {
       this.captures.set(
         step.id,
-        await this.buildE2eStepCapture(step, action, selector, result, ctx.showBrowser),
+        await this.buildE2eStepCapture(step, action, payload.selector, result, ctx.showBrowser),
       );
     } catch (captureError: unknown) {
-      this.captures.set(step.id, this.buildFallbackE2eCapture(step, action, selector));
+      this.captures.set(step.id, this.buildFallbackE2eCapture(step, action, payload.selector));
       console.warn(
         '[FlowExecutor] E2E step succeeded but capture failed:',
         captureError instanceof Error ? captureError.message : captureError,

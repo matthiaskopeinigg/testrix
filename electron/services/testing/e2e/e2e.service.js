@@ -66,6 +66,33 @@ function normalizePageUrlForE2e(raw) {
   }
 }
 
+/**
+ * Expected URL for Assert URL / Wait for URL. The Test Suite editor stores it in `value`.
+ */
+function e2eExpectedUrlFromPayload(selector, value) {
+  return String(value || selector || '').trim();
+}
+
+/**
+ * True when the live page URL matches the expected pattern (substring or normalized host+path).
+ */
+function e2eUrlMatchesExpectation(currentUrl, expected) {
+  const expectedRaw = String(expected || '').trim();
+  if (!expectedRaw) {
+    return false;
+  }
+  const current = String(currentUrl || '');
+  if (current.includes(expectedRaw)) {
+    return true;
+  }
+  const expectedNorm = normalizePageUrlForE2e(expectedRaw);
+  const currentNorm = normalizePageUrlForE2e(current);
+  if (!expectedNorm) {
+    return false;
+  }
+  return currentNorm.includes(expectedNorm);
+}
+
 function clearE2eRunnerStealth(win) {
   try {
     win.setOpacity(1);
@@ -2210,31 +2237,45 @@ class E2eService {
           };
           break;
 
-        case 'ASSERT_URL':
-          const currentUrl = this.window.webContents.getURL();
-          if (!currentUrl.includes(selector)) {
-            throw new Error(`Assertion failed: URL "${currentUrl}" does not contain "${selector}"`);
+        case 'ASSERT_URL': {
+          const expectedUrl = e2eExpectedUrlFromPayload(selector, value);
+          if (!expectedUrl) {
+            throw new Error('Assert URL requires an expected URL');
           }
-          result = { success: true };
+          const currentUrl = String(this.window.webContents.getURL() || '');
+          if (!e2eUrlMatchesExpectation(currentUrl, expectedUrl)) {
+            throw new Error(`Assertion failed: URL "${currentUrl}" does not match "${expectedUrl}"`);
+          }
+          result = { success: true, data: { url: currentUrl } };
           break;
+        }
 
-        case 'WAIT_FOR_URL':
-          const targetUrl = selector;
+        case 'WAIT_FOR_URL': {
+          const targetUrl = e2eExpectedUrlFromPayload(selector, value);
+          if (!targetUrl) {
+            throw new Error('Wait for URL requires a URL pattern');
+          }
           const waitStart = Date.now();
+          const waitBudget = Math.max(Number(timeout) || 10000, 500);
+          let lastSeenUrl = '';
           let match = false;
-          while (Date.now() - waitStart < (timeout || 10000)) {
+          while (Date.now() - waitStart < waitBudget) {
             if (this.executeCancelRequested) {
               throw new Error('Flow run cancelled by user.');
             }
-            if (this.window.webContents.getURL().includes(targetUrl)) {
+            lastSeenUrl = String(this.window.webContents.getURL() || '');
+            if (e2eUrlMatchesExpectation(lastSeenUrl, targetUrl)) {
               match = true;
               break;
             }
-            await new Promise(r => setTimeout(r, 500));
+            await new Promise((r) => setTimeout(r, 250));
           }
-          if (!match) throw new Error(`Timeout waiting for URL to contain: ${targetUrl}`);
-          result = { success: true };
+          if (!match) {
+            throw new Error(`Timeout waiting for URL to contain "${targetUrl}". Last URL: ${lastSeenUrl}`);
+          }
+          result = { success: true, data: { url: lastSeenUrl } };
           break;
+        }
 
         case 'WAIT_FOR_PAGE_URL': {
           let operator = 'equals';

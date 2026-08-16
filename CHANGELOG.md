@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.3-beta.5] - 2026-08-16
+
+### Fixed
+
+- Test Suite E2E Assert URL and Wait for URL use the expected URL from the step editor instead of an empty CSS selector
+
 ## [1.0.3-beta.4] - 2026-08-16
 
 ### Fixed
@@ -314,7 +320,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Initial public beta of Testrix: local-first desktop API client (HTTP, WebSocket, collections, environments, test suites, load tests, mocks, and capture).
 
-[Unreleased]: https://github.com/matthiaskopeinigg/testrix/compare/v1.0.3-beta.4...HEAD
+[Unreleased]: https://github.com/matthiaskopeinigg/testrix/compare/v1.0.3-beta.5...HEAD
+[1.0.3-beta.5]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.3-beta.5
 [1.0.3-beta.4]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.3-beta.4
 [1.0.3-beta.3]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.3-beta.3
 [1.0.3-beta.2]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.3-beta.2

@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
+import { e2eUrlMatchesExpectation, resolveE2eUrlExpectation } from '@shared/testing';
+
 import { e2eSelectorFieldLabel, layoutForE2eAction } from './flow-e2e-action-fields';
 
 describe('layoutForE2eAction', () => {
@@ -42,6 +44,14 @@ describe('layoutForE2eAction', () => {
   it('shows expected URL for assert and wait-for-url actions', () => {
     expect(layoutForE2eAction('ASSERT_URL').expectedUrl).toBe(true);
     expect(layoutForE2eAction('WAIT_FOR_URL').expectedUrl).toBe(true);
+  });
+
+  it('reads assert/wait URL from the editor value field, not the CSS selector', () => {
+    expect(resolveE2eUrlExpectation('', 'https://example.com/app')).toBe('https://example.com/app');
+    expect(e2eUrlMatchesExpectation('https://www.example.com/app/', 'https://example.com/app')).toBe(
+      true,
+    );
+    expect(e2eUrlMatchesExpectation('https://example.com/app', '')).toBe(false);
   });
 
   it('labels screenshot selector as optional', () => {
