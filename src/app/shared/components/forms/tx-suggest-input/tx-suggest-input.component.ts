@@ -62,8 +62,11 @@ export class TxSuggestInputComponent implements ControlValueAccessor {
   readonly completionLabel = input('Suggestions');
   /** `token` completes the identifier at the caret instead of the whole value. */
   readonly matchMode = input<'full' | 'token'>('full');
-  /** `inline` shows a gray remainder after the caret instead of a popup list. */
-  readonly completionStyle = input<'popup' | 'inline'>('popup');
+  /**
+   * `inline` (default) shows a gray remainder after the caret.
+   * `popup` keeps a floating list (opt-in).
+   */
+  readonly completionStyle = input<'popup' | 'inline'>('inline');
   /** When true, `'` / `"` / `(` insert a matching closer. */
   readonly autoClose = input(false);
   readonly clearable = input(false);

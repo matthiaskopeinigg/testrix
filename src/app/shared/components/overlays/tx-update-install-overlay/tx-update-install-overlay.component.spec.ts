@@ -46,7 +46,7 @@ describe('TxUpdateInstallOverlayComponent', () => {
     const dialog = root.querySelector('.tx-update-install-overlay');
     expect(dialog?.textContent).toContain('Installing update');
     expect(dialog?.textContent).toContain('v0.2.0-sim');
-    expect(dialog?.textContent).toContain('Keep Testrix open until Setup appears.');
+    expect(dialog?.textContent).toContain('Keep this window open. Testrix will close and restart when the update is ready.');
     expect(dialog?.getAttribute('role')).toBe('alertdialog');
   });
 });

@@ -15,7 +15,7 @@ export interface LaunchInstallerOptions {
   readonly installDir?: string;
   /** PID of the running app to wait for before replacing files. */
   readonly parentPid?: number;
-  /** Handshake file Setup writes when the Updating window is visible. */
+  /** Handshake file Setup writes when silent update has started (app can exit). */
   readonly readyFile?: string;
 }
 

@@ -1,4 +1,5 @@
 import { buildOutgoingRequest } from '../../../shared/http/build-outgoing-request';
+import { buildManualOutgoingRequest } from '../../../shared/http/build-manual-outgoing-request';
 import { sendHttpRequestPayloadSchema } from '../../../shared/http/outgoing-request.schema';
 import { resolveTemplateVariables } from '../../../shared/dynamic-variables/template-variables';
 import type { DatabaseConnection } from '../../../shared/config/database-settings.schema';
@@ -1034,51 +1035,19 @@ export class TestSuiteFlowExecutor {
       ctx.environmentVariableKeys,
     );
 
-    const url = this.resolveFlowTemplate(
-      String(cfg.url ?? ''),
-      flow,
-      ctx.environments,
-      ctx.environmentIdOverride,
-      ctx.ancestorFolders,
-      ctx.environmentVariableKeys,
-    ).trim();
-    if (!url) {
+    const built = buildManualOutgoingRequest({
+      loadTestId: `flow-${step.id}`,
+      manual: cfg,
+      http: ctx.http,
+      variableContext,
+    });
+    if (!built) {
       throw new Error('REQUEST step needs a URL or collection request.');
     }
 
-    const resolvedHeaders = Object.fromEntries(
-      (cfg.headers ?? [])
-        .filter((h) => h.enabled && h.key)
-        .map((h) => [
-          h.key,
-          resolveTemplateVariables(h.value, { environment: variableContext }),
-        ]),
-    );
-
     const payload = sendHttpRequestPayloadSchema.parse({
-      requestId: step.id,
-      method: cfg.method ?? 'GET',
-      url,
-      headers: resolvedHeaders,
-      body: { kind: 'none' },
-      transport: {
-        timeoutMs: Number(cfg.timeoutMs) || 30_000,
-        useCookies: true,
-        http2Enabled: ctx.http.request.http2Enabled,
-        http2FallbackToHttp1: true,
-        followRedirects: true,
-        maxRedirects: 10,
-        strictSsl: true,
-        disableCookiesGlobally: false,
-        ignoreInvalidSsl: false,
-        proxy: ctx.http.proxy,
-        certificates: ctx.http.certificates,
-        dns: ctx.http.dns,
-        retries: ctx.http.retries,
-      },
-      scripts: { pre: [], post: [] },
-      environmentId: null,
-      variableContext,
+      ...built.outgoing,
+      runScope: { runId: `flow-${step.id}` },
     });
 
     const { snapshot } = await executeHttpRequest(payload);

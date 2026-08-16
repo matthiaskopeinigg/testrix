@@ -1,7 +1,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 
-/** How long the running app waits for Setup to show its Updating window. */
+/** How long the running app waits for Setup to signal it has started. */
 export const UPDATE_READY_WAIT_MS = 45_000;
 
 /**

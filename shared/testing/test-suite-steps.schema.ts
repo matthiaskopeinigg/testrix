@@ -32,6 +32,8 @@ export const testSuiteStepStatusSchema = z.enum([
 export type TestSuiteStepStatus = z.infer<typeof testSuiteStepStatusSchema>;
 
 export const testSuiteKeyValuePairSchema = z.object({
+  /** Stable editor row id so typing a key does not remount the input. */
+  id: z.string().optional(),
   key: z.string(),
   value: z.string(),
   enabled: z.boolean().default(true),

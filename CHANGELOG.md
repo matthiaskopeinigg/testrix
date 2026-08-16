@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.3-beta.1] - 2026-08-16
+
+### Changed
+
+- Silent auto-update no longer opens the Setup “Updating Testrix” window (it rendered as an empty gray box on some machines). The in-app overlay stays until Setup signals it is ready, then the app exits
+- Prefix autocomplete (header names, query params, and similar fields) shows gray remainder text instead of a floating list. Typing `$` still opens the dynamic-variable menu
+
+### Fixed
+
+- Test Suite manual REQUEST steps send the configured body (and query params) instead of an empty body
+- Header and query-param autocomplete no longer remounts the input after the first character
+
 ## [1.0.2-beta.9] - 2026-08-16
 
 ### Added
@@ -273,7 +285,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Initial public beta of Testrix: local-first desktop API client (HTTP, WebSocket, collections, environments, test suites, load tests, mocks, and capture).
 
-[Unreleased]: https://github.com/matthiaskopeinigg/testrix/compare/v1.0.2-beta.9...HEAD
+[Unreleased]: https://github.com/matthiaskopeinigg/testrix/compare/v1.0.3-beta.1...HEAD
+[1.0.3-beta.1]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.3-beta.1
 [1.0.2-beta.9]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.2-beta.9
 [1.0.2-beta.8]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.2-beta.8
 [1.0.2-beta.7]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.2-beta.7

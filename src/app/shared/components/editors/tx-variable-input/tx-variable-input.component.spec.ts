@@ -42,6 +42,25 @@ describe('TxVariableInputComponent', () => {
     expect(fixture.nativeElement.querySelector('.tx-variable-input__completion')).toBeTruthy();
   });
 
+  it('previews literal value suggestions as ghost text instead of a popup', () => {
+    fixture.componentRef.setInput('valueSuggestions', ['application/json', 'application/xml']);
+    fixture.detectChanges();
+
+    const input = fixture.nativeElement.querySelector(
+      'input.tx-variable-input__control',
+    ) as HTMLInputElement;
+    input.value = 'application/j';
+    input.selectionStart = input.value.length;
+    input.selectionEnd = input.value.length;
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('.tx-variable-input__completion')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.tx-variable-input__ghost')?.textContent).toBe(
+      'son',
+    );
+  });
+
   it('highlights parenthetical parameters in the mirror layer', () => {
     fixture.componentInstance.writeValue('$randomInt(6)');
     fixture.detectChanges();

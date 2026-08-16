@@ -85,14 +85,13 @@ describe('TxSuggestInputComponent Enter', () => {
     input.dispatchEvent(new Event('input', { bubbles: true }));
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.querySelector('.tx-suggest-input__completion')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('.tx-suggest-input__completion')).toBeNull();
 
     input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
     fixture.detectChanges();
 
     expect(input.value).toBe('');
     expect(submitted).toEqual([1]);
-    expect(fixture.nativeElement.querySelector('.tx-suggest-input__completion')).toBeNull();
     expect(document.activeElement).toBe(input);
   });
 
@@ -126,7 +125,6 @@ describe('TxSuggestInputComponent inline completion', () => {
     fixture = TestBed.createComponent(TxSuggestInputComponent);
     fixture.componentRef.setInput('suggestions', ['users', 'email']);
     fixture.componentRef.setInput('matchMode', 'token');
-    fixture.componentRef.setInput('completionStyle', 'inline');
     fixture.detectChanges();
   });
 
@@ -150,6 +148,38 @@ describe('TxSuggestInputComponent inline completion', () => {
     fixture.detectChanges();
 
     expect(input.value).toBe('users');
+    expect(fixture.nativeElement.querySelector('.tx-suggest-input__ghost')).toBeNull();
+  });
+});
+
+describe('TxSuggestInputComponent popup completion', () => {
+  let fixture: ComponentFixture<TxSuggestInputComponent>;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [TxSuggestInputComponent],
+      providers: [
+        {
+          provide: TxIconService,
+          useValue: { loadIconInner: () => Promise.resolve('<path d="M0 0"/>') },
+        },
+      ],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(TxSuggestInputComponent);
+    fixture.componentRef.setInput('suggestions', ['id', 'name']);
+    fixture.componentRef.setInput('matchMode', 'token');
+    fixture.componentRef.setInput('completionStyle', 'popup');
+    fixture.detectChanges();
+  });
+
+  it('shows a floating list when completionStyle is popup', () => {
+    const input = fixture.nativeElement.querySelector('input') as HTMLInputElement;
+    input.focus();
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('.tx-suggest-input__completion')).not.toBeNull();
     expect(fixture.nativeElement.querySelector('.tx-suggest-input__ghost')).toBeNull();
   });
 });

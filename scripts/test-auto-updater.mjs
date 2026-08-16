@@ -522,7 +522,7 @@ function printNextSteps(fromVersion, toVersion, simulated) {
   console.log('    1. Settings → About → Check for updates (channel must be Beta)');
   console.log('    2. Download, then Install and restart');
   console.log('    3. Time from Install click until the app is usable again');
-  console.log(`${LOG} Watch for: in-app overlay staying up, then Setup "Updating Testrix", then relaunch.`);
+  console.log(`${LOG} Watch for: in-app overlay staying up until Setup starts, then relaunch.`);
 }
 
 async function main() {

@@ -14,6 +14,9 @@
       (pointerout)="handleHitPointerOut($event)"
       (pointerdown)="handleHitPointerDown($event)"
     ><code [innerHTML]="highlightedHtml() | txVariableInputHighlightHtml"></code></pre>
+    @if (inlineSuffix(); as suffix) {
+      <pre class="tx-variable-input__ghost-mirror" aria-hidden="true"><code><span class="tx-variable-input__ghost-spacer">{{ value() }}</span><span class="tx-variable-input__ghost">{{ suffix }}</span></code></pre>
+    }
     <input
       #nativeInput
       class="tx-variable-input__control"
@@ -23,20 +26,25 @@
       [placeholder]="placeholder()"
       [disabled]="disabled()"
       [attr.aria-label]="ariaLabel() || null"
-      [attr.aria-expanded]="completionOpen()"
-      [attr.aria-controls]="completionOpen() ? effectiveId() + '-completion' : null"
-      [attr.aria-autocomplete]="completionOpen() ? 'list' : null"
+      [attr.aria-expanded]="showCompletionPopup() ? true : null"
+      [attr.aria-controls]="showCompletionPopup() ? effectiveId() + '-completion' : null"
+      [attr.aria-autocomplete]="inlineSuffix() ? 'inline' : showCompletionPopup() ? 'list' : null"
+      [attr.aria-describedby]="inlineSuffix() ? effectiveId() + '-ghost' : null"
       (input)="handleInput($event)"
       (focus)="handleFocus($event)"
+      (click)="handleClick()"
       (keydown)="handleKeydown($event)"
       (keyup)="handleKeyup($event)"
       (select)="handleSelect()"
       (scroll)="handleScroll()"
       (blur)="handleBlur()"
     />
+    @if (inlineSuffix(); as suffix) {
+      <span [id]="effectiveId() + '-ghost'" class="tx-variable-input__sr-only">Suggested completion: {{ value() }}{{ suffix }}</span>
+    }
   </div>
 
-  @if (completionOpen()) {
+  @if (showCompletionPopup()) {
     <div
       #completionPanel
       [id]="effectiveId() + '-completion'"
@@ -48,10 +56,7 @@
       aria-label="Dynamic variable suggestions"
     >
       <p class="tx-variable-input__completion-hint tx-completion-popup__hint">
-        @if (valueSuggestions().length > 0) {
-          Ctrl+Space ·
-        }
-        ↑↓ Enter Tab · Esc
+        Ctrl+Space · ↑↓ Enter Tab · Esc
       </p>
       <div class="tx-variable-input__completion-list tx-completion-popup__list">
         @for (item of completionItems(); track item.id; let index = $index) {

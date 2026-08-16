@@ -32,6 +32,7 @@ import {
   type TxCompletionPlacement,
 } from '../../forms/tx-completion-popup/tx-completion-popup-placement';
 
+import { inlineCompletionSuffix } from '../../forms/tx-suggest-input/filter-prefix-suggestions';
 import { isSuggestTriggerKeydown } from '../../forms/tx-suggest-input/tx-suggest-input-keyboard';
 
 import { caretIndexFromClientX } from './tx-variable-input-caret';
@@ -51,6 +52,7 @@ import { TxVariableInputHighlightHtmlPipe } from './tx-variable-input-highlight-
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
     class: 'tx-variable-input-host',
+    '[class.tx-variable-input-host--ghost]': '!!inlineSuffix()',
   },
   providers: [
     {
@@ -79,7 +81,7 @@ export class TxVariableInputComponent implements ControlValueAccessor {
   readonly completionPlacement = input<TxCompletionPlacement>(TX_COMPLETION_PLACEMENT_DEFAULT);
   /**
    * Literal value suggestions (e.g. common header values for the row key).
-   * Shown when `$` / `{{}}` completion is not active.
+   * Shown as gray inline remainder when `$` / `{{}}` completion is not active.
    */
   readonly valueSuggestions = input<readonly string[]>([]);
   /** When true, the value can be masked until {@link valueRevealed} is set. */
@@ -99,7 +101,7 @@ export class TxVariableInputComponent implements ControlValueAccessor {
 
   constructor() {
     const onScroll = (): void => {
-      if (this.completionOpen()) {
+      if (this.showCompletionPopup()) {
         this.positionCompletion();
       }
     };
@@ -126,12 +128,35 @@ export class TxVariableInputComponent implements ControlValueAccessor {
   );
 
   protected readonly completionOpen = signal(false);
+  /** `template` is `$` / `{{` catalog (popup). `literal` is prefix values (ghost). */
+  protected readonly completionKind = signal<'template' | 'literal'>('template');
   protected readonly completionPositioned = signal(false);
   protected readonly resolvedCompletionPlacement = signal<TxCompletionPlacement>(
     TX_COMPLETION_PLACEMENT_DEFAULT,
   );
   protected readonly completionItems = signal<readonly DynamicVariableCatalogItem[]>([]);
   protected readonly completionIndex = signal(0);
+  private readonly caret = signal(0);
+
+  protected readonly showCompletionPopup = computed(
+    () => this.completionOpen() && this.completionKind() === 'template',
+  );
+
+  /** Gray remainder after the typed value for literal suggestions. */
+  protected readonly inlineSuffix = computed(() => {
+    if (this.completionKind() !== 'literal' || !this.completionOpen() || this.isValueMasked()) {
+      return '';
+    }
+    const item = this.completionItems()[this.completionIndex()];
+    if (!item) {
+      return '';
+    }
+    const value = this.value();
+    if (this.caret() !== value.length) {
+      return '';
+    }
+    return inlineCompletionSuffix(value, item.insert);
+  });
 
   private completionReplaceStart = 0;
   private completionReplaceEnd = 0;
@@ -142,7 +167,7 @@ export class TxVariableInputComponent implements ControlValueAccessor {
 
   @HostListener('window:resize')
   onWindowResize(): void {
-    if (this.completionOpen()) {
+    if (this.showCompletionPopup()) {
       this.positionCompletion();
     }
   }
@@ -167,14 +192,26 @@ export class TxVariableInputComponent implements ControlValueAccessor {
     const inputEl = event.target as HTMLInputElement;
     const raw = inputEl.value;
     this.value.set(raw);
+    this.caret.set(inputEl.selectionStart ?? raw.length);
     this.onChange(raw);
     this.refreshCompletion(inputEl);
     this.scheduleMirrorScrollSync();
   }
 
   protected handleFocus(event: Event): void {
-    this.refreshCompletion(event.target as HTMLInputElement);
+    const inputEl = event.target as HTMLInputElement;
+    this.caret.set(inputEl.selectionStart ?? inputEl.value.length);
+    this.refreshCompletion(inputEl);
     this.scheduleMirrorScrollSync();
+  }
+
+  protected handleClick(): void {
+    const inputEl = this.nativeInput()?.nativeElement;
+    if (!inputEl) {
+      return;
+    }
+    this.caret.set(inputEl.selectionStart ?? inputEl.value.length);
+    this.refreshCompletion(inputEl);
   }
 
   protected handleBlur(): void {
@@ -194,6 +231,10 @@ export class TxVariableInputComponent implements ControlValueAccessor {
 
   protected handleKeyup(ev: KeyboardEvent): void {
     if (['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(ev.key)) {
+      const inputEl = this.nativeInput()?.nativeElement;
+      if (inputEl) {
+        this.caret.set(inputEl.selectionStart ?? inputEl.value.length);
+      }
       this.scheduleMirrorScrollSync();
     }
   }
@@ -317,7 +358,21 @@ export class TxVariableInputComponent implements ControlValueAccessor {
         this.completionIndex.update((index) => Math.max(index - 1, 0));
         return;
       }
+      if (ev.key === 'ArrowRight' && this.inlineSuffix()) {
+        const inputEl = this.nativeInput()?.nativeElement;
+        if (inputEl && inputEl.selectionStart === this.value().length) {
+          const item = this.completionItems()[this.completionIndex()];
+          if (item) {
+            ev.preventDefault();
+            this.applyCompletion(item);
+          }
+        }
+        return;
+      }
       if (ev.key === 'Enter' || ev.key === 'Tab') {
+        if (this.completionKind() === 'literal' && !this.inlineSuffix()) {
+          return;
+        }
         const item = this.completionItems()[this.completionIndex()];
         if (item) {
           ev.preventDefault();
@@ -368,33 +423,45 @@ export class TxVariableInputComponent implements ControlValueAccessor {
   }
 
   private refreshCompletion(inputEl: HTMLInputElement): void {
+    const caret = inputEl.selectionStart ?? inputEl.value.length;
+    this.caret.set(caret);
     const templateResult = findTemplateVariableSuggestions(
       inputEl.value,
-      inputEl.selectionStart ?? inputEl.value.length,
+      caret,
       this.catalog(),
     );
-    const result =
-      templateResult ??
-      findLiteralValueSuggestions(inputEl.value, this.valueSuggestions());
-    if (!result || result.items.length === 0) {
+    if (templateResult && templateResult.items.length > 0) {
+      this.openCompletion(templateResult, 'template');
+      return;
+    }
+    const literalResult = findLiteralValueSuggestions(inputEl.value, this.valueSuggestions());
+    if (!literalResult || literalResult.items.length === 0 || !inputEl.value.trim()) {
       this.closeCompletion();
       return;
     }
-    this.openCompletion(result);
+    this.openCompletion(literalResult, 'literal');
   }
 
-  private openCompletion(result: {
-    readonly context: { readonly replaceStart: number; readonly replaceEnd: number };
-    readonly items: readonly DynamicVariableCatalogItem[];
-  }): void {
+  private openCompletion(
+    result: {
+      readonly context: { readonly replaceStart: number; readonly replaceEnd: number };
+      readonly items: readonly DynamicVariableCatalogItem[];
+    },
+    kind: 'template' | 'literal',
+  ): void {
+    this.completionKind.set(kind);
     this.completionReplaceStart = result.context.replaceStart;
     this.completionReplaceEnd = result.context.replaceEnd;
     this.completionItems.set(result.items);
     this.completionIndex.set(0);
-    this.completionPositioned.set(false);
     this.completionOpen.set(true);
+    if (kind === 'literal') {
+      this.completionPositioned.set(true);
+      return;
+    }
+    this.completionPositioned.set(false);
     scheduleFixedCompletionPosition(() => {
-      if (this.completionOpen()) {
+      if (this.showCompletionPopup()) {
         this.positionCompletion();
       }
     });
@@ -422,6 +489,7 @@ export class TxVariableInputComponent implements ControlValueAccessor {
 
   private closeCompletion(): void {
     this.completionOpen.set(false);
+    this.completionKind.set('template');
     this.completionPositioned.set(false);
     this.completionItems.set([]);
     this.completionIndex.set(0);
@@ -479,7 +547,7 @@ export class TxVariableInputComponent implements ControlValueAccessor {
 
     const offset = inputEl.scrollLeft;
     const layers = this.hostEl.nativeElement.querySelectorAll(
-      '.tx-variable-input__mirror, .tx-variable-input__hit',
+      '.tx-variable-input__mirror, .tx-variable-input__hit, .tx-variable-input__ghost-mirror',
     );
     for (const layer of layers) {
       if (layer instanceof HTMLElement) {
@@ -488,7 +556,7 @@ export class TxVariableInputComponent implements ControlValueAccessor {
     }
 
     const codes = this.hostEl.nativeElement.querySelectorAll(
-      '.tx-variable-input__mirror code, .tx-variable-input__hit code',
+      '.tx-variable-input__mirror code, .tx-variable-input__hit code, .tx-variable-input__ghost-mirror code',
     );
     for (const code of codes) {
       if (!(code instanceof HTMLElement)) {

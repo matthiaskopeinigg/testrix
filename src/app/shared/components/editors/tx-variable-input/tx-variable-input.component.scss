@@ -48,6 +48,7 @@
 
 .tx-variable-input__mirror,
 .tx-variable-input__hit,
+.tx-variable-input__ghost-mirror,
 .tx-variable-input__control {
   box-sizing: border-box;
   margin: 0;
@@ -69,7 +70,8 @@
  * same edge as ::selection (inputs clip inside padding; padded <pre> would not).
  */
 .tx-variable-input__mirror,
-.tx-variable-input__hit {
+.tx-variable-input__hit,
+.tx-variable-input__ghost-mirror {
   position: absolute;
   top: var(--tx-variable-input-pad-y);
   right: var(--tx-variable-input-pad-x);
@@ -113,6 +115,32 @@
   code {
     pointer-events: none;
   }
+}
+
+.tx-variable-input__ghost-mirror {
+  z-index: 1;
+  pointer-events: none;
+  color: var(--tx-text-0);
+}
+
+.tx-variable-input__ghost-spacer {
+  color: transparent;
+}
+
+.tx-variable-input__ghost {
+  color: var(--tx-text-1);
+}
+
+.tx-variable-input__sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .tx-variable-input__control {

@@ -927,60 +927,8 @@ function createWindow() {
   return win;
 }
 
-const UPDATING_WINDOW_WIDTH = 420;
-const UPDATING_WINDOW_HEIGHT = 280;
-
 /**
- * Compact always-on-top window shown during in-app silent updates so the
- * desktop is not blank while Setup waits for the app to exit and unpacks files.
- *
- * Shown immediately (opaque) so Windows paints a surface before HTML loads.
- *
- * @returns {import('electron').BrowserWindow}
- */
-function createUpdatingWindow() {
-  const win = new BrowserWindow({
-    width: UPDATING_WINDOW_WIDTH,
-    height: UPDATING_WINDOW_HEIGHT,
-    minWidth: UPDATING_WINDOW_WIDTH,
-    minHeight: UPDATING_WINDOW_HEIGHT,
-    maxWidth: UPDATING_WINDOW_WIDTH,
-    maxHeight: UPDATING_WINDOW_HEIGHT,
-    resizable: false,
-    maximizable: false,
-    minimizable: false,
-    fullscreenable: false,
-    autoHideMenuBar: true,
-    frame: false,
-    transparent: false,
-    hasShadow: true,
-    roundedCorners: true,
-    show: true,
-    alwaysOnTop: true,
-    skipTaskbar: false,
-    backgroundColor: '#18181b',
-    icon: path.join(__dirname, 'renderer', 'assets', 'logo.png'),
-    webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
-      contextIsolation: true,
-      nodeIntegration: false,
-      sandbox: false,
-      backgroundThrottling: false,
-      spellcheck: false,
-    },
-  });
-
-  win.setAlwaysOnTop(true, 'screen-saver');
-  win.moveTop();
-  win.show();
-  win.focus();
-  signalUpdateReady();
-  void win.loadFile(path.join(__dirname, 'renderer', 'updating.html'));
-  return win;
-}
-
-/**
- * Tells the running Testrix instance that the Updating window is visible.
+ * Tells the running Testrix instance that Setup has started and the app can exit.
  */
 function signalUpdateReady() {
   const filePath = String(process.env.TESTRIX_UPDATE_READY_FILE || '').trim();
@@ -992,20 +940,6 @@ function signalUpdateReady() {
     fs.writeFileSync(filePath, 'ready', 'utf8');
   } catch {
     // App still exits after the handshake timeout.
-  }
-}
-
-/**
- * @param {import('electron').BrowserWindow | null} win
- * @param {{ phase: string, percent: number | null, current?: string }} payload
- */
-function sendUpdatingProgress(win, payload) {
-  if (!win || win.isDestroyed()) {
-    return;
-  }
-  const wc = win.webContents;
-  if (wc && !wc.isDestroyed()) {
-    wc.send('setup:progress', payload);
   }
 }
 
@@ -1228,32 +1162,23 @@ async function runSilentUpdateIfRequested() {
     return false;
   }
 
-  const updatingWindow = createUpdatingWindow();
-  sendUpdatingProgress(updatingWindow, { phase: 'waiting', percent: null });
+  signalUpdateReady();
   await waitForParentExit();
 
   const result = await performInstall({
     installDir: existing.installDir,
     scope: existing.scope === 'machine' ? 'machine' : 'user',
     skipRegistration: true,
-    onProgress: (payload) => sendUpdatingProgress(updatingWindow, payload),
   });
 
   if (!result.ok) {
     await launchInstalledApp(existing.mainExePath);
-    if (!updatingWindow.isDestroyed()) {
-      updatingWindow.close();
-    }
     app.exit(1);
     return true;
   }
 
-  sendUpdatingProgress(updatingWindow, { phase: 'done', percent: 1 });
   const launchPath = result.mainExePath || existing.mainExePath;
   await launchInstalledApp(launchPath);
-  if (!updatingWindow.isDestroyed()) {
-    updatingWindow.close();
-  }
   app.exit(0);
   return true;
 }
@@ -1271,12 +1196,6 @@ if (process.argv.includes('--uninstall')) {
   app.whenReady().then(() => {
     const r = platform.runUninstall();
     app.exit(r.ok ? 0 : 1);
-  });
-} else if (process.argv.includes('--update-ui-preview')) {
-  app.whenReady().then(() => {
-    const win = createUpdatingWindow();
-    sendUpdatingProgress(win, { phase: 'copying', percent: 0.42 });
-    setTimeout(() => app.exit(0), 8_000);
   });
 } else if (SILENT_UPDATE) {
   void (async () => {
