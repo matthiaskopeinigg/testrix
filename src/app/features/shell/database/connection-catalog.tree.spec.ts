@@ -57,6 +57,38 @@ describe('buildConnectionCatalogChildren', () => {
     expect(nodes[0]?.icon).toBe('sliders');
   });
 
+  it('keeps selected schemas visible while the catalog is loading', () => {
+    const nodes = buildConnectionCatalogChildren(
+      'c1',
+      'postgresql',
+      { ...emptyConnectionCatalogState(), state: 'loading' },
+      {
+        showSystemObjects: false,
+        connection: { type: 'postgresql', selectedSchemas: ['public', 'app'] },
+      },
+    );
+    expect(nodes.map((node) => node.kind)).toEqual(['schemas', 'schema', 'schema']);
+    expect(nodes.map((node) => node.label)).toEqual([
+      databaseSchemasSelectedLabel(2),
+      'public',
+      'app',
+    ]);
+  });
+
+  it('shows selected schemas even when the seed catalog list is empty', () => {
+    const catalog = {
+      ...emptyConnectionCatalogState(),
+      state: 'ready' as const,
+      schemaDirectory: 'seed' as const,
+      schemas: [],
+    };
+    const nodes = buildConnectionCatalogChildren('c1', 'oracle', catalog, {
+      showSystemObjects: false,
+      connection: { type: 'oracle', user: 'hr', selectedSchemas: ['APP'] },
+    });
+    expect(nodes.map((node) => node.label)).toEqual([databaseSchemasSelectedLabel(1), 'APP']);
+  });
+
   it('shows only selected schemas when the connection lists them', () => {
     const catalog = {
       ...emptyConnectionCatalogState(),

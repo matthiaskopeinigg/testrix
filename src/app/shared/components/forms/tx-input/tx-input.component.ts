@@ -40,6 +40,8 @@ export class TxInputComponent implements ControlValueAccessor {
   readonly type = input<'text' | 'password' | 'email' | 'search' | 'url' | 'number'>('text');
   readonly disabled = input(false);
   readonly ariaLabel = input('');
+  /** Native `autocomplete` hint. Use `new-password` on password fields to avoid browser wipes. */
+  readonly autocomplete = input<string>('');
   /** When unset, search inputs show a clear control when they have a value. */
   readonly clearable = input<boolean | undefined>(undefined);
 

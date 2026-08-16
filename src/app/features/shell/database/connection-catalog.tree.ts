@@ -1,9 +1,15 @@
 import type { DatabaseConnection, DatabaseType } from '@shared/config';
-import type { DatabaseCatalogColumn, DatabaseCatalogIndex, DatabaseCatalogTable } from '@shared/database';
+import type {
+  DatabaseCatalogColumn,
+  DatabaseCatalogIndex,
+  DatabaseCatalogSchemaItem,
+  DatabaseCatalogTable,
+} from '@shared/database';
 import {
   databaseSupportsSchemaSelection,
   isSystemSchemaName,
   resolveVisibleDatabaseSchemas,
+  seedCatalogSchemaItems,
 } from '@shared/database';
 
 import type {
@@ -99,10 +105,20 @@ export function buildConnectionCatalogChildren(
     return [keys];
   }
   if (!catalog || catalog.state === 'idle' || catalog.state === 'loading') {
-    memo?.nodes.clear();
-    memo?.tableDetails.clear();
-    memo?.schemaTables.clear();
-    return withSchemasPicker(connectionId, type, connection, EMPTY_CATALOG_CHILDREN, memo);
+    const seeded = visibleSelectedSchemas(connection, [], showSystemObjects);
+    if (seeded.length === 0) {
+      memo?.nodes.clear();
+      memo?.tableDetails.clear();
+      memo?.schemaTables.clear();
+      return withSchemasPicker(connectionId, type, connection, EMPTY_CATALOG_CHILDREN, memo);
+    }
+    catalog = {
+      state: 'ready',
+      schemaDirectory: 'seed',
+      schemas: seeded,
+      tablesBySchema: {},
+      detailsByTable: {},
+    };
   }
   if (catalog.state === 'error') {
     return withSchemasPicker(
@@ -117,16 +133,16 @@ export function buildConnectionCatalogChildren(
     const tables = filterTables(catalog.tablesBySchema['main'] ?? flattenTables(catalog.tablesBySchema), true);
     return buildTableGroups(connectionId, 'main', tables, catalog, memo);
   }
-  const schemas = resolveVisibleDatabaseSchemas(
-    {
-      type: connection.type ?? type ?? 'postgresql',
-      user: connection.user,
-      database: connection.database,
-      selectedSchemas: connection.selectedSchemas,
-    },
-    catalog.schemas,
-    showSystemObjects,
-  );
+  const schemaQuery = {
+    type: connection.type ?? type ?? 'postgresql',
+    user: connection.user,
+    database: connection.database,
+    selectedSchemas: connection.selectedSchemas,
+  };
+  let schemas = resolveVisibleDatabaseSchemas(schemaQuery, catalog.schemas, showSystemObjects);
+  if (schemas.length === 0 && (connection.selectedSchemas?.length ?? 0) > 0) {
+    schemas = visibleSelectedSchemas(connection, catalog.schemas, showSystemObjects);
+  }
   if (schemas.length === 0) {
     const emptyStatus =
       catalog.schemaDirectory === 'full' && catalog.schemas.length === 0
@@ -170,6 +186,23 @@ export function buildConnectionCatalogChildren(
     }),
     memo,
   );
+}
+
+/**
+ * Selected schemas from the catalog, falling back to the persisted seed list.
+ * A stale seed catalog (opened before the user picked schemas) otherwise hides
+ * every selected schema until the connection is fully refreshed.
+ */
+function visibleSelectedSchemas(
+  connection: Pick<DatabaseConnection, 'type' | 'user' | 'database' | 'selectedSchemas'>,
+  catalogSchemas: readonly DatabaseCatalogSchemaItem[],
+  showSystemObjects: boolean,
+): DatabaseCatalogSchemaItem[] {
+  const fromCatalog = resolveVisibleDatabaseSchemas(connection, catalogSchemas, showSystemObjects);
+  if (fromCatalog.length > 0) {
+    return fromCatalog;
+  }
+  return resolveVisibleDatabaseSchemas(connection, seedCatalogSchemaItems(connection), showSystemObjects);
 }
 
 /**

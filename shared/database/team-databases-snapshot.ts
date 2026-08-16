@@ -52,17 +52,21 @@ export function createDefaultTeamDatabasesFile(): TeamDatabasesFile {
 
 function collectConnectionSecrets(
   nodes: readonly DatabaseConnectionTreeItem[],
-): Map<string, Pick<DatabaseConnection, 'password' | 'clientPath'>> {
-  const secrets = new Map<string, Pick<DatabaseConnection, 'password' | 'clientPath'>>();
+): Map<string, Pick<DatabaseConnection, 'password' | 'clientPath' | 'selectedSchemas'>> {
+  const secrets = new Map<string, Pick<DatabaseConnection, 'password' | 'clientPath' | 'selectedSchemas'>>();
   for (const conn of flattenDatabaseConnections(nodes)) {
-    secrets.set(conn.id, { password: conn.password, clientPath: conn.clientPath });
+    secrets.set(conn.id, {
+      password: conn.password,
+      clientPath: conn.clientPath,
+      selectedSchemas: conn.selectedSchemas,
+    });
   }
   return secrets;
 }
 
 function applyLocalSecrets(
   nodes: readonly DatabaseConnectionTreeItem[],
-  secrets: ReadonlyMap<string, Pick<DatabaseConnection, 'password' | 'clientPath'>>,
+  secrets: ReadonlyMap<string, Pick<DatabaseConnection, 'password' | 'clientPath' | 'selectedSchemas'>>,
 ): DatabaseConnectionTreeItem[] {
   return nodes.map((item) => {
     if (isDatabaseConnectionFolder(item)) {
@@ -79,6 +83,8 @@ function applyLocalSecrets(
       ...item,
       password: local.password || item.password,
       clientPath: local.clientPath || item.clientPath,
+      selectedSchemas:
+        item.selectedSchemas !== undefined ? item.selectedSchemas : local.selectedSchemas,
     };
   });
 }

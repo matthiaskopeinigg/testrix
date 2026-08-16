@@ -52,15 +52,32 @@ const schema: ConnectionTreeNode = {
 };
 
 describe('connection-tree.drop', () => {
-  it('remaps inside a connection to after that connection', () => {
+  it('remaps inside a connection to before that connection so a later row can move up', () => {
     expect(remapConnectionDropTarget(dropContext(connectionA, connectionB, 'inside'))).toEqual({
       targetId: 'c-b',
-      position: 'after',
+      position: 'before',
     });
   });
 
   it('remaps catalog rows onto the owning connection', () => {
     expect(remapConnectionDropTarget(dropContext(connectionA, schema, 'before'))).toEqual({
+      targetId: 'c-b',
+      position: 'after',
+    });
+  });
+
+  it('remaps before the schemas action row to before the connection', () => {
+    const schemas: ConnectionTreeNode = {
+      id: connectionCatalogId('c-b', 'schemas', { name: 'schemas' }),
+      label: '1 Schemas selected',
+      kind: 'schemas',
+      data: { kind: 'schemas', connectionId: 'c-b' },
+    };
+    expect(remapConnectionDropTarget(dropContext(connectionA, schemas, 'before'))).toEqual({
+      targetId: 'c-b',
+      position: 'before',
+    });
+    expect(remapConnectionDropTarget(dropContext(connectionA, schemas, 'after'))).toEqual({
       targetId: 'c-b',
       position: 'after',
     });

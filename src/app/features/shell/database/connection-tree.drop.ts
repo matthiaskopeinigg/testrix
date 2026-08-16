@@ -15,13 +15,20 @@ function nodeKind(ctx: TxTreeDropContext<ConnectionTreeNodeMeta>, which: 'source
 /**
  * Rewrites drops on live catalog rows (and `inside` a connection) onto the owning
  * persisted connection so reorder does not nest folders/connections under schemas.
+ *
+ * `inside` a connection becomes `before` so dragging a later row onto an earlier
+ * one (Oracle first, PostgreSQL second) can move it up. Adjacent downward `before`
+ * drops are still remapped to `after` by the tree model.
+ *
+ * A `before` drop on the schemas/keys action row is the insert line just under the
+ * connection label — treat that as `before` the connection, not `after`.
  */
 export function remapConnectionDropTarget(
   ctx: TxTreeDropContext<ConnectionTreeNodeMeta>,
 ): TxTreeDropRemap | null {
   const targetKind = nodeKind(ctx, 'target');
   if (targetKind === 'connection' && ctx.position === 'inside') {
-    return { targetId: ctx.targetId, position: 'after' };
+    return { targetId: ctx.targetId, position: 'before' };
   }
   if (persistableKind(targetKind)) {
     return null;
@@ -29,6 +36,9 @@ export function remapConnectionDropTarget(
   const catalog = parseConnectionCatalogId(ctx.targetId);
   if (!catalog) {
     return null;
+  }
+  if (ctx.position === 'before' && (catalog.kind === 'schemas' || catalog.kind === 'keys')) {
+    return { targetId: catalog.connectionId, position: 'before' };
   }
   return { targetId: catalog.connectionId, position: 'after' };
 }

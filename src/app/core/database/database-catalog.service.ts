@@ -127,10 +127,38 @@ export class DatabaseCatalogService {
 
   async openConnection(connection: DatabaseConnection): Promise<void> {
     const state = this.snapshot(connection.id)?.state;
-    if (state === 'ready' || state === 'error') {
+    if (state === 'error') {
+      return;
+    }
+    if (state === 'ready') {
+      this.syncSelectedSchemas(connection);
       return;
     }
     await this.refreshConnection(connection);
+  }
+
+  /**
+   * Keeps a seed catalog in sync after the user changes {@link DatabaseConnection.selectedSchemas}.
+   * No-ops when the full schema directory is already cached (the tree filters that list).
+   *
+   * @param connection Connection whose selected schemas should appear in the sidebar.
+   */
+  syncSelectedSchemas(connection: DatabaseConnection): void {
+    const current = this.snapshot(connection.id);
+    if (!current || current.state !== 'ready' || current.schemaDirectory === 'full') {
+      return;
+    }
+    const seeded = seedCatalogSchemaItems(connection);
+    const currentKey = current.schemas.map((schema) => schema.name.toLowerCase()).join('\0');
+    const seedKey = seeded.map((schema) => schema.name.toLowerCase()).join('\0');
+    if (currentKey === seedKey) {
+      return;
+    }
+    this.patch(connection.id, {
+      ...current,
+      schemaDirectory: 'seed',
+      schemas: seeded,
+    });
   }
 
   /**

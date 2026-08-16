@@ -88,17 +88,21 @@
       <div class="db-conn__grid">
         <tx-form-field label="User" controlId="db-conn-user">
           <tx-input
-            id="db-conn-user"
+            controlId="db-conn-user"
+            autocomplete="username"
             [ngModel]="conn.user ?? ''"
             (ngModelChange)="handlePatch({ user: $event || undefined })"
+            (focusin)="handleUserFocus()"
           />
         </tx-form-field>
         <tx-form-field label="Password" controlId="db-conn-pass">
           <tx-input
-            id="db-conn-pass"
+            controlId="db-conn-pass"
             type="password"
+            autocomplete="new-password"
             [ngModel]="conn.password ?? ''"
             (ngModelChange)="handlePatch({ password: $event || undefined })"
+            (focusin)="handlePasswordFocus()"
           />
         </tx-form-field>
       </div>

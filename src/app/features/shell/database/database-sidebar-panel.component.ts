@@ -1200,7 +1200,26 @@ export class DatabaseSidebarPanelComponent {
         this.showSystemObjects(),
       ).map((schema) => schema.name);
     const next = current.filter((name) => name.toLowerCase() !== schemaName.toLowerCase());
-    await this.connections.patchConnection(connection.id, { selectedSchemas: next });
+    await this.persistSelectedSchemas(connection.id, next);
+  }
+
+  /**
+   * Writes selected schemas to the connection profile and refreshes the seed catalog.
+   *
+   * @param connectionId Connection id.
+   * @param selectedSchemas Schema names to show under the connection.
+   */
+  private async persistSelectedSchemas(
+    connectionId: string,
+    selectedSchemas: readonly string[],
+  ): Promise<void> {
+    await this.connections.patchConnection(connectionId, {
+      selectedSchemas: [...selectedSchemas],
+    });
+    const connection = this.connections.find(connectionId);
+    if (connection) {
+      this.catalog.syncSelectedSchemas(connection);
+    }
   }
 
   protected handleSchemaPickerApplied(event: {
@@ -1208,9 +1227,7 @@ export class DatabaseSidebarPanelComponent {
     readonly selectedSchemas: readonly string[];
   }): void {
     this.schemaPickerState.set(null);
-    void this.connections.patchConnection(event.connectionId, {
-      selectedSchemas: [...event.selectedSchemas],
-    });
+    void this.persistSelectedSchemas(event.connectionId, event.selectedSchemas);
   }
 
   protected handleSchemaPickerClosed(): void {

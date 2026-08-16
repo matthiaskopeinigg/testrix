@@ -30,6 +30,13 @@ describe('TxInputComponent', () => {
     expect(input.type).toBe('text');
   });
 
+  it('forwards autocomplete to the native input', () => {
+    fixture.componentRef.setInput('autocomplete', 'new-password');
+    fixture.detectChanges();
+    const input = fixture.nativeElement.querySelector('input.tx-input') as HTMLInputElement;
+    expect(input.getAttribute('autocomplete')).toBe('new-password');
+  });
+
   it('shows clear control for search inputs with a value', async () => {
     fixture.componentRef.setInput('type', 'search');
     fixture.componentInstance.writeValue('query');

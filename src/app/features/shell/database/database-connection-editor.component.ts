@@ -93,6 +93,8 @@ export class DatabaseConnectionEditorComponent {
   protected readonly testOutcome = signal<TestOutcome | null>(null);
   protected readonly statusById = signal<DatabaseConnectionStatusMap>({});
   protected readonly draft = signal<DatabaseConnection | null>(null);
+  private userTouched = false;
+  private passwordTouched = false;
 
   protected readonly connectionId = computed(() => parseDatabaseConnectionTabResourceId(this.resourceId()));
 
@@ -144,9 +146,12 @@ export class DatabaseConnectionEditorComponent {
     effect(() => {
       const id = this.connectionId();
       const stored = id != null ? this.connections.find(id) : null;
-      if (this.draft()?.id !== stored?.id) {
-        this.draft.set(stored);
+      if (this.draft()?.id === stored?.id) {
+        return;
       }
+      this.userTouched = false;
+      this.passwordTouched = false;
+      this.draft.set(stored ? cloneConnectionDraft(stored) : null);
     });
     effect(() => {
       if (this.connection()) {
@@ -205,12 +210,24 @@ export class DatabaseConnectionEditorComponent {
     }
   }
 
+  protected handleUserFocus(): void {
+    this.userTouched = true;
+  }
+
+  protected handlePasswordFocus(): void {
+    this.passwordTouched = true;
+  }
+
   protected handlePatch(patch: Partial<DatabaseConnection>): void {
     const current = this.draft();
     if (!current) {
       return;
     }
-    const next = { ...current, ...patch };
+    const nextPatch = sanitizeCredentialPatch(current, patch, this.userTouched, this.passwordTouched);
+    if (!nextPatch) {
+      return;
+    }
+    const next = { ...current, ...nextPatch };
     this.draft.set(next);
     this.testOutcome.set(null);
     if (this.connections.isDraft(next.id)) {
@@ -225,6 +242,10 @@ export class DatabaseConnectionEditorComponent {
   protected async handleFolderChange(value: string): Promise<void> {
     const conn = this.connection();
     if (!conn) {
+      return;
+    }
+    const currentFolder = this.connections.parentFolderId(conn.id) ?? FOLDER_NONE;
+    if (value !== FOLDER_NEW && (value || FOLDER_NONE) === currentFolder) {
       return;
     }
     if (value === FOLDER_NEW) {
@@ -267,8 +288,9 @@ export class DatabaseConnectionEditorComponent {
     this.testOutcome.set(null);
     this.statusById.update((map) => ({ ...map, [conn.id]: { state: 'checking' } }));
     const requestId = conn.id;
+    const probe = connectionForProbe(conn, this.storedConnection());
     try {
-      await bridge.database.testConnection(conn);
+      await bridge.database.testConnection(probe);
       if (this.connectionId() !== requestId) {
         return;
       }
@@ -307,7 +329,10 @@ export class DatabaseConnectionEditorComponent {
       await this.connections.commitDraft(latest);
       return;
     }
-    await this.connections.patchConnection(latest.id, connectionPersistPatch(latest));
+    await this.connections.patchConnection(
+      latest.id,
+      connectionPersistPatch(latest, this.storedConnection()),
+    );
   }
 
   protected handleCancel(): void {
@@ -322,7 +347,9 @@ export class DatabaseConnectionEditorComponent {
     }
     const stored = this.storedConnection();
     if (stored) {
-      this.draft.set({ ...stored });
+      this.userTouched = false;
+      this.passwordTouched = false;
+      this.draft.set(cloneConnectionDraft(stored));
     }
     this.testOutcome.set(null);
   }
@@ -341,19 +368,24 @@ export class DatabaseConnectionEditorComponent {
 }
 
 function connectionEditorEquals(a: DatabaseConnection, b: DatabaseConnection): boolean {
-  return JSON.stringify(connectionPersistPatch(a)) === JSON.stringify(connectionPersistPatch(b));
+  return JSON.stringify(connectionPersistPatch(b, a)) === JSON.stringify(connectionPersistPatch(a, a));
 }
 
-function connectionPersistPatch(
+/**
+ * Fields written on Save. Blank user/password keep the stored secrets so a
+ * browser-cleared password field cannot wipe the profile.
+ */
+export function connectionPersistPatch(
   latest: DatabaseConnection,
+  stored?: DatabaseConnection | null,
 ): Partial<Omit<DatabaseConnection, 'id' | 'kind'>> {
   return {
     name: latest.name,
     type: latest.type,
     host: latest.host,
     port: latest.port,
-    user: latest.user,
-    password: latest.password,
+    user: keepSecret(latest.user, stored?.user),
+    password: keepSecret(latest.password, stored?.password),
     database: latest.database,
     filePath: latest.filePath,
     clientPath: latest.clientPath,
@@ -363,5 +395,48 @@ function connectionPersistPatch(
     commandTimeoutMs: latest.commandTimeoutMs,
     busyTimeoutMs: latest.busyTimeoutMs,
     connectOnBoot: latest.connectOnBoot,
+  };
+}
+
+/** Copies a connection so the editor cannot mutate the persisted tree in place. */
+export function cloneConnectionDraft(connection: DatabaseConnection): DatabaseConnection {
+  return { ...connection };
+}
+
+/**
+ * Drops spurious empty user/password updates until the field has been focused.
+ *
+ * @returns The patch to apply, or `null` when nothing should change.
+ */
+export function sanitizeCredentialPatch(
+  current: DatabaseConnection,
+  patch: Partial<DatabaseConnection>,
+  userTouched: boolean,
+  passwordTouched: boolean,
+): Partial<DatabaseConnection> | null {
+  const next: Partial<DatabaseConnection> = { ...patch };
+  if ('user' in next && !userTouched && !next.user && current.user) {
+    delete next.user;
+  }
+  if ('password' in next && !passwordTouched && !next.password && current.password) {
+    delete next.password;
+  }
+  return Object.keys(next).length > 0 ? next : null;
+}
+
+/** Prefer the edited secret, otherwise keep the stored one. */
+function keepSecret(next: string | undefined, stored: string | undefined): string | undefined {
+  return next || stored;
+}
+
+/** Test uses stored user/password when the form field was blanked by the browser. */
+function connectionForProbe(
+  draft: DatabaseConnection,
+  stored: DatabaseConnection | null,
+): DatabaseConnection {
+  return {
+    ...draft,
+    user: keepSecret(draft.user, stored?.user),
+    password: keepSecret(draft.password, stored?.password),
   };
 }

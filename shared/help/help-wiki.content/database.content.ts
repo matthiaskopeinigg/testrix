@@ -27,7 +27,7 @@ export const HELP_WIKI_DATABASE_SECTIONS: readonly HelpWikiSection[] = [
           'Right-click a connection → Schemas…, or click “N Schemas selected”, to choose which schemas appear. None are selected by default. Hide schema removes one from the tree.',
           'Right-click empty space in a section to create a folder or item at the root.',
           'Double-click a folder, connection, or query name to rename it inline.',
-          'Drag connections to reorder them or drop them onto a folder.',
+          'Drag connections to reorder them (drop on a connection or on its “N Schemas selected” row) or drop them onto a folder.',
         ],
       },
       {

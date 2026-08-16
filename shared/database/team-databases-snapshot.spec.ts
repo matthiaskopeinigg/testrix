@@ -60,4 +60,17 @@ describe('mergeTeamDatabasesIntoSettings', () => {
       password: 'keep-me',
     });
   });
+
+  it('keeps local selectedSchemas when the incoming snapshot omits them', () => {
+    const local = {
+      connections: [connection({ id: 'c1', name: 'Primary', selectedSchemas: ['public', 'app'] })],
+      nodes: [connection({ id: 'c1', name: 'Primary', selectedSchemas: ['public', 'app'] })],
+      idleDisconnectMinutes: 0,
+    };
+    const incoming = createTeamDatabasesSnapshot({
+      nodes: [connection({ id: 'c1', name: 'Primary' })],
+    });
+    const merged = mergeTeamDatabasesIntoSettings(local, incoming);
+    expect(merged.connections[0]?.selectedSchemas).toEqual(['public', 'app']);
+  });
 });

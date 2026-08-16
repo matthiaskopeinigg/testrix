@@ -62,6 +62,28 @@ describe('DatabaseCatalogService', () => {
     expect(catalog.snapshot('ora1')?.schemas).toEqual([]);
   });
 
+  it('updates a seed catalog when selected schemas change after open', async () => {
+    TestBed.configureTestingModule({
+      providers: [
+        DatabaseCatalogService,
+        {
+          provide: ElectronService,
+          useValue: { bridge: () => ({ database: { introspect: vi.fn() } }) },
+        },
+      ],
+    });
+
+    const catalog = TestBed.inject(DatabaseCatalogService);
+    await catalog.openConnection(ORACLE);
+    expect(catalog.snapshot('ora1')?.schemas).toEqual([]);
+
+    catalog.syncSelectedSchemas({ ...ORACLE, selectedSchemas: ['HR', 'APP'] });
+    expect(catalog.snapshot('ora1')?.schemas.map((schema) => schema.name)).toEqual(['HR', 'APP']);
+
+    await catalog.openConnection({ ...ORACLE, selectedSchemas: ['SCOTT'] });
+    expect(catalog.snapshot('ora1')?.schemas.map((schema) => schema.name)).toEqual(['SCOTT']);
+  });
+
   it('loads the full schema directory only for the Schemas picker', async () => {
     const introspect = vi.fn(async (request: { readonly level: string }) => {
       if (request.level === 'schemas') {
