@@ -1,4 +1,4 @@
-import { Injectable, computed, inject } from '@angular/core';
+import { Injectable, computed, inject, signal } from '@angular/core';
 
 import {
   collectDatabaseConnectionFolders,
@@ -19,18 +19,49 @@ import {
 import { ConfigService } from '@app/core/config/config.service';
 import { newTestingId } from '@app/core/testing/testing-id';
 
+export interface DatabaseConnectionDraft {
+  readonly connection: DatabaseConnection;
+  readonly parentId: string | null;
+}
+
+/**
+ * Inserts unsaved connection drafts into the persisted folder tree for the sidebar.
+ *
+ * @param nodes Saved connection tree.
+ * @param drafts In-memory new connections not yet written to settings.
+ */
+export function mergeDatabaseConnectionDrafts(
+  nodes: readonly DatabaseConnectionTreeItem[],
+  drafts: readonly DatabaseConnectionDraft[],
+): DatabaseConnectionTreeItem[] {
+  let next = [...nodes];
+  for (const draft of drafts) {
+    next = insertChild(next, draft.parentId, { ...draft.connection, kind: 'connection' });
+  }
+  return next;
+}
+
 /**
  * Shared `settings.json` database connections as a folder tree.
  */
 @Injectable({ providedIn: 'root' })
 export class DatabaseConnectionsService {
   private readonly config = inject(ConfigService);
+  private readonly drafts = signal<readonly DatabaseConnectionDraft[]>([]);
 
-  readonly nodes = computed(() => this.config.settings()?.databases.nodes ?? []);
+  readonly persistedNodes = computed(() => this.config.settings()?.databases.nodes ?? []);
+  readonly nodes = computed(() => mergeDatabaseConnectionDrafts(this.persistedNodes(), this.drafts()));
   readonly connections = computed(() => flattenDatabaseConnections(this.nodes()));
 
   find(id: string): DatabaseConnection | null {
     return findDatabaseConnection(this.nodes(), id);
+  }
+
+  /**
+   * True when the connection exists only in memory (not yet saved).
+   */
+  isDraft(id: string): boolean {
+    return this.drafts().some((draft) => draft.connection.id === id);
   }
 
   async saveNodes(nodes: readonly DatabaseConnectionTreeItem[]): Promise<void> {
@@ -47,10 +78,54 @@ export class DatabaseConnectionsService {
     });
   }
 
+  /**
+   * Persists sidebar reorder/drop results without writing unsaved drafts.
+   */
+  async saveVisibleTree(nodes: readonly DatabaseConnectionTreeItem[]): Promise<void> {
+    const draftIds = new Set(this.drafts().map((draft) => draft.connection.id));
+    this.drafts.set(
+      this.drafts().flatMap((draft) => {
+        const found = findDatabaseConnection(nodes, draft.connection.id);
+        if (!found) {
+          return [];
+        }
+        return [
+          {
+            connection: found,
+            parentId: findDatabaseConnectionParentId(nodes, draft.connection.id) ?? null,
+          },
+        ];
+      }),
+    );
+    await this.saveNodes(omitConnectionIds(nodes, draftIds));
+  }
+
+  /**
+   * Adds a connection that stays in memory until {@link commitDraft}.
+   */
   async createConnection(parentId: string | null = null): Promise<DatabaseConnection> {
     const connection = createDefaultDatabaseConnection();
-    await this.saveNodes(insertChild(this.nodes(), parentId, connection));
+    this.drafts.update((list) => [...list, { connection, parentId }]);
     return connection;
+  }
+
+  /**
+   * Writes an unsaved connection to settings.
+   */
+  async commitDraft(connection: DatabaseConnection): Promise<void> {
+    const draft = this.drafts().find((item) => item.connection.id === connection.id);
+    if (!draft) {
+      return;
+    }
+    await this.saveNodes(insertChild(this.persistedNodes(), draft.parentId, { ...connection, kind: 'connection' }));
+    this.drafts.update((list) => list.filter((item) => item.connection.id !== connection.id));
+  }
+
+  /**
+   * Drops an unsaved connection without writing settings.
+   */
+  discardDraft(id: string): void {
+    this.drafts.update((list) => list.filter((item) => item.connection.id !== id));
   }
 
   async createFolder(name = 'New folder', parentId: string | null = null): Promise<string> {
@@ -61,7 +136,7 @@ export class DatabaseConnectionsService {
       children: [],
       updatedAt: new Date().toISOString(),
     };
-    await this.saveNodes(insertChild(this.nodes(), parentId, folder));
+    await this.saveNodes(insertChild(this.persistedNodes(), parentId, folder));
     return folder.id;
   }
 
@@ -69,8 +144,21 @@ export class DatabaseConnectionsService {
     id: string,
     patch: Partial<Omit<DatabaseConnection, 'id' | 'kind'>>,
   ): Promise<void> {
+    if (this.isDraft(id)) {
+      this.drafts.update((list) =>
+        list.map((item) =>
+          item.connection.id === id
+            ? {
+                ...item,
+                connection: { ...item.connection, ...patch, id: item.connection.id, kind: 'connection' },
+              }
+            : item,
+        ),
+      );
+      return;
+    }
     await this.saveNodes(
-      mapDatabaseConnectionTree(this.nodes(), (item) => {
+      mapDatabaseConnectionTree(this.persistedNodes(), (item) => {
         if (isDatabaseConnectionLeaf(item) && item.id === id) {
           return { ...item, ...patch, id: item.id, kind: 'connection' };
         }
@@ -84,9 +172,13 @@ export class DatabaseConnectionsService {
     if (!trimmed) {
       return;
     }
+    if (this.isDraft(id)) {
+      await this.patchConnection(id, { name: trimmed });
+      return;
+    }
     const ts = new Date().toISOString();
     await this.saveNodes(
-      mapDatabaseConnectionTree(this.nodes(), (item) => {
+      mapDatabaseConnectionTree(this.persistedNodes(), (item) => {
         if (item.id !== id) {
           return item;
         }
@@ -109,12 +201,21 @@ export class DatabaseConnectionsService {
       kind: 'connection',
       name: `${source.name} copy`,
     };
-    await this.saveNodes(insertSiblingAfter(this.nodes(), id, copy));
+    const parentId = findDatabaseConnectionParentId(this.nodes(), id) ?? null;
+    if (this.isDraft(id)) {
+      this.drafts.update((list) => [...list, { connection: copy, parentId }]);
+      return copy;
+    }
+    await this.saveNodes(insertSiblingAfter(this.persistedNodes(), id, copy));
     return copy;
   }
 
   async deleteNode(id: string): Promise<void> {
-    await this.saveNodes(removeNode(this.nodes(), id));
+    if (this.isDraft(id)) {
+      this.discardDraft(id);
+      return;
+    }
+    await this.saveNodes(removeNode(this.persistedNodes(), id));
   }
 
   /**
@@ -128,17 +229,23 @@ export class DatabaseConnectionsService {
     if (currentParent === parentId) {
       return;
     }
-    const item = findDatabaseConnectionTreeItem(this.nodes(), connectionId);
+    if (this.isDraft(connectionId)) {
+      this.drafts.update((list) =>
+        list.map((item) => (item.connection.id === connectionId ? { ...item, parentId } : item)),
+      );
+      return;
+    }
+    const item = findDatabaseConnectionTreeItem(this.persistedNodes(), connectionId);
     if (!item || isDatabaseConnectionFolder(item)) {
       return;
     }
     if (parentId) {
-      const parent = findDatabaseConnectionTreeItem(this.nodes(), parentId);
+      const parent = findDatabaseConnectionTreeItem(this.persistedNodes(), parentId);
       if (!parent || !isDatabaseConnectionFolder(parent)) {
         return;
       }
     }
-    await this.saveNodes(insertChild(removeNode(this.nodes(), connectionId), parentId, item));
+    await this.saveNodes(insertChild(removeNode(this.persistedNodes(), connectionId), parentId, item));
   }
 
   folderOptions(): ReturnType<typeof collectDatabaseConnectionFolders> {
@@ -200,9 +307,16 @@ function removeNode(
   nodes: readonly DatabaseConnectionTreeItem[],
   id: string,
 ): DatabaseConnectionTreeItem[] {
+  return omitConnectionIds(nodes, new Set([id]));
+}
+
+function omitConnectionIds(
+  nodes: readonly DatabaseConnectionTreeItem[],
+  ids: ReadonlySet<string>,
+): DatabaseConnectionTreeItem[] {
   return nodes
-    .filter((item) => item.id !== id)
+    .filter((item) => !ids.has(item.id))
     .map((item) =>
-      isDatabaseConnectionFolder(item) ? { ...item, children: removeNode(item.children, id) } : item,
+      isDatabaseConnectionFolder(item) ? { ...item, children: omitConnectionIds(item.children, ids) } : item,
     );
 }

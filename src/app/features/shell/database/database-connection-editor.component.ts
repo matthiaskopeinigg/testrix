@@ -29,6 +29,7 @@ import {
 
 import { DatabaseConnectionsService } from '@app/core/database/database-connections.service';
 import { ElectronService } from '@app/core/electron/electron.service';
+import { WorkspaceEditorService } from '@app/core/workspace/workspace-editor.service';
 import { TxBannerComponent } from '@app/shared/components/feedback/tx-banner/tx-banner.component';
 import { TxButtonComponent } from '@app/shared/components/forms/tx-button/tx-button.component';
 import { TxDropdownComponent } from '@app/shared/components/forms/tx-dropdown/tx-dropdown.component';
@@ -36,6 +37,8 @@ import { TxFormFieldComponent } from '@app/shared/components/forms/tx-form-field
 import { TxInputComponent } from '@app/shared/components/forms/tx-input/tx-input.component';
 import { TxTagComponent } from '@app/shared/components/forms/tx-tag/tx-tag.component';
 import { TxToggleComponent } from '@app/shared/components/forms/tx-toggle/tx-toggle.component';
+
+import { iconForDatabaseType } from './database-type-icon';
 
 const FOLDER_NONE = '';
 const FOLDER_NEW = '__tx_new_folder__';
@@ -75,6 +78,7 @@ type TestOutcome = { readonly kind: 'success' | 'error'; readonly message: strin
 export class DatabaseConnectionEditorComponent {
   private readonly connections = inject(DatabaseConnectionsService);
   private readonly electron = inject(ElectronService);
+  private readonly workspaceEditor = inject(WorkspaceEditorService);
   private readonly destroyRef = inject(DestroyRef);
 
   readonly resourceId = input.required<string>();
@@ -83,6 +87,7 @@ export class DatabaseConnectionEditorComponent {
   protected readonly typeOptions = DATABASE_TYPE_OPTIONS.map((entry) => ({
     value: entry.value,
     label: entry.label,
+    icon: iconForDatabaseType(entry.value),
   }));
 
   protected readonly testing = signal(false);
@@ -95,6 +100,11 @@ export class DatabaseConnectionEditorComponent {
   protected readonly connectionId = computed(() => parseDatabaseConnectionTabResourceId(this.resourceId()));
 
   protected readonly connection = computed(() => this.draft());
+
+  protected readonly isUnsaved = computed(() => {
+    const id = this.connectionId();
+    return id != null && this.connections.isDraft(id);
+  });
 
   protected readonly canPickFile = computed(() => Boolean(this.electron.bridge()?.shell?.pickFile));
 
@@ -195,6 +205,11 @@ export class DatabaseConnectionEditorComponent {
     }
     const next = { ...current, ...patch };
     this.draft.set(next);
+    this.testOutcome.set(null);
+    if (this.connections.isDraft(next.id)) {
+      void this.connections.patchConnection(next.id, connectionPersistPatch(next));
+      return;
+    }
     this.persist();
   }
 
@@ -249,13 +264,20 @@ export class DatabaseConnectionEditorComponent {
     const requestId = conn.id;
     try {
       await bridge.database.testConnection(conn);
-      if (this.connectionId() !== requestId || !this.connections.find(requestId)) {
+      if (this.connectionId() !== requestId) {
         return;
       }
       this.testOutcome.set({ kind: 'success', message: 'Connection successful.' });
-      await this.refreshStatusesFromMain();
+      if (!this.connections.isDraft(requestId)) {
+        await this.refreshStatusesFromMain();
+      } else {
+        this.statusById.update((map) => ({
+          ...map,
+          [conn.id]: { state: 'connected', checkedAt: new Date().toISOString() },
+        }));
+      }
     } catch (err: unknown) {
-      if (this.connectionId() !== requestId || !this.connections.find(requestId)) {
+      if (this.connectionId() !== requestId) {
         return;
       }
       const message = formatDatabaseConnectionError(err);
@@ -271,6 +293,27 @@ export class DatabaseConnectionEditorComponent {
     }
   }
 
+  protected async handleSave(): Promise<void> {
+    const latest = this.draft();
+    if (!latest || !this.connections.isDraft(latest.id)) {
+      return;
+    }
+    if (this.saveTimer !== null) {
+      clearTimeout(this.saveTimer);
+      this.saveTimer = null;
+    }
+    await this.connections.commitDraft(latest);
+  }
+
+  protected handleCancel(): void {
+    const id = this.connectionId();
+    if (!id || !this.connections.isDraft(id)) {
+      return;
+    }
+    this.connections.discardDraft(id);
+    this.workspaceEditor.closeTabsForResourceIds([this.resourceId()]);
+  }
+
   private persist(): void {
     if (this.saveTimer !== null) {
       clearTimeout(this.saveTimer);
@@ -278,26 +321,10 @@ export class DatabaseConnectionEditorComponent {
     this.saveTimer = setTimeout(() => {
       this.saveTimer = null;
       const latest = this.draft();
-      if (!latest || !this.connections.find(latest.id)) {
+      if (!latest || !this.connections.find(latest.id) || this.connections.isDraft(latest.id)) {
         return;
       }
-      void this.connections.patchConnection(latest.id, {
-        name: latest.name,
-        type: latest.type,
-        host: latest.host,
-        port: latest.port,
-        user: latest.user,
-        password: latest.password,
-        database: latest.database,
-        filePath: latest.filePath,
-        clientPath: latest.clientPath,
-        useSid: latest.useSid,
-        tls: latest.tls,
-        connectTimeoutMs: latest.connectTimeoutMs,
-        commandTimeoutMs: latest.commandTimeoutMs,
-        busyTimeoutMs: latest.busyTimeoutMs,
-        connectOnBoot: latest.connectOnBoot,
-      });
+      void this.connections.patchConnection(latest.id, connectionPersistPatch(latest));
     }, 300);
   }
 
@@ -312,4 +339,26 @@ export class DatabaseConnectionEditorComponent {
       /* statuses are optional UI hints */
     }
   }
+}
+
+function connectionPersistPatch(
+  latest: DatabaseConnection,
+): Partial<Omit<DatabaseConnection, 'id' | 'kind'>> {
+  return {
+    name: latest.name,
+    type: latest.type,
+    host: latest.host,
+    port: latest.port,
+    user: latest.user,
+    password: latest.password,
+    database: latest.database,
+    filePath: latest.filePath,
+    clientPath: latest.clientPath,
+    useSid: latest.useSid,
+    tls: latest.tls,
+    connectTimeoutMs: latest.connectTimeoutMs,
+    commandTimeoutMs: latest.commandTimeoutMs,
+    busyTimeoutMs: latest.busyTimeoutMs,
+    connectOnBoot: latest.connectOnBoot,
+  };
 }

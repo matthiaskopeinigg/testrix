@@ -171,6 +171,10 @@
       >
         Test connection
       </tx-button>
+      @if (isUnsaved()) {
+        <tx-button variant="secondary" (pressed)="handleCancel()">Cancel</tx-button>
+        <tx-button variant="primary" (pressed)="handleSave()">Save</tx-button>
+      }
     </div>
 
     @if (testOutcome(); as outcome) {

@@ -52,14 +52,14 @@ export const HELP_WIKI_DATABASE_SECTIONS: readonly HelpWikiSection[] = [
       {
         type: 'list',
         items: [
-          'New folder / New connection — right-click the Connections list or a folder. The connection editor can also move a connection into an existing folder.',
+          'New folder / New connection — right-click the Connections list or a folder. New connections stay unsaved until you click Save; Cancel discards the draft. The connection editor can also move a connection into an existing folder.',
           'Connection settings — host, port, user, password, database name, Oracle service name / SID, SQLite file path, TLS, and timeouts (context menu).',
-          'Test connection — probes the server without running a query.',
+          'Test connection — probes the server without running a query and does not save the profile.',
           'Connect on boot — Testrix probes the connection when the app starts.',
           'Click a connection to show its selected schemas; click again to hide them. Click “N Schemas selected” to pick schemas — none are selected by default.',
           'Open catalog — expands schemas and objects. Refresh reloads the catalog.',
           'New query — creates a saved query already pointed at this connection.',
-          'Open data — opens a table data tab for the selected table or view.',
+          'Open data — opens a table data tab from a table or view context menu (not from a connection).',
           'Duplicate, rename, or delete from the context menu.',
         ],
       },

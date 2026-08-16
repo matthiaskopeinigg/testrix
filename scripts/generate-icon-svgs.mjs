@@ -2,6 +2,9 @@
 /**
  * Emits stroke UI icons as standalone SVG files from the canonical path registry.
  * Source keys match `TxIconName`; files use kebab-case under `assets/icons/`.
+ *
+ * Database engine logos (postgresql, mysql, …) are official brand SVGs and are
+ * not generated here — see `scripts/write-database-brand-icons.mjs`.
  */
 
 import * as fs from 'node:fs/promises';
@@ -10,6 +13,20 @@ import { fileURLToPath } from 'node:url';
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const outDir = path.join(root, 'assets', 'icons');
+
+/** Official logos live in `assets/icons/*.svg` — do not overwrite them here. */
+const SKIP_ICON_NAMES = new Set([
+  'postgresql',
+  'mysql',
+  'mariadb',
+  'mssql',
+  'oracle',
+  'sqlite',
+  'cockroachdb',
+  'clickhouse',
+  'mongodb',
+  'redis',
+]);
 
 /** @type {Record<string, string>} */
 const TX_ICON_PATHS = {
@@ -202,6 +219,9 @@ await fs.mkdir(outDir, { recursive: true });
 
 let count = 0;
 for (const [name, inner] of Object.entries(TX_ICON_PATHS)) {
+  if (SKIP_ICON_NAMES.has(name)) {
+    continue;
+  }
   const fileName = `${toKebab(name)}.svg`;
   await fs.writeFile(path.join(outDir, fileName), wrapSvg(inner), 'utf8');
   count += 1;

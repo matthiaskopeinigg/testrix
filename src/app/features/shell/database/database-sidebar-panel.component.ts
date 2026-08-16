@@ -395,7 +395,7 @@ export class DatabaseSidebarPanelComponent {
     if (this.navFilter().trim().length > 0) {
       return;
     }
-    void this.connections.saveNodes(
+    void this.connections.saveVisibleTree(
       fromConnectionTreeNodesWithExisting(nodes, this.connections.nodes()),
     );
   }

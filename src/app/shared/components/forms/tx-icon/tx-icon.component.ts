@@ -10,7 +10,7 @@ import {
 import { DomSanitizer, type SafeHtml } from '@angular/platform-browser';
 
 import { TxIconService } from '../../../icons/tx-icon.service';
-import { type TxIconName } from '../../../icons/tx-icon.registry';
+import { txIconIsFilled, type TxIconName } from '../../../icons/tx-icon.registry';
 
 @Component({
   selector: 'tx-icon',
@@ -33,6 +33,15 @@ export class TxIconComponent {
 
   /** When set, exposes `role="img"` + `aria-label`; otherwise decorative. */
   readonly ariaLabel = input<string | undefined>(undefined);
+
+  /** Filled brand marks must not inherit the host `currentColor` stroke. */
+  protected readonly hostStroke = computed(() =>
+    txIconIsFilled(this.name()) ? 'none' : 'currentColor',
+  );
+
+  protected readonly hostStrokeWidth = computed(() =>
+    txIconIsFilled(this.name()) ? null : this.strokeWidth(),
+  );
 
   private readonly innerMarkup = signal<string | null>(null);
 
@@ -58,9 +67,25 @@ export class TxIconComponent {
           }
         },
         () => {
-          if (this.name() === iconName) {
-            this.innerMarkup.set(null);
+          if (this.name() !== iconName) {
+            return;
           }
+          if (iconName === 'database') {
+            this.innerMarkup.set(null);
+            return;
+          }
+          void this.iconService.loadIconInner('database').then(
+            (inner) => {
+              if (this.name() === iconName) {
+                this.innerMarkup.set(inner);
+              }
+            },
+            () => {
+              if (this.name() === iconName) {
+                this.innerMarkup.set(null);
+              }
+            },
+          );
         },
       );
     });

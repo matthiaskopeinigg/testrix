@@ -70,6 +70,16 @@ export const TX_ICON_NAMES = [
   'bug',
   'gitBranch',
   'database',
+  'postgresql',
+  'mysql',
+  'mariadb',
+  'mssql',
+  'oracle',
+  'sqlite',
+  'cockroachdb',
+  'clickhouse',
+  'mongodb',
+  'redis',
   'cloud',
   'api',
   'http',
@@ -117,3 +127,22 @@ export const TX_ICON_NAMES = [
 ] as const;
 
 export type TxIconName = (typeof TX_ICON_NAMES)[number];
+
+/** Official brand logos that paint with fills, not `currentColor` strokes. */
+const TX_FILLED_ICON_NAMES: ReadonlySet<TxIconName> = new Set([
+  'postgresql',
+  'mysql',
+  'mariadb',
+  'mssql',
+  'oracle',
+  'sqlite',
+  'cockroachdb',
+  'clickhouse',
+  'mongodb',
+  'redis',
+]);
+
+/** True when the icon must not inherit `tx-icon`’s `currentColor` stroke. */
+export function txIconIsFilled(name: TxIconName): boolean {
+  return TX_FILLED_ICON_NAMES.has(name);
+}

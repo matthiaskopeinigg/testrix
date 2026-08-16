@@ -7,10 +7,11 @@ import {
 
 import type { TxIconName } from '@app/shared/icons/tx-icon.registry';
 
+import { iconForDatabaseType } from './database-type-icon';
 import type { ConnectionTreeKind, ConnectionTreeNode } from './connection-tree.types';
 
-function iconForKind(kind: ConnectionTreeKind): TxIconName {
-  return kind === 'folder' ? 'folder' : 'database';
+function iconForKind(kind: ConnectionTreeKind, type?: string): TxIconName {
+  return kind === 'folder' ? 'folder' : iconForDatabaseType(type);
 }
 
 function connectionSubtitle(conn: DatabaseConnection): string {
@@ -33,7 +34,7 @@ function toConnectionTreeNode(item: DatabaseConnectionTreeItem): ConnectionTreeN
       id: item.id,
       label: item.name,
       kind: 'connection',
-      icon: iconForKind('connection'),
+      icon: iconForKind('connection', item.type),
       subtitle: connectionSubtitle(item),
       data: {
         kind: 'connection',

@@ -55,7 +55,6 @@ export function buildConnectionNodeContextMenu(
   if (kind === 'connection') {
     const items: TxContextMenuItem[] = [
       { id: 'open', label: 'Open catalog', icon: 'folderOpen' },
-      { id: 'open-data', label: 'Open data', icon: 'play' },
       { id: 'new-query', label: 'New query', icon: 'fileText' },
       { id: 'refresh', label: 'Refresh', icon: 'refresh' },
       { id: 'test', label: 'Test connection', icon: 'play' },

@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.2-beta.2] - 2026-08-16
+
+### Added
+
+- Database sidebar shows official engine logos (single brand color) on each connection
+- New connections stay unsaved until Save; Test connection does not persist; Cancel discards the draft
+
+### Changed
+
+- Connection context menu no longer includes Open data (still available on tables and views)
+
 ## [1.0.2-beta.1] - 2026-08-16
 
 ### Fixed
@@ -186,7 +197,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Initial public beta of Testrix: local-first desktop API client (HTTP, WebSocket, collections, environments, test suites, load tests, mocks, and capture).
 
-[Unreleased]: https://github.com/matthiaskopeinigg/testrix/compare/v1.0.2-beta.1...HEAD
+[Unreleased]: https://github.com/matthiaskopeinigg/testrix/compare/v1.0.2-beta.2...HEAD
+[1.0.2-beta.2]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.2-beta.2
 [1.0.2-beta.1]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.2-beta.1
 [1.0.1-beta.9]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.1-beta.9
 [1.0.1-beta.8]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.1-beta.8

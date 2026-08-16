@@ -170,7 +170,7 @@ export class TxTreeRowComponent<TMeta = unknown> implements AfterViewInit, OnDes
     100 - this.dropBeforePercent - this.dropAfterPercent;
 
   protected rowIconSize(): number {
-    return this.debug() ? 26 : 18;
+    return this.debug() ? 26 : 20;
   }
 
   protected chevronIconSize(): number {

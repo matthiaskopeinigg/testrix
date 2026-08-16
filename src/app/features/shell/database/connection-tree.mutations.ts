@@ -1,5 +1,6 @@
 import { newTestingId } from '@app/core/testing/testing-id';
 
+import { iconForDatabaseType } from './database-type-icon';
 import type { ConnectionTreeKind, ConnectionTreeNode } from './connection-tree.types';
 
 export interface ConnectionNodeLocation {
@@ -62,7 +63,7 @@ function createNode(kind: ConnectionTreeKind, label?: string): ConnectionTreeNod
     id,
     label: resolvedLabel,
     kind: 'connection',
-    icon: 'database',
+    icon: iconForDatabaseType('postgresql'),
     data: { kind: 'connection', type: 'postgresql' },
   };
 }

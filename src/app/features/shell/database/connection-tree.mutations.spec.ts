@@ -37,6 +37,7 @@ describe('connection-tree', () => {
     expect(isConnectionFolderNode(tree[0]!)).toBe(true);
     expect(isConnectionLeafNode(tree[0]!.children![0]!)).toBe(true);
     expect(tree[0]!.children![0]!.subtitle).toBe('db.example:5432');
+    expect(tree[0]!.children![0]!.icon).toBe('postgresql');
     const back = fromConnectionTreeNodesWithExisting(tree, items);
     expect(back).toEqual(items);
   });

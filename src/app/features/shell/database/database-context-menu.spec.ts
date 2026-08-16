@@ -21,6 +21,13 @@ describe('database sidebar context menus', () => {
     expect(ids).toContain('edit');
     expect(items.find((item) => item.id === 'edit')?.label).toBe('Connection settings');
     expect(ids).toContain('open');
+    expect(ids).not.toContain('open-data');
+  });
+
+  it('offers Open data on tables, not on connections', () => {
+    const tableIds = buildConnectionNodeContextMenu('table', false).map((item) => item.id);
+    expect(tableIds).toContain('open-data');
+    expect(tableIds[0]).toBe('open-data');
   });
 
   it('opens the schema picker from the schemas-selected row', () => {
