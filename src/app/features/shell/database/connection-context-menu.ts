@@ -73,6 +73,10 @@ export function buildConnectionNodeContextMenu(
     return items;
   }
 
+  if (kind === 'schemas') {
+    return [{ id: 'schemas', label: 'Schemas…', icon: 'layers' }];
+  }
+
   if (kind === 'schema') {
     return [
       { id: 'refresh', label: 'Refresh', icon: 'refresh' },

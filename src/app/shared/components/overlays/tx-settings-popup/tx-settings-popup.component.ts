@@ -86,6 +86,7 @@ import { TxSettingsEditorKeyboardSectionComponent } from './sections/tx-settings
 import { TxSettingsHttpRequestSectionComponent } from './sections/tx-settings-http-request-section.component';
 import { TxSettingsHttpRetriesSectionComponent } from './sections/tx-settings-http-retries-section.component';
 import { TxSettingsHttpTestingSectionComponent } from './sections/tx-settings-http-testing-section.component';
+import { TxSettingsDatabasesSectionComponent } from './sections/tx-settings-databases-section.component';
 import { settingsSectionMatchesQuery } from './settings-popup-search-index';
 import { SettingsPopupService } from '@app/core/ui/settings-popup.service';
 
@@ -101,6 +102,7 @@ export type SettingsPopupSection =
   | 'mockServer'
   | 'capture'
   | 'interceptor'
+  | 'databases'
   | 'general'
   | 'logging'
   | 'dataConfig'
@@ -168,6 +170,7 @@ export interface SettingsSidebarSection {
     TxSettingsHttpCertificatesSectionComponent,
     TxSettingsHttpDnsSectionComponent,
     TxSettingsHttpProxySectionComponent,
+    TxSettingsDatabasesSectionComponent,
   ],
   templateUrl: './tx-settings-popup.component.html',
   styleUrl: './tx-settings-popup.component.scss',
@@ -384,6 +387,7 @@ export class TxSettingsPopupComponent {
         { id: 'mockServer', label: 'Mock Server', icon: 'cloud' },
         { id: 'capture', label: 'Capture', icon: 'record' },
         { id: 'interceptor', label: 'Interceptor', icon: 'interceptor' },
+        { id: 'databases', label: 'Database', icon: 'database' },
         { id: 'general', label: 'General', icon: 'folder' },
       ],
     },
@@ -792,6 +796,12 @@ export class TxSettingsPopupComponent {
     value: SettingsFile['interceptor']['editorLayout'],
   ): Promise<void> {
     await this.patch({ interceptor: { editorLayout: value } });
+  }
+
+  protected async patchDatabases(
+    patch: Pick<SettingsFile['databases'], 'idleDisconnectMinutes'>,
+  ): Promise<void> {
+    await this.patch({ databases: patch });
   }
 
   protected async patchHttpRequest(patch: Partial<SettingsFile['http']['request']>): Promise<void> {
@@ -1446,6 +1456,10 @@ export class TxSettingsPopupComponent {
 
     if (patch.interceptor != null) {
       return 'Interceptor settings saved';
+    }
+
+    if (patch.databases != null) {
+      return 'Database settings saved';
     }
 
     if (patch.dataConfig != null) {

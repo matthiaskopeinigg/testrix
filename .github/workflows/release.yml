@@ -93,17 +93,23 @@ jobs:
     needs: [pack-windows, pack-linux, pack-macos]
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.RELEASE_TAG }}
       - name: Download installers
         uses: actions/download-artifact@v8
         with:
           path: artifacts
           merge-multiple: true
+      - name: Extract changelog notes
+        run: node scripts/changelog-release-notes.mjs --tag "${{ env.RELEASE_TAG }}" --out release-notes.md
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ env.RELEASE_TAG }}
           name: Testrix ${{ env.RELEASE_TAG }}
-          generate_release_notes: true
+          body_path: release-notes.md
+          generate_release_notes: false
           prerelease: ${{ contains(env.RELEASE_TAG, '-') }}
           files: |
             artifacts/**/*

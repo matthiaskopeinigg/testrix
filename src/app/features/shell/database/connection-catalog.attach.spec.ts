@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
+import type { DatabaseConnection } from '@shared/config';
+
 import { emptyConnectionCatalogState } from '@app/core/database/database-catalog.types';
 
 import { attachCatalogToConnectionTree, ConnectionCatalogAttachCache } from './connection-catalog.attach';
+import { databaseSchemasSelectedLabel } from './connection-catalog.tree';
 import type { ConnectionTreeNode } from './connection-tree.types';
 
 function pgConnection(id: string, label: string): ConnectionTreeNode {
@@ -13,6 +16,19 @@ function pgConnection(id: string, label: string): ConnectionTreeNode {
     icon: 'database',
     subtitle: 'localhost:5432',
     data: { kind: 'connection', type: 'postgresql', host: 'localhost', port: 5432 },
+  };
+}
+
+function pgProfile(id: string): DatabaseConnection {
+  return {
+    id,
+    kind: 'connection',
+    name: id,
+    type: 'postgresql',
+    host: 'localhost',
+    port: 5432,
+    connectOnBoot: false,
+    selectedSchemas: ['public'],
   };
 }
 
@@ -32,8 +48,8 @@ describe('attachCatalogToConnectionTree', () => {
     const cache = new ConnectionCatalogAttachCache();
     const nodes = [pgConnection('a', 'Alpha')];
     const catalogs = { a: readyCatalog(['users']) };
-    const first = cache.attach(nodes, (id) => catalogs[id as 'a'], {}, false);
-    const second = cache.attach(nodes, (id) => catalogs[id as 'a'], {}, false);
+    const first = cache.attach(nodes, (id) => catalogs[id as 'a'], {}, false, pgProfile);
+    const second = cache.attach(nodes, (id) => catalogs[id as 'a'], {}, false, pgProfile);
     expect(second).toBe(first);
   });
 
@@ -41,12 +57,13 @@ describe('attachCatalogToConnectionTree', () => {
     const cache = new ConnectionCatalogAttachCache();
     const nodes = [pgConnection('a', 'Alpha')];
     const catalogs = { a: readyCatalog(['users']) };
-    const first = cache.attach(nodes, (id) => catalogs[id as 'a'], {}, false);
+    const first = cache.attach(nodes, (id) => catalogs[id as 'a'], {}, false, pgProfile);
     const second = cache.attach(
       nodes,
       (id) => catalogs[id as 'a'],
       { a: { state: 'connected' } },
       false,
+      pgProfile,
     );
     expect(second).not.toBe(first);
     expect(second[0]?.children).toBe(first[0]?.children);
@@ -60,21 +77,22 @@ describe('attachCatalogToConnectionTree', () => {
       a: readyCatalog(['users']),
       b: readyCatalog(['orders']),
     };
-    const first = cache.attach(nodes, (id) => catalogs[id], {}, false);
+    const first = cache.attach(nodes, (id) => catalogs[id], {}, false, pgProfile);
     catalogs['b'] = readyCatalog(['orders', 'items']);
-    const second = cache.attach(nodes, (id) => catalogs[id], {}, false);
+    const second = cache.attach(nodes, (id) => catalogs[id], {}, false, pgProfile);
     expect(second[0]).toBe(first[0]);
     expect(second[1]).not.toBe(first[1]);
-    expect(second[1]?.children?.[0]?.children?.[0]?.children?.map((child) => child.label)).toEqual([
-      'orders',
-      'items',
-    ]);
+    const schema = second[1]?.children?.find((child) => child.kind === 'schema');
+    expect(schema?.children?.[0]?.children?.map((child) => child.label)).toEqual(['orders', 'items']);
   });
 
   it('still attaches catalog children without a cache', () => {
     const nodes = [pgConnection('a', 'Alpha')];
     const catalog = readyCatalog(['users']);
-    const tree = attachCatalogToConnectionTree(nodes, () => catalog, {}, false);
-    expect(tree[0]?.children?.[0]?.label).toBe('public');
+    const tree = attachCatalogToConnectionTree(nodes, () => catalog, {}, false, undefined, pgProfile);
+    expect(tree[0]?.children?.map((child) => child.label)).toEqual([
+      databaseSchemasSelectedLabel(1),
+      'public',
+    ]);
   });
 });

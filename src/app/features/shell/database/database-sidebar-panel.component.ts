@@ -22,6 +22,7 @@ import {
   qualifySqlTableName,
   resolveVisibleDatabaseSchemas,
   SAVED_QUERY_MAX_FOLDER_DEPTH,
+  formatDatabaseConnectionError,
   type DatabaseConnectionStatusMap,
 } from '@shared/database';
 
@@ -438,17 +439,21 @@ export class DatabaseSidebarPanelComponent {
     if (!loc) {
       return;
     }
+    const kind = loc.node.data?.kind ?? loc.node.kind;
+    if (kind === 'schemas') {
+      this.connectionFocusNodeId.set(this.connectionIdForNode(event.nodeId));
+      void this.openSchemaPicker(event.nodeId);
+      return;
+    }
     this.connectionFocusNodeId.set(event.nodeId);
     if (isConnectionFolderNode(loc.node)) {
       this.toggleConnectionFolderExpanded(event.nodeId);
       return;
     }
     if (isConnectionLeafNode(loc.node)) {
-      this.setConnectionFolderExpanded(event.nodeId, true);
-      void this.ensureCatalogForExpanded(event.nodeId);
+      this.toggleConnectionFolderExpanded(event.nodeId);
       return;
     }
-    const kind = loc.node.data?.kind ?? loc.node.kind;
     if (kind === 'table' || kind === 'view') {
       this.openTableData(event.nodeId);
       return;
@@ -464,6 +469,10 @@ export class DatabaseSidebarPanelComponent {
       return;
     }
     const kind = loc.node.data?.kind ?? loc.node.kind;
+    if (kind === 'schemas') {
+      void this.openSchemaPicker(event.nodeId);
+      return;
+    }
     if (kind === 'table' || kind === 'view') {
       this.openTableData(event.nodeId);
       return;
@@ -1067,26 +1076,60 @@ export class DatabaseSidebarPanelComponent {
     if (!connection || !databaseSupportsSchemaSelection(connection.type)) {
       return;
     }
-    await this.catalog.openConnection(connection);
-    await this.catalog.ensureFullSchemaDirectory(connection);
-    const snapshot = this.catalog.snapshot(connectionId);
-    if (!snapshot || snapshot.state !== 'ready') {
-      this.notifications.showError(snapshot?.error ?? 'Could not load schemas for this connection.');
-      return;
-    }
-    const visible = resolveVisibleDatabaseSchemas(
-      connection,
-      snapshot.schemas,
-      this.showSystemObjects(),
-    );
+    const existing = this.catalog.snapshot(connectionId);
+    const alreadyFull = existing?.state === 'ready' && existing.schemaDirectory === 'full';
     this.schemaPickerState.set({
       connectionId,
       connectionName: connection.name,
-      schemas: snapshot.schemas,
-      selectedSchemas:
-        connection.selectedSchemas ?? visible.map((schema) => schema.name),
+      schemas: existing?.schemas ?? [],
+      selectedSchemas: connection.selectedSchemas ?? [],
       showSystemObjects: this.showSystemObjects(),
+      loading: !alreadyFull,
     });
+    if (alreadyFull) {
+      return;
+    }
+    try {
+      await this.catalog.openConnection(connection);
+      await this.catalog.ensureFullSchemaDirectory(connection);
+      if (this.schemaPickerState()?.connectionId !== connectionId) {
+        return;
+      }
+      const snapshot = this.catalog.snapshot(connectionId);
+      if (!snapshot || snapshot.state !== 'ready') {
+        this.schemaPickerState.set({
+          connectionId,
+          connectionName: connection.name,
+          schemas: snapshot?.schemas ?? [],
+          selectedSchemas: connection.selectedSchemas ?? [],
+          showSystemObjects: this.showSystemObjects(),
+          loading: false,
+          error: snapshot?.error ?? 'Could not load schemas for this connection.',
+        });
+        return;
+      }
+      this.schemaPickerState.set({
+        connectionId,
+        connectionName: connection.name,
+        schemas: snapshot.schemas,
+        selectedSchemas: connection.selectedSchemas ?? [],
+        showSystemObjects: this.showSystemObjects(),
+        loading: false,
+      });
+    } catch (error) {
+      if (this.schemaPickerState()?.connectionId !== connectionId) {
+        return;
+      }
+      this.schemaPickerState.set({
+        connectionId,
+        connectionName: connection.name,
+        schemas: [],
+        selectedSchemas: connection.selectedSchemas ?? [],
+        showSystemObjects: this.showSystemObjects(),
+        loading: false,
+        error: formatDatabaseConnectionError(error),
+      });
+    }
   }
 
   private async hideSchema(nodeId: string): Promise<void> {

@@ -240,7 +240,11 @@ export class WorkspaceBundleService {
     if (filtered.databases?.connections) {
       const incoming = normalizeDatabaseSettings(filtered.databases.connections);
       const current = normalizeDatabaseSettings(
-        (await bridge.config.getSettings()).databases ?? { connections: [], nodes: [] },
+        (await bridge.config.getSettings()).databases ?? {
+          connections: [],
+          nodes: [],
+          idleDisconnectMinutes: 0,
+        },
       );
       const next =
         options.mode === 'replace'

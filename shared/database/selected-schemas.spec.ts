@@ -16,20 +16,30 @@ describe('selected-schemas', () => {
     { name: 'APP', system: false },
   ];
 
-  it('defaults Oracle to the connection user instead of every schema', () => {
+  it('shows no schemas until the user selects some', () => {
     expect(
       resolveVisibleDatabaseSchemas(
         { type: 'oracle', user: 'hr', selectedSchemas: undefined },
         many,
         false,
       ).map((schema) => schema.name),
-    ).toEqual(['HR']);
+    ).toEqual([]);
+    expect(
+      resolveVisibleDatabaseSchemas(
+        { type: 'postgresql', database: 'app', selectedSchemas: undefined },
+        [
+          { name: 'pg_catalog', system: true },
+          { name: 'public', system: false },
+          { name: 'app', system: false },
+        ],
+        false,
+      ).map((schema) => schema.name),
+    ).toEqual([]);
   });
 
-  it('seeds Oracle with the connection user without a full directory', () => {
-    expect(seedCatalogSchemaItems({ type: 'oracle', user: 'hr' })).toEqual([
-      { name: 'HR', system: false },
-    ]);
+  it('seeds nothing when no schemas are selected', () => {
+    expect(seedCatalogSchemaItems({ type: 'oracle', user: 'hr' })).toEqual([]);
+    expect(seedCatalogSchemaItems({ type: 'postgresql', database: 'app' })).toEqual([]);
   });
 
   it('defaults Postgres to public when present', () => {
@@ -67,8 +77,8 @@ describe('selected-schemas', () => {
     ).toEqual([]);
   });
 
-  it('limits completion schemas to selected / default names', () => {
-    expect(completionSchemaNames({ type: 'oracle', user: 'hr' })).toEqual(['HR']);
+  it('limits completion schemas to selected names', () => {
+    expect(completionSchemaNames({ type: 'oracle', user: 'hr' })).toEqual([]);
     expect(
       completionSchemaNames({
         type: 'oracle',

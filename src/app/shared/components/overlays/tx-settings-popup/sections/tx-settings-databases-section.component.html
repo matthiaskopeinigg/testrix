@@ -1,0 +1,29 @@
+<div class="tx-entrance-stagger__block">
+  <h2 class="tx-settings__tab-title">Database</h2>
+  <p class="tx-settings__tab-description">
+    Global connection behavior for the Database workbench. Changes apply immediately and are saved to
+    your config file.
+  </p>
+</div>
+
+<div class="tx-entrance-stagger__block">
+  <h3 class="tx-settings__section-heading">Connections</h3>
+  <tx-form-field
+    label="Disconnect idle connections after (minutes)"
+    controlId="tx-settings-db-idle-disconnect"
+  >
+    <tx-slider
+      controlId="tx-settings-db-idle-disconnect"
+      [min]="idleMin"
+      [max]="idleMax"
+      [step]="1"
+      unit=" min"
+      [ngModel]="databases().idleDisconnectMinutes"
+      (ngModelChange)="emitIdleDisconnectMinutes($event)"
+    />
+  </tx-form-field>
+  <p class="tx-settings__tab-description">
+    Closes unused database pools after this many minutes of inactivity. Set to 0 to keep connections
+    open until you quit Testrix.
+  </p>
+</div>

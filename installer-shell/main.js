@@ -21,37 +21,6 @@ const platform = require(`./platforms/${process.platform === 'darwin' ? 'mac' : 
  */
 app.commandLine.appendSwitch('disable-features', 'Translate,OptimizationGuideModelDownloading');
 
-// #region agent log
-/** @param {string} location @param {string} message @param {Record<string, unknown>} data @param {string} hypothesisId */
-function agentDebugLog(location, message, data, hypothesisId) {
-  const payload = {
-    sessionId: 'e8295c',
-    location,
-    message,
-    data,
-    hypothesisId,
-    timestamp: Date.now(),
-    runId: 'post-fix',
-    packaged: app.isPackaged,
-  };
-  fetch('http://127.0.0.1:7736/ingest/d5806da4-cf16-47c7-b1e3-a0241cdfcf92', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'e8295c' },
-    body: JSON.stringify(payload),
-  }).catch(() => {});
-  if (app.isPackaged) {
-    try {
-      fs.appendFileSync(
-        path.join(app.getPath('temp'), 'testrix-installer-debug-e8295c.log'),
-        `${JSON.stringify(payload)}\n`,
-      );
-    } catch (_) {
-      /* ignore */
-    }
-  }
-}
-// #endregion
-
 const APP_ID = 'dev.testrix.app';
 const REG_SUBKEY = `Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\${APP_ID}`;
 const MAIN_EXE = 'Testrix.exe';
@@ -60,6 +29,12 @@ const META_FILE = '.install-meta.json';
 const PAYLOAD_ARCHIVE = 'payload.zip';
 const SILENT_UPDATE =
   process.argv.includes('--silent-update') || process.env.TESTRIX_SILENT_UPDATE === '1';
+
+if (SILENT_UPDATE) {
+  app.disableHardwareAcceleration();
+  app.commandLine.appendSwitch('disable-gpu');
+}
+
 const APPENDED_PAYLOAD_MAGIC = Buffer.from('TESTRIXPK');
 const APPENDED_PAYLOAD_FOOTER_BYTES = 8 + 8 + APPENDED_PAYLOAD_MAGIC.length;
 
@@ -171,12 +146,25 @@ function materializeAppendedPayloadArchive(sourceExe) {
   originalFs.mkdirSync(path.dirname(tempZip), { recursive: true });
 
   const fd = originalFs.openSync(sourceExe, 'r');
+  const out = originalFs.openSync(tempZip, 'w');
   try {
-    const payload = Buffer.alloc(meta.payloadSize);
-    originalFs.readSync(fd, payload, 0, meta.payloadSize, meta.payloadOffset);
-    originalFs.writeFileSync(tempZip, payload);
+    const chunkSize = 8 * 1024 * 1024;
+    const buf = Buffer.alloc(chunkSize);
+    let remaining = meta.payloadSize;
+    let offset = meta.payloadOffset;
+    while (remaining > 0) {
+      const n = Math.min(chunkSize, remaining);
+      const read = originalFs.readSync(fd, buf, 0, n, offset);
+      if (read <= 0) {
+        break;
+      }
+      originalFs.writeSync(out, buf, 0, read);
+      remaining -= read;
+      offset += read;
+    }
   } finally {
     originalFs.closeSync(fd);
+    originalFs.closeSync(out);
   }
 
   return tempZip;
@@ -400,9 +388,8 @@ function elevateExtractArchive(archivePath, destDir) {
 async function installPayloadFromArchive(archivePath, destDir, scope, onProgress) {
   onProgress({ phase: 'extracting', percent: null });
 
-  const extractDir = path.join(os.tmpdir(), 'TestrixSetup', pkgVersion(), 'payload-staging');
-
   if (scope === 'machine' && process.platform === 'win32') {
+    const extractDir = path.join(os.tmpdir(), 'TestrixSetup', pkgVersion(), 'payload-staging');
     try {
       originalFs.rmSync(extractDir, { recursive: true, force: true });
     } catch (_) {}
@@ -421,17 +408,10 @@ async function installPayloadFromArchive(archivePath, destDir, scope, onProgress
   }
 
   try {
-    originalFs.rmSync(extractDir, { recursive: true, force: true });
+    originalFs.rmSync(destDir, { recursive: true, force: true });
   } catch (_) {}
-
-  await extractPayloadArchive(archivePath, extractDir, onProgress);
-  onProgress({ phase: 'copying', percent: scope === 'machine' ? null : 0 });
-  await platform.installApp({
-    src: extractDir,
-    dest: destDir,
-    scope,
-    onProgress,
-  });
+  await extractPayloadArchive(archivePath, destDir, onProgress);
+  onProgress({ phase: 'copying', percent: 1 });
 }
 
 function defaultInstallDir(scope) {
@@ -985,12 +965,17 @@ function waitForParentExit() {
   }
 
   return new Promise((resolve) => {
+    const started = Date.now();
     const poll = () => {
       try {
         process.kill(pid, 0);
-        setTimeout(poll, 250);
+        if (Date.now() - started > 30_000) {
+          resolve();
+          return;
+        }
+        setTimeout(poll, 80);
       } catch {
-        setTimeout(resolve, 750);
+        setTimeout(resolve, 120);
       }
     };
     poll();
@@ -1023,7 +1008,7 @@ function resolveExistingInstallForSilentUpdate() {
 /**
  * Installs or updates Testrix into `installDir`.
  *
- * @param {{ installDir: string, scope: 'user' | 'machine', onProgress?: (payload: object) => void }} opts
+ * @param {{ installDir: string, scope: 'user' | 'machine', skipRegistration?: boolean, onProgress?: (payload: object) => void }} opts
  */
 async function performInstall(opts) {
   const scope = opts?.scope === 'machine' ? 'machine' : 'user';
@@ -1074,13 +1059,26 @@ async function performInstall(opts) {
 
     onProgress({ phase: 'finalizing', percent: 1 });
 
-    const registration = platform.registerApp({ installDir: dest, scope });
+    const skipRegistration = opts?.skipRegistration === true;
+    let registration = {
+      shortcuts: [],
+      uninstallScript: null,
+      mainExePath: platform.getLaunchPath(dest),
+    };
+    if (!skipRegistration) {
+      registration = platform.registerApp({ installDir: dest, scope });
+    }
+
+    const previousMeta = readInstallMeta(dest);
     const installMeta = {
       scope,
       installDir: dest,
       version: pkgVersion(),
-      shortcuts: registration.shortcuts || [],
-      uninstallScript: registration.uninstallScript || null,
+      shortcuts: registration.shortcuts?.length
+        ? registration.shortcuts
+        : previousMeta?.shortcuts || [],
+      uninstallScript:
+        registration.uninstallScript || previousMeta?.uninstallScript || null,
     };
     if (typeof platform.writeInstallMeta === 'function') {
       platform.writeInstallMeta(dest, installMeta, scope);
@@ -1161,6 +1159,7 @@ async function runSilentUpdateIfRequested() {
   const result = await performInstall({
     installDir: existing.installDir,
     scope: existing.scope === 'machine' ? 'machine' : 'user',
+    skipRegistration: true,
   });
 
   if (!result.ok) {
@@ -1175,22 +1174,31 @@ async function runSilentUpdateIfRequested() {
   return true;
 }
 
+function openInstallerWindow() {
+  mainWindow = createWindow();
+  app.on('activate', () => {
+    if (BrowserWindow.getAllWindows().length === 0) {
+      mainWindow = createWindow();
+    }
+  });
+}
+
 if (process.argv.includes('--uninstall')) {
   app.whenReady().then(() => {
     const r = platform.runUninstall();
     app.exit(r.ok ? 0 : 1);
   });
-} else {
-  app.whenReady().then(async () => {
+} else if (SILENT_UPDATE) {
+  void (async () => {
     if (await runSilentUpdateIfRequested()) {
       return;
     }
-    mainWindow = createWindow();
-    app.on('activate', () => {
-      if (BrowserWindow.getAllWindows().length === 0) {
-        mainWindow = createWindow();
-      }
-    });
+    await app.whenReady();
+    openInstallerWindow();
+  })();
+} else {
+  app.whenReady().then(() => {
+    openInstallerWindow();
   });
 }
 

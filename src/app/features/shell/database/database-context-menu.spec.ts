@@ -23,11 +23,9 @@ describe('database sidebar context menus', () => {
     expect(ids).toContain('open');
   });
 
-  it('offers table information without requiring a click on the table row', () => {
-    const items = buildConnectionNodeContextMenu('table', false);
-    const ids = items.map((item) => item.id);
-    expect(ids).toContain('show-structure');
-    expect(ids).toContain('open-data');
-    expect(items.find((item) => item.id === 'show-structure')?.label).toBe('Table information');
+  it('opens the schema picker from the schemas-selected row', () => {
+    const items = buildConnectionNodeContextMenu('schemas', false);
+    expect(items.map((item) => item.id)).toEqual(['schemas']);
+    expect(items[0]?.label).toBe('Schemas…');
   });
 });

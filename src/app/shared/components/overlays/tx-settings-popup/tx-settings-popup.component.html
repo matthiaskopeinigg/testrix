@@ -745,6 +745,24 @@
                   </div>
                 </section>
               }
+              @if (isSectionActive('databases')) {
+                <section
+                  class="tx-settings__section"
+                  [class.tx-settings__section--active]="isSectionActive('databases')"
+                  [attr.aria-hidden]="!isSectionActive('databases')"
+                >
+                  <div
+                    class="tx-settings__section-inner tx-entrance-stagger"
+                    [class.tx-entrance-stagger--play]="isSectionContentAnimating('databases')"
+                    [class.tx-entrance-stagger--settled]="isSectionContentSettled('databases')"
+                  >
+                    <tx-settings-databases-section
+                      [databases]="s.databases"
+                      (databasesChange)="patchDatabases($event)"
+                    />
+                  </div>
+                </section>
+              }
               @if (isSectionActive('general')) {
                 <section
                   class="tx-settings__section"

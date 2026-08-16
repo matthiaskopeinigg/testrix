@@ -46,7 +46,7 @@ export class DatabaseCatalogService {
   }
 
   /**
-   * Catalog slice for SQL autocomplete. Only selected / default schemas — never the
+   * Catalog slice for SQL autocomplete. Only selected schemas — never the
    * full schema directory (Oracle `all_users` can be 200+ and freezes the editor).
    * Tables/columns are hard-capped so a loaded schema with thousands of objects stays cheap.
    *
@@ -134,7 +134,7 @@ export class DatabaseCatalogService {
   }
 
   /**
-   * Opens the catalog with only selected/default schemas (no full schema directory query).
+   * Opens the catalog with only selected schemas (no full schema directory query).
    */
   async refreshConnection(connection: DatabaseConnection): Promise<void> {
     await this.enqueue(`root:${connection.id}`, async () => {

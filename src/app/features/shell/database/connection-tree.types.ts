@@ -5,6 +5,7 @@ import type { TxTreeNode } from '@app/shared/components/data/tx-tree/tx-tree.typ
 export type ConnectionTreeKind =
   | 'folder'
   | 'connection'
+  | 'schemas'
   | 'schema'
   | 'group'
   | 'table'

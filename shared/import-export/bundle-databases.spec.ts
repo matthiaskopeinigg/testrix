@@ -19,6 +19,7 @@ describe('liftDatabasesFromSettings', () => {
         databases: {
           connections: [conn],
           nodes: [conn],
+          idleDisconnectMinutes: 0,
         },
         privacy: { telemetryEnabled: false },
       },
@@ -39,10 +40,10 @@ describe('liftDatabasesFromSettings', () => {
       exportedAt: '2026-01-01T00:00:00.000Z',
       appVersion: '0.1.0',
       databases: {
-        connections: { connections: [fromSection], nodes: [fromSection] },
+        connections: { connections: [fromSection], nodes: [fromSection], idleDisconnectMinutes: 0 },
       },
       settings: {
-        databases: { connections: [fromSettings], nodes: [fromSettings] },
+        databases: { connections: [fromSettings], nodes: [fromSettings], idleDisconnectMinutes: 0 },
       },
     });
 
@@ -54,7 +55,7 @@ describe('liftDatabasesFromSettings', () => {
 describe('omitSettingsDatabases', () => {
   it('drops databases from a settings snapshot', () => {
     const omitted = omitSettingsDatabases({
-      databases: { connections: [], nodes: [] },
+      databases: { connections: [], nodes: [], idleDisconnectMinutes: 0 },
       privacy: { telemetryEnabled: false },
     });
 

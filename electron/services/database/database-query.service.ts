@@ -40,6 +40,10 @@ export class DatabaseQueryService {
   private readonly oraclePools = new Map<string, { fingerprint: string; pool: OraclePool }>();
   private readonly mongoClients = new Map<string, { fingerprint: string; client: MongoClient }>();
   private readonly clickhouseClients = new Map<string, { fingerprint: string; client: ClickHouseClient }>();
+  private readonly lastActivityAt = new Map<string, number>();
+  private readonly inFlightByConnection = new Map<string, number>();
+  private readonly sqlitePathByConnectionId = new Map<string, string>();
+  private idleWatchTimer: ReturnType<typeof setInterval> | null = null;
 
   /**
    * Runs a query against the given connection profile.
@@ -52,6 +56,19 @@ export class DatabaseQueryService {
     if (!connection || !queryText) {
       throw new Error('Connection and query are required');
     }
+    this.beginActivity(connection.id);
+    try {
+      return await this.executeQuery(connection, queryText, options);
+    } finally {
+      this.endActivity(connection.id);
+    }
+  }
+
+  private async executeQuery(
+    connection: DatabaseConnection,
+    queryText: string,
+    options: DatabaseQueryOptions,
+  ): Promise<DatabaseQueryEnvelope> {
     const stepMs = options.stepTimeoutMs;
     const family = databaseEngineFamily(connection.type);
     if (family === 'redis') {
@@ -205,8 +222,50 @@ export class DatabaseQueryService {
     throw new Error(`Unsupported database type: ${connection.type}`);
   }
 
+  /**
+   * Starts a background sweep that closes pooled connections after
+   * `getIdleDisconnectMinutes()` minutes of inactivity. `0` disables the sweep.
+   */
+  startIdleDisconnectWatch(getIdleDisconnectMinutes: () => number): void {
+    if (this.idleWatchTimer !== null) {
+      return;
+    }
+    this.idleWatchTimer = setInterval(() => {
+      void this.closeIdleConnections(getIdleDisconnectMinutes());
+    }, 15_000);
+    if (typeof this.idleWatchTimer === 'object' && this.idleWatchTimer && 'unref' in this.idleWatchTimer) {
+      this.idleWatchTimer.unref();
+    }
+  }
+
+  /** Closes pooled connections that have been idle for at least `idleMinutes`. */
+  async closeIdleConnections(idleMinutes: number): Promise<void> {
+    if (!Number.isFinite(idleMinutes) || idleMinutes <= 0) {
+      return;
+    }
+    const cutoff = Date.now() - idleMinutes * 60_000;
+    const ids = [...this.lastActivityAt.keys()];
+    for (const id of ids) {
+      if (!id || (this.inFlightByConnection.get(id) ?? 0) > 0) {
+        continue;
+      }
+      const last = this.lastActivityAt.get(id) ?? 0;
+      if (last > 0 && last <= cutoff) {
+        logInfo(`Disconnecting idle database connection ${id} after ${idleMinutes} minute(s)`);
+        await this.closeConnection(id);
+      }
+    }
+  }
+
   /** Closes all pooled connections. Call on app quit. */
   async closeAll(): Promise<void> {
+    if (this.idleWatchTimer !== null) {
+      clearInterval(this.idleWatchTimer);
+      this.idleWatchTimer = null;
+    }
+    this.lastActivityAt.clear();
+    this.inFlightByConnection.clear();
+    this.sqlitePathByConnectionId.clear();
     const promises: Promise<unknown>[] = [];
     for (const c of this.redisPool.values()) {
       promises.push(c.quit().catch(() => {}));
@@ -245,6 +304,90 @@ export class DatabaseQueryService {
     }
     this.clickhouseClients.clear();
     await Promise.allSettled(promises);
+  }
+
+  /** Closes pooled clients for a single connection id. */
+  async closeConnection(connectionId: string): Promise<void> {
+    if (!connectionId) {
+      return;
+    }
+    const promises: Promise<unknown>[] = [];
+    const redis = this.redisPool.get(connectionId);
+    if (redis) {
+      this.redisPool.delete(connectionId);
+      promises.push(redis.quit().catch(() => {}));
+    }
+    const sqlitePath = this.sqlitePathByConnectionId.get(connectionId);
+    if (sqlitePath) {
+      const db = this.sqliteDbs.get(sqlitePath);
+      if (db) {
+        this.sqliteDbs.delete(sqlitePath);
+        try {
+          db.close();
+        } catch {
+          /* ignore */
+        }
+      }
+      for (const [id, path] of [...this.sqlitePathByConnectionId.entries()]) {
+        if (path === sqlitePath) {
+          this.sqlitePathByConnectionId.delete(id);
+        }
+      }
+    }
+    const pg = this.pgPools.get(connectionId);
+    if (pg) {
+      this.pgPools.delete(connectionId);
+      promises.push(pg.pool.end().catch(() => {}));
+    }
+    const mysql = this.mysqlPools.get(connectionId);
+    if (mysql) {
+      this.mysqlPools.delete(connectionId);
+      promises.push(mysql.end().catch(() => {}));
+    }
+    const mssql = this.mssqlPools.get(connectionId);
+    if (mssql) {
+      this.mssqlPools.delete(connectionId);
+      promises.push(mssql.close().catch(() => {}));
+    }
+    const oracle = this.oraclePools.get(connectionId);
+    if (oracle) {
+      this.oraclePools.delete(connectionId);
+      promises.push(oracle.pool.close(0).catch(() => {}));
+    }
+    const mongo = this.mongoClients.get(connectionId);
+    if (mongo) {
+      this.mongoClients.delete(connectionId);
+      promises.push(mongo.client.close().catch(() => {}));
+    }
+    const clickhouse = this.clickhouseClients.get(connectionId);
+    if (clickhouse) {
+      this.clickhouseClients.delete(connectionId);
+      promises.push(clickhouse.client.close().catch(() => {}));
+    }
+    this.lastActivityAt.delete(connectionId);
+    this.inFlightByConnection.delete(connectionId);
+    await Promise.allSettled(promises);
+  }
+
+  private beginActivity(connectionId: string): void {
+    if (!connectionId) {
+      return;
+    }
+    this.lastActivityAt.set(connectionId, Date.now());
+    this.inFlightByConnection.set(connectionId, (this.inFlightByConnection.get(connectionId) ?? 0) + 1);
+  }
+
+  private endActivity(connectionId: string): void {
+    if (!connectionId) {
+      return;
+    }
+    this.lastActivityAt.set(connectionId, Date.now());
+    const next = (this.inFlightByConnection.get(connectionId) ?? 1) - 1;
+    if (next <= 0) {
+      this.inFlightByConnection.delete(connectionId);
+      return;
+    }
+    this.inFlightByConnection.set(connectionId, next);
   }
 
   private connectTimeoutMs(conn: DatabaseConnection): number {
@@ -305,6 +448,9 @@ export class DatabaseQueryService {
   private getSqlite(conn: DatabaseConnection): Database.Database {
     const abs = this.resolveSqlitePath(conn);
     const busy = this.busyTimeoutMs(conn);
+    if (conn.id) {
+      this.sqlitePathByConnectionId.set(conn.id, abs);
+    }
     if (!this.sqliteDbs.has(abs)) {
       logInfo(`Opening SQLite database: ${abs}`);
       this.sqliteDbs.set(abs, new Database(abs, { timeout: busy }));

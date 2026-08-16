@@ -128,6 +128,7 @@ export function createDefaultSettings(): SettingsFile {
     databases: {
       connections: [],
       nodes: [],
+      idleDisconnectMinutes: 0,
     },
   };
 }

@@ -21,7 +21,7 @@ export interface ConnectionCatalogState {
   readonly state: CatalogLoadState;
   readonly error?: string;
   /**
-   * `seed` = only selected/default schemas (fast open).
+   * `seed` = only explicitly selected schemas (fast open).
    * `full` = complete directory from the database (Schemas… picker).
    */
   readonly schemaDirectory: 'seed' | 'full';

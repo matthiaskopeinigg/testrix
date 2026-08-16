@@ -24,7 +24,7 @@ export const HELP_WIKI_DATABASE_SECTIONS: readonly HelpWikiSection[] = [
         items: [
           'Connections and Queries each collapse independently. Both start expanded.',
           'Search filters connection and query names. Filter and sort menus refine the Queries list.',
-          'Right-click a connection → Schemas… to search and choose which schemas appear (useful when a database has hundreds of schemas). Only selected schemas show under the connection; Hide schema removes one from the tree.',
+          'Right-click a connection → Schemas…, or click “N Schemas selected”, to choose which schemas appear. None are selected by default. Hide schema removes one from the tree.',
           'Right-click empty space in a section to create a folder or item at the root.',
           'Double-click a folder, connection, or query name to rename it inline.',
           'Drag connections to reorder them or drop them onto a folder.',
@@ -33,7 +33,7 @@ export const HELP_WIKI_DATABASE_SECTIONS: readonly HelpWikiSection[] = [
       {
         type: 'note',
         title: 'Where data is stored',
-        text: 'Connections are shared in settings.json (all profiles). Saved queries are profile-local in queries.json. Export both from Settings → Data & Config → Export, under the Database section.',
+        text: 'Connections are shared in settings.json (all profiles). Saved queries are profile-local in queries.json. Export both from Settings → Data & Config → Export, under the Database section. Settings → Database controls idle disconnect for pooled connections.',
       },
     ],
   }),
@@ -56,6 +56,7 @@ export const HELP_WIKI_DATABASE_SECTIONS: readonly HelpWikiSection[] = [
           'Connection settings — host, port, user, password, database name, Oracle service name / SID, SQLite file path, TLS, and timeouts (context menu).',
           'Test connection — probes the server without running a query.',
           'Connect on boot — Testrix probes the connection when the app starts.',
+          'Click a connection to show its selected schemas; click again to hide them. Click “N Schemas selected” to pick schemas — none are selected by default.',
           'Open catalog — expands schemas and objects. Refresh reloads the catalog.',
           'New query — creates a saved query already pointed at this connection.',
           'Open data — opens a table data tab for the selected table or view.',
@@ -65,7 +66,7 @@ export const HELP_WIKI_DATABASE_SECTIONS: readonly HelpWikiSection[] = [
       {
         type: 'tip',
         title: 'Local Docker databases',
-        text: 'From the repo, run docker compose up -d. Add PostgreSQL on localhost:5432 (user, password, and database testrix) or Redis on localhost:6379.',
+        text: 'From the repo, run docker compose up -d. Add PostgreSQL on localhost:5432 (user, password, and database testrix), Oracle on localhost:1521 (user testrix, password testrix, service name FREEPDB1, Use SID off), or Redis on localhost:6379. Oracle’s first start can take a few minutes.',
       },
       {
         type: 'note',

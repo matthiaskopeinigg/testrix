@@ -42,7 +42,7 @@ export const databaseConnectionSchema = z.object({
   useSid: z.boolean().optional(),
   /**
    * Schemas shown under this connection in the sidebar (DataGrip-style).
-   * When omitted, Testrix defaults to the current user / public / database schema.
+   * When omitted, no schemas are shown until the user picks some.
    */
   selectedSchemas: z.array(z.string().min(1).max(256)).max(500).optional(),
   tls: z.boolean().optional(),
@@ -99,14 +99,31 @@ export const databaseConnectionTreeItemSchema: z.ZodType<DatabaseConnectionTreeI
   }),
 );
 
+/** 0 keeps pooled connections open until the app quits. */
+export const DATABASE_IDLE_DISCONNECT_MINUTES_MIN = 0;
+
+/** Upper bound for the Settings slider and persisted `idleDisconnectMinutes`. */
+export const DATABASE_IDLE_DISCONNECT_MINUTES_MAX = 120;
+
 const databaseSettingsShapeSchema = z.object({
   connections: z.array(databaseConnectionSchema).default([]),
   nodes: z.array(databaseConnectionTreeItemSchema).optional(),
+  /**
+   * Close idle pooled connections after this many minutes.
+   * `0` disables idle disconnect.
+   */
+  idleDisconnectMinutes: z
+    .number()
+    .int()
+    .min(DATABASE_IDLE_DISCONNECT_MINUTES_MIN)
+    .max(DATABASE_IDLE_DISCONNECT_MINUTES_MAX)
+    .default(0),
 });
 
 export type DatabaseSettings = {
   readonly connections: readonly DatabaseConnection[];
   readonly nodes: readonly DatabaseConnectionTreeItem[];
+  readonly idleDisconnectMinutes: number;
 };
 
 /** True when a tree item is a connection (not a folder). */
@@ -294,11 +311,23 @@ function wrapConnectionsAsNodes(
   return connections.map((conn) => ({ ...conn, kind: 'connection' as const }));
 }
 
+function clampIdleDisconnectMinutes(value: number | undefined): number {
+  if (value == null || !Number.isFinite(value)) {
+    return 0;
+  }
+  return Math.min(
+    DATABASE_IDLE_DISCONNECT_MINUTES_MAX,
+    Math.max(DATABASE_IDLE_DISCONNECT_MINUTES_MIN, Math.floor(value)),
+  );
+}
+
 /** Syncs `nodes` (source of truth when present) with the flat `connections` list. */
 export function normalizeDatabaseSettings(input: {
   readonly connections?: readonly DatabaseConnection[];
   readonly nodes?: readonly DatabaseConnectionTreeItem[];
+  readonly idleDisconnectMinutes?: number;
 }): DatabaseSettings {
+  const idleDisconnectMinutes = clampIdleDisconnectMinutes(input.idleDisconnectMinutes);
   if (input.nodes !== undefined) {
     const nodes = dedupeFolderTreeById(
       [...input.nodes],
@@ -307,12 +336,12 @@ export function normalizeDatabaseSettings(input: {
         isDatabaseConnectionFolder(folder) ? { ...folder, children } : folder,
       (item) => (isDatabaseConnectionFolder(item) ? item.children : []),
     );
-    return { nodes, connections: flattenDatabaseConnections(nodes) };
+    return { nodes, connections: flattenDatabaseConnections(nodes), idleDisconnectMinutes };
   }
   const connections = [...(input.connections ?? [])].map((conn) =>
     databaseConnectionSchema.parse(conn),
   );
-  return { connections, nodes: wrapConnectionsAsNodes(connections) };
+  return { connections, nodes: wrapConnectionsAsNodes(connections), idleDisconnectMinutes };
 }
 
 export const databaseSettingsSchema: z.ZodType<DatabaseSettings> = databaseSettingsShapeSchema.transform(

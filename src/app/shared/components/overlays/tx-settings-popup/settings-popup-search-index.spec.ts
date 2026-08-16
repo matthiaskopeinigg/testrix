@@ -8,6 +8,7 @@ describe('settingsSectionMatchesQuery', () => {
     expect(settingsSectionMatchesQuery('appearance', 'dracula')).toBe(true);
     expect(settingsSectionMatchesQuery('logging', 'trace')).toBe(true);
     expect(settingsSectionMatchesQuery('dataConfig', 'profile')).toBe(true);
+    expect(settingsSectionMatchesQuery('databases', 'idle')).toBe(true);
   });
 
   it('does not match unrelated sections', () => {

@@ -34,11 +34,15 @@ export class DatabaseConnectionsService {
   }
 
   async saveNodes(nodes: readonly DatabaseConnectionTreeItem[]): Promise<void> {
-    const normalized = normalizeDatabaseSettings({ nodes });
+    const normalized = normalizeDatabaseSettings({
+      nodes,
+      idleDisconnectMinutes: this.config.settings()?.databases.idleDisconnectMinutes,
+    });
     await this.config.patchSettings({
       databases: {
         connections: [...normalized.connections],
         nodes: [...normalized.nodes],
+        idleDisconnectMinutes: normalized.idleDisconnectMinutes,
       },
     });
   }

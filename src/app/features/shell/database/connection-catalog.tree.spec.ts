@@ -2,7 +2,16 @@ import { describe, expect, it } from 'vitest';
 
 import { emptyConnectionCatalogState } from '@app/core/database/database-catalog.types';
 
-import { buildConnectionCatalogChildren, createConnectionCatalogBuildMemo } from './connection-catalog.tree';
+import {
+  buildConnectionCatalogChildren,
+  createConnectionCatalogBuildMemo,
+  databaseSchemasSelectedLabel,
+} from './connection-catalog.tree';
+
+const publicSelected = {
+  showSystemObjects: false,
+  connection: { type: 'postgresql' as const, selectedSchemas: ['public'] },
+};
 
 describe('buildConnectionCatalogChildren', () => {
   it('omits empty Views and does not leave a loading child id', () => {
@@ -14,8 +23,8 @@ describe('buildConnectionCatalogChildren', () => {
         public: [{ schema: 'public', name: 'users', kind: 'table' as const }],
       },
     };
-    const nodes = buildConnectionCatalogChildren('c1', 'postgresql', catalog, false);
-    const schema = nodes[0];
+    const nodes = buildConnectionCatalogChildren('c1', 'postgresql', catalog, publicSelected);
+    const schema = nodes.find((node) => node.kind === 'schema');
     expect(schema?.children?.map((child) => child.label)).toEqual(['Tables']);
     expect(schema?.children?.some((child) => child.label.includes('Loading'))).toBe(false);
     const table = schema?.children?.[0]?.children?.[0];
@@ -30,20 +39,22 @@ describe('buildConnectionCatalogChildren', () => {
       schemas: [{ name: 'public', system: false }],
       tablesBySchema: {},
     };
-    const nodes = buildConnectionCatalogChildren('c1', 'postgresql', catalog, false);
-    const schema = nodes[0];
+    const nodes = buildConnectionCatalogChildren('c1', 'postgresql', catalog, publicSelected);
+    const schema = nodes.find((node) => node.kind === 'schema');
     expect(schema?.subtitle).toBeUndefined();
     expect(schema?.children?.map((child) => child.label)).toEqual(['Loading tables…']);
   });
 
-  it('returns no children while the catalog is loading', () => {
+  it('puts a schemas-selected action first while the catalog is loading', () => {
     const nodes = buildConnectionCatalogChildren(
       'c1',
       'postgresql',
       { ...emptyConnectionCatalogState(), state: 'loading' },
       false,
     );
-    expect(nodes).toEqual([]);
+    expect(nodes.map((node) => node.label)).toEqual([databaseSchemasSelectedLabel(0)]);
+    expect(nodes[0]?.kind).toBe('schemas');
+    expect(nodes[0]?.icon).toBe('sliders');
   });
 
   it('shows only selected schemas when the connection lists them', () => {
@@ -61,24 +72,34 @@ describe('buildConnectionCatalogChildren', () => {
       showSystemObjects: false,
       connection: { type: 'oracle', user: 'hr', selectedSchemas: ['APP', 'SCOTT'] },
     });
-    expect(nodes.map((node) => node.label)).toEqual(['SCOTT', 'APP']);
+    expect(nodes.map((node) => node.label)).toEqual([
+      databaseSchemasSelectedLabel(2),
+      'SCOTT',
+      'APP',
+    ]);
   });
 
-  it('defaults Oracle to the connection user when selection is unset', () => {
+  it('does not add public or the Oracle user as a default schema', () => {
     const catalog = {
       ...emptyConnectionCatalogState(),
       state: 'ready' as const,
       schemas: [
+        { name: 'public', system: false },
         { name: 'HR', system: false },
         { name: 'SCOTT', system: false },
       ],
       tablesBySchema: {},
     };
-    const nodes = buildConnectionCatalogChildren('c1', 'oracle', catalog, {
+    const postgres = buildConnectionCatalogChildren('c1', 'postgresql', catalog, {
+      showSystemObjects: false,
+      connection: { type: 'postgresql' },
+    });
+    expect(postgres.map((node) => node.label)).toEqual([databaseSchemasSelectedLabel(0)]);
+    const oracle = buildConnectionCatalogChildren('c1', 'oracle', catalog, {
       showSystemObjects: false,
       connection: { type: 'oracle', user: 'hr' },
     });
-    expect(nodes.map((node) => node.label)).toEqual(['HR']);
+    expect(oracle.map((node) => node.label)).toEqual([databaseSchemasSelectedLabel(0)]);
   });
 
   it('reuses unchanged table nodes when another table detail is patched', () => {
@@ -93,8 +114,9 @@ describe('buildConnectionCatalogChildren', () => {
       tablesBySchema: { public: tables },
     };
     const memo = createConnectionCatalogBuildMemo();
-    const first = buildConnectionCatalogChildren('c1', 'postgresql', catalog, false, memo);
-    const users = first[0]?.children?.[0]?.children?.[0];
+    const first = buildConnectionCatalogChildren('c1', 'postgresql', catalog, publicSelected, memo);
+    const schema = first.find((node) => node.kind === 'schema');
+    const users = schema?.children?.[0]?.children?.[0];
     const patched = {
       ...catalog,
       detailsByTable: {
@@ -106,9 +128,10 @@ describe('buildConnectionCatalogChildren', () => {
         },
       },
     };
-    const second = buildConnectionCatalogChildren('c1', 'postgresql', patched, false, memo);
-    expect(second[0]?.children?.[0]?.children?.[0]).toBe(users);
-    expect(second[0]?.children?.[0]?.children?.[1]?.children?.some((child) => child.label === 'Columns')).toBe(
+    const second = buildConnectionCatalogChildren('c1', 'postgresql', patched, publicSelected, memo);
+    const nextSchema = second.find((node) => node.kind === 'schema');
+    expect(nextSchema?.children?.[0]?.children?.[0]).toBe(users);
+    expect(nextSchema?.children?.[0]?.children?.[1]?.children?.some((child) => child.label === 'Columns')).toBe(
       true,
     );
   });

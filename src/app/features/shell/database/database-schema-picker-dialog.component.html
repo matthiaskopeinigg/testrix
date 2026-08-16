@@ -6,63 +6,85 @@
   (closed)="handleCancel()"
 >
   @if (state(); as current) {
-    <p class="database-schema-picker__hint">
-      Choose which schemas appear under this connection. Search filters the list like DataGrip.
-    </p>
+    <div class="database-schema-picker">
+      <p class="database-schema-picker__hint">
+        Choose which schemas appear under this connection. Selected schemas stay at the top of the list.
+      </p>
 
-    <tx-form-field label="Search schemas" controlId="database-schema-picker-search">
-      <tx-input
-        controlId="database-schema-picker-search"
-        placeholder="Filter by schema name…"
-        [ngModel]="query()"
-        (ngModelChange)="query.set($event)"
-        txAutofocus
-      />
-    </tx-form-field>
+      <tx-form-field label="Search schemas" controlId="database-schema-picker-search">
+        <tx-input
+          controlId="database-schema-picker-search"
+          placeholder="Filter by schema name…"
+          [disabled]="current.loading"
+          [ngModel]="query()"
+          (ngModelChange)="query.set($event)"
+          txAutofocus
+        />
+      </tx-form-field>
 
-    <div class="database-schema-picker__toolbar" role="group" aria-label="Schema selection actions">
-      <tx-button variant="secondary" (pressed)="handleSelectFiltered()">
-        Select filtered
-      </tx-button>
-      <tx-button variant="secondary" (pressed)="handleClearFiltered()">
-        Clear filtered
-      </tx-button>
-      <span class="database-schema-picker__count">{{ selectedCount() }} selected</span>
-    </div>
+      <div class="database-schema-picker__body">
+        <div class="database-schema-picker__meta">
+          <span class="database-schema-picker__count">{{ selectedCount() }} selected</span>
+        </div>
 
-    <div
-      class="database-schema-picker__list"
-      role="listbox"
-      aria-multiselectable="true"
-      aria-label="Schemas"
-    >
-      @for (schema of filteredSchemas(); track schema.name) {
-        <button
-          type="button"
-          class="database-schema-picker__row"
-          role="option"
-          [attr.aria-selected]="isSelected(schema.name)"
-          [class.is-selected]="isSelected(schema.name)"
-          (click)="handleToggle(schema.name)"
+        @if (current.error) {
+          <tx-banner variant="error" title="Could not load schemas">
+            {{ current.error }}
+          </tx-banner>
+        }
+
+        <div
+          class="database-schema-picker__list"
+          role="listbox"
+          aria-multiselectable="true"
+          aria-label="Schemas"
+          [attr.aria-busy]="current.loading"
         >
-          <tx-icon
-            [name]="isSelected(schema.name) ? 'checkCircle' : 'plus'"
-            [size]="16"
-            aria-hidden="true"
-          />
-          <span class="database-schema-picker__name">{{ schema.name }}</span>
-          @if (schema.system) {
-            <span class="database-schema-picker__badge">System</span>
+          @if (current.loading) {
+            <div class="database-schema-picker__loading">
+              <tx-spinner size="md" ariaLabel="Loading schemas" />
+              <p class="database-schema-picker__loading-label">Loading schemas…</p>
+            </div>
+          } @else {
+            @for (schema of filteredSchemas(); track schema.name; let i = $index) {
+              @if (showDividerBefore(i)) {
+                <div class="database-schema-picker__divider" role="separator"></div>
+              }
+              <button
+                type="button"
+                class="database-schema-picker__row"
+                role="option"
+                [attr.aria-selected]="isSelected(schema.name)"
+                [class.is-selected]="isSelected(schema.name)"
+                (click)="handleToggle(schema.name)"
+              >
+                <span class="database-schema-picker__check" aria-hidden="true">
+                  @if (isSelected(schema.name)) {
+                    <tx-icon name="check" [size]="10" />
+                  }
+                </span>
+                <span class="database-schema-picker__name">{{ schema.name }}</span>
+                @if (schema.system) {
+                  <span class="database-schema-picker__system">sys</span>
+                }
+              </button>
+            } @empty {
+              <p class="database-schema-picker__empty">No schemas match this filter.</p>
+            }
           }
-        </button>
-      } @empty {
-        <p class="database-schema-picker__empty">No schemas match this filter.</p>
-      }
-    </div>
+        </div>
+      </div>
 
-    <div class="database-schema-picker__actions" role="group" aria-label="Dialog actions">
-      <tx-button variant="secondary" (pressed)="handleCancel()">Cancel</tx-button>
-      <tx-button variant="primary" (pressed)="handleApply()">Apply</tx-button>
+      <div class="database-schema-picker__actions" role="group" aria-label="Dialog actions">
+        <tx-button variant="secondary" (pressed)="handleCancel()">Cancel</tx-button>
+        <tx-button
+          variant="primary"
+          [disabled]="current.loading || !!current.error"
+          (pressed)="handleApply()"
+        >
+          Apply
+        </tx-button>
+      </div>
     </div>
   }
 </tx-modal>

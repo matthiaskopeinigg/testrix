@@ -20,7 +20,7 @@ describe('buildImportExportTree', () => {
       exportedAt: '2026-01-01T00:00:00.000Z',
       appVersion: '0.1.0',
       databases: {
-        connections: { connections: [conn], nodes: [conn] },
+        connections: { connections: [conn], nodes: [conn], idleDisconnectMinutes: 0 },
         queries: {
           schemaVersion: 2,
           nodes: [
@@ -36,7 +36,7 @@ describe('buildImportExportTree', () => {
         },
       },
       settings: {
-        databases: { connections: [conn], nodes: [conn] },
+        databases: { connections: [conn], nodes: [conn], idleDisconnectMinutes: 0 },
       },
     };
 
@@ -67,7 +67,7 @@ describe('buildImportExportTree', () => {
       exportedAt: '2026-01-01T00:00:00.000Z',
       appVersion: '0.1.0',
       settings: {
-        databases: { connections: [conn], nodes: [conn] },
+        databases: { connections: [conn], nodes: [conn], idleDisconnectMinutes: 0 },
       },
     });
 
@@ -93,7 +93,7 @@ describe('filterBundle databases', () => {
       exportedAt: '2026-01-01T00:00:00.000Z',
       appVersion: '0.1.0',
       databases: {
-        connections: { connections: [connA, connB], nodes: [connA, connB] },
+        connections: { connections: [connA, connB], nodes: [connA, connB], idleDisconnectMinutes: 0 },
         queries: {
           schemaVersion: 2,
           nodes: [

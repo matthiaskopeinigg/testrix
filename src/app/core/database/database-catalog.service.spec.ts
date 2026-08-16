@@ -59,7 +59,7 @@ describe('DatabaseCatalogService', () => {
 
     expect(introspect).not.toHaveBeenCalled();
     expect(catalog.snapshot('ora1')?.schemaDirectory).toBe('seed');
-    expect(catalog.snapshot('ora1')?.schemas.map((schema) => schema.name)).toEqual(['HR']);
+    expect(catalog.snapshot('ora1')?.schemas).toEqual([]);
   });
 
   it('loads the full schema directory only for the Schemas picker', async () => {

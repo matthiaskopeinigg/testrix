@@ -1,6 +1,7 @@
 export const CONNECTION_CATALOG_SEP = '::tx::';
 
 export type ConnectionCatalogNodeKind =
+  | 'schemas'
   | 'schema'
   | 'group'
   | 'table'

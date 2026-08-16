@@ -21,6 +21,7 @@ import { DbChannels } from '../channels/db.channels';
 import { databaseQueryService } from '../../services/database/database-query.service';
 import { databaseIntrospectService } from '../../services/database/database-introspect.service';
 import { databaseConnectionStatusService } from '../../services/database/database-connection-status.service';
+import { getMainSettings } from '../../services/settings-runtime';
 import type { ConfigFileService } from '../../services/config/config-file.service';
 
 const dbQueryPayloadSchema = z.object({
@@ -42,6 +43,9 @@ export interface DbHandlerDeps {
 }
 
 export function registerDbHandlers(ipc: IpcMainBinder, deps: DbHandlerDeps): void {
+  databaseQueryService.startIdleDisconnectWatch(
+    () => getMainSettings().databases.idleDisconnectMinutes,
+  );
   ipc.handle(
     DbChannels.query,
     wrapInvokeHandler(DbChannels.query, async (_event: IpcMainInvokeEvent, raw: unknown) => {

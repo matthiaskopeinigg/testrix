@@ -31,6 +31,7 @@ describe('database-settings.schema', () => {
     const settings = createDefaultSettings();
     expect(settings.databases.connections).toEqual([]);
     expect(settings.databases.nodes).toEqual([]);
+    expect(settings.databases.idleDisconnectMinutes).toBe(0);
     expect(databaseSettingsSchema.safeParse(settings.databases).success).toBe(true);
   });
 

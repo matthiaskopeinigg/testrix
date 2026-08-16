@@ -7,9 +7,9 @@ import { isSystemSchemaName } from './sql-identifier';
 /**
  * Resolves which catalog schemas should appear under a connection in the sidebar.
  *
- * DataGrip-style: only selected schemas are shown. When `selectedSchemas` is unset,
- * defaults to the current user / public / database schema instead of listing every
- * schema (Oracle can expose 200+ users via `all_users`).
+ * DataGrip-style: only explicitly selected schemas are shown. When `selectedSchemas`
+ * is unset, the tree stays empty until the user picks schemas (Oracle can expose
+ * 200+ users via `all_users`).
  *
  * @param connection Connection profile (type, user, database, selectedSchemas).
  * @param schemas Full introspected schema list.
@@ -26,18 +26,17 @@ export function resolveVisibleDatabaseSchemas(
   }
 
   const selected = connection.selectedSchemas;
-  if (selected !== undefined) {
-    return filterSchemasBySelection(eligible, selected);
+  if (selected === undefined) {
+    return [];
   }
-
-  return filterSchemasBySelection(eligible, defaultSelectedSchemaNames(connection, eligible));
+  return filterSchemasBySelection(eligible, selected);
 }
 
 /**
  * Builds a lightweight schema list for the sidebar without querying every DB user.
  *
  * Opening a connection with hundreds of schemas (Oracle `all_users`) freezes the UI;
- * seed only the selected / default schemas and load the full directory when the
+ * seed only explicitly selected schemas and load the full directory when the
  * Schemas… picker opens.
  *
  * @param connection Connection profile.
@@ -45,10 +44,7 @@ export function resolveVisibleDatabaseSchemas(
 export function seedCatalogSchemaItems(
   connection: Pick<DatabaseConnection, 'type' | 'user' | 'database' | 'selectedSchemas'>,
 ): DatabaseCatalogSchemaItem[] {
-  const names =
-    connection.selectedSchemas !== undefined
-      ? connection.selectedSchemas
-      : guessedDefaultSchemaNames(connection);
+  const names = connection.selectedSchemas ?? [];
   const seen = new Set<string>();
   const out: DatabaseCatalogSchemaItem[] = [];
   for (const raw of names) {
@@ -171,7 +167,7 @@ function firstEligible(eligible: readonly DatabaseCatalogSchemaItem[]): string[]
 }
 
 /**
- * Schema names that query autocomplete may suggest (selected / default only).
+ * Schema names that query autocomplete may suggest (selected schemas only).
  * Never the full `all_users` directory — that freezes editors with 200+ schemas.
  *
  * @param connection Connection profile.

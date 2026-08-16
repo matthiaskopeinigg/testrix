@@ -464,12 +464,12 @@ export class UpdaterService {
         buildSilentUpdateLaunchOptions(install),
       );
       if (process.platform !== 'darwin') {
-        electronApp.quit();
+        electronApp.exit(0);
         return;
       }
       setTimeout(() => {
-        electronApp.quit();
-      }, 400);
+        electronApp.exit(0);
+      }, 200);
     } catch (error: unknown) {
       logError(this.getPathFn(), 'installer launch failed', error);
       const message = error instanceof Error ? error.message : 'Could not launch the installer.';

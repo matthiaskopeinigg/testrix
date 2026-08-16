@@ -53,6 +53,7 @@ import {
     '[class.tx-tree-row-host--debug-target]': 'isDebugDragTarget()',
     '[class.tx-dnd-deny-active]': 'showDropRejectShake()',
     '[attr.data-tx-tree-node-id]': 'row().id',
+    '[attr.data-kind]': 'row().node.kind || null',
     '[style.--tx-tree-indent]': 'indentPx() + "px"',
     '[style.--row-depth]': 'row().depth',
     '[class.tx-tree-row-host--expand-reveal]': 'expandRevealIndex() !== null',

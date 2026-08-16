@@ -32,6 +32,25 @@ function payloadExists(payloadRoot) {
   return fs.existsSync(path.join(payloadRoot, MAIN_EXECUTABLE));
 }
 
+/**
+ * Copies a payload directory with robocopy (much faster than per-file Node copy).
+ * Exit codes 0–7 are success.
+ *
+ * @param {string} from
+ * @param {string} to
+ * @returns {boolean}
+ */
+function copyDirRobocopy(from, to) {
+  fs.mkdirSync(to, { recursive: true });
+  const result = spawnSync(
+    'robocopy',
+    [from, to, '/E', '/R:2', '/W:1', '/NFL', '/NDL', '/NJH', '/NJS', '/NP'],
+    { windowsHide: true, encoding: 'utf8' },
+  );
+  const code = result.status ?? 16;
+  return code >= 0 && code < 8;
+}
+
 function getLaunchPath(installDir) {
   return path.join(installDir, MAIN_EXECUTABLE);
 }
@@ -112,6 +131,10 @@ async function installApp({ src, dest, scope, onProgress }) {
   try {
     fs.rmSync(dest, { recursive: true, force: true });
   } catch {}
+  if (copyDirRobocopy(src, dest)) {
+    onProgress({ phase: 'copying', percent: 1 });
+    return;
+  }
   await copyDirWithProgress(src, dest, ({ percent, current }) => {
     onProgress({ phase: 'copying', percent, current });
   });

@@ -1,59 +1,121 @@
+.database-schema-picker {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tx-space-5, 1.25rem);
+  min-height: 0;
+  flex: 1;
+}
+
 .database-schema-picker__hint {
-  margin: 0 0 var(--tx-space-3);
+  margin: 0;
   color: var(--tx-fg-muted);
   font-size: var(--tx-font-size-sm);
   line-height: 1.45;
 }
 
-.database-schema-picker__toolbar {
+.database-schema-picker__body {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: var(--tx-space-3, 0.75rem);
+  min-height: 0;
+  flex: 1;
+}
+
+.database-schema-picker__meta {
+  display: flex;
   align-items: center;
-  gap: var(--tx-space-2);
-  margin: var(--tx-space-3) 0 var(--tx-space-4);
+  margin: 0;
 }
 
 .database-schema-picker__count {
-  margin-left: auto;
   color: var(--tx-fg-muted);
   font-size: var(--tx-font-size-sm);
+  font-variant-numeric: tabular-nums;
 }
 
 .database-schema-picker__list {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  max-height: min(420px, 50vh);
+  gap: 0;
+  flex: 1;
+  max-height: min(560px, 62vh);
   overflow: auto;
-  margin-top: var(--tx-space-2);
-  padding: var(--tx-space-1);
-  border: 1px solid var(--tx-border-subtle);
+  padding: 0.15rem;
+  border: 1px solid var(--tx-border-0);
   border-radius: var(--tx-radius-md);
-  background: color-mix(in srgb, var(--tx-bg-elevated) 80%, transparent);
+  background: color-mix(in srgb, var(--tx-bg-elevated) 88%, var(--tx-bg) 12%);
+}
+
+.database-schema-picker__loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--tx-space-3, 0.75rem);
+  min-height: 120px;
+  padding: var(--tx-space-4, 1rem) var(--tx-space-3, 0.75rem);
+}
+
+.database-schema-picker__loading-label {
+  margin: 0;
+  color: var(--tx-fg-muted);
+  font-size: var(--tx-font-size-sm);
+}
+
+.database-schema-picker__divider {
+  height: 1px;
+  margin: 0.12rem 0.3rem;
+  background: var(--tx-border-0);
 }
 
 .database-schema-picker__row {
   display: flex;
   align-items: center;
-  gap: var(--tx-space-2);
+  gap: 0.4rem;
   width: 100%;
+  min-height: 1.5rem;
   margin: 0;
-  padding: var(--tx-space-2) var(--tx-space-3);
-  border: 0;
+  padding: 0.1rem 0.35rem;
+  border: 1px solid transparent;
   border-radius: var(--tx-radius-sm);
   background: transparent;
   color: var(--tx-fg);
   font: inherit;
+  line-height: 1.2;
   text-align: left;
   cursor: pointer;
 }
 
 .database-schema-picker__row:hover {
-  background: color-mix(in srgb, var(--tx-accent) 12%, transparent);
+  background: color-mix(in srgb, var(--tx-accent) 8%, transparent);
+}
+
+.database-schema-picker__row:focus-visible {
+  outline: 2px solid var(--tx-focus-ring);
+  outline-offset: -2px;
 }
 
 .database-schema-picker__row.is-selected {
-  background: color-mix(in srgb, var(--tx-accent) 18%, transparent);
+  background: color-mix(in srgb, var(--tx-accent) 14%, transparent);
+  border-color: color-mix(in srgb, var(--tx-accent) 28%, transparent);
+}
+
+.database-schema-picker__check {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 0.875rem;
+  height: 0.875rem;
+  border: 1px solid var(--tx-border-0);
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--tx-bg) 70%, transparent);
+  color: var(--tx-accent);
+}
+
+.database-schema-picker__row.is-selected .database-schema-picker__check {
+  border-color: color-mix(in srgb, var(--tx-accent) 55%, var(--tx-border-0));
+  background: color-mix(in srgb, var(--tx-accent) 18%, var(--tx-bg));
 }
 
 .database-schema-picker__name {
@@ -62,16 +124,22 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.01em;
 }
 
-.database-schema-picker__badge {
+.database-schema-picker__system {
   flex-shrink: 0;
   color: var(--tx-fg-muted);
-  font-size: var(--tx-font-size-xs);
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .database-schema-picker__empty {
-  margin: var(--tx-space-4);
+  margin: var(--tx-space-5, 1.25rem) var(--tx-space-3, 0.75rem);
   color: var(--tx-fg-muted);
   font-size: var(--tx-font-size-sm);
   text-align: center;
@@ -80,6 +148,7 @@
 .database-schema-picker__actions {
   display: flex;
   justify-content: flex-end;
-  gap: var(--tx-space-2);
-  margin-top: var(--tx-space-4);
+  gap: var(--tx-space-2, 0.5rem);
+  margin: 0;
+  padding-top: var(--tx-space-1, 0.25rem);
 }

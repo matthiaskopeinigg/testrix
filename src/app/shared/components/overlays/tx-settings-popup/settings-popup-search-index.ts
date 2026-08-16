@@ -211,6 +211,17 @@ const SETTINGS_SECTION_SEARCH_TERMS: Record<SettingsPopupSection, readonly strin
     'project',
     'shell',
   ),
+  databases: flattenTerms(
+    'Database',
+    'Databases',
+    'Connections',
+    'Disconnect idle connections after',
+    'idle timeout',
+    'disconnect',
+    'pool',
+    'minutes',
+    'Keep connections open',
+  ),
   logging: flattenTerms(
     'Logging',
     'Output',

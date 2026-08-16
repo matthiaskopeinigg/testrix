@@ -1,15 +1,18 @@
-# Local databases for the Data workspace.
+# Local databases for the Database workspace.
 # Redis: type Redis, host localhost, port 6379, DB index 0.
 # Redis Commander UI: http://localhost:8081
 # PostgreSQL: type PostgreSQL, host localhost, port 5432,
 #   user testrix, password testrix, database testrix.
+# Oracle: type Oracle, host localhost, port 1521,
+#   user testrix, password testrix, service name FREEPDB1 (Use SID off).
+#   First start can take a few minutes (image is large).
 # Usage: docker compose up -d
 # Stop:   docker compose down
 
 services:
   redis:
     image: redis:7-alpine
-    container_name: api-workbench-redis
+    container_name: testrix-redis
     hostname: redis
     ports:
       - '6379:6379'
@@ -24,7 +27,7 @@ services:
 
   redis-commander:
     image: ghcr.io/joeferner/redis-commander:latest
-    container_name: api-workbench-redis-commander
+    container_name: testrix-redis-commander
     environment:
       REDIS_HOSTS: local:redis:6379
     ports:
@@ -52,6 +55,28 @@ services:
       timeout: 3s
       retries: 5
 
+  oracle:
+    image: gvenzl/oracle-free:23-slim-faststart
+    container_name: testrix-oracle
+    hostname: oracle
+    ports:
+      - '1521:1521'
+    environment:
+      ORACLE_PASSWORD: testrix
+      APP_USER: testrix
+      APP_USER_PASSWORD: testrix
+    shm_size: 1gb
+    volumes:
+      - oracle-data:/opt/oracle/oradata
+      - ./docker/oracle/init.sql:/container-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ['CMD', 'healthcheck.sh']
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 90s
+
 volumes:
   redis-data:
   postgres-data:
+  oracle-data:

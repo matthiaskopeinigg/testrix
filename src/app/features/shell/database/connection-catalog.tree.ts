@@ -1,6 +1,10 @@
 import type { DatabaseConnection, DatabaseType } from '@shared/config';
 import type { DatabaseCatalogColumn, DatabaseCatalogIndex, DatabaseCatalogTable } from '@shared/database';
-import { isSystemSchemaName, resolveVisibleDatabaseSchemas } from '@shared/database';
+import {
+  databaseSupportsSchemaSelection,
+  isSystemSchemaName,
+  resolveVisibleDatabaseSchemas,
+} from '@shared/database';
 
 import type {
   ConnectionCatalogState,
@@ -15,6 +19,15 @@ import type { ConnectionTreeNode } from './connection-tree.types';
 export type { ConnectionCatalogState, ConnectionCatalogTableDetail } from '@app/core/database/database-catalog.types';
 
 const EMPTY_CATALOG_CHILDREN: ConnectionTreeNode[] = [];
+
+/**
+ * Sidebar label for the schema-picker action row under a connection.
+ *
+ * @param count Number of schemas currently selected for the connection.
+ */
+export function databaseSchemasSelectedLabel(count: number): string {
+  return `${count} Schemas selected`;
+}
 
 /**
  * Per-connection memo so a table-detail patch reuses unchanged schema/table nodes.
@@ -89,10 +102,16 @@ export function buildConnectionCatalogChildren(
     memo?.nodes.clear();
     memo?.tableDetails.clear();
     memo?.schemaTables.clear();
-    return EMPTY_CATALOG_CHILDREN;
+    return withSchemasPicker(connectionId, type, connection, EMPTY_CATALOG_CHILDREN, memo);
   }
   if (catalog.state === 'error') {
-    return [statusNode(connectionId, 'Could not load objects', catalog.error)];
+    return withSchemasPicker(
+      connectionId,
+      type,
+      connection,
+      [statusNode(connectionId, 'Could not load objects', catalog.error)],
+      memo,
+    );
   }
   if (type === 'sqlite') {
     const tables = filterTables(catalog.tablesBySchema['main'] ?? flattenTables(catalog.tablesBySchema), true);
@@ -109,47 +128,100 @@ export function buildConnectionCatalogChildren(
     showSystemObjects,
   );
   if (schemas.length === 0) {
-    if (catalog.schemas.length === 0) {
-      return [statusNode(connectionId, 'No schemas')];
-    }
-    return [
-      statusNode(
-        connectionId,
-        'No schemas selected',
-        'Right-click the connection → Schemas…',
-      ),
-    ];
+    const emptyStatus =
+      catalog.schemaDirectory === 'full' && catalog.schemas.length === 0
+        ? [statusNode(connectionId, 'No schemas')]
+        : EMPTY_CATALOG_CHILDREN;
+    return withSchemasPicker(connectionId, type, connection, emptyStatus, memo);
   }
-  return schemas.map((schema) => {
-    const id = connectionCatalogId(connectionId, 'schema', { schema: schema.name, name: schema.name });
-    const schemaTables = catalog.tablesBySchema[schema.name];
-    const tables = filterTables(schemaTables, showSystemObjects);
-    const loadingSchema = schemaTables === undefined;
-    const prev = memo?.nodes.get(id);
-    if (
-      prev &&
-      memo?.schemaTables.get(id) === schemaTables &&
-      (loadingSchema || schemaTableDetailsUnchanged(connectionId, tables, catalog, memo))
-    ) {
-      return prev;
-    }
-    const node: ConnectionTreeNode = {
-      id,
-      label: schema.name,
-      kind: 'schema',
-      icon: 'layers' as TxIconName,
-      subtitle: schema.system ? 'System' : undefined,
-      draggable: false,
-      droppable: false,
-      data: { kind: 'schema', connectionId, schema: schema.name },
-      children: loadingSchema
-        ? [statusNode(connectionId, 'Loading tables…', undefined, schema.name)]
-        : buildTableGroups(connectionId, schema.name, tables, catalog, memo),
-    };
-    memo?.nodes.set(id, node);
-    memo?.schemaTables.set(id, schemaTables);
-    return node;
-  });
+  return withSchemasPicker(
+    connectionId,
+    type,
+    connection,
+    schemas.map((schema) => {
+      const id = connectionCatalogId(connectionId, 'schema', { schema: schema.name, name: schema.name });
+      const schemaTables = catalog.tablesBySchema[schema.name];
+      const tables = filterTables(schemaTables, showSystemObjects);
+      const loadingSchema = schemaTables === undefined;
+      const prev = memo?.nodes.get(id);
+      if (
+        prev &&
+        memo?.schemaTables.get(id) === schemaTables &&
+        (loadingSchema || schemaTableDetailsUnchanged(connectionId, tables, catalog, memo))
+      ) {
+        return prev;
+      }
+      const node: ConnectionTreeNode = {
+        id,
+        label: schema.name,
+        kind: 'schema',
+        icon: 'layers' as TxIconName,
+        subtitle: schema.system ? 'System' : undefined,
+        draggable: false,
+        droppable: false,
+        data: { kind: 'schema', connectionId, schema: schema.name },
+        children: loadingSchema
+          ? [statusNode(connectionId, 'Loading tables…', undefined, schema.name)]
+          : buildTableGroups(connectionId, schema.name, tables, catalog, memo),
+      };
+      memo?.nodes.set(id, node);
+      memo?.schemaTables.set(id, schemaTables);
+      return node;
+    }),
+    memo,
+  );
+}
+
+/**
+ * Prepends the schema-picker action row when the engine supports schema selection.
+ */
+function withSchemasPicker(
+  connectionId: string,
+  type: DatabaseType | undefined,
+  connection: Pick<DatabaseConnection, 'type' | 'user' | 'database' | 'selectedSchemas'>,
+  children: readonly ConnectionTreeNode[],
+  memo?: ConnectionCatalogBuildMemo,
+): ConnectionTreeNode[] {
+  const picker = schemasPickerNode(connectionId, type, connection, memo);
+  if (!picker) {
+    return children as ConnectionTreeNode[];
+  }
+  if (children === EMPTY_CATALOG_CHILDREN || children.length === 0) {
+    return [picker];
+  }
+  return [picker, ...children];
+}
+
+/**
+ * Live catalog row that opens the schema picker. Not expandable.
+ */
+function schemasPickerNode(
+  connectionId: string,
+  type: DatabaseType | undefined,
+  connection: Pick<DatabaseConnection, 'type' | 'user' | 'database' | 'selectedSchemas'>,
+  memo?: ConnectionCatalogBuildMemo,
+): ConnectionTreeNode | null {
+  if (!databaseSupportsSchemaSelection(type ?? connection.type)) {
+    return null;
+  }
+  const id = connectionCatalogId(connectionId, 'schemas', { name: 'schemas' });
+  const count = connection.selectedSchemas?.length ?? 0;
+  const label = databaseSchemasSelectedLabel(count);
+  const prev = memo?.nodes.get(id);
+  if (prev && prev.label === label && prev.icon === 'sliders') {
+    return prev;
+  }
+  const node: ConnectionTreeNode = {
+    id,
+    label,
+    kind: 'schemas',
+    icon: 'sliders' as TxIconName,
+    draggable: false,
+    droppable: false,
+    data: { kind: 'schemas', connectionId },
+  };
+  memo?.nodes.set(id, node);
+  return node;
 }
 
 function flattenTables(

@@ -174,13 +174,18 @@ export class ConfigService {
           ? ({ ...current.http, ...patch.http } as SettingsFile['http'])
           : current.http,
         databases: patch.databases
-          ? normalizeDatabaseSettings(
-              patch.databases.nodes !== undefined
+          ? normalizeDatabaseSettings({
+              ...(patch.databases.nodes !== undefined
                 ? { nodes: patch.databases.nodes }
                 : patch.databases.connections !== undefined
                   ? { connections: patch.databases.connections }
-                  : current.databases,
-            )
+                  : {
+                      connections: current.databases.connections,
+                      nodes: current.databases.nodes,
+                    }),
+              idleDisconnectMinutes:
+                patch.databases.idleDisconnectMinutes ?? current.databases.idleDisconnectMinutes,
+            })
           : current.databases,
       };
       this.settingsState.set(next);
