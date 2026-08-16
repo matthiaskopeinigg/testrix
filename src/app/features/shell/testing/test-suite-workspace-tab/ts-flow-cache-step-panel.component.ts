@@ -56,6 +56,8 @@ export class TsFlowCacheStepPanelComponent {
   readonly variableCatalog = input<readonly DynamicVariableCatalogItem[]>([]);
 
   readonly configChange = output<Record<string, unknown>>();
+  /** Emitted when the user clicks a `{{placeholder}}` in a generated cache value. */
+  readonly environmentVariableClick = output<{ readonly key: string }>();
 
   protected readonly extractKindOptions = FLOW_STEP_VALIDATION_EXTRACT_KIND_OPTIONS;
 

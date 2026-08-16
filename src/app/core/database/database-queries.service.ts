@@ -2,7 +2,7 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 
 import { ElectronService } from '@app/core/electron/electron.service';
 import { ErrorNotificationService } from '@app/core/errors/error-notification.service';
-import { runTestingHydrateOnce } from '@app/core/testing/testing-hydrate-once';
+import { runTestingHydrateOnce, type TestingHydrateOptions } from '@app/core/testing/testing-hydrate-once';
 import { newTestingId } from '@app/core/testing/testing-id';
 
 import { insertChildIntoFolderTree } from '@shared/config';
@@ -35,7 +35,7 @@ export class DatabaseQueriesService {
   readonly nodes = computed(() => this.fileState()?.nodes ?? []);
   readonly queries = computed(() => flattenSavedQueries(this.nodes()));
 
-  async hydrate(): Promise<void> {
+  async hydrate(options?: TestingHydrateOptions): Promise<void> {
     return runTestingHydrateOnce(
       () => this.fileState() !== null,
       this.hydrateInflight,
@@ -52,7 +52,24 @@ export class DatabaseQueriesService {
           this.fileState.set(createDefaultSavedQueriesFile());
         }
       },
+      options,
     );
+  }
+
+  /**
+   * Writes a pending debounce save so a profile switch does not land on the next folder.
+   */
+  async flushPending(): Promise<void> {
+    if (this.saveTimer === null) {
+      return;
+    }
+    clearTimeout(this.saveTimer);
+    this.saveTimer = null;
+    const file = this.fileState();
+    if (!file) {
+      return;
+    }
+    await this.flushSave(file);
   }
 
   find(id: string): SavedDatabaseQuery | null {

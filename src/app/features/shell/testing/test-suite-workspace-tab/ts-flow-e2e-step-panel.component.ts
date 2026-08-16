@@ -43,6 +43,8 @@ export class TsFlowE2eStepPanelComponent {
   readonly stepId = input<string | null>(null);
 
   readonly configChange = output<Record<string, unknown>>();
+  /** Emitted when the user clicks a `{{placeholder}}` in a URL or text field. */
+  readonly environmentVariableClick = output<{ readonly key: string }>();
 
   protected readonly e2eActionOptions = FLOW_STEP_E2E_ACTION_OPTIONS;
   protected readonly picking = signal(false);

@@ -83,6 +83,7 @@
             [placeholder]="queryEditorPlaceholder()"
             [ngModel]="cfg().query"
             (ngModelChange)="patch({ query: $event })"
+            (environmentVariableClick)="environmentVariableClick.emit($event)"
           />
         </div>
       </tx-form-field>

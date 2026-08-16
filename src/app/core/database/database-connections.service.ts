@@ -42,7 +42,7 @@ export function mergeDatabaseConnectionDrafts(
 }
 
 /**
- * Shared `settings.json` database connections as a folder tree.
+ * Shared `settings.json` idle-disconnect plus per-profile connection tree.
  */
 @Injectable({ providedIn: 'root' })
 export class DatabaseConnectionsService {
@@ -62,6 +62,13 @@ export class DatabaseConnectionsService {
    */
   isDraft(id: string): boolean {
     return this.drafts().some((draft) => draft.connection.id === id);
+  }
+
+  /**
+   * Drops in-memory new connections when switching workspace profiles.
+   */
+  clearDrafts(): void {
+    this.drafts.set([]);
   }
 
   async saveNodes(nodes: readonly DatabaseConnectionTreeItem[]): Promise<void> {

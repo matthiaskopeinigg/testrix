@@ -32,7 +32,7 @@ import {
 import type { MockServerTreeNode } from '@app/features/shell/testing/mock-server-sidebar-panel/mock-server-tree.types';
 
 import { newTestingId } from './testing-id';
-import { runTestingHydrateOnce } from './testing-hydrate-once';
+import { runTestingHydrateOnce, type TestingHydrateOptions } from './testing-hydrate-once';
 
 const BROWSER_STORAGE_KEY = 'testrix.mock-server.v2';
 
@@ -73,7 +73,7 @@ export class MockServerService {
     return [...tags].sort((a, b) => a.localeCompare(b));
   });
 
-  async hydrate(): Promise<void> {
+  async hydrate(options?: TestingHydrateOptions): Promise<void> {
     return runTestingHydrateOnce(
       () => this.fileState() !== null,
       this.hydrateInflight,
@@ -98,7 +98,24 @@ export class MockServerService {
           this.fileState.set(createDefaultMockServerFile());
         }
       },
+      options,
     );
+  }
+
+  /**
+   * Writes a pending debounce save so a profile switch does not land on the next folder.
+   */
+  async flushPending(): Promise<void> {
+    if (this.saveTimer === null) {
+      return;
+    }
+    clearTimeout(this.saveTimer);
+    this.saveTimer = null;
+    const file = this.fileState();
+    if (!file) {
+      return;
+    }
+    await this.persist(file);
   }
 
   findEndpoint(id: string): MockServerEndpoint | null {

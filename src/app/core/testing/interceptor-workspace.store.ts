@@ -32,7 +32,7 @@ import {
 import type { InterceptorTreeNode } from '@app/features/shell/testing/interceptor-sidebar-panel/interceptor-tree.types';
 
 import { newTestingId } from './testing-id';
-import { runTestingHydrateOnce } from './testing-hydrate-once';
+import { runTestingHydrateOnce, type TestingHydrateOptions } from './testing-hydrate-once';
 
 const BROWSER_STORAGE_KEY = 'testrix.interceptor.v1';
 
@@ -60,7 +60,7 @@ export class InterceptorWorkspaceStore {
   readonly startUrl = computed(() => this.fileState()?.startUrl ?? 'https://example.com');
   readonly hits = this.hitsState.asReadonly();
 
-  async hydrate(): Promise<void> {
+  async hydrate(options?: TestingHydrateOptions): Promise<void> {
     return runTestingHydrateOnce(
       () => this.fileState() !== null,
       this.hydrateInflight,
@@ -85,7 +85,24 @@ export class InterceptorWorkspaceStore {
           this.fileState.set(createDefaultInterceptorFile());
         }
       },
+      options,
     );
+  }
+
+  /**
+   * Writes a pending debounce save so a profile switch does not land on the next folder.
+   */
+  async flushPending(): Promise<void> {
+    if (this.saveTimer === null) {
+      return;
+    }
+    clearTimeout(this.saveTimer);
+    this.saveTimer = null;
+    const file = this.fileState();
+    if (!file) {
+      return;
+    }
+    await this.persist(file);
   }
 
   findRule(id: string): InterceptorRule | null {

@@ -57,6 +57,8 @@ export class TsFlowRequestStepPanelComponent {
   readonly variableCatalog = input<readonly DynamicVariableCatalogItem[]>([]);
 
   readonly configChange = output<Record<string, unknown>>();
+  /** Emitted when the user clicks a `{{placeholder}}` in the URL, params, headers, or body. */
+  readonly environmentVariableClick = output<{ readonly key: string }>();
 
   protected readonly httpMethodOptions = FLOW_STEP_HTTP_METHOD_OPTIONS;
   protected readonly requestSourceOptions = FLOW_REQUEST_SOURCE_OPTIONS;

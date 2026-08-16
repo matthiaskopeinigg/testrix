@@ -20,6 +20,7 @@
           [catalog]="variableCatalog()"
           [ngModel]="cfg().urlPattern"
           (ngModelChange)="patch({ urlPattern: $event })"
+          (environmentVariableClick)="environmentVariableClick.emit($event)"
           placeholder="**/api/login or /v1/users/*"
         />
       </tx-form-field>
@@ -69,6 +70,7 @@
         [rows]="headerRows()"
         [variableCatalog]="variableCatalog()"
         (rowsChange)="handleHeadersChange($event)"
+        (environmentVariableClick)="environmentVariableClick.emit($event)"
       />
     </section>
 
@@ -86,6 +88,7 @@
         [rows]="queryRows()"
         [variableCatalog]="variableCatalog()"
         (rowsChange)="handleQueryChange($event)"
+        (environmentVariableClick)="environmentVariableClick.emit($event)"
       />
     </section>
 
@@ -118,6 +121,7 @@
             [variableCatalog]="variableCatalog()"
             [ngModel]="cfg().replacePostBody ?? ''"
             (ngModelChange)="patch({ replacePostBody: $event })"
+            (environmentVariableClick)="environmentVariableClick.emit($event)"
           />
         </div>
       } @else {

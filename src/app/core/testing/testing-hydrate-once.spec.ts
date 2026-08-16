@@ -27,4 +27,13 @@ describe('runTestingHydrateOnce', () => {
 
     expect(load).not.toHaveBeenCalled();
   });
+
+  it('reloads when force is set even if already hydrated', async () => {
+    const inflight = { current: null as Promise<void> | null };
+    const load = vi.fn(async () => undefined);
+
+    await runTestingHydrateOnce(() => true, inflight, load, { force: true });
+
+    expect(load).toHaveBeenCalledTimes(1);
+  });
 });

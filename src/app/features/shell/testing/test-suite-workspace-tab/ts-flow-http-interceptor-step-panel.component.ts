@@ -48,6 +48,8 @@ export class TsFlowHttpInterceptorStepPanelComponent {
   readonly variableCatalog = input<readonly DynamicVariableCatalogItem[]>([]);
 
   readonly configChange = output<Record<string, unknown>>();
+  /** Emitted when the user clicks a `{{placeholder}}` in the URL, headers, query, or body. */
+  readonly environmentVariableClick = output<{ readonly key: string }>();
 
   protected readonly methodOptions = FLOW_STEP_HTTP_METHOD_OPTIONS;
   protected readonly phaseOptions = FLOW_STEP_LISTENER_PHASE_OPTIONS;

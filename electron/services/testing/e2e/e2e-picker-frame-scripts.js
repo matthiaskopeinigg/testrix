@@ -80,9 +80,12 @@ function compileFramePickerScript(opts) {
 
   var PICK_GEN = ${pickGen};
   if (window.__awPickerGen === PICK_GEN) return;
-  window.__awPickerGen = PICK_GEN;
 
   ${initReport}
+
+  // Stamp gen only after the top-frame bridge exists. Stamping first made later
+  // reinjects no-op when preload was not ready yet (first Pick on page did nothing).
+  window.__awPickerGen = PICK_GEN;
   ${hintBlock}
 
   var AW_DEEP = ' >>> ';
@@ -95,8 +98,12 @@ function compileFramePickerScript(opts) {
     if (!el || el.nodeType !== 1) return false;
     if (hint && el === hint) return true;
     if (typeof el.closest === 'function') {
-      try { if (el.closest('#__aw-picker-hint')) return true; } catch (_) {}
+      try {
+        if (el.closest('#__aw-picker-hint')) return true;
+        if (el.closest('#aw-e2e-hud')) return true;
+      } catch (_) {}
     }
+    if (el.id === 'aw-e2e-hud') return true;
     if (el.classList && el.classList.contains('__aw-picker-ui')) return true;
     return false;
   }

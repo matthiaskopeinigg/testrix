@@ -13,7 +13,7 @@ import {
 import { ElectronService } from '@app/core/electron/electron.service';
 import { ErrorNotificationService } from '@app/core/errors/error-notification.service';
 import { newTestingId } from '@app/core/testing/testing-id';
-import { runTestingHydrateOnce } from '@app/core/testing/testing-hydrate-once';
+import { runTestingHydrateOnce, type TestingHydrateOptions } from '@app/core/testing/testing-hydrate-once';
 
 /**
  * Profile-local cron monitors (run while Testrix is open).
@@ -33,7 +33,7 @@ export class MonitorsService {
   readonly monitors = computed(() => this.fileState()?.monitors ?? []);
   readonly results = computed(() => this.fileState()?.results ?? []);
 
-  async hydrate(): Promise<void> {
+  async hydrate(options?: TestingHydrateOptions): Promise<void> {
     return runTestingHydrateOnce(
       () => this.fileState() !== null,
       this.hydrateInflight,
@@ -52,7 +52,24 @@ export class MonitorsService {
         this.unsubResult?.();
         this.unsubResult = api.onMonitorResult?.((result) => this.applyResult(result)) ?? null;
       },
+      options,
     );
+  }
+
+  /**
+   * Writes a pending debounce save so a profile switch does not land on the next folder.
+   */
+  async flushPending(): Promise<void> {
+    if (this.saveTimer === null) {
+      return;
+    }
+    clearTimeout(this.saveTimer);
+    this.saveTimer = null;
+    const file = this.fileState();
+    if (!file) {
+      return;
+    }
+    await this.flushSave(file);
   }
 
   setPendingCron(expression: string): void {

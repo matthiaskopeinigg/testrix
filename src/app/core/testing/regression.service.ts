@@ -35,7 +35,7 @@ import {
 import type { RegressionTreeNode } from '@app/features/shell/testing/regression-sidebar-panel/regression-tree.types';
 
 import { newTestingId } from './testing-id';
-import { runTestingHydrateOnce } from './testing-hydrate-once';
+import { runTestingHydrateOnce, type TestingHydrateOptions } from './testing-hydrate-once';
 
 const BROWSER_STORAGE_KEY = 'testrix.regressions.v2';
 
@@ -68,7 +68,7 @@ export class RegressionService {
     return [...tags].sort((a, b) => a.localeCompare(b));
   });
 
-  async hydrate(): Promise<void> {
+  async hydrate(options?: TestingHydrateOptions): Promise<void> {
     return runTestingHydrateOnce(
       () => this.fileState() !== null,
       this.hydrateInflight,
@@ -86,7 +86,24 @@ export class RegressionService {
           this.fileState.set(createDefaultRegressionsFile());
         }
       },
+      options,
     );
+  }
+
+  /**
+   * Writes a pending debounce save so a profile switch does not land on the next folder.
+   */
+  async flushPending(): Promise<void> {
+    if (this.saveTimer === null) {
+      return;
+    }
+    clearTimeout(this.saveTimer);
+    this.saveTimer = null;
+    const file = this.fileState();
+    if (!file) {
+      return;
+    }
+    await this.persist(file);
   }
 
   findArtifact(id: string): RegressionArtifact | null {

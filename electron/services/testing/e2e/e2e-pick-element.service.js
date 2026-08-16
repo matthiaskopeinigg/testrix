@@ -62,21 +62,28 @@ async function teardownPickerInAllFrames(webContents) {
   }
 }
 
-let activeCleanup = null;
+/** @type {{ cancel: () => void, done: Promise<void> } | null} */
+let activeSession = null;
 
 function closeActiveSession() {
-  if (typeof activeCleanup === 'function') {
-    try {
-      activeCleanup();
-    } catch (_) {}
+  const session = activeSession;
+  activeSession = null;
+  if (!session) {
+    return Promise.resolve();
   }
-  activeCleanup = null;
+  try {
+    session.cancel();
+  } catch (_) {}
+  return session.done.then(
+    () => undefined,
+    () => undefined,
+  );
 }
 
 module.exports = { closeActiveSession, runPickElementSession };
 
 async function runPickElementSession(payload) {
-  closeActiveSession();
+  await closeActiveSession();
   try {
     // eslint-disable-next-line global-require
     require('./e2e-pick-scroll-position.service').closeActiveScrollSession();
@@ -146,26 +153,42 @@ async function runPickElementSession(payload) {
   }
 
   try {
+    if (typeof svc.ensureRunnerWindowSurface === 'function') {
+      await svc.ensureRunnerWindowSurface();
+    }
+  } catch (_) {}
+  try {
     win.setIgnoreMouseEvents(false);
+    if (!win.isVisible()) win.show();
+    win.focus();
   } catch (_) {}
 
   const pickGenToken = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-  let reinjectTimer = null;
+  /** @type {ReturnType<typeof setTimeout>[]} */
+  const reinjectTimers = [];
 
-  const scheduleReinjectPickers = () => {
-    if (reinjectTimer) clearTimeout(reinjectTimer);
-    reinjectTimer = setTimeout(() => {
-      reinjectTimer = null;
+  const scheduleReinjectPickers = (delayMs = 220) => {
+    const timer = setTimeout(() => {
+      const idx = reinjectTimers.indexOf(timer);
+      if (idx >= 0) reinjectTimers.splice(idx, 1);
       if (!win || win.isDestroyed()) return;
       void injectPickerIntoAllFrames(win.webContents, pickGenToken).catch(() => {});
-    }, 220);
+    }, delayMs);
+    reinjectTimers.push(timer);
   };
 
   const onFrameFinishLoad = () => scheduleReinjectPickers();
+  const onFrameCreated = () => scheduleReinjectPickers(50);
+  const onInPageNavigate = () => scheduleReinjectPickers(80);
 
   let settled = false;
   /** @type {((r: unknown) => void) | null} */
   let resolveOuter = null;
+  /** @type {(() => void) | null} */
+  let settleDone = null;
+  const sessionDone = new Promise((resolve) => {
+    settleDone = resolve;
+  });
 
   /** Cancels picker when Escape is pressed even if focus is inside an iframe. */
   let onBeforePickInput = null;
@@ -173,13 +196,22 @@ async function runPickElementSession(payload) {
   const cleanupIpcAndClosed = () => {
     ipcMain.removeListener('e2e:pick-element:result', onResult);
     ipcMain.removeListener('e2e:pick-element:cancel', onCancel);
-    if (reinjectTimer) {
-      clearTimeout(reinjectTimer);
-      reinjectTimer = null;
+    while (reinjectTimers.length) {
+      clearTimeout(reinjectTimers.pop());
     }
     if (win && !win.isDestroyed()) {
+      const wc = win.webContents;
       try {
-        win.webContents.removeListener('did-frame-finish-load', onFrameFinishLoad);
+        wc.removeListener('did-frame-finish-load', onFrameFinishLoad);
+      } catch (_) {}
+      try {
+        wc.removeListener('frame-created', onFrameCreated);
+      } catch (_) {}
+      try {
+        wc.removeListener('did-navigate-in-page', onInPageNavigate);
+      } catch (_) {}
+      try {
+        wc.removeListener('did-frame-navigate', onInPageNavigate);
       } catch (_) {}
     }
     if (onBeforePickInput && win && !win.isDestroyed()) {
@@ -200,7 +232,9 @@ async function runPickElementSession(payload) {
     if (settled) return;
     settled = true;
     cleanupIpcAndClosed();
-    activeCleanup = null;
+    if (activeSession && activeSession.done === sessionDone) {
+      activeSession = null;
+    }
     try {
       if (win && !win.isDestroyed()) {
         await teardownPickerInAllFrames(win.webContents);
@@ -213,6 +247,7 @@ async function runPickElementSession(payload) {
       } catch (_) {}
     }
     if (resolveOuter) resolveOuter(result);
+    if (settleDone) settleDone();
   };
 
   const onResult = (_e, data) => {
@@ -229,7 +264,10 @@ async function runPickElementSession(payload) {
   listeners.onClosed = () => void finish({ ok: false, cancelled: true });
   win.once('closed', listeners.onClosed);
 
-  activeCleanup = () => void finish({ ok: false, cancelled: true });
+  activeSession = {
+    cancel: () => void finish({ ok: false, cancelled: true }),
+    done: sessionDone,
+  };
 
   return new Promise((resolve) => {
     resolveOuter = resolve;
@@ -244,15 +282,28 @@ async function runPickElementSession(payload) {
         });
         return;
       }
+      const wc = win.webContents;
       try {
-        win.webContents.on('did-frame-finish-load', onFrameFinishLoad);
+        wc.on('did-frame-finish-load', onFrameFinishLoad);
       } catch (_) {}
+      try {
+        wc.on('frame-created', onFrameCreated);
+      } catch (_) {}
+      try {
+        wc.on('did-navigate-in-page', onInPageNavigate);
+      } catch (_) {}
+      try {
+        wc.on('did-frame-navigate', onInPageNavigate);
+      } catch (_) {}
+      scheduleReinjectPickers(150);
+      scheduleReinjectPickers(400);
+      scheduleReinjectPickers(1000);
       onBeforePickInput = (_e, input) => {
         if (input.type === 'keyDown' && input.key === 'Escape') {
           void finish({ ok: false, cancelled: true });
         }
       };
-      win.webContents.on('before-input-event', onBeforePickInput);
+      wc.on('before-input-event', onBeforePickInput);
       logInfo('e2e pick-element: session active (all WebFrameMain trees)');
     })();
   });

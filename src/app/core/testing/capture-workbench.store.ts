@@ -36,7 +36,7 @@ import {
 import type { CaptureTreeNode } from '@app/features/shell/testing/capture-sidebar-panel/capture-tree.types';
 
 import { newTestingId } from './testing-id';
-import { runTestingHydrateOnce } from './testing-hydrate-once';
+import { runTestingHydrateOnce, type TestingHydrateOptions } from './testing-hydrate-once';
 
 const BROWSER_STORAGE_KEY = 'testrix.capture.v2';
 
@@ -60,7 +60,7 @@ export class CaptureWorkbenchStore {
   readonly running = computed(() => this.activeCaptureItemIdState() !== null);
   readonly entriesBySession = this.entriesBySessionState.asReadonly();
 
-  async hydrate(): Promise<void> {
+  async hydrate(options?: TestingHydrateOptions): Promise<void> {
     return runTestingHydrateOnce(
       () => this.fileState() !== null,
       this.hydrateInflight,
@@ -82,7 +82,24 @@ export class CaptureWorkbenchStore {
           this.fileState.set(createDefaultCaptureFile());
         }
       },
+      options,
     );
+  }
+
+  /**
+   * Writes a pending debounce save so a profile switch does not land on the next folder.
+   */
+  async flushPending(): Promise<void> {
+    if (this.saveTimer === null) {
+      return;
+    }
+    clearTimeout(this.saveTimer);
+    this.saveTimer = null;
+    const file = this.fileState();
+    if (!file) {
+      return;
+    }
+    await this.persist(file);
   }
 
   isSessionRecording(captureItemId: string): boolean {

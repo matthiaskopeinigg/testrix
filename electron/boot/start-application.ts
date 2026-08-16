@@ -25,6 +25,7 @@ import { registerBrowserProtocolHandler } from '../config/browser-protocol';
 import { resolveDevServerOrigin, waitForDevServerReady } from './wait-for-dev-server';
 
 import { ErrorCodes, TestrixError } from '../../shared/errors';
+import { resolveProfileDir } from '../../shared/config';
 import { cookieJarStore } from '../services/http/cookie-jar.service';
 import { registerTeamFileNotify } from '../services/collaboration/team-file-notify';
 import { notifyTeamFileSaved, initTeamSyncFromBoot, refreshTeamSyncOnProfileSwitch } from '../ipc/handlers/team.handler';
@@ -144,6 +145,14 @@ export async function startApplication(getBootSplash?: () => BrowserWindow | nul
 
     await files.ensureProfileWorkspaceDefaults(activeProfileDirRef);
 
+    const manifest = await pathsSvc.readProfilesManifest();
+    if (manifest) {
+      const profileDirs = manifest.profiles.map((entry) =>
+        resolveProfileDir(entry, layout.anchor.profilesRoot),
+      );
+      await files.migrateSharedDatabasesToProfiles(profileDirs);
+    }
+
     await files.readSession();
     await applyUpdateChannelBootSync(app, files);
     await files.readSettings();
@@ -210,6 +219,7 @@ export async function startApplication(getBootSplash?: () => BrowserWindow | nul
       setActiveProfileDirRef: (next) => {
         activeProfileDirRef = next;
         void cookieJarStore.loadForProfile(next);
+        void closeDatabaseConnections();
       },
       onProfileDirChanged: async () => {
         await refreshTeamSyncOnProfileSwitch({

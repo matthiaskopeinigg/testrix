@@ -214,7 +214,7 @@ function closeActiveScrollSession() {
 ipcMain.handle('e2e:pick-scroll-position:start', async (_event, payload) => {
   try {
     // eslint-disable-next-line global-require
-    require('./e2e-pick-element.service').closeActiveSession();
+    await require('./e2e-pick-element.service').closeActiveSession();
   } catch (_) {}
   closeActiveScrollSession();
 

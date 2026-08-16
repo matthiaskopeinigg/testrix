@@ -63,6 +63,7 @@
                 [catalog]="variableCatalog()"
                 [ngModel]="entry.value ?? ''"
                 (ngModelChange)="handleGeneratedValueChange($index, $event)"
+                (environmentVariableClick)="environmentVariableClick.emit($event)"
                 placeholder="test-$uuid@gmail.com"
               />
             </tx-form-field>

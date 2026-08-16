@@ -54,6 +54,8 @@ export class TsFlowDatabaseStepPanelComponent {
   readonly variableCatalog = input<readonly DynamicVariableCatalogItem[]>([]);
 
   readonly configChange = output<Record<string, unknown>>();
+  /** Emitted when the user clicks a `{{placeholder}}` in the query editor. */
+  readonly environmentVariableClick = output<{ readonly key: string }>();
 
   private readonly configService = inject(ConfigService);
   private readonly queries = inject(DatabaseQueriesService);

@@ -37,7 +37,7 @@ import {
 } from '@app/features/shell/testing/test-suite-sidebar-panel/test-suite-tree.adapter';
 
 import { newTestingId } from './testing-id';
-import { runTestingHydrateOnce } from './testing-hydrate-once';
+import { runTestingHydrateOnce, type TestingHydrateOptions } from './testing-hydrate-once';
 
 const BROWSER_STORAGE_KEY = 'testrix.test-suites.v1';
 
@@ -81,7 +81,7 @@ export class TestSuiteService {
     return [...tags].sort((a, b) => a.localeCompare(b));
   });
 
-  async hydrate(): Promise<void> {
+  async hydrate(options?: TestingHydrateOptions): Promise<void> {
     return runTestingHydrateOnce(
       () => this.fileState() !== null,
       this.hydrateInflight,
@@ -99,7 +99,24 @@ export class TestSuiteService {
           this.fileState.set(createDefaultTestSuitesFile());
         }
       },
+      options,
     );
+  }
+
+  /**
+   * Writes a pending debounce save so a profile switch does not land on the next folder.
+   */
+  async flushPending(): Promise<void> {
+    if (this.saveTimer === null) {
+      return;
+    }
+    clearTimeout(this.saveTimer);
+    this.saveTimer = null;
+    const file = this.fileState();
+    if (!file) {
+      return;
+    }
+    await this.persist(file);
   }
 
   saveTreeItems(items: readonly TestSuiteTreeItem[]): void {

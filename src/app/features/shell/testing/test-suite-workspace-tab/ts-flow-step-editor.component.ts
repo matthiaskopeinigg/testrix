@@ -2,12 +2,16 @@ import { ChangeDetectionStrategy, Component, computed, inject, input, output } f
 import { FormsModule } from '@angular/forms';
 
 import { getEnvironmentDefinition } from '@shared/config';
-import type { TestSuiteFlow, TestSuiteFlowStep } from '@shared/testing';
+import type { TestSuiteFlow, TestSuiteFlowStep, TestSuiteTreeItem } from '@shared/testing';
 import { resolveFlowStepRunError } from '@shared/testing';
 
 import { ConfigService } from '@app/core/config/config.service';
 import { EnvironmentsService } from '@app/core/environments/environments.service';
+import { openTestSuiteFlowStep } from '@app/core/testing/open-test-suite-flow-step';
 import { TestSuiteService } from '@app/core/testing/test-suite.service';
+import { TestingSessionService } from '@app/core/testing/testing-session.service';
+import { openEnvironmentVariableTab } from '@app/core/workspace/open-environment-variable-tab';
+import { WorkspaceEditorService } from '@app/core/workspace/workspace-editor.service';
 
 import { TxBannerComponent } from '@app/shared/components/feedback/tx-banner/tx-banner.component';
 import { TxButtonComponent } from '@app/shared/components/forms/tx-button/tx-button.component';
@@ -18,7 +22,7 @@ import { TxInputComponent } from '@app/shared/components/forms/tx-input/tx-input
 import { TxTextareaComponent } from '@app/shared/components/forms/tx-textarea/tx-textarea.component';
 import { TxToggleComponent } from '@app/shared/components/forms/tx-toggle/tx-toggle.component';
 
-import { collectPriorFlowPlaceholderKeys } from './flow-step-variable-catalog';
+import { collectPriorFlowPlaceholderKeys, findCatalogPlaceholderSource } from './flow-step-variable-catalog';
 import { buildValidationRefStepOptions } from './flow-step-picker-options';
 import {
   FLOW_STEP_ADD_ICONS,
@@ -70,10 +74,12 @@ export class TsFlowStepEditorComponent {
   private readonly configService = inject(ConfigService);
   private readonly environmentsService = inject(EnvironmentsService);
   private readonly testSuite = inject(TestSuiteService);
+  private readonly testingSession = inject(TestingSessionService);
+  private readonly workspaceEditor = inject(WorkspaceEditorService);
 
   readonly step = input<TestSuiteFlowStep | null>(null);
   readonly flow = input<TestSuiteFlow | null>(null);
-  readonly suiteItems = input<readonly import('@shared/testing').TestSuiteTreeItem[]>([]);
+  readonly suiteItems = input<readonly TestSuiteTreeItem[]>([]);
   readonly lastRunMessage = input<string | null>(null);
   readonly liveStepError = input<string | null>(null);
   readonly failureAlertDismissed = input(false);
@@ -82,6 +88,8 @@ export class TsFlowStepEditorComponent {
   readonly removeStep = output<void>();
   readonly failureDismissed = output<void>();
   readonly failureReopened = output<void>();
+  /** Same-flow step to select when the user clicks a `{{placeholder}}` produced here. */
+  readonly selectStep = output<string>();
 
   protected readonly stepTypeIcon = computed((): TxIconName => {
     const step = this.step();
@@ -156,6 +164,7 @@ export class TsFlowStepEditorComponent {
       step.id,
       environment,
       this.environmentKeyOptions(),
+      this.suiteItems(),
     );
   });
 
@@ -174,6 +183,40 @@ export class TsFlowStepEditorComponent {
 
   protected patchConfig(config: Record<string, unknown>): void {
     this.stepChange.emit({ config });
+  }
+
+  /**
+   * Opens the CACHE / MANUAL step that produced `{{key}}`, or the environment variable editor.
+   */
+  protected handlePlaceholderClick(event: { readonly key: string }): void {
+    const key = event.key.trim();
+    if (!key) {
+      return;
+    }
+    const source = findCatalogPlaceholderSource(this.variableCatalog(), key);
+    const flow = this.flow();
+    if (source) {
+      if (flow && source.flowId === flow.id) {
+        this.selectStep.emit(source.stepId);
+        return;
+      }
+      void openTestSuiteFlowStep(
+        this.workspaceEditor,
+        this.configService,
+        this.testingSession,
+        source.flowId,
+        source.stepId,
+      );
+      return;
+    }
+    const effectiveId = flow ? this.testSuite.resolveFlowEnvironmentId(flow.id) : null;
+    openEnvironmentVariableTab(
+      this.workspaceEditor,
+      this.environmentsService.environments(),
+      key,
+      effectiveId,
+      this.environmentKeyOptions(),
+    );
   }
 
   protected rawConfigJson(): string {

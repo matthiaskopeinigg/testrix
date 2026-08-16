@@ -124,7 +124,7 @@ export const HELP_WIKI_REFERENCE_SECTIONS: readonly HelpWikiSection[] = [
         items: [
           'Renderer-only mode — if IPC is unavailable, use npm start instead of ng serve alone.',
           'Profile switch — ensure the correct profile is active before editing collections.',
-          'Settings vs profile data — theme and keyboard bindings are global; collections are per profile.',
+          'Settings vs profile data — theme and keyboard bindings are global; collections, test suites, and Database connections are per profile.',
           'Editor layout — each workspace tab type has its own layout setting under Settings (Sidebar vs Tabs).',
           'Reload config — welcome screen or restart app if files changed on disk externally.',
         ],

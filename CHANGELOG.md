@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.3-beta.3] - 2026-08-16
+
+### Changed
+
+- Database connections are stored per workspace profile (`databases.json`) instead of in shared settings. Idle disconnect remains a global setting
+
+### Fixed
+
+- Pick on page for E2E CSS selectors attaches on the first open (late frames and a hidden runner no longer require picking twice)
+- Test Suite `{{placeholder}}` tokens from a TRIGGER'd flow highlight as known variables, and clicking one opens the producing step (or the environment variable)
+- Switching workspace profiles reloads Test Suite, saved queries, and other profile-local testing data instead of keeping the previous profile’s list
+
 ## [1.0.3-beta.2] - 2026-08-16
 
 ### Changed
@@ -295,7 +307,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Initial public beta of Testrix: local-first desktop API client (HTTP, WebSocket, collections, environments, test suites, load tests, mocks, and capture).
 
-[Unreleased]: https://github.com/matthiaskopeinigg/testrix/compare/v1.0.3-beta.2...HEAD
+[Unreleased]: https://github.com/matthiaskopeinigg/testrix/compare/v1.0.3-beta.3...HEAD
+[1.0.3-beta.3]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.3-beta.3
 [1.0.3-beta.2]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.3-beta.2
 [1.0.3-beta.1]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.3-beta.1
 [1.0.2-beta.9]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.2-beta.9

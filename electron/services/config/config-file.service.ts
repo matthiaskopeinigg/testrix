@@ -79,12 +79,16 @@ import {
 import {
   createDefaultSavedQueriesFile,
   createDefaultTeamDatabasesFile,
-  createTeamDatabasesSnapshot,
-  mergeTeamDatabasesIntoSettings,
+  hasSharedDatabaseConnections,
+  isEmptyTeamDatabasesFile,
+  overlayProfileDatabasesOnSettings,
   parseSavedQueriesFile,
   savedQueriesFileSchema,
+  stripSharedSettingsDatabases,
+  teamDatabasesFileFromSettings,
   teamDatabasesFileSchema,
   type SavedQueriesFile,
+  type TeamDatabasesFile,
 } from '../../../shared/database';
 
 import { ErrorCodes, TestrixError } from '../../../shared/errors';
@@ -208,17 +212,20 @@ export class ConfigFileService {
       migrateSettings,
       'settings',
     );
-    setMainSettings(settings);
-    return settings;
+    const profileFile = await this.readProfileDatabasesFile();
+    const overlayed = overlayProfileDatabasesOnSettings(settings, profileFile);
+    setMainSettings(overlayed);
+    return overlayed;
   }
 
   async writeSettings(data: SettingsFile): Promise<void> {
     const filePath = this.settingsPath();
+    const disk = stripSharedSettingsDatabases(data);
     await this.runSerialized(filePath, async () => {
-      await this.atomicWriteJson(filePath, data);
+      await this.atomicWriteJson(filePath, disk);
     });
+    await this.writeProfileDatabases(data);
     setMainSettings(data);
-    await this.writeTeamDatabasesSnapshot(data);
   }
 
   async mergeSettingsPatch(patch: SettingsPatch): Promise<SettingsFile> {
@@ -237,9 +244,9 @@ export class ConfigFileService {
           updatedAt: new Date().toISOString(),
         },
       });
-      await this.atomicWriteJson(filePath, updated);
+      await this.atomicWriteJson(filePath, stripSharedSettingsDatabases(updated));
+      await this.writeProfileDatabases(updated);
       setMainSettings(updated);
-      await this.writeTeamDatabasesSnapshot(updated);
       return updated;
     });
   }
@@ -496,43 +503,48 @@ export class ConfigFileService {
   }
 
   /**
-   * Writes a sanitized connection snapshot for Teams sync and notifies the mirror.
+   * Copies legacy shared `settings.json` connections into each empty profile `databases.json`,
+   * then clears connections from shared settings.
    */
-  async writeTeamDatabasesSnapshot(settings: SettingsFile): Promise<void> {
-    const snapshot = createTeamDatabasesSnapshot(settings.databases);
+  async migrateSharedDatabasesToProfiles(profileDirs: readonly string[]): Promise<void> {
+    const settings = await this.readSharedSettingsFromDisk();
+    if (!hasSharedDatabaseConnections(settings.databases)) {
+      return;
+    }
+    const snapshot = teamDatabasesFileFromSettings(settings.databases);
+    for (const dir of profileDirs) {
+      await this.ensureProfileWorkspaceDefaults(dir);
+      const existing = await this.readProfileDatabasesFile(dir);
+      if (isEmptyTeamDatabasesFile(existing)) {
+        await this.atomicWriteJson(this.databasesSnapshotPath(dir), snapshot);
+      }
+    }
+    await this.atomicWriteJson(this.settingsPath(), stripSharedSettingsDatabases(settings));
+  }
+
+  /**
+   * Writes the active profile connection tree (including local passwords) and notifies Teams.
+   */
+  async writeProfileDatabases(settings: SettingsFile): Promise<void> {
+    const snapshot = teamDatabasesFileFromSettings(settings.databases);
     await this.atomicWriteJson(this.databasesSnapshotPath(), snapshot);
     notifyTeamConfigFileSaved(this.getActiveProfileDir(), TEAM_SYNC_FILE_NAMES.databaseConnections);
   }
 
   /**
-   * Merges a pulled `databases.json` into shared settings, keeping local passwords.
+   * Refreshes in-memory settings after a team pull merged `databases.json` for the active profile.
    */
   async mergeIncomingTeamDatabases(profileDir: string): Promise<boolean> {
-    const snapshotPath = this.databasesSnapshotPath(profileDir);
-    let incoming: ReturnType<typeof createDefaultTeamDatabasesFile>;
-    try {
-      const raw = await fs.readFile(snapshotPath, 'utf8');
-      incoming = teamDatabasesFileSchema.parse(JSON.parse(raw) as unknown);
-    } catch (err: unknown) {
-      if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
-        return false;
-      }
-      throw err;
+    if (path.resolve(profileDir) !== path.resolve(this.getActiveProfileDir())) {
+      return false;
     }
-    const current = await this.readSettings();
-    const mergedDatabases = mergeTeamDatabasesIntoSettings(current.databases, incoming);
-    const next: SettingsFile = settingsFileSchema.parse({
-      ...current,
-      databases: mergedDatabases,
-      meta: {
-        ...current.meta,
-        updatedAt: new Date().toISOString(),
-      },
-    });
+    const incoming = await this.readProfileDatabasesFile(profileDir);
+    const current = getMainSettings();
+    const next = overlayProfileDatabasesOnSettings(current, incoming);
     if (JSON.stringify(next.databases) === JSON.stringify(current.databases)) {
       return false;
     }
-    await this.writeSettings(next);
+    setMainSettings(next);
     return true;
   }
 
@@ -552,6 +564,30 @@ export class ConfigFileService {
     const updated = monitorsFileSchema.parse(data);
     await this.atomicWriteJson(this.monitorsPath(), updated);
     return updated;
+  }
+
+  private async readSharedSettingsFromDisk(): Promise<SettingsFile> {
+    return this.readValidated(
+      this.settingsPath(),
+      () => createDefaultSettings(),
+      (j: unknown) => settingsFileSchema.parse(j),
+      migrateSettings,
+      'settings',
+    );
+  }
+
+  private async readProfileDatabasesFile(
+    profileDir = this.getActiveProfileDir(),
+  ): Promise<TeamDatabasesFile> {
+    try {
+      const raw = await fs.readFile(this.databasesSnapshotPath(profileDir), 'utf8');
+      return teamDatabasesFileSchema.parse(JSON.parse(raw) as unknown);
+    } catch (err: unknown) {
+      if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
+        return createDefaultTeamDatabasesFile();
+      }
+      throw err;
+    }
   }
 
   private async readJsonFile<T>(

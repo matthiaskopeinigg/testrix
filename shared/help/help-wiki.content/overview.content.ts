@@ -109,8 +109,8 @@ export const HELP_WIKI_OVERVIEW_SECTIONS: readonly HelpWikiSection[] = [
       {
         type: 'list',
         items: [
-          'Per profile: collections, environments, test suites, load tests, regressions, mock server, capture, interceptor, saved Database queries, session/history.',
-          'Shared: settings.json (appearance, HTTP defaults, logging, Database connections, keyboard bindings).',
+          'Per profile: collections, environments, test suites, load tests, regressions, mock server, capture, interceptor, Database connections, saved Database queries, session/history.',
+          'Shared: settings.json (appearance, HTTP defaults, logging, Database idle disconnect, keyboard bindings).',
           'Config root defaults to Documents/Testrix on Windows/macOS; see Reference → Local-first & paths.',
         ],
       },

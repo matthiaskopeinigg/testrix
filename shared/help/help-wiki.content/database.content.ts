@@ -33,7 +33,7 @@ export const HELP_WIKI_DATABASE_SECTIONS: readonly HelpWikiSection[] = [
       {
         type: 'note',
         title: 'Where data is stored',
-        text: 'Connections are shared in settings.json (all profiles). Teams can also sync a sanitized databases.json snapshot (no passwords) plus saved queries in queries.json. Export both from Settings → Data & Config → Export, under the Database section. Settings → Database controls idle disconnect for pooled connections.',
+        text: 'Connections and saved queries are stored per workspace profile (`databases.json` and `queries.json`). Teams sync a sanitized connection snapshot (no passwords). Export both from Settings → Data & Config → Export, under the Database section. Settings → Database controls idle disconnect for pooled connections (shared across profiles).',
       },
     ],
   }),

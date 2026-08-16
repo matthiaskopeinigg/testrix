@@ -6,21 +6,22 @@ import { listLocalProfiles, listTeamProfiles } from '@shared/collaboration';
 
 import { CollectionsService } from '../collections/collections.service';
 import { ConfigService } from '../config/config.service';
-import { EnvironmentsService } from '../environments/environments.service';
+import { DatabaseConnectionsService } from '../database/database-connections.service';
+import { DatabaseQueriesService } from '../database/database-queries.service';
 import { ElectronService } from '../electron/electron.service';
+import { EnvironmentsService } from '../environments/environments.service';
 import { ErrorNotificationService } from '../errors/error-notification.service';
 import { HistoryService } from '../history/history.service';
 import { CaptureWorkbenchStore } from '../testing/capture-workbench.store';
 import { InterceptorWorkspaceStore } from '../testing/interceptor-workspace.store';
 import { LoadTestService } from '../testing/load-test.service';
 import { MockServerService } from '../testing/mock-server.service';
+import { MonitorsService } from '../testing/monitors.service';
 import { RegressionService } from '../testing/regression.service';
 import { TestSuiteService } from '../testing/test-suite.service';
 import { TestingSessionService } from '../testing/testing-session.service';
 import { WorkspaceSidebarSessionService } from '../workspace/workspace-sidebar-session.service';
 import { WorkspaceEditorService } from '../workspace/workspace-editor.service';
-import { DatabaseQueriesService } from '../database/database-queries.service';
-import { MonitorsService } from '../testing/monitors.service';
 
 @Injectable({ providedIn: 'root' })
 export class ProfileService {
@@ -40,6 +41,7 @@ export class ProfileService {
   private readonly capture = inject(CaptureWorkbenchStore);
   private readonly interceptor = inject(InterceptorWorkspaceStore);
   private readonly databaseQueries = inject(DatabaseQueriesService);
+  private readonly databaseConnections = inject(DatabaseConnectionsService);
   private readonly monitors = inject(MonitorsService);
 
   private readonly profilesState = signal<readonly ProfileEntry[]>([]);
@@ -211,18 +213,20 @@ export class ProfileService {
   }
 
   private async rehydrateWorkspace(): Promise<void> {
+    const force = { force: true } as const;
+    this.databaseConnections.clearDrafts();
     await Promise.all([
       this.collectionsService.hydrate(),
       this.environmentsService.hydrate(),
       this.historyService.hydrate(),
-      this.testSuite.hydrate(),
-      this.loadTest.hydrate(),
-      this.regression.hydrate(),
-      this.mockServer.hydrate(),
-      this.capture.hydrate(),
-      this.interceptor.hydrate(),
-      this.databaseQueries.hydrate(),
-      this.monitors.hydrate(),
+      this.testSuite.hydrate(force),
+      this.loadTest.hydrate(force),
+      this.regression.hydrate(force),
+      this.mockServer.hydrate(force),
+      this.capture.hydrate(force),
+      this.interceptor.hydrate(force),
+      this.databaseQueries.hydrate(force),
+      this.monitors.hydrate(force),
       this.configService.hydrate(),
     ]);
     await this.configService.hydrateSession();
@@ -239,6 +243,14 @@ export class ProfileService {
       this.workspaceEditor.flushPendingSession(),
       this.testingSession.flushPending(),
       this.sidebarSession.flushPending(),
+      this.testSuite.flushPending(),
+      this.loadTest.flushPending(),
+      this.regression.flushPending(),
+      this.mockServer.flushPending(),
+      this.capture.flushPending(),
+      this.interceptor.flushPending(),
+      this.databaseQueries.flushPending(),
+      this.monitors.flushPending(),
     ]);
   }
 }

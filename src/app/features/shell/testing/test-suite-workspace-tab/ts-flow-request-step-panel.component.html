@@ -36,6 +36,7 @@
               [catalog]="variableCatalog()"
               [ngModel]="cfg().url"
               (ngModelChange)="patch({ url: $event })"
+              (environmentVariableClick)="environmentVariableClick.emit($event)"
               placeholder="https://api.example.com/path"
             />
           </tx-form-field>
@@ -87,6 +88,7 @@
                 [rows]="queryRows()"
                 [variableCatalog]="variableCatalog()"
                 (rowsChange)="handleQueryChange($event)"
+                (environmentVariableClick)="environmentVariableClick.emit($event)"
               />
             </div>
           </div>
@@ -106,6 +108,7 @@
                 [rows]="headerRows()"
                 [variableCatalog]="variableCatalog()"
                 (rowsChange)="handleHeadersChange($event)"
+                (environmentVariableClick)="environmentVariableClick.emit($event)"
               />
             </div>
           </div>
@@ -118,6 +121,7 @@
                 [body]="collectionBody()"
                 [variableCatalog]="variableCatalog()"
                 (bodyChange)="handleBodyChange($event)"
+                (environmentVariableClick)="environmentVariableClick.emit($event)"
               />
             </div>
           </div>

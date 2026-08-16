@@ -6,6 +6,10 @@ export interface DynamicVariableCatalogItem {
   readonly detail: string;
   /** When true, prefer inserting with `()` and caret inside parentheses. */
   readonly hasArgs?: boolean;
+  /** Flow that produced this `{{placeholder}}` (CACHE / MANUAL / TRIGGER inherit). */
+  readonly sourceFlowId?: string;
+  /** Step that produced this `{{placeholder}}`. */
+  readonly sourceStepId?: string;
 }
 
 /** Default `$` variables available across the app (headers, URLs, bodies, scripts, …). */

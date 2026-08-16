@@ -17,6 +17,7 @@
           [catalog]="variableCatalog()"
           [ngModel]="listenerCfg().urlPattern"
           (ngModelChange)="patch({ urlPattern: $event })"
+          (environmentVariableClick)="environmentVariableClick.emit($event)"
           placeholder="**/api/** or /webhooks/*"
         />
       </tx-form-field>
