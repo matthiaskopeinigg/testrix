@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Release workflow starts when Authenticode secrets are unset (secret presence is checked via job env, not `if: secrets.*`)
+
 ## [1.0.4]
 
 First stable release of Testrix. This is the product as of the end of the `1.0.0`–`1.0.3` beta series: a local-first desktop API client (HTTP, WebSocket, collections, environments, test suites, load tests, mocks, and capture) with a Database workspace, team Git sync, and in-app updates.
