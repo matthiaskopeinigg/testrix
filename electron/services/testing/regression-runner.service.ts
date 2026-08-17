@@ -216,7 +216,7 @@ export class RegressionRunner {
 
     const executeOptions: TestSuiteFlowExecuteOptions = {
       environmentIdOverride: this.profile.environmentId ?? undefined,
-      e2eShowWindowOverride: this.profile.e2eShowWindowOverride,
+      e2eShowWindowOverride: this.profile.e2eShowWindowOverride ?? false,
       e2eKeepWindowOpenOverride: this.profile.e2eKeepWindowOpenOverride,
     };
 

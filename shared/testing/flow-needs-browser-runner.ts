@@ -32,46 +32,29 @@ export function flowNeedsBrowserRunnerDeep(
 }
 
 /**
- * True when this flow or a TRIGGER descendant has browser steps and wants the runner visible.
+ * True when this flow wants the E2E window visible.
+ *
+ * TRIGGER children do not affect this: the root run pins Show E2E onto nested flows.
  */
 export function flowRunWantsVisibleE2eWindow(
   flow: FlowBrowserWalkFlow,
-  suiteItems: readonly TestSuiteTreeItem[],
-  visitingFlowIds: ReadonlySet<string> = new Set(),
+  _suiteItems?: readonly TestSuiteTreeItem[],
+  _visitingFlowIds?: ReadonlySet<string>,
 ): boolean {
-  const steps = flattenEnabledFlowSteps(flow.nodes);
-  if (flowNeedsBrowserRunner(steps) && flow.e2eShowWindow !== false) {
-    return true;
-  }
-  const visiting = withVisitedFlow(visitingFlowIds, flow.id);
-  return walkTriggerTargets(steps, suiteItems, visiting, (nested) =>
-    flowRunWantsVisibleE2eWindow(nested, suiteItems, visiting),
-  );
+  return flow.e2eShowWindow !== false;
 }
 
 /**
- * True when this flow or a TRIGGER descendant has browser steps and wants the runner left open.
+ * True when this flow wants the E2E window left open after the run.
+ *
+ * TRIGGER children do not affect this: the root run pins Keep E2E onto nested flows.
  */
 export function flowRunWantsKeepE2eWindow(
   flow: FlowBrowserWalkFlow,
-  suiteItems: readonly TestSuiteTreeItem[],
-  visitingFlowIds: ReadonlySet<string> = new Set(),
+  _suiteItems?: readonly TestSuiteTreeItem[],
+  _visitingFlowIds?: ReadonlySet<string>,
 ): boolean {
-  const steps = flattenEnabledFlowSteps(flow.nodes);
-  if (flowNeedsBrowserRunner(steps) && flow.e2eKeepWindowOpen === true) {
-    return true;
-  }
-  const visiting = withVisitedFlow(visitingFlowIds, flow.id);
-  return walkTriggerTargets(steps, suiteItems, visiting, (nested) =>
-    flowRunWantsKeepE2eWindow(nested, suiteItems, visiting),
-  );
-}
-
-/** Copies `visitingFlowIds` and records `flowId` as already walked. */
-function withVisitedFlow(visitingFlowIds: ReadonlySet<string>, flowId: string): Set<string> {
-  const visiting = new Set(visitingFlowIds);
-  visiting.add(flowId);
-  return visiting;
+  return flow.e2eKeepWindowOpen === true;
 }
 
 /**

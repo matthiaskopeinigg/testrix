@@ -1,11 +1,11 @@
 <div class="request-panel ts-flow-step-panel">
   <p class="request-panel__hint">{{ referenceHint() }}</p>
 
-  <tx-form-field label="Reference step" controlId="ts-val-ref">
+  <tx-form-field label="Reference step (optional)" controlId="ts-val-ref">
     <tx-dropdown
       controlId="ts-val-ref"
-      [options]="refStepOptions()"
-      placeholder="Select prior step…"
+      [options]="liveRefOptions()"
+      placeholder="Live page, or select a prior step…"
       [ngModel]="cfg().refStepId ?? ''"
       (ngModelChange)="handleRefStepChange($event)"
     />
@@ -45,8 +45,40 @@
               />
             </tx-form-field>
             @if (expressionLabel(rule.source); as exprLabel) {
-              <tx-form-field [label]="exprLabel" [controlId]="'ts-val-expr-' + $index">
-                @if (expressionSuggestions(rule.source); as catalog) {
+              @if (showsSelectorField(rule.source)) {
+                <div class="ts-flow-step-panel__selector-row">
+                  <tx-form-field
+                    class="ts-flow-step-panel__grow"
+                    [label]="exprLabel"
+                    [controlId]="'ts-val-expr-' + $index"
+                  >
+                    <tx-input
+                      [controlId]="'ts-val-expr-' + $index"
+                      [ngModel]="rule.expression"
+                      (ngModelChange)="patchRule($index, { expression: $event })"
+                      placeholder="CSS selector or XPath"
+                    />
+                  </tx-form-field>
+                  @if (pickingRuleIndex() === $index) {
+                    <tx-button
+                      variant="secondary"
+                      ariaLabel="Cancel element pick"
+                      (click)="handleCancelPick()"
+                    >
+                      Cancel pick
+                    </tx-button>
+                  } @else {
+                    <tx-button
+                      variant="secondary"
+                      ariaLabel="Pick element on page"
+                      (click)="handlePickOnPage($index)"
+                    >
+                      Pick on page
+                    </tx-button>
+                  }
+                </div>
+              } @else if (expressionSuggestions(rule.source); as catalog) {
+                <tx-form-field [label]="exprLabel" [controlId]="'ts-val-expr-' + $index">
                   <tx-suggest-input
                     [controlId]="'ts-val-expr-' + $index"
                     [suggestions]="catalog"
@@ -54,14 +86,16 @@
                     [ngModel]="rule.expression"
                     (ngModelChange)="patchRule($index, { expression: $event })"
                   />
-                } @else {
+                </tx-form-field>
+              } @else {
+                <tx-form-field [label]="exprLabel" [controlId]="'ts-val-expr-' + $index">
                   <tx-input
                     [controlId]="'ts-val-expr-' + $index"
                     [ngModel]="rule.expression"
                     (ngModelChange)="patchRule($index, { expression: $event })"
                   />
-                }
-              </tx-form-field>
+                </tx-form-field>
+              }
             }
             <tx-form-field label="Operator" [controlId]="'ts-val-op-' + $index">
               <tx-dropdown
@@ -89,6 +123,6 @@
       }
     </div>
 
-    <tx-button variant="add" [disabled]="!refStepType()" (pressed)="handleAddRule()">Add rule</tx-button>
+    <tx-button variant="add" (pressed)="handleAddRule()">Add rule</tx-button>
   }
 </div>

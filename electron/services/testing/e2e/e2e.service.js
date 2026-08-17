@@ -2243,18 +2243,59 @@ class E2eService {
         case 'ASSERT_ELEMENT': {
           const subA = parseSubframeTerminalSelector(selector);
           const compoundJsonA = JSON.stringify(subA ? subA.inner : String(selector ?? ''));
+          const waitMs = Math.max(Number(timeout) || 5000, 500);
+          const pollMs = 250;
+          const maxAttempts = Math.max(1, Math.ceil(waitMs / pollMs));
+          const expectedText = String(value ?? '');
           const assertScript = `
-            (function() {
+            (async function() {
               ${guestDeepSelectorHelperSource()}
               const compound = ${compoundJsonA};
-              return !!awResolveDeepSelector(document, compound);
+              const expected = ${JSON.stringify(expectedText)};
+              const findEl = () => awResolveDeepSelector(document, compound);
+              let el = null;
+              let text = '';
+              for (let i = 0; i < ${maxAttempts}; i++) {
+                el = findEl();
+                if (el) {
+                  text = (el.innerText != null ? el.innerText : (el.textContent || '')) || '';
+                  if (!expected || text.indexOf(expected) !== -1) {
+                    return JSON.stringify({ ok: true, exists: true, text: text });
+                  }
+                }
+                await new Promise(r => setTimeout(r, ${pollMs}));
+              }
+              if (!el) {
+                return JSON.stringify({
+                  ok: false,
+                  error: 'Assertion failed: Element ' + compound + ' not found',
+                });
+              }
+              return JSON.stringify({
+                ok: false,
+                exists: true,
+                text: text,
+                error: 'Assertion failed: Element text did not contain ' + JSON.stringify(expected) +
+                  '. Got: ' + JSON.stringify(String(text).slice(0, 200)),
+              });
             })()
           `;
-          const exists = await this.raceWithExecuteCancel(
+          const rawAssert = await this.raceWithExecuteCancel(
             evaluateScopedGuestScript(this.window.webContents, selector, assertScript),
           );
-          if (!exists) throw new Error(`Assertion failed: Element ${selector} not found`);
-          result = { success: true };
+          let parsedAssert;
+          try {
+            parsedAssert = typeof rawAssert === 'string' ? JSON.parse(rawAssert) : rawAssert;
+          } catch (_) {
+            throw new Error('ASSERT_ELEMENT: invalid JSON from page');
+          }
+          if (!parsedAssert || !parsedAssert.ok) {
+            throw new Error(parsedAssert && parsedAssert.error ? parsedAssert.error : `Assertion failed: Element ${selector} not found`);
+          }
+          result = {
+            success: true,
+            data: { exists: true, text: String(parsedAssert.text ?? '') },
+          };
           break;
         }
 
@@ -2387,6 +2428,9 @@ class E2eService {
           const subR = parseSubframeTerminalSelector(selector);
           const compoundJsonR = JSON.stringify(subR ? subR.inner : String(selector ?? ''));
           const propJ = JSON.stringify(prop);
+          const readWaitMs = Math.max(Number(timeout) || 2400, 400);
+          const readPollMs = 400;
+          const readAttempts = Math.max(1, Math.ceil(readWaitMs / readPollMs));
           const readScript = `
             (async function() {
               ${guestDeepSelectorHelperSource()}
@@ -2394,9 +2438,9 @@ class E2eService {
               const prop = ${propJ};
               const findEl = () => awResolveDeepSelector(document, compound);
               let el = findEl();
-              for (let i = 0; i < 6; i++) {
+              for (let i = 0; i < ${readAttempts}; i++) {
                 if (el) break;
-                await new Promise(r => setTimeout(r, 400));
+                await new Promise(r => setTimeout(r, ${readPollMs}));
                 el = findEl();
               }
               if (!el) return JSON.stringify({ ok: false, error: 'Element not found' });

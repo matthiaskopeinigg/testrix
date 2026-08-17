@@ -11,6 +11,7 @@ describe('layoutForE2eAction', () => {
       selectorPick: false,
       pageUrl: true,
       text: false,
+      expectedText: false,
       expectedUrl: false,
       screenshotFileName: false,
       timeout: true,
@@ -23,6 +24,7 @@ describe('layoutForE2eAction', () => {
       selectorPick: true,
       pageUrl: false,
       text: false,
+      expectedText: false,
       expectedUrl: false,
       screenshotFileName: false,
       timeout: true,
@@ -35,10 +37,16 @@ describe('layoutForE2eAction', () => {
       selectorPick: true,
       pageUrl: false,
       text: true,
+      expectedText: false,
       expectedUrl: false,
       screenshotFileName: false,
       timeout: true,
     });
+  });
+
+  it('shows expected text for assert element', () => {
+    expect(layoutForE2eAction('ASSERT_ELEMENT').expectedText).toBe(true);
+    expect(layoutForE2eAction('ASSERT_ELEMENT').selector).toBe(true);
   });
 
   it('shows expected URL for assert and wait-for-url actions', () => {

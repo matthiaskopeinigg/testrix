@@ -272,10 +272,10 @@ export function createDefaultValidationStepConfig(): ValidationStepConfig {
     refStepId: null,
     rules: [
       {
-        source: 'response_status',
+        source: 'e2e_element_text',
         expression: '',
-        operator: 'equals',
-        expected: '200',
+        operator: 'contains',
+        expected: '',
       },
     ],
   });

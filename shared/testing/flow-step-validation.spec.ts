@@ -5,11 +5,24 @@ import { buildHttpResponseStepCapture } from './flow-step-capture';
 import {
   evaluateValidationRule,
   resolveValidationActualValue,
+  resolveE2eValidationSelector,
   sanitizeValidationRulesForReferenceStepType,
   validationSourcesForReferenceStepType,
 } from './flow-step-validation';
 
 describe('flow-step-validation', () => {
+  it('maps live-page validation (no reference) to element sources', () => {
+    expect(validationSourcesForReferenceStepType(null)).toContain('e2e_element_text');
+    expect(validationSourcesForReferenceStepType(undefined)).toContain('e2e_selector_exists');
+  });
+
+  it('resolves the live E2E selector from the rule, then the referenced step', () => {
+    expect(resolveE2eValidationSelector({ expression: '.toast-success' }, 'button.submit')).toBe(
+      '.toast-success',
+    );
+    expect(resolveE2eValidationSelector({ expression: '  ' }, 'button.submit')).toBe('button.submit');
+  });
+
   it('maps E2E reference steps to element sources', () => {
     expect(validationSourcesForReferenceStepType('E2E')).toContain('e2e_element_text');
     expect(validationSourcesForReferenceStepType('E2E')).toContain('e2e_page_url');

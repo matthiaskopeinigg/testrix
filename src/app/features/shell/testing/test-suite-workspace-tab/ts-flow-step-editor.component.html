@@ -65,6 +65,7 @@
           <app-ts-flow-validation-step-panel
             [config]="s.config"
             [flow]="flow()"
+            [stepId]="s.id"
             [refStepOptions]="refStepOptions()"
             [variableCatalog]="variableCatalog()"
             (configChange)="patchConfig($event)"

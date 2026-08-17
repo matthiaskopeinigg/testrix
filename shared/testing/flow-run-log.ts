@@ -324,9 +324,9 @@ export function buildFlowStepRunLogDetails(
   if (step.stepType === 'VALIDATION') {
     const cfg = step.config as ValidationStepConfig;
     const refStep = cfg.refStepId ? findFlowStepById(flow.nodes, cfg.refStepId) : null;
-    const refCapture = refStep?.lastRunCapture ?? null;
-    if (refStep && refCapture) {
-      const rules = sanitizeValidationRulesForReferenceStepType(refStep.stepType, cfg.rules ?? []);
+    const refCapture = refStep?.lastRunCapture ?? capture;
+    if (refCapture) {
+      const rules = sanitizeValidationRulesForReferenceStepType(refStep?.stepType, cfg.rules ?? []);
       validationChecks = buildFlowValidationCheckResults(rules, refCapture);
     }
   }

@@ -1,10 +1,11 @@
-import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
 import type { DynamicVariableCatalogItem } from '@shared/dynamic-variables';
 import {
   defaultValidationRuleForReferenceStepType,
   findFlowStepById,
+  isE2eElementValidationSource,
   sanitizeValidationRulesForReferenceStepType,
   type FlowStepRunCapture,
   type TestSuiteFlow,
@@ -13,6 +14,8 @@ import {
 import type { ValidationStepConfig } from '@shared/testing/test-suite-steps.schema';
 import type { TxDropdownOption } from '@app/shared/components/forms/tx-dropdown/tx-dropdown.types';
 
+import { ElectronService } from '@app/core/electron/electron.service';
+import { ErrorNotificationService } from '@app/core/errors/error-notification.service';
 import { TxButtonComponent } from '@app/shared/components/forms/tx-button/tx-button.component';
 import { TxIconComponent } from '@app/shared/components/forms/tx-icon/tx-icon.component';
 import { TxDropdownComponent } from '@app/shared/components/forms/tx-dropdown/tx-dropdown.component';
@@ -47,8 +50,12 @@ import {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TsFlowValidationStepPanelComponent {
+  private readonly electron = inject(ElectronService);
+  private readonly notifier = inject(ErrorNotificationService);
+
   readonly config = input<Record<string, unknown>>({});
   readonly flow = input<TestSuiteFlow | null>(null);
+  readonly stepId = input<string | null>(null);
   readonly refStepOptions = input<readonly TxDropdownOption[]>([]);
   readonly variableCatalog = input<readonly DynamicVariableCatalogItem[]>([]);
 
@@ -56,7 +63,8 @@ export class TsFlowValidationStepPanelComponent {
   readonly environmentVariableClick = output<{ readonly key: string }>();
 
   protected readonly operatorOptions = FLOW_STEP_VALIDATION_OPERATOR_OPTIONS;
-  protected readonly expectedPlaceholder = '200 or {{plainPw}}';
+  protected readonly expectedPlaceholder = 'Expected text or value';
+  protected readonly pickingRuleIndex = signal<number | null>(null);
 
   protected readonly refStepType = computed((): TestSuiteStepType | null => {
     const flow = this.flow();
@@ -79,6 +87,11 @@ export class TsFlowValidationStepPanelComponent {
   protected readonly sourceOptions = computed(() =>
     buildValidationSourceOptions(this.refStepType()),
   );
+
+  protected readonly liveRefOptions = computed((): readonly TxDropdownOption[] => [
+    { value: '', label: 'Live page (current browser)' },
+    ...this.refStepOptions(),
+  ]);
 
   protected readonly referenceHint = computed(() => validationReferenceHint(this.refStepType()));
 
@@ -114,15 +127,67 @@ export class TsFlowValidationStepPanelComponent {
     const nextRefId = refStepId || null;
     const flow = this.flow();
     const refStep = nextRefId && flow ? findFlowStepById(flow.nodes, nextRefId) : null;
-    const rules = nextRefId
-      ? sanitizeValidationRulesForReferenceStepType(refStep?.stepType, this.rules())
-      : [];
+    const rules = sanitizeValidationRulesForReferenceStepType(refStep?.stepType, this.rules());
     if (rules.length === 0) {
       const fallback = defaultValidationRuleForReferenceStepType(refStep?.stepType);
       this.patch({ refStepId: nextRefId, rules: fallback ? [fallback] : [] });
       return;
     }
     this.patch({ refStepId: nextRefId, rules });
+  }
+
+  protected showsSelectorField(source: ValidationStepConfig['rules'][number]['source']): boolean {
+    return source !== 'e2e_page_url' && isE2eElementValidationSource(source);
+  }
+
+  protected async handlePickOnPage(index: number): Promise<void> {
+    if (this.pickingRuleIndex() !== null) {
+      return;
+    }
+
+    const api = this.electron.bridge()?.testing;
+    if (!api?.e2ePickElement) {
+      this.notifier.reportUnknown(new Error('Element picker is only available in the desktop app.'));
+      return;
+    }
+
+    const flow = this.flow();
+    const stepId = this.stepId();
+    if (!flow || !stepId) {
+      this.notifier.reportUnknown(new Error('Save the flow step before picking an element.'));
+      return;
+    }
+
+    this.pickingRuleIndex.set(index);
+    try {
+      const result = await api.e2ePickElement({
+        flowId: flow.id,
+        stepId,
+      });
+      if (result.cancelled) {
+        return;
+      }
+      if (result.ok && result.selector) {
+        this.patchRule(index, { expression: result.selector });
+        return;
+      }
+      if (result.error) {
+        this.notifier.reportUnknown(new Error(result.error));
+      }
+    } catch (error: unknown) {
+      this.notifier.reportUnknown(error);
+    } finally {
+      this.pickingRuleIndex.set(null);
+    }
+  }
+
+  protected async handleCancelPick(): Promise<void> {
+    const api = this.electron.bridge()?.testing;
+    try {
+      await api?.e2eCancel?.();
+    } catch {
+      // The in-flight pick invoke still settles in handlePickOnPage.
+    }
   }
 
   protected handleAddRule(): void {

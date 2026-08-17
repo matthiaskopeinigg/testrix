@@ -112,6 +112,9 @@ function migrateFlow(flow: unknown): TestSuiteFlow {
 }
 
 function migrateSuiteItem(item: unknown): TestSuiteTreeItem {
+  if (typeof item === 'object' && item !== null && 'nodes' in item) {
+    return migrateFlow(item);
+  }
   const parsed = parseTestSuiteTreeItem(item);
   if (isTestSuiteFlow(parsed)) {
     return migrateFlow(parsed);

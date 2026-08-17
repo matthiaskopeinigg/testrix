@@ -70,6 +70,19 @@
     </tx-form-field>
   }
 
+  @if (fields().expectedText) {
+    <tx-form-field label="Expected text (optional)" controlId="ts-e2e-expected-text">
+      <tx-variable-input
+        controlId="ts-e2e-expected-text"
+        [catalog]="variableCatalog()"
+        [ngModel]="cfg().value"
+        (ngModelChange)="patch({ value: $event })"
+        (environmentVariableClick)="environmentVariableClick.emit($event)"
+        placeholder="Success or error message text"
+      />
+    </tx-form-field>
+  }
+
   @if (fields().expectedUrl) {
     <tx-form-field [label]="expectedUrlLabel()" controlId="ts-e2e-expected-url">
       <tx-variable-input

@@ -20,8 +20,10 @@ import {
   findTestSuiteFlowInTree,
   flattenEnabledFlowSteps,
   markRemainingFlowStepsSkipped,
+  resolveE2eValidationSelector,
   resolveGlobalE2eScreenshotDirectory,
   resolveE2eUrlExpectation,
+  resolveTestSuiteFlowEnvironmentId,
   resolveValidationActualValue,
   sanitizeValidationRulesForReferenceStepType,
   sanitizeCacheEntriesForReferenceStepType,
@@ -32,8 +34,6 @@ import {
   cacheEntryExtractFailureMessage,
   validationFailureMessage,
   flowNeedsBrowserRunnerDeep,
-  flowRunWantsKeepE2eWindow,
-  flowRunWantsVisibleE2eWindow,
   resolveTriggerTargetFlows,
   triggerFlowCycleMessage,
   type FlowRunProgressEvent,
@@ -115,7 +115,7 @@ interface FlowStepContext {
   readonly environmentVariableKeys: import('@shared/http/collection-execution.schema').EnvironmentVariableKeyMode;
   readonly ancestorFlowIds: readonly string[];
   readonly suiteItems: readonly TestSuiteTreeItem[];
-  /** True when the root run pinned `showBrowser` via `e2eShowWindowOverride`. */
+  /** True when the root run pinned `showBrowser` (always true for a flow run). */
   readonly showBrowserLocked: boolean;
 }
 
@@ -167,9 +167,11 @@ export class TestSuiteFlowExecutor {
 
     let flow = flowLoaded.flow;
     const ancestorFolders = flowLoaded.ancestorFolders;
-    if (options.environmentIdOverride !== undefined) {
-      flow = { ...flow, environmentId: options.environmentIdOverride };
-    }
+    const pinnedEnvironmentId =
+      options.environmentIdOverride !== undefined
+        ? options.environmentIdOverride?.trim() || null
+        : resolveTestSuiteFlowEnvironmentId(flow.environmentId, ancestorFolders);
+    flow = { ...flow, environmentId: pinnedEnvironmentId };
 
     const steps = flattenEnabledFlowSteps(flow.nodes);
     if (steps.length === 0) {
@@ -185,15 +187,10 @@ export class TestSuiteFlowExecutor {
     }
 
     const needsBrowserRunner = flowNeedsBrowserRunnerDeep(steps, suiteItems, new Set([flow.id]));
-    const showBrowserLocked = options.e2eShowWindowOverride !== undefined;
-    const showBrowser =
-      options.e2eShowWindowOverride ??
-      (flow.e2eShowWindow !== false ||
-        flowRunWantsVisibleE2eWindow(flow, suiteItems, new Set([flow.id])));
+    const showBrowserLocked = true;
+    const showBrowser = options.e2eShowWindowOverride ?? flow.e2eShowWindow !== false;
     const keepBrowserOpen =
-      options.e2eKeepWindowOpenOverride ??
-      (flow.e2eKeepWindowOpen === true ||
-        flowRunWantsKeepE2eWindow(flow, suiteItems, new Set([flow.id])));
+      options.e2eKeepWindowOpenOverride ?? flow.e2eKeepWindowOpen === true;
     const lockVisibleRunnerInput = needsBrowserRunner && showBrowser;
 
     if (needsBrowserRunner && !this.e2eRunner) {
@@ -282,7 +279,7 @@ export class TestSuiteFlowExecutor {
             showBrowser,
             e2eScreenshotFolder: settings.http.testing.e2eScreenshotFolder,
             e2eIgnoreInvalidSsl: settings.testSuite.e2eIgnoreInvalidSsl === true,
-            environmentIdOverride: options.environmentIdOverride,
+            environmentIdOverride: pinnedEnvironmentId,
             ancestorFolders,
             environmentVariableKeys: {
               useFolderPathInKeys: settings.environments.useFolderPathInKeys,
@@ -419,16 +416,12 @@ export class TestSuiteFlowExecutor {
       throw new Error('E2E runner is not available.');
     }
 
-    const showBrowser = parentCtx.showBrowserLocked
-      ? parentCtx.showBrowser
-      : parentCtx.showBrowser || flow.e2eShowWindow !== false;
-
     const ctx: FlowStepContext = {
       ...parentCtx,
       flowId: flow.id,
       ancestorFolders: location.ancestorFolders,
       ancestorFlowIds: [...parentCtx.ancestorFlowIds, flow.id],
-      showBrowser,
+      showBrowser: parentCtx.showBrowser,
     };
 
     for (const nestedStep of steps) {
@@ -1063,6 +1056,7 @@ export class TestSuiteFlowExecutor {
         appVersion: ctx.appVersion,
         runScope: { runId: `flow-${step.id}` },
         environmentVariableKeys: ctx.environmentVariableKeys,
+        environmentIdOverride: ctx.environmentIdOverride ?? '',
       });
       if (!built) {
         throw new Error('Collection request not found.');
@@ -1155,30 +1149,47 @@ export class TestSuiteFlowExecutor {
     ctx: FlowStepContext,
   ): Promise<void> {
     const cfg = step.config as ValidationStepConfig;
-    const refId = cfg.refStepId;
-    if (!refId) {
-      throw new Error('Validation step needs a reference step.');
-    }
-
-    const refStep = findFlowStepById(flow.nodes, refId);
-    if (!refStep) {
+    const refId = cfg.refStepId?.trim() || null;
+    const refStep = refId ? findFlowStepById(flow.nodes, refId) : null;
+    if (refId && !refStep) {
       throw new Error('Reference step was not found in this flow.');
     }
 
-    const rules = sanitizeValidationRulesForReferenceStepType(refStep.stepType, cfg.rules ?? []);
+    const rules = sanitizeValidationRulesForReferenceStepType(refStep?.stepType, cfg.rules ?? []);
     if (rules.length === 0) {
       return;
     }
 
-    const capture = await this.resolveValidationReferenceCapture(
-      refStep,
-      refId,
-      rules,
-      ctx.showBrowser,
-    );
+    const liveE2e = !refStep || refStep.stepType === 'E2E';
+    let lastCapture: FlowStepRunCapture | null = null;
+
+    if (!liveE2e) {
+      lastCapture = await this.resolveValidationReferenceCapture(
+        refStep,
+        refId ?? '',
+        rules,
+        ctx.showBrowser,
+      );
+      this.captures.set(step.id, lastCapture);
+      for (const rule of rules) {
+        const actual = resolveValidationActualValue(lastCapture, rule);
+        const expected = this.resolveFlowTemplate(
+          rule.expected ?? '',
+          flow,
+          ctx.environments,
+          ctx.environmentIdOverride,
+          ctx.ancestorFolders,
+          ctx.environmentVariableKeys,
+        );
+        const resolved = { ...rule, expected };
+        if (!evaluateValidationRule(resolved, actual)) {
+          throw new Error(validationFailureMessage(resolved, actual));
+        }
+      }
+      return;
+    }
 
     for (const rule of rules) {
-      const actual = resolveValidationActualValue(capture, rule);
       const expected = this.resolveFlowTemplate(
         rule.expected ?? '',
         flow,
@@ -1188,10 +1199,123 @@ export class TestSuiteFlowExecutor {
         ctx.environmentVariableKeys,
       );
       const resolved = { ...rule, expected };
+      const capture = await this.captureLiveE2eValidationRule(resolved, refStep, ctx);
+      lastCapture = capture;
+      const actual = resolveValidationActualValue(capture, resolved);
       if (!evaluateValidationRule(resolved, actual)) {
         throw new Error(validationFailureMessage(resolved, actual));
       }
     }
+
+    if (lastCapture) {
+      this.captures.set(step.id, lastCapture);
+    }
+  }
+
+  /**
+   * Reads the live page for one E2E validation rule (element text/HTML/exists or URL).
+   */
+  private async captureLiveE2eValidationRule(
+    rule: ValidationRule,
+    refStep: TestSuiteFlowStep | null,
+    ctx: FlowStepContext,
+  ): Promise<FlowStepRunCapture> {
+    const fallbackSelector =
+      refStep?.stepType === 'E2E'
+        ? String((refStep.config as E2eStepConfig).selector ?? '').trim()
+        : '';
+
+    if (rule.source === 'e2e_page_url') {
+      const pageUrl = await this.waitForLivePageUrlForRules([rule], ctx.showBrowser);
+      return {
+        kind: 'e2e_element',
+        capturedAt: new Date().toISOString(),
+        action: 'VALIDATION',
+        selector: fallbackSelector,
+        pageUrl,
+        elementText: '',
+        elementHtml: '',
+        elementExists: false,
+      };
+    }
+
+    const selector = resolveE2eValidationSelector(rule, fallbackSelector);
+    if (!selector) {
+      throw new Error(
+        'Validation needs a CSS selector for the element (or a referenced E2E step with a selector).',
+      );
+    }
+
+    const waitForPresence = rule.operator !== 'not_exists' && rule.operator !== 'is_empty';
+    const live = await this.readLiveE2eElement(selector, ctx, waitForPresence);
+    return {
+      kind: 'e2e_element',
+      capturedAt: new Date().toISOString(),
+      action: 'VALIDATION',
+      selector,
+      pageUrl: '',
+      elementText: live.elementText,
+      elementHtml: live.elementHtml,
+      elementExists: live.elementExists,
+    };
+  }
+
+  /** Reads current element text/HTML from the open E2E session. */
+  private async readLiveE2eElement(
+    selector: string,
+    ctx: FlowStepContext,
+    waitForPresence: boolean,
+  ): Promise<{
+    readonly elementText: string;
+    readonly elementHtml: string;
+    readonly elementExists: boolean;
+  }> {
+    const runner = this.e2eRunner;
+    if (!runner || !this.browserSessionReady) {
+      throw new Error('Browser session is not available for element validation.');
+    }
+
+    if (waitForPresence) {
+      const asserted = await this.safeE2eRunnerExecute(runner, {
+        action: 'ASSERT_ELEMENT',
+        selector,
+        value: '',
+        timeout: DEFAULT_E2E_TIMEOUT_MS,
+        show: ctx.showBrowser,
+        ignoreInvalidSsl: ctx.e2eIgnoreInvalidSsl,
+      });
+      if (!asserted?.success) {
+        return { elementText: '', elementHtml: '', elementExists: false };
+      }
+    }
+
+    const textResult = await this.safeE2eRunnerExecute(runner, {
+      action: 'READ_ELEMENT_DOM',
+      selector,
+      value: '{}',
+      timeout: waitForPresence ? 2000 : 500,
+      show: ctx.showBrowser,
+      ignoreInvalidSsl: ctx.e2eIgnoreInvalidSsl,
+    });
+    const htmlResult = await this.safeE2eRunnerExecute(runner, {
+      action: 'READ_ELEMENT_DOM',
+      selector,
+      value: JSON.stringify({ prop: 'innerHTML' }),
+      timeout: waitForPresence ? 2000 : 500,
+      show: ctx.showBrowser,
+      ignoreInvalidSsl: ctx.e2eIgnoreInvalidSsl,
+    });
+
+    const elementText =
+      textResult?.success && textResult.data && typeof textResult.data === 'object'
+        ? String((textResult.data as { text?: string }).text ?? '')
+        : '';
+    const elementHtml =
+      htmlResult?.success && htmlResult.data && typeof htmlResult.data === 'object'
+        ? String((htmlResult.data as { text?: string }).text ?? '')
+        : '';
+    const elementExists = Boolean(textResult?.success || htmlResult?.success || elementText || elementHtml);
+    return { elementText, elementHtml, elementExists };
   }
 
   private async executeCache(

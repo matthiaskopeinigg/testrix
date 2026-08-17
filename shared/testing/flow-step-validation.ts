@@ -30,11 +30,33 @@ export const E2E_ELEMENT_VALIDATION_SOURCES = [
 /** Cached query result validation (DATABASE steps). */
 export const DATABASE_VALIDATION_SOURCES = ['cached_value'] as const satisfies readonly ValidationRuleSource[];
 
+/**
+ * True when a validation source reads the live E2E page (element or URL).
+ */
+export function isE2eElementValidationSource(
+  source: ValidationRuleSource,
+): boolean {
+  return (E2E_ELEMENT_VALIDATION_SOURCES as readonly string[]).includes(source);
+}
+
+/**
+ * CSS selector for a live E2E validation rule.
+ * `expression` wins; otherwise the referenced E2E step selector is used.
+ */
+export function resolveE2eValidationSelector(
+  rule: Pick<ValidationRule, 'expression'>,
+  fallbackSelector = '',
+): string {
+  return rule.expression.trim() || fallbackSelector.trim();
+}
+
 export function validationSourcesForReferenceStepType(
   stepType: TestSuiteStepType | null | undefined,
 ): readonly ValidationRuleSource[] {
   switch (stepType) {
     case 'E2E':
+    case undefined:
+    case null:
       return E2E_ELEMENT_VALIDATION_SOURCES;
     case 'REQUEST':
     case 'HTTP_LISTENER':
@@ -53,10 +75,12 @@ export function defaultValidationRuleForReferenceStepType(
 ): ValidationRule | null {
   switch (stepType) {
     case 'E2E':
+    case undefined:
+    case null:
       return {
         source: 'e2e_element_text',
         expression: '',
-        operator: 'is_not_empty',
+        operator: 'contains',
         expected: '',
       };
     case 'REQUEST':

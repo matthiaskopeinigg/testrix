@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.6]
+
+### Changed
+
+- The root flow’s Show E2E, Keep E2E, and environment apply to every TRIGGER child (a regression run also pins Show E2E)
+
+### Added
+
+- Validation can assert live page element text, HTML, or presence (optional CSS selector and pick-on-page)
+- Assert element E2E action accepts optional expected text
+
 ## [1.0.5]
 
 Stable channel build of 1.0.5-beta.1 (updater channel and SemVer fixes).
@@ -447,7 +458,8 @@ Tagged in git. GitHub installers were not published (Authenticode secrets were m
 
 Initial public beta of Testrix: local-first desktop API client (HTTP, WebSocket, collections, environments, test suites, load tests, mocks, and capture).
 
-[Unreleased]: https://github.com/matthiaskopeinigg/testrix/compare/v1.0.5...HEAD
+[Unreleased]: https://github.com/matthiaskopeinigg/testrix/compare/v1.0.6...HEAD
+[1.0.6]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.6
 [1.0.5]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.5
 [1.0.5-beta.1]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.5-beta.1
 [1.0.4]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.4

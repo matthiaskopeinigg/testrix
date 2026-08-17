@@ -20,7 +20,7 @@ export const FLOW_STEP_GUIDED_TITLES: Record<TestSuiteStepType, string> = {
 /** One-line hint for the add-step modal. */
 export const FLOW_STEP_ADD_HINTS: Record<TestSuiteStepType, string> = {
   REQUEST: 'Call an API and store the response.',
-  VALIDATION: 'Assert a prior response or value.',
+  VALIDATION: 'Assert a prior response, live page text, or cached value.',
   CACHE: 'Generate a value or extract from a prior step into flow variables.',
   DATABASE: 'Write a query or select a saved query, then cache the result.',
   E2E: 'Drive the browser (navigate, click, type).',

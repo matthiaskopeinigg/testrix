@@ -38,7 +38,7 @@ export function validationReferenceHint(
 ): string {
   switch (refStepType) {
     case 'E2E':
-      return 'Assert element text, HTML, presence, or page URL / redirect from the referenced browser step.';
+      return 'Assert live element text, HTML, presence, or page URL. Selector is optional when a referenced browser step already has one.';
     case 'REQUEST':
       return 'Assert HTTP response status, body, or headers from the referenced request.';
     case 'HTTP_LISTENER':
@@ -49,11 +49,11 @@ export function validationReferenceHint(
     case 'CACHE':
       return 'Assert the cached (or decrypted) value stored by the referenced CACHE step.';
     default:
-      return 'Pick a prior request, E2E, listener, interceptor, database, or CACHE step to validate against.';
+      return 'Assert live page text or presence, or pick a prior request/E2E step to validate against.';
   }
 }
 
-/** Label for the expression field (header name, etc.). */
+/** Label for the expression field (header name, CSS selector, etc.). */
 export function validationExpressionLabel(source: ValidationRule['source']): string | null {
   switch (source) {
     case 'response_header':
@@ -61,6 +61,10 @@ export function validationExpressionLabel(source: ValidationRule['source']): str
       return 'Header name';
     case 'request_param':
       return 'Param name';
+    case 'e2e_element_text':
+    case 'e2e_element_html':
+    case 'e2e_selector_exists':
+      return 'CSS selector';
     default:
       return null;
   }

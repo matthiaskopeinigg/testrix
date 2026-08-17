@@ -89,7 +89,7 @@ describe('flowNeedsBrowserRunnerDeep', () => {
 });
 
 describe('flowRunWantsVisibleE2eWindow', () => {
-  it('follows a TRIGGER target that has Show E2E enabled', () => {
+  it('uses the root flow setting and ignores TRIGGER children', () => {
     const login = suiteFlow('login', 'Login', [createFlowStep('E2E', 'Open app')], {
       e2eShowWindow: true,
     });
@@ -104,12 +104,12 @@ describe('flowRunWantsVisibleE2eWindow', () => {
       ],
       { e2eShowWindow: false },
     );
-    expect(flowRunWantsVisibleE2eWindow(parent, [login, parent])).toBe(true);
+    expect(flowRunWantsVisibleE2eWindow(parent, [login, parent])).toBe(false);
   });
 });
 
 describe('flowRunWantsKeepE2eWindow', () => {
-  it('follows a TRIGGER target that has Keep E2E enabled', () => {
+  it('uses the root flow setting and ignores TRIGGER children', () => {
     const login = suiteFlow('login', 'Login', [createFlowStep('E2E', 'Open app')], {
       e2eKeepWindowOpen: true,
     });
@@ -119,6 +119,6 @@ describe('flowRunWantsKeepE2eWindow', () => {
         config: { targetType: 'flow', targetId: 'login' },
       },
     ]);
-    expect(flowRunWantsKeepE2eWindow(parent, [login, parent])).toBe(true);
+    expect(flowRunWantsKeepE2eWindow(parent, [login, parent])).toBe(false);
   });
 });

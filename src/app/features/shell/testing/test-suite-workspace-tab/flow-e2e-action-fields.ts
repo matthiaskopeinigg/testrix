@@ -11,6 +11,7 @@ export interface E2eActionFieldLayout {
   readonly selectorPick: boolean;
   readonly pageUrl: boolean;
   readonly text: boolean;
+  readonly expectedText: boolean;
   readonly expectedUrl: boolean;
   readonly screenshotFileName: boolean;
   readonly timeout: boolean;
@@ -28,7 +29,7 @@ const SELECTOR_ACTIONS: readonly E2eStepAction[] = [
 const SELECTOR_OPTIONAL_ACTIONS: readonly E2eStepAction[] = ['SCREENSHOT'];
 
 /**
- * Returns the field layout for an E2E step action.
+ * Returns the field layout for a given E2E step action.
  */
 export function layoutForE2eAction(action: E2eStepAction): E2eActionFieldLayout {
   return {
@@ -36,6 +37,7 @@ export function layoutForE2eAction(action: E2eStepAction): E2eActionFieldLayout 
     selectorPick: SELECTOR_ACTIONS.includes(action) || SELECTOR_OPTIONAL_ACTIONS.includes(action),
     pageUrl: action === 'NAVIGATE_TO',
     text: action === 'TYPE_TEXT',
+    expectedText: action === 'ASSERT_ELEMENT',
     expectedUrl: action === 'ASSERT_URL' || action === 'WAIT_FOR_URL',
     screenshotFileName: action === 'SCREENSHOT',
     timeout: true,
