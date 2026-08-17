@@ -24,6 +24,7 @@ export const INTERCEPTOR_FILE_NAME = 'interceptor.json';
 export const QUERIES_FILE_NAME = 'queries.json';
 export const DATABASES_FILE_NAME = 'databases.json';
 export const MONITORS_FILE_NAME = 'monitors.json';
+export const LOOKUPS_FILE_NAME = 'lookups.json';
 
 /** Default `ng serve` port — avoids clashing with other Angular apps on 4200. */
 export const TESTRIX_DEV_SERVER_PORT = 4720;

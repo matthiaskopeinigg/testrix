@@ -37,6 +37,7 @@ export const HELP_WIKI_SECTION_IDS = [
   'capture',
   'interceptor',
   'monitors',
+  'lookups',
   // Development tools
   'dev-uuid-generator',
   'dev-code-editor',

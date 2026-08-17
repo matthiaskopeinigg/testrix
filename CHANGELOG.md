@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0-beta.1]
+
+### Added
+
+- Lookups in the Testing hub: ticket identifiers, skip-unless database queries, and a labeled results card
+- Lookup result fields that contain JSON arrays or objects render as a table or list (for example a `products` array of `{ name, uuid }`)
+- README feature map covering workspace, collections, environments, Database, testing tools, developer tools, Teams, settings, and desktop updates
+
+### Changed
+
+- Lookup skip-unless uses a JavaScript regex against a source value instead of a fixed kind dropdown
+- Lookup playbooks use the full editor width and the same tab-open stagger as other workspace tabs
+
+### Fixed
+
+- Lookup tabs restore Run/Edit, inputs, and the last results card from the workspace session
+- Enabling Required on a lookup step no longer breaks the editor
+- Lookup results are selectable and have copy buttons
+
+### Removed
+
+- Auto-seeded Customer ticket lookup playbook and Compose lookup demo tables
+
 ## [1.0.9]
 
 ### Added
@@ -487,7 +510,8 @@ Tagged in git. GitHub installers were not published (Authenticode secrets were m
 
 Initial public beta of Testrix: local-first desktop API client (HTTP, WebSocket, collections, environments, test suites, load tests, mocks, and capture).
 
-[Unreleased]: https://github.com/matthiaskopeinigg/testrix/compare/v1.0.9...HEAD
+[Unreleased]: https://github.com/matthiaskopeinigg/testrix/compare/v1.1.0-beta.1...HEAD
+[1.1.0-beta.1]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.1.0-beta.1
 [1.0.9]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.9
 [1.0.8]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.8
 [1.0.7]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.7

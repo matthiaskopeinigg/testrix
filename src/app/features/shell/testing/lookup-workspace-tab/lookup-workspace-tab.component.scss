@@ -1,0 +1,332 @@
+@use '../testing-sidebar-shared' as testing;
+@use '../../workspace/workspace-tab-chrome' as tab-chrome;
+
+:host {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  min-width: 0;
+  @include testing.testing-no-select;
+}
+
+.lk-tab {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  min-width: 0;
+}
+
+.lk-tab__bar {
+  @include tab-chrome.workspace-tab-toolbar-row;
+}
+
+.lk-tab__bar-cluster {
+  @include tab-chrome.workspace-tab-bar-cluster;
+
+  &--grow {
+    @include tab-chrome.workspace-tab-bar-cluster-grow;
+  }
+}
+
+.lk-tab__protocol-chip {
+  @include tab-chrome.workspace-tab-title-chip;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex: 0 0 auto;
+  align-self: flex-end;
+  margin-bottom: 1px;
+  padding-inline: 0.55rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--tx-text-1);
+}
+
+.lk-tab__name-field {
+  flex: 1 1 auto;
+  min-width: 8rem;
+  max-width: 40rem;
+}
+
+.lk-tab--sidebar .lk-tab__workspace {
+  flex-direction: row;
+}
+
+.lk-tab__sections-wrap {
+  @include tab-chrome.workspace-tab-sections-wrap;
+}
+
+.lk-tab__sections-bar {
+  @include tab-chrome.workspace-tab-sections-bar;
+}
+
+.lk-tab__section-tab {
+  @include tab-chrome.workspace-tab-section-tab;
+}
+
+.lk-tab__workspace {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+}
+
+.lk-tab__nav {
+  @include tab-chrome.workspace-tab-section-sidebar-nav;
+}
+
+.lk-tab__nav-item {
+  @include tab-chrome.workspace-tab-section-sidebar-nav-item;
+}
+
+.lk-tab__nav-icon {
+  display: flex;
+  flex-shrink: 0;
+}
+
+.lk-tab__divider {
+  @include tab-chrome.workspace-tab-section-sidebar-divider;
+}
+
+.lk-tab__pane {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  padding: 14px 18px 18px;
+}
+
+.request-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tx-space-3, 0.75rem);
+  min-height: 0;
+  flex: 1 1 auto;
+  width: 100%;
+  max-width: none;
+}
+
+.request-panel--run {
+  gap: 1rem;
+}
+
+.lk-tab__run-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.65rem 0.85rem;
+}
+
+.lk-tab__run-env {
+  flex: 0 1 16rem;
+  min-width: 12rem;
+}
+
+.lk-tab__run-inputs {
+  display: flex;
+  flex: 1 1 22rem;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.65rem 0.85rem;
+  min-width: 0;
+}
+
+.lk-tab__run-inputs tx-form-field {
+  flex: 1 1 14rem;
+  min-width: 12rem;
+}
+
+.lk-tab__run-cta {
+  flex: 0 0 auto;
+}
+
+.lk-tab__section-title {
+  margin: var(--tx-space-3, 0.75rem) 0 0;
+  font-size: var(--tx-font-size-sm, 0.8125rem);
+  font-weight: 650;
+  color: var(--tx-text-1);
+}
+
+.lk-tab__subsection-title {
+  margin: var(--tx-space-2, 0.5rem) 0 0;
+  font-size: var(--tx-font-size-xs, 0.75rem);
+  font-weight: 600;
+  color: var(--tx-text-2);
+}
+
+.lk-tab__hint {
+  margin: 0;
+  color: var(--tx-text-2);
+  font-size: var(--tx-font-size-sm, 0.8125rem);
+}
+
+.lk-tab__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--tx-space-2, 0.5rem);
+}
+
+.lk-tab__row tx-form-field {
+  flex: 1 1 8rem;
+  min-width: 7rem;
+}
+
+.lk-tab__row tx-toggle {
+  flex: 0 0 auto;
+}
+
+.lk-tab__results-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--tx-space-2, 0.5rem);
+}
+
+.lk-tab__results-head .lk-tab__section-title {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+}
+
+.lk-tab__step {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tx-space-3, 0.75rem);
+  padding: var(--tx-space-3, 0.75rem);
+  border: 1px solid var(--tx-border-0);
+  border-radius: var(--tx-radius-md);
+  background: var(--tx-surface-1);
+}
+
+.lk-tab__results {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tx-space-2, 0.5rem);
+}
+
+.lk-tab__result-card {
+  margin: 0;
+  padding: 0.15rem 0.25rem 0.35rem;
+  border: 1px solid color-mix(in srgb, var(--tx-border-0) 80%, transparent);
+  border-radius: var(--tx-radius-md);
+  background: color-mix(in srgb, var(--tx-surface-1) 88%, var(--tx-surface-0));
+  display: flex;
+  flex-direction: column;
+  @include testing.testing-selectable-text;
+}
+
+.lk-tab__kv {
+  display: grid;
+  grid-template-columns: minmax(8rem, 13rem) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 2.35rem;
+  padding: 0.4rem 0.85rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--tx-border-0) 55%, transparent);
+}
+
+.lk-tab__kv:last-child {
+  border-bottom: 0;
+}
+
+.lk-tab__kv-label {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--tx-text-2);
+}
+
+.lk-tab__kv-value {
+  margin: 0;
+  min-width: 0;
+  color: var(--tx-text-1);
+  font-family: var(--tx-font-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  word-break: break-word;
+  @include testing.testing-selectable-text;
+}
+
+.lk-tab__result-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  padding: 0.75rem 0.85rem 0.9rem;
+  border-top: 1px solid color-mix(in srgb, var(--tx-border-0) 55%, transparent);
+}
+
+.lk-tab__result-panel:first-child {
+  border-top: 0;
+}
+
+.lk-tab__result-panel-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.lk-tab__result-panel-title {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 650;
+  color: var(--tx-text-1);
+}
+
+.lk-tab__result-meta {
+  color: var(--tx-text-2);
+  font-size: 0.75rem;
+}
+
+.lk-tab__result-panel-head tx-button {
+  margin-left: auto;
+}
+
+.lk-tab__result-block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tx-space-1, 0.25rem);
+  min-width: 0;
+}
+
+.lk-tab__result-caption {
+  margin: 0;
+  font-size: var(--tx-font-size-xs, 0.75rem);
+  font-weight: 600;
+  color: var(--tx-text-2);
+}
+
+.lk-tab__result-list {
+  margin: 0;
+  padding-inline-start: 1.15rem;
+  color: var(--tx-text-1);
+  font-family: var(--tx-font-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
+  font-size: 0.8125rem;
+}
+
+.lk-tab__result-grid {
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.lk-tab__result-grid tx-data-grid {
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+}
+
+.lk-tab__result-grid ::ng-deep .tx-data-grid__sort {
+  display: none;
+}

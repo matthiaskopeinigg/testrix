@@ -66,7 +66,7 @@ export const HELP_WIKI_DATABASE_SECTIONS: readonly HelpWikiSection[] = [
       {
         type: 'tip',
         title: 'Local Docker databases',
-        text: 'From the repo, run docker compose up -d. Add PostgreSQL on localhost:5432 (user, password, and database testrix), Oracle on localhost:1521 (user testrix, password testrix, service name FREEPDB1, Use SID off), or Redis on localhost:6379. Oracle’s first start can take a few minutes.',
+        text: 'From the repo, run docker compose up -d. Add PostgreSQL on localhost:5432 (user, password, and database testrix), MySQL on localhost:3306 (user, password, and database testrix), Oracle on localhost:1521 (user testrix, password testrix, service name FREEPDB1, Use SID off), or Redis on localhost:6379. Oracle’s first start can take a few minutes.',
       },
       {
         type: 'note',

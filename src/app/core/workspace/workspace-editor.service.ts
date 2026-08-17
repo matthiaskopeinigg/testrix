@@ -50,6 +50,7 @@ import { toTreeNodes } from '@app/features/shell/environments/environment-tree.a
 import { findHistoryNode } from '@app/features/shell/history/history-tree.mutations';
 import { CaptureWorkbenchStore } from '@app/core/testing/capture-workbench.store';
 import { InterceptorWorkspaceStore } from '@app/core/testing/interceptor-workspace.store';
+import { LookupService } from '@app/core/testing/lookup.service';
 import { LoadTestService } from '@app/core/testing/load-test.service';
 import { MockServerService } from '@app/core/testing/mock-server.service';
 import { RegressionService } from '@app/core/testing/regression.service';
@@ -92,6 +93,7 @@ export class WorkspaceEditorService {
   private readonly mockServer = inject(MockServerService);
   private readonly capture = inject(CaptureWorkbenchStore);
   private readonly interceptor = inject(InterceptorWorkspaceStore);
+  private readonly lookups = inject(LookupService);
   private readonly databaseQueries = inject(DatabaseQueriesService);
   private readonly databaseConnections = inject(DatabaseConnectionsService);
   private readonly environmentsService = inject(EnvironmentsService);
@@ -171,6 +173,7 @@ export class WorkspaceEditorService {
       mockServer: this.mockServer,
       capture: this.capture,
       interceptor: this.interceptor,
+      lookups: this.lookups,
       databases: this.databaseConnections,
       databaseQueries: this.databaseQueries,
     };
@@ -241,6 +244,9 @@ export class WorkspaceEditorService {
     }
     if (kind === 'interceptor-rule') {
       return { label: this.interceptor.labelForResource(resourceId) };
+    }
+    if (kind === 'lookup') {
+      return { label: this.lookups.labelForResource(resourceId) };
     }
     if (kind === 'database') {
       const connectionId = parseDatabaseConnectionTabResourceId(resourceId);

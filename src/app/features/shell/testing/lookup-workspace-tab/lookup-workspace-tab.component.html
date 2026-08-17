@@ -1,0 +1,489 @@
+@if (missing()) {
+  <section class="lk-tab tx-workspace-tab" [attr.aria-label]="title()">
+    <div class="lk-tab__workspace">
+      <div class="lk-tab__pane tx-workspace-tab__pane">
+        <div class="request-panel tx-workspace-tab__section-shell">
+          <tx-banner variant="warning" title="Lookup not found">
+            This tab points to a lookup that no longer exists. Close the tab or pick another from the sidebar.
+          </tx-banner>
+        </div>
+      </div>
+    </div>
+  </section>
+} @else if (lookup(); as lookup) {
+  <section
+    class="lk-tab tx-workspace-tab"
+    [class.lk-tab--titlebar]="useTitlebarLayout()"
+    [class.lk-tab--sidebar]="useSidebarLayout()"
+    [attr.aria-label]="title()"
+  >
+    <div
+      class="tx-workspace-tab__chrome tx-entrance-stagger"
+      [class.tx-entrance-stagger--play]="tabMotion.loadStaggerPlay()"
+      [class.tx-entrance-stagger--settled]="tabMotion.loadStaggerSettled()"
+    >
+      <div class="tx-entrance-stagger__block lk-tab__bar">
+        <div class="lk-tab__bar-cluster lk-tab__bar-cluster--grow">
+          <div class="lk-tab__protocol-chip" aria-hidden="true">
+            <tx-icon name="search" [size]="14" aria-hidden="true" />
+            <span>LOOKUP</span>
+          </div>
+          <tx-form-field class="lk-tab__name-field" label="Name" controlId="lookup-name">
+            <tx-input
+              id="lookup-name"
+              [ngModel]="lookup.name"
+              (ngModelChange)="handleNameChange($event)"
+            />
+          </tx-form-field>
+        </div>
+      </div>
+
+      @if (useTitlebarLayout()) {
+        <div class="tx-entrance-stagger__block lk-tab__sections-wrap">
+          <nav
+            class="lk-tab__sections-bar"
+            role="tablist"
+            aria-label="Lookup sections"
+            [txWorkspaceSectionNav]="activeSection()"
+          >
+            @for (item of navItems; track item.id) {
+              <button
+                type="button"
+                class="lk-tab__section-tab"
+                role="tab"
+                [attr.aria-selected]="activeSection() === item.id"
+                [class.is-active]="activeSection() === item.id"
+                (click)="handleSectionSelect(item.id)"
+              >
+                <tx-icon [name]="$any(item.icon)" [size]="14" aria-hidden="true" />
+                <span>{{ item.label }}</span>
+              </button>
+            }
+          </nav>
+        </div>
+      }
+    </div>
+
+    <div class="lk-tab__workspace">
+      @if (useSidebarLayout()) {
+        <nav
+          class="lk-tab__nav"
+          role="tablist"
+          aria-label="Lookup sections"
+          [txWorkspaceSectionNav]="activeSection()"
+        >
+          @for (item of navItems; track item.id) {
+            <button
+              type="button"
+              class="lk-tab__nav-item"
+              role="tab"
+              [attr.aria-selected]="activeSection() === item.id"
+              [class.is-active]="activeSection() === item.id"
+              (click)="handleSectionSelect(item.id)"
+            >
+              <span class="lk-tab__nav-icon">
+                <tx-icon [name]="$any(item.icon)" [size]="14" aria-hidden="true" />
+              </span>
+              <span>{{ item.label }}</span>
+            </button>
+          }
+        </nav>
+        <div class="lk-tab__divider" aria-hidden="true"></div>
+      }
+
+      <div class="lk-tab__pane tx-workspace-tab__pane">
+        @switch (activeSection()) {
+          @case ('run') {
+            <div
+              class="tx-workspace-tab__section-shell tx-entrance-stagger"
+              [class.tx-entrance-stagger--play]="isSectionContentAnimating('run')"
+              [class.tx-entrance-stagger--settled]="isSectionContentSettled('run')"
+            >
+              <div class="tx-entrance-stagger__block request-panel request-panel--run">
+                <div class="lk-tab__run-form">
+                  <tx-form-field class="lk-tab__run-env" label="Environment" controlId="lookup-run-env">
+                    <tx-dropdown
+                      id="lookup-run-env"
+                      [options]="environmentOptions()"
+                      [ngModel]="environmentDropdownValue(runEnvironmentId())"
+                      (ngModelChange)="handleRunEnvironmentChange($event)"
+                    />
+                  </tx-form-field>
+                  <div class="lk-tab__run-inputs">
+                    @for (field of lookup.inputs; track field.key) {
+                      <tx-form-field [label]="field.label || field.key" [controlId]="'lookup-run-' + field.key">
+                        <tx-input
+                          [id]="'lookup-run-' + field.key"
+                          [ngModel]="inputValue(field.key)"
+                          (ngModelChange)="handleRunInputChange(field.key, $event)"
+                          [placeholder]="field.placeholder"
+                        />
+                      </tx-form-field>
+                    }
+                  </div>
+                  <tx-button
+                    class="lk-tab__run-cta"
+                    variant="cta"
+                    [loading]="running()"
+                    loadingLabel="Running"
+                    (pressed)="handleRun()"
+                  >
+                    Run lookup
+                  </tx-button>
+                </div>
+
+                @if (runError(); as error) {
+                  <tx-banner variant="error" title="Run failed">{{ error }}</tx-banner>
+                }
+
+                @if (runResult(); as result) {
+                  <tx-divider />
+                  @if (!result.ok) {
+                    <tx-banner variant="warning" title="Lookup finished with errors">
+                      {{ failedStepSummary(result) }}
+                    </tx-banner>
+                  }
+
+                  <section class="lk-tab__results" aria-label="Results">
+                    <div class="lk-tab__results-head">
+                      <h3 class="lk-tab__section-title">Results</h3>
+                      @if (result.results.length > 0) {
+                        <tx-button
+                          variant="secondary"
+                          size="icon"
+                          [ariaLabel]="copiedKey() === 'all' ? 'Copied all results' : 'Copy all results'"
+                          (pressed)="handleCopyAllResults(result.results)"
+                        >
+                          <tx-icon [name]="resultCopyIcon('all')" [size]="14" aria-hidden="true" />
+                        </tx-button>
+                      }
+                    </div>
+                    @if (result.results.length === 0) {
+                      <p class="lk-tab__hint">No result fields are configured. Add them in Edit.</p>
+                    } @else {
+                      <div class="lk-tab__result-card">
+                        @for (row of result.results; track row.id) {
+                          @let views = resultViews(row);
+                          @if (resultRowIsBlock(views)) {
+                            <article class="lk-tab__result-panel">
+                              <header class="lk-tab__result-panel-head">
+                                <h4 class="lk-tab__result-panel-title">{{ row.label }}</h4>
+                                @if (resultTableRowCount(views); as rows) {
+                                  <span class="lk-tab__result-meta">{{ rows }} {{ rows === 1 ? 'row' : 'rows' }}</span>
+                                }
+                                <tx-button
+                                  variant="secondary"
+                                  size="icon"
+                                  [ariaLabel]="copiedKey() === row.id ? 'Copied ' + row.label : 'Copy ' + row.label"
+                                  (pressed)="handleCopyResultRow(row)"
+                                >
+                                  <tx-icon [name]="resultCopyIcon(row.id)" [size]="14" aria-hidden="true" />
+                                </tx-button>
+                              </header>
+                              @for (view of views; track $index) {
+                                <div class="lk-tab__result-block">
+                                  @if (view.caption) {
+                                    <p class="lk-tab__result-caption">{{ view.caption }}</p>
+                                  }
+                                  @switch (view.block.kind) {
+                                    @case ('text') {
+                                      <span class="lk-tab__kv-value">{{ view.block.text }}</span>
+                                    }
+                                    @case ('list') {
+                                      <ul class="lk-tab__result-list">
+                                        @for (item of view.block.items; track $index) {
+                                          <li>{{ item }}</li>
+                                        }
+                                      </ul>
+                                    }
+                                    @case ('table') {
+                                      <div
+                                        class="lk-tab__result-grid"
+                                        [style.height]="resultTableHeight(view.block.rows.length)"
+                                      >
+                                        <tx-data-grid
+                                          [columns]="view.block.columns"
+                                          [rows]="view.block.rows"
+                                          [sortDisabled]="true"
+                                          emptyLabel="No rows"
+                                        />
+                                      </div>
+                                    }
+                                  }
+                                </div>
+                              }
+                            </article>
+                          } @else {
+                            <div class="lk-tab__kv">
+                              <span class="lk-tab__kv-label">{{ row.label }}</span>
+                              <span class="lk-tab__kv-value">{{ scalarResultText(views) }}</span>
+                              <tx-button
+                                variant="secondary"
+                                size="icon"
+                                [ariaLabel]="copiedKey() === row.id ? 'Copied ' + row.label : 'Copy ' + row.label"
+                                (pressed)="handleCopyResultRow(row)"
+                              >
+                                <tx-icon [name]="resultCopyIcon(row.id)" [size]="14" aria-hidden="true" />
+                              </tx-button>
+                            </div>
+                          }
+                        }
+                      </div>
+                    }
+                  </section>
+                }
+              </div>
+            </div>
+          }
+          @case ('edit') {
+            <div
+              class="tx-workspace-tab__section-shell tx-entrance-stagger"
+              [class.tx-entrance-stagger--play]="isSectionContentAnimating('edit')"
+              [class.tx-entrance-stagger--settled]="isSectionContentSettled('edit')"
+            >
+              <div class="tx-entrance-stagger__block request-panel">
+                <tx-form-field label="Description" controlId="lookup-description">
+                  <tx-input
+                    id="lookup-description"
+                    [ngModel]="lookup.description"
+                    (ngModelChange)="handleDescriptionChange($event)"
+                    placeholder="Optional notes for this playbook"
+                  />
+                </tx-form-field>
+
+                <tx-form-field label="Environment" controlId="lookup-edit-env">
+                  <tx-dropdown
+                    id="lookup-edit-env"
+                    [options]="environmentOptions()"
+                    [ngModel]="environmentDropdownValue(lookup.environmentId)"
+                    (ngModelChange)="handleSavedEnvironmentChange($event)"
+                  />
+                </tx-form-field>
+
+                <h3 class="lk-tab__section-title">Inputs</h3>
+                @for (field of lookup.inputs; track $index) {
+                  <div class="lk-tab__row">
+                    <tx-form-field label="Key" [controlId]="'lookup-input-key-' + $index">
+                      <tx-input
+                        [id]="'lookup-input-key-' + $index"
+                        [ngModel]="field.key"
+                        (ngModelChange)="handleInputPatch($index, { key: $event })"
+                      />
+                    </tx-form-field>
+                    <tx-form-field label="Label" [controlId]="'lookup-input-label-' + $index">
+                      <tx-input
+                        [id]="'lookup-input-label-' + $index"
+                        [ngModel]="field.label"
+                        (ngModelChange)="handleInputPatch($index, { label: $event })"
+                      />
+                    </tx-form-field>
+                    <tx-form-field label="Placeholder" [controlId]="'lookup-input-ph-' + $index">
+                      <tx-input
+                        [id]="'lookup-input-ph-' + $index"
+                        [ngModel]="field.placeholder"
+                        (ngModelChange)="handleInputPatch($index, { placeholder: $event })"
+                      />
+                    </tx-form-field>
+                    <tx-button variant="danger" size="icon" ariaLabel="Remove input" (pressed)="handleRemoveInput($index)">
+                      <tx-icon name="trash" [size]="14" aria-hidden="true" />
+                    </tx-button>
+                  </div>
+                }
+                <tx-button variant="add" (pressed)="handleAddInput()">Add input</tx-button>
+
+                <h3 class="lk-tab__section-title">Steps</h3>
+                @if (!hasConnections()) {
+                  <tx-banner variant="warning" title="Database connections">
+                    Add connections from the Database sidebar. Each query step needs a connection.
+                  </tx-banner>
+                }
+
+                @for (step of lookup.steps; track step.id) {
+                  <section class="lk-tab__step" [attr.aria-label]="step.name">
+                    <div class="lk-tab__row">
+                      <tx-form-field label="Step name" [controlId]="'lookup-step-name-' + step.id">
+                        <tx-input
+                          [id]="'lookup-step-name-' + step.id"
+                          [ngModel]="step.name"
+                          (ngModelChange)="handleStepPatch(step.id, { name: $event })"
+                        />
+                      </tx-form-field>
+                      <tx-toggle
+                        label="Enabled"
+                        [controlId]="'lookup-step-enabled-' + step.id"
+                        [ngModel]="step.enabled"
+                        [ngModelOptions]="{ standalone: true }"
+                        (ngModelChange)="handleStepFlagChange(step.id, 'enabled', $event)"
+                      />
+                      <tx-toggle
+                        label="Required"
+                        [controlId]="'lookup-step-required-' + step.id"
+                        [ngModel]="step.required"
+                        [ngModelOptions]="{ standalone: true }"
+                        (ngModelChange)="handleStepFlagChange(step.id, 'required', $event)"
+                      />
+                      <tx-button variant="danger" size="icon" ariaLabel="Remove step" (pressed)="handleRemoveStep(step.id)">
+                        <tx-icon name="trash" [size]="14" aria-hidden="true" />
+                      </tx-button>
+                    </div>
+
+                    <div class="lk-tab__row">
+                      <tx-form-field label="Skip unless source" [controlId]="'lookup-step-src-' + step.id">
+                        <tx-input
+                          [id]="'lookup-step-src-' + step.id"
+                          [ngModel]="step.when?.source ?? ''"
+                          (ngModelChange)="handleWhenSourceChange(step, $event)"
+                          placeholder="input.email or var.uuid"
+                        />
+                      </tx-form-field>
+                      <tx-form-field label="Skip unless regex" [controlId]="'lookup-step-when-' + step.id">
+                        <tx-input
+                          [id]="'lookup-step-when-' + step.id"
+                          [ngModel]="step.when?.value ?? ''"
+                          (ngModelChange)="handleWhenRegexChange(step, $event)"
+                          [placeholder]="skipUnlessRegexPlaceholder"
+                        />
+                      </tx-form-field>
+                    </div>
+
+                    <div class="lk-tab__row">
+                      <tx-form-field label="Query source" [controlId]="'lookup-step-qsrc-' + step.id">
+                        <tx-dropdown
+                          [id]="'lookup-step-qsrc-' + step.id"
+                          [options]="querySourceOptions"
+                          [ngModel]="step.querySource"
+                          (ngModelChange)="handleQuerySourceChange(step, $event)"
+                        />
+                      </tx-form-field>
+                      <tx-form-field label="Connection" [controlId]="'lookup-step-conn-' + step.id">
+                        <tx-tree-select
+                          [id]="'lookup-step-conn-' + step.id"
+                          [nodes]="connectionTreeNodes()"
+                          [ngModel]="step.connectionId"
+                          (ngModelChange)="handleStepPatch(step.id, { connectionId: $event })"
+                          placeholder="Select a connection"
+                          emptyLabel="Select a connection"
+                          ariaLabel="Connection"
+                        />
+                      </tx-form-field>
+                    </div>
+
+                    @if (step.querySource === 'saved') {
+                      <tx-form-field label="Saved query" [controlId]="'lookup-step-saved-' + step.id">
+                        <tx-dropdown
+                          [id]="'lookup-step-saved-' + step.id"
+                          [options]="savedQueryOptions()"
+                          [ngModel]="step.savedQueryId ?? ''"
+                          (ngModelChange)="handleSavedQueryChange(step, $event)"
+                          emptyLabel="Select a saved query"
+                        />
+                      </tx-form-field>
+                      <tx-form-field label="Query preview" [controlId]="'lookup-step-preview-' + step.id">
+                        <tx-code-editor
+                          [language]="queryEditorLanguage(step)"
+                          [languageBadgeLabel]="queryEditorLanguageLabel(step)"
+                          title="Query preview"
+                          [hideToolbarActions]="true"
+                          [framed]="true"
+                          [readOnly]="true"
+                          [ngModel]="savedQueryPreview(step)"
+                          placeholder="Select a saved query to preview its SQL"
+                        />
+                      </tx-form-field>
+                    } @else {
+                      <tx-form-field label="Query" [controlId]="'lookup-step-query-' + step.id">
+                        <tx-code-editor
+                          [language]="queryEditorLanguage(step)"
+                          [languageBadgeLabel]="queryEditorLanguageLabel(step)"
+                          title="Query"
+                          [hideToolbarActions]="true"
+                          [framed]="true"
+                          [autocomplete]="true"
+                          [extraCompletionItems]="queryEditorCompletions(step)"
+                          [variableCatalog]="variableCatalog()"
+                          [placeholder]="queryEditorPlaceholder(step)"
+                          [ngModel]="step.query"
+                          (ngModelChange)="handleStepPatch(step.id, { query: $event })"
+                        />
+                      </tx-form-field>
+                    }
+
+                    <h4 class="lk-tab__subsection-title">Extracts</h4>
+                    @for (extract of step.extracts; track $index) {
+                      <div class="lk-tab__row">
+                        <tx-form-field label="Variable" [controlId]="'lookup-ex-var-' + step.id + '-' + $index">
+                          <tx-input
+                            [id]="'lookup-ex-var-' + step.id + '-' + $index"
+                            [ngModel]="extract.variableName"
+                            (ngModelChange)="handleExtractPatch(step, $index, { variableName: $event })"
+                          />
+                        </tx-form-field>
+                        <tx-form-field label="Kind" [controlId]="'lookup-ex-kind-' + step.id + '-' + $index">
+                          <tx-dropdown
+                            [id]="'lookup-ex-kind-' + step.id + '-' + $index"
+                            [options]="extractKindOptions"
+                            [ngModel]="extract.extractKind ?? 'jsonpath'"
+                            (ngModelChange)="handleExtractPatch(step, $index, { extractKind: $event })"
+                          />
+                        </tx-form-field>
+                        <tx-form-field label="Path" [controlId]="'lookup-ex-path-' + step.id + '-' + $index">
+                          <tx-input
+                            [id]="'lookup-ex-path-' + step.id + '-' + $index"
+                            [ngModel]="extract.extract"
+                            (ngModelChange)="handleExtractPatch(step, $index, { extract: $event })"
+                            placeholder="$[0].id"
+                          />
+                        </tx-form-field>
+                        <tx-button
+                          variant="danger"
+                          size="icon"
+                          ariaLabel="Remove extract"
+                          (pressed)="handleRemoveExtract(step, $index)"
+                        >
+                          <tx-icon name="trash" [size]="14" aria-hidden="true" />
+                        </tx-button>
+                      </div>
+                    }
+                    <tx-button variant="add" (pressed)="handleAddExtract(step)">Add extract</tx-button>
+                  </section>
+                }
+                <tx-button variant="add" (pressed)="handleAddStep()">Add step</tx-button>
+
+                <h3 class="lk-tab__section-title">Results card</h3>
+                @for (field of lookup.results; track field.id) {
+                  <div class="lk-tab__row">
+                    <tx-form-field label="Label" [controlId]="'lookup-res-label-' + field.id">
+                      <tx-input
+                        [id]="'lookup-res-label-' + field.id"
+                        [ngModel]="field.label"
+                        (ngModelChange)="handleResultPatch($index, { label: $event })"
+                      />
+                    </tx-form-field>
+                    <tx-form-field label="Value" [controlId]="'lookup-res-tpl-' + field.id">
+                      <tx-variable-input
+                        [controlId]="'lookup-res-tpl-' + field.id"
+                        [ngModel]="field.template"
+                        (ngModelChange)="handleResultPatch($index, { template: $event })"
+                        [catalog]="variableCatalog()"
+                        [placeholder]="resultTemplatePlaceholder"
+                      />
+                    </tx-form-field>
+                    <tx-button
+                      variant="danger"
+                      size="icon"
+                      ariaLabel="Remove result field"
+                      (pressed)="handleRemoveResult($index)"
+                    >
+                      <tx-icon name="trash" [size]="14" aria-hidden="true" />
+                    </tx-button>
+                  </div>
+                }
+                <tx-button variant="add" (pressed)="handleAddResult()">Add result field</tx-button>
+              </div>
+            </div>
+          }
+        }
+      </div>
+    </div>
+  </section>
+}

@@ -9,6 +9,8 @@ import {
   monitorsFileSchema,
   parseLoadTestIpcId,
   parseMonitorsFile,
+  lookupsFileSchema,
+  parseLookupsFile,
   regressionsFileSchema,
   testSuitesFileSchema,
 } from '../../../shared/testing';
@@ -17,6 +19,7 @@ import { ErrorCodes, TestrixError } from '../../../shared/errors';
 import type { ConfigFileService } from '../../services/config/config-file.service';
 import { TestingRuntimeService } from '../../services/testing/testing-runtime.service';
 import { getMonitorScheduler } from '../../services/testing/monitor-scheduler.service';
+import { getLookupRunner } from '../../services/testing/lookup-runner.service';
 import { E2eChannels } from '../channels/e2e.channels';
 import { TestingChannels } from '../channels/testing.channels';
 import { wrapInvokeHandler } from '../wrap-ipc-handler';
@@ -309,5 +312,24 @@ export function registerTestingHandlers(ipc: IpcMainBinder, deps: TestingHandler
       }
       return scheduler.runNow(monitorId.trim());
     }),
+  );
+  const lookupRunner = getLookupRunner(deps.files);
+  ipc.handle(
+    TestingChannels.getLookups,
+    wrapInvokeHandler(TestingChannels.getLookups, async () => deps.files.readLookups()),
+  );
+  ipc.handle(
+    TestingChannels.setLookups,
+    wrapInvokeHandler(TestingChannels.setLookups, async (_e, data: unknown) => {
+      const parsed = lookupsFileSchema.safeParse(data);
+      if (!parsed.success) {
+        throw new TestrixError(ErrorCodes.CONFIG_VALIDATION_FAILED, 'Invalid lookups payload.');
+      }
+      return deps.files.saveLookups(parseLookupsFile(parsed.data));
+    }),
+  );
+  ipc.handle(
+    TestingChannels.lookupRun,
+    wrapInvokeHandler(TestingChannels.lookupRun, async (_e, payload: unknown) => lookupRunner.run(payload)),
   );
 }

@@ -15,6 +15,7 @@ import {
   PATHS_ANCHOR_FILE_NAME,
   PROFILES_FILE_NAME,
   MONITORS_FILE_NAME,
+  LOOKUPS_FILE_NAME,
   QUERIES_FILE_NAME,
   DATABASES_FILE_NAME,
   REGRESSIONS_FILE_NAME,
@@ -49,6 +50,7 @@ export const WORKSPACE_FILE_DESCRIPTORS: readonly WorkspaceFileDescriptor[] = [
   { fileName: QUERIES_FILE_NAME, scope: 'profile', currentVersion: 1 },
   { fileName: DATABASES_FILE_NAME, scope: 'profile', currentVersion: 1 },
   { fileName: MONITORS_FILE_NAME, scope: 'profile', currentVersion: 1 },
+  { fileName: LOOKUPS_FILE_NAME, scope: 'profile', currentVersion: 1 },
 ];
 
 export interface ReadWorkspaceFileMetaInput {

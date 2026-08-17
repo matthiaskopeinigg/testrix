@@ -26,6 +26,7 @@ import {
 import { mockServerTabsByIdSchema } from './mock-server-tab-ui.schema';
 import { captureTabsByIdSchema } from './capture-tab-ui.schema';
 import { interceptorTabsByIdSchema } from './interceptor-tab-ui.schema';
+import { lookupTabsByIdSchema } from './lookup-tab-ui.schema';
 
 export const TESTING_ACTIVE_VIEW_IDS = ['menu', 'test-suite', 'load-test', 'regression'] as const;
 export type TestingActiveViewId = (typeof TESTING_ACTIVE_VIEW_IDS)[number];
@@ -37,6 +38,7 @@ export const TESTING_SUBPANEL_IDS = [
   'capture',
   'interceptor',
   'monitors',
+  'lookups',
 ] as const;
 export type TestingSubpanelId = (typeof TESTING_SUBPANEL_IDS)[number];
 
@@ -96,6 +98,7 @@ export const workspaceTestingSchema = z.object({
   captureTabsById: captureTabsByIdSchema.default({}),
   interceptor: interceptorSidebarPrefsSchema,
   interceptorTabsById: interceptorTabsByIdSchema.default({}),
+  lookupTabsById: lookupTabsByIdSchema.default({}),
 });
 
 export type WorkspaceTestingState = z.infer<typeof workspaceTestingSchema>;
@@ -138,5 +141,6 @@ export function mergeWorkspaceTesting(
     captureTabsById: { ...base.captureTabsById, ...patch.captureTabsById },
     interceptor: { ...base.interceptor, ...patch.interceptor },
     interceptorTabsById: { ...base.interceptorTabsById, ...patch.interceptorTabsById },
+    lookupTabsById: { ...base.lookupTabsById, ...patch.lookupTabsById },
   });
 }
