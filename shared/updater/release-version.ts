@@ -72,10 +72,10 @@ export function isReleaseVersionNewer(current: string, candidate: string): boole
   }
 
   if (!a.pre && b.pre) {
-    return true;
+    return false;
   }
   if (a.pre && !b.pre) {
-    return false;
+    return true;
   }
   if (a.pre && b.pre) {
     return b.pre.localeCompare(a.pre, undefined, { numeric: true }) > 0;

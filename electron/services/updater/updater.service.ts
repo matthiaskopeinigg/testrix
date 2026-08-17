@@ -14,7 +14,6 @@ import {
 import { updateCheckCacheSchema } from '../../../shared/updater/updater-status.schema';
 import { isUpdaterCacheStatusStale, isUpdaterCacheStatusUsable } from '../../../shared/updater/updater-cache';
 import { DEFAULT_DEV_SIM_VERSION } from '../../../shared/updater/dev-update-sim';
-import { resolveUpdateChannelForVersion } from '../../../shared/updater/release-version';
 import { waitForUpdateReadyFile } from './update-ready-file';
 
 import { isDevMode } from '../../config/environment';
@@ -181,7 +180,7 @@ export class UpdaterService {
     }
 
     this.devSimulatedVersion = trimmed;
-    const channel = this.resolveCheckChannel(this.readSettings().updates.channel, trimmed);
+    const channel = this.resolveCheckChannel(this.readSettings().updates.channel);
     this.applyChannel(channel);
 
     if (this.checkInFlight) {
@@ -503,17 +502,12 @@ export class UpdaterService {
   }
 
   /**
-   * Beta installs always check the beta feed. GitHub has no Stable "latest"
-   * release, and a stale Stable setting would 404 `/releases/latest` on older builds.
+   * Uses the channel the user selected in Settings (Stable or Beta).
    *
    * @param settingsChannel Channel persisted in settings.
-   * @param version Installed or simulated semver used for the check.
    */
-  private resolveCheckChannel(
-    settingsChannel: UpdateChannel,
-    version = this.resolveCurrentVersion(),
-  ): UpdateChannel {
-    return resolveUpdateChannelForVersion(version) === 'beta' ? 'beta' : settingsChannel;
+  private resolveCheckChannel(settingsChannel: UpdateChannel): UpdateChannel {
+    return settingsChannel;
   }
 
   private applyChannel(channel: UpdateChannel): void {

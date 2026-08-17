@@ -7,8 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.5-beta.1]
+
 ### Fixed
 
+- A beta install can switch to Stable and auto-update to a published stable release
+- SemVer treats `1.0.4` as newer than `1.0.3-beta.10` (same-core stables are newer than their betas)
 - Release workflow starts when Authenticode secrets are unset (secret presence is checked via job env, not `if: secrets.*`)
 
 ## [1.0.4]
@@ -433,7 +437,8 @@ Tagged in git. GitHub installers were not published (Authenticode secrets were m
 
 Initial public beta of Testrix: local-first desktop API client (HTTP, WebSocket, collections, environments, test suites, load tests, mocks, and capture).
 
-[Unreleased]: https://github.com/matthiaskopeinigg/testrix/compare/v1.0.4...HEAD
+[Unreleased]: https://github.com/matthiaskopeinigg/testrix/compare/v1.0.5-beta.1...HEAD
+[1.0.5-beta.1]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.5-beta.1
 [1.0.4]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.4
 [1.0.3]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.3
 [1.0.3-beta.10]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.3-beta.10

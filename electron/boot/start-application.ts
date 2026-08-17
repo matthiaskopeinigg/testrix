@@ -18,7 +18,6 @@ import { ProfileConfigService } from '../services/config/profile-config.service'
 import { createErrorWindow } from '../windows/error-window/error-window.factory';
 import { getMainSettings } from '../services/settings-runtime';
 import { getUpdaterService } from '../services/updater/updater.service';
-import { applyUpdateChannelBootSync } from '../services/updater/sync-update-channel.service';
 import { createMainWindow, loadMainWindowContent, usesWin32DirectShow } from '../windows/main-window/main-window.factory';
 import { createSplashWindow } from '../windows/splash-window/splash-window.factory';
 import { registerBrowserProtocolHandler } from '../config/browser-protocol';
@@ -154,7 +153,6 @@ export async function startApplication(getBootSplash?: () => BrowserWindow | nul
     }
 
     await files.readSession();
-    await applyUpdateChannelBootSync(app, files);
     await files.readSettings();
     warmDatabaseConnectionsOnBoot(getMainSettings().databases.connections);
 

@@ -37,7 +37,13 @@ describe('release-version', () => {
     expect(isReleaseVersionNewer('1.0.0-beta.9', '1.0.1-beta.1')).toBe(true);
   });
 
-  it('treats stable releases as older than installed beta builds', () => {
+  it('treats a same-core stable as newer than its beta', () => {
+    expect(isReleaseVersionNewer('1.0.0-beta.9', '1.0.0')).toBe(true);
+    expect(isReleaseVersionNewer('1.0.0', '1.0.0-beta.9')).toBe(false);
+    expect(isReleaseVersionNewer('1.0.3-beta.10', '1.0.4')).toBe(true);
+  });
+
+  it('treats a lower-core stable as older than an installed beta', () => {
     expect(isReleaseVersionNewer('0.9.0-beta.2', '0.1.3')).toBe(false);
   });
 });
