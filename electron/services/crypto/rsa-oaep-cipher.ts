@@ -8,8 +8,13 @@ import {
 } from 'node:crypto';
 
 import {
+  compactPemBase64,
+  normalizePemInput,
+  padBase64,
   pemLooksLikePrivateKey,
+  pemLooksLikePublicKey,
   RSA_OAEP_JAVA_TRANSFORM,
+  wrapPemBlock,
 } from '../../../shared/crypto/rsa-oaep.schema';
 
 /** Node options matching Java `RSA/ECB/OAEPWithSHA-1AndMGF1Padding`. */
@@ -30,6 +35,12 @@ export interface RsaOaepDecryptParams {
   readonly ciphertext: string;
 }
 
+interface PrivateKeyCandidate {
+  readonly key: string | Buffer;
+  readonly format: 'pem' | 'der';
+  readonly type?: 'pkcs8' | 'pkcs1';
+}
+
 /**
  * Encrypts UTF-8 plaintext to standard Base64 using RSA OAEP SHA-1.
  *
@@ -37,7 +48,7 @@ export interface RsaOaepDecryptParams {
  * and the public key is derived.
  */
 export function encryptUtf8ToBase64(params: RsaOaepEncryptParams): string {
-  const pem = params.pem.trim();
+  const pem = normalizePemInput(params.pem);
   if (!pem) {
     throw new Error('PEM key is required to encrypt.');
   }
@@ -53,12 +64,14 @@ export function encryptUtf8ToBase64(params: RsaOaepEncryptParams): string {
  * Decrypts standard Base64 ciphertext to UTF-8 using RSA OAEP SHA-1 and a private PEM.
  */
 export function decryptBase64ToUtf8(params: RsaOaepDecryptParams): string {
-  const pem = params.pem.trim();
+  const pem = normalizePemInput(params.pem);
   if (!pem) {
     throw new Error('PEM key is required to decrypt.');
   }
-  if (!pemLooksLikePrivateKey(pem)) {
-    throw new Error('Decrypt needs a private key PEM.');
+  if (pemLooksLikePublicKey(pem)) {
+    throw new Error(
+      'That value is a public key or certificate. Decrypt needs a private key (BEGIN PRIVATE KEY / BEGIN ENCRYPTED PRIVATE KEY), or the Base64 PKCS#8 body.',
+    );
   }
   const privateKey = loadPrivateKey(pem, params.keyPassword, 'decrypt');
   let cipherBytes: Buffer;
@@ -88,7 +101,10 @@ export function rsaOaepJavaTransform(): string {
 function loadPublicKeyForEncrypt(pem: string, keyPassword: string): KeyObject {
   if (!pemLooksLikePrivateKey(pem)) {
     try {
-      return createPublicKey({ key: pem, format: 'pem' });
+      const armored = pem.includes('-----BEGIN')
+        ? pem
+        : wrapPemBlock('PUBLIC KEY', compactPemBase64(pem));
+      return createPublicKey({ key: armored, format: 'pem' });
     } catch (error: unknown) {
       throw new Error(cipherOperationFailureMessage('load public key', error));
     }
@@ -110,11 +126,66 @@ function loadPrivateKey(pem: string, keyPassword: string, operation: 'encrypt' |
         : 'Private-key password is required to encrypt with a private PEM.',
     );
   }
-  try {
-    return createPrivateKey({ key: pem, format: 'pem', passphrase });
-  } catch {
-    throw new Error('Could not unlock the private key. Check the PEM and private-key password.');
+  const candidates = privateKeyLoadCandidates(pem);
+  if (candidates.length === 0) {
+    throw new Error(
+      'Could not read a private key. Paste PEM including the BEGIN/END lines, or the Base64 PKCS#8 body (often a long MII… string).',
+    );
   }
+  for (const candidate of candidates) {
+    try {
+      return createPrivateKey({
+        key: candidate.key,
+        format: candidate.format,
+        type: candidate.type,
+        passphrase,
+      });
+    } catch {
+      continue;
+    }
+  }
+  throw new Error(
+    'Could not unlock the private key. Check the PEM (BEGIN/END lines or PKCS#8 Base64) and private-key password.',
+  );
+}
+
+function privateKeyLoadCandidates(pem: string): PrivateKeyCandidate[] {
+  const normalized = normalizePemInput(pem);
+  if (/-{3,}BEGIN (?:ENCRYPTED |RSA )?PRIVATE KEY-{3,}/i.test(normalized)) {
+    return [{ key: normalized, format: 'pem' }];
+  }
+  const compact = compactPemBase64(normalized);
+  const der = decodeHeaderlessKeyBlob(compact);
+  if (!der) {
+    return [{ key: normalized, format: 'pem' }];
+  }
+  const standardB64 = der.toString('base64');
+  return [
+    { key: wrapPemBlock('ENCRYPTED PRIVATE KEY', standardB64), format: 'pem' },
+    { key: wrapPemBlock('PRIVATE KEY', standardB64), format: 'pem' },
+    { key: wrapPemBlock('RSA PRIVATE KEY', standardB64), format: 'pem' },
+    { key: der, format: 'der', type: 'pkcs8' },
+    { key: der, format: 'der', type: 'pkcs1' },
+  ];
+}
+
+/**
+ * Decodes a headerless private-key blob from standard Base64, URL-safe Base64, or hex.
+ */
+function decodeHeaderlessKeyBlob(compact: string): Buffer | null {
+  if (compact.length < 64) {
+    return null;
+  }
+  if (/^[0-9a-fA-F]+$/.test(compact) && compact.length % 2 === 0) {
+    const hex = Buffer.from(compact, 'hex');
+    return hex.length >= 64 ? hex : null;
+  }
+  const padded = padBase64(compact.replace(/-/g, '+').replace(/_/g, '/'));
+  if (!/^[A-Za-z0-9+/]+=*$/.test(padded)) {
+    return null;
+  }
+  const der = Buffer.from(padded, 'base64');
+  return der.length >= 64 ? der : null;
 }
 
 function cipherOperationFailureMessage(operation: string, error: unknown): string {

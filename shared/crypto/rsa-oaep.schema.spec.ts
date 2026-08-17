@@ -23,4 +23,19 @@ describe('rsa-oaep.schema', () => {
     expect(pemLooksLikePrivateKey('-----BEGIN RSA PRIVATE KEY-----\n')).toBe(true);
     expect(pemLooksLikePrivateKey('-----BEGIN PUBLIC KEY-----\n')).toBe(false);
   });
+
+  it('treats a headerless PKCS#8 Base64 body as a private key', () => {
+    const body = `${'MIIJ'.padEnd(80, 'A')}==`;
+    expect(pemLooksLikePrivateKey(body)).toBe(true);
+    expect(pemLooksLikePrivateKey(`"${body}"`)).toBe(true);
+    expect(pemLooksLikePrivateKey(body.replace(/\+/g, '-').replace(/\//g, '_'))).toBe(true);
+  });
+
+  it('does not treat a public PEM with escaped newlines as private', () => {
+    expect(
+      pemLooksLikePrivateKey(
+        '-----BEGIN PUBLIC KEY-----\\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8A\\n-----END PUBLIC KEY-----',
+      ),
+    ).toBe(false);
+  });
 });

@@ -84,4 +84,71 @@ describe('rsa-oaep-cipher', () => {
       }),
     ).toThrow(/Private-key password is required to encrypt/);
   });
+
+  it('decrypts a headerless PKCS#8 Base64 body', () => {
+    const { publicPem, privatePem } = encryptedPkcs8Pair();
+    const ciphertext = encryptUtf8ToBase64({
+      pem: publicPem,
+      keyPassword: '',
+      plaintext: PLAINTEXT,
+    });
+    const body = privatePem
+      .replace(/-----BEGIN [^-]+-----/g, '')
+      .replace(/-----END [^-]+-----/g, '')
+      .replace(/\s+/g, '');
+    expect(pemLooksLikePrivateKey(body)).toBe(true);
+    expect(
+      decryptBase64ToUtf8({
+        pem: body,
+        keyPassword: PEM_PASSWORD,
+        ciphertext,
+      }),
+    ).toBe(PLAINTEXT);
+
+    const urlSafe = body.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    expect(
+      decryptBase64ToUtf8({
+        pem: urlSafe,
+        keyPassword: PEM_PASSWORD,
+        ciphertext,
+      }),
+    ).toBe(PLAINTEXT);
+
+    const hex = Buffer.from(body, 'base64').toString('hex');
+    expect(
+      decryptBase64ToUtf8({
+        pem: hex,
+        keyPassword: PEM_PASSWORD,
+        ciphertext,
+      }),
+    ).toBe(PLAINTEXT);
+  });
+
+  it('decrypts a PEM with literal \\n escapes', () => {
+    const { publicPem, privatePem } = encryptedPkcs8Pair();
+    const ciphertext = encryptUtf8ToBase64({
+      pem: publicPem,
+      keyPassword: '',
+      plaintext: PLAINTEXT,
+    });
+    const escaped = privatePem.replace(/\n/g, '\\n');
+    expect(
+      decryptBase64ToUtf8({
+        pem: escaped,
+        keyPassword: PEM_PASSWORD,
+        ciphertext,
+      }),
+    ).toBe(PLAINTEXT);
+  });
+
+  it('rejects a public PEM on decrypt with a clear error', () => {
+    const { publicPem } = encryptedPkcs8Pair();
+    expect(() =>
+      decryptBase64ToUtf8({
+        pem: publicPem,
+        keyPassword: PEM_PASSWORD,
+        ciphertext: 'AAAA',
+      }),
+    ).toThrow(/public key or certificate/i);
+  });
 });

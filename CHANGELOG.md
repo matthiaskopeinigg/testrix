@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.3-beta.9] - 2026-08-17
+
+### Fixed
+
+- RSA OAEP decrypt accepts a headerless PKCS#8 private key body (Base64, URL-safe Base64, or hex) without BEGIN/END lines
+
 ## [1.0.3-beta.8] - 2026-08-17
 
 ### Added
@@ -342,7 +348,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Initial public beta of Testrix: local-first desktop API client (HTTP, WebSocket, collections, environments, test suites, load tests, mocks, and capture).
 
-[Unreleased]: https://github.com/matthiaskopeinigg/testrix/compare/v1.0.3-beta.8...HEAD
+[Unreleased]: https://github.com/matthiaskopeinigg/testrix/compare/v1.0.3-beta.9...HEAD
+[1.0.3-beta.9]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.3-beta.9
 [1.0.3-beta.8]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.3-beta.8
 [1.0.3-beta.7]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.3-beta.7
 [1.0.3-beta.6]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.3-beta.6
