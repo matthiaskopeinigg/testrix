@@ -1,6 +1,8 @@
 :host {
   display: block;
   min-width: 0;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 :host.tx-tree-host--dragging {
@@ -55,6 +57,8 @@
   font-size: 0.8125rem;
   line-height: 1.45;
   color: var(--tx-text-1);
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .tx-tree__custom-row {

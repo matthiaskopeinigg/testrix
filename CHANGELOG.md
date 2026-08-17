@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.7]
+
+### Changed
+
+- The packaged renderer stays local: UI fonts are no longer fetched from Google, and Chromium background networking is disabled so idle traffic is only the auto-updater talking to GitHub Releases
+- Sidebar chrome, empty copy, and tree labels are not selectable (search and inline rename still are)
+
+### Fixed
+
+- Splash and installer windows no longer send debug snapshots to a local ingest endpoint
+
 ## [1.0.6]
 
 ### Changed
@@ -458,7 +469,8 @@ Tagged in git. GitHub installers were not published (Authenticode secrets were m
 
 Initial public beta of Testrix: local-first desktop API client (HTTP, WebSocket, collections, environments, test suites, load tests, mocks, and capture).
 
-[Unreleased]: https://github.com/matthiaskopeinigg/testrix/compare/v1.0.6...HEAD
+[Unreleased]: https://github.com/matthiaskopeinigg/testrix/compare/v1.0.7...HEAD
+[1.0.7]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.7
 [1.0.6]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.6
 [1.0.5]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.5
 [1.0.5-beta.1]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.5-beta.1

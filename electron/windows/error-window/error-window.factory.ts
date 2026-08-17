@@ -17,6 +17,7 @@ export function createErrorWindow(message: string, parent?: BrowserWindow): Brow
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
+      spellcheck: false,
     },
   });
 

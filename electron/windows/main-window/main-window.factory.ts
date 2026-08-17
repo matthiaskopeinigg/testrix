@@ -63,6 +63,7 @@ export function createMainWindow(
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: process.platform === 'win32' ? false : !win32DirectShow,
+      spellcheck: false,
       backgroundThrottling: false,
       preload: resolveMainPreloadPath(),
       additionalArguments: [...bootThemeAdditionalArguments(), ...bootAppVersionAdditionalArguments()],

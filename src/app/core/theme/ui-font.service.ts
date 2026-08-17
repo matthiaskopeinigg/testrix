@@ -3,20 +3,12 @@ import { Injectable, Injector, inject } from '@angular/core';
 import type { SettingsFile } from '@shared/config';
 import type { UiFontId } from '@shared/theme';
 import {
-  buildUiFontStylesheetUrl,
   getUiFontDefinition,
   uiFontFamilyStack,
-} from '@shared/theme';
-import {
-  type UiFontSizeId,
-  type UiFontWeightId,
-  type UiLineHeightId,
   resolveUiTypographyTokens,
 } from '@shared/theme';
 
 import { ConfigService } from '../config/config.service';
-
-const STYLESHEET_LINK_ID = 'tx-ui-font-stylesheet';
 
 export type AppearanceTypography = Pick<
   SettingsFile['appearance'],
@@ -24,7 +16,7 @@ export type AppearanceTypography = Pick<
 >;
 
 /**
- * Loads Google Fonts and applies interface typography from appearance settings.
+ * Applies interface typography from appearance settings using locally resolved font stacks.
  */
 @Injectable({ providedIn: 'root' })
 export class UiFontService {
@@ -109,25 +101,5 @@ export class UiFontService {
     root.setAttribute('data-ui-font-size', appearance.uiFontSize);
     root.setAttribute('data-ui-font-weight', appearance.uiFontWeight);
     root.setAttribute('data-ui-line-height', appearance.uiLineHeight);
-
-    this.ensureStylesheet(buildUiFontStylesheetUrl(appearance.uiFont));
-  }
-
-  private ensureStylesheet(href: string): void {
-    if (typeof document === 'undefined') {
-      return;
-    }
-
-    let link = document.getElementById(STYLESHEET_LINK_ID) as HTMLLinkElement | null;
-    if (!link) {
-      link = document.createElement('link');
-      link.id = STYLESHEET_LINK_ID;
-      link.rel = 'stylesheet';
-      document.head.appendChild(link);
-    }
-
-    if (link.getAttribute('href') !== href) {
-      link.setAttribute('href', href);
-    }
   }
 }

@@ -18,6 +18,8 @@
   box-sizing: border-box;
   width: 100%;
   min-width: 0;
+  -webkit-user-select: text;
+  user-select: text;
   margin: 0;
   padding: 0.1rem 0.35rem;
   border: 1px solid color-mix(in srgb, var(--tx-primary) 55%, var(--tx-border-strong));

@@ -1,3 +1,4 @@
+import './config/chromium-privacy';
 import './config/dev-chromium-paths';
 
 import path from 'node:path';

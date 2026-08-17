@@ -41,7 +41,6 @@ describe('UiFontService', () => {
     expect(document.documentElement.getAttribute('data-ui-font-size')).toBe('large');
     expect(document.documentElement.style.getPropertyValue('--tx-font-body')).toContain('Poppins');
     expect(document.documentElement.style.getPropertyValue('--tx-ui-font-weight-body')).toBe('700');
-    const link = document.getElementById('tx-ui-font-stylesheet') as HTMLLinkElement | null;
-    expect(link?.getAttribute('href')).toContain('Poppins');
+    expect(document.getElementById('tx-ui-font-stylesheet')).toBeNull();
   });
 });

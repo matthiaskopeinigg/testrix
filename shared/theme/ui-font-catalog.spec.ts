@@ -3,7 +3,6 @@ import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_UI_FONT_ID,
   UI_FONT_IDS,
-  buildUiFontStylesheetUrl,
   getUiFontDefinition,
   isUiFontId,
   uiFontFamilyStack,
@@ -15,10 +14,10 @@ describe('ui-font-catalog', () => {
     expect(DEFAULT_UI_FONT_ID).toBe('inter');
   });
 
-  it('resolves family stacks and Google Fonts URLs', () => {
+  it('resolves family stacks without a remote stylesheet', () => {
     expect(uiFontFamilyStack('inter')).toContain('Inter');
     expect(uiFontFamilyStack('open-sans')).toContain("'Open Sans'");
-    expect(buildUiFontStylesheetUrl('ibm-plex-sans')).toContain('IBM+Plex+Sans');
+    expect(uiFontFamilyStack('ibm-plex-sans')).toContain('IBM Plex Sans');
   });
 
   it('guards unknown ids', () => {

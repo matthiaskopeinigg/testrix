@@ -12,6 +12,7 @@ export function createSplashWindow(): BrowserWindow {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
+      spellcheck: false,
     },
   });
   win.center();

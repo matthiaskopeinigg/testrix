@@ -55,13 +55,11 @@ function attachDefaultCsp(): void {
     }
 
     const testrixSrc = 'testrix:';
-    const githubConnect =
-      "https://api.github.com https://*.githubusercontent.com https://github.com";
     const connectSrc = usesAngularDevServer()
-      ? `${buildDevConnectSrc(resolveDevServerOrigin())} ${githubConnect}`.trim()
-      : `'self' ${testrixSrc} blob: ${githubConnect}`;
-    const fontStyleSrc = "'self' 'unsafe-inline' https://fonts.googleapis.com";
-    const fontSrc = "'self' https://fonts.gstatic.com data:";
+      ? `${buildDevConnectSrc(resolveDevServerOrigin())}`.trim()
+      : `'self' ${testrixSrc} blob:`;
+    const fontStyleSrc = "'self' 'unsafe-inline'";
+    const fontSrc = "'self' data:";
     const csp = usesAngularDevServer()
       ? `default-src 'self'; script-src 'self' 'unsafe-inline'; style-src ${fontStyleSrc}; font-src ${fontSrc}; img-src 'self' data: blob:; connect-src ${connectSrc}; worker-src 'self' blob:; frame-src 'self'; child-src 'self'`
       : `default-src 'self' ${testrixSrc}; script-src 'self' 'unsafe-inline'; style-src ${fontStyleSrc}; font-src ${fontSrc}; img-src 'self' ${testrixSrc} data: blob:; connect-src ${connectSrc}; frame-src 'self'; child-src 'self'`;
@@ -91,11 +89,6 @@ function resolveBootSplash(getBootSplash?: () => BrowserWindow | null): BrowserW
 }
 
 export async function startApplication(getBootSplash?: () => BrowserWindow | null): Promise<void> {
-  // Win32: fixes mouse input in embedded Chromium (occlusion + GPU compositing vs normal browser).
-  if (process.platform === 'win32') {
-    app.commandLine.appendSwitch('disable-features', 'CalculateNativeWinOcclusion');
-  }
-
   if (!app.requestSingleInstanceLock()) {
     app.quit();
     return;
@@ -114,6 +107,8 @@ export async function startApplication(getBootSplash?: () => BrowserWindow | nul
   });
 
   await app.whenReady();
+
+  session.defaultSession.setSpellCheckerEnabled(false);
 
   registerBrowserProtocolHandler();
 

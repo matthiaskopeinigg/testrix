@@ -197,26 +197,6 @@ function wireExternalLinks() {
 /* ─────────────────────────────────────────────────────────── init */
 
 async function init() {
-  // #region agent log
-  fetch('http://127.0.0.1:7736/ingest/d5806da4-cf16-47c7-b1e3-a0241cdfcf92', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'e8295c' },
-    body: JSON.stringify({
-      sessionId: 'e8295c',
-      location: 'installer-shell/app.js:init',
-      message: 'installer renderer init',
-      data: {
-        surface: 'installer-main-window',
-        spinnerCount: document.querySelectorAll('.tx-splash-spinner').length,
-        bodyBg: getComputedStyle(document.body).backgroundColor,
-      },
-      hypothesisId: 'H1',
-      timestamp: Date.now(),
-      runId: 'post-fix',
-    }),
-  }).catch(() => {});
-  // #endregion
-
   $('btn-titlebar-min').addEventListener('click', () => window.setupApi.minimize());
   $('btn-titlebar-close').addEventListener('click', () => window.setupApi.quit());
 
