@@ -7,6 +7,75 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.3] - 2026-08-17
+
+First stable release of Testrix. This is the product as of the end of the `1.0.0`–`1.0.3` beta series: a local-first desktop API client (HTTP, WebSocket, collections, environments, test suites, load tests, mocks, and capture) with a Database workspace, team Git sync, and in-app updates.
+
+### Added
+
+- Collections, folders, and request workspaces with environments, dynamic variables, scripts, cookies, and code snippets
+- HTTP and WebSocket clients
+- Test suites (including E2E browser steps), regression runs, mock servers, traffic capture, and interceptors
+- OAuth 2.0 with PKCE on collection and folder auth
+- Environment secret vault for sensitive variable values
+- Parse cURL into a request, and generate requests or mocks from Capture traffic
+- Local monitors that run a request, flow, or load test on a cron while Testrix is open
+- Load tests with a manual HTTP target, isolated per-test live metrics, and result export as HTML, k6, or Gatling
+- Database workspace: connections, folders, catalog browse, saved queries, and table data (filter, edit, export)
+- Database engines: PostgreSQL, Redis, Oracle, MariaDB, CockroachDB, ClickHouse, and MongoDB
+- Import and export of database connections and saved queries as a first-class bundle section
+- Named SQL parameters (`:name`) with a bind dialog before Run
+- Team share of saved queries, plus a sanitized connection list (passwords stay local)
+- Query connection picker as a folder tree, with per-query environment variables
+- Ctrl+Enter execute chooser when several statements exist (run from caret vs run all)
+- Confirm UPDATE/DELETE/DROP/TRUNCATE; block those on read-only queries
+- Database sidebar engine logos and a schema picker (“N schemas selected”)
+- Local Docker Compose stacks for PostgreSQL, Redis, and Oracle Free
+- Settings → Database: close idle pooled connections after a chosen number of minutes (`0` keeps them open)
+- Test Suite TRIGGER steps run another flow, or every descendant flow under a folder (fail-fast), inheriting variables and captures; the target picker is a searchable folder tree
+- TRIGGER steps can reuse the E2E browser session so a later flow stays logged in
+- Test Suite CACHE steps can generate values (for example `test-$uuid@gmail.com`) without a reference step, then reuse them as `{{email}}` in later steps
+- RSA OAEP SHA-1 encrypt/decrypt Development Tool (Java `OAEPWithSHA-1AndMGF1Padding`) and Test Suite CACHE cipher option, with `{{placeholder}}` support in VALIDATION expected values
+- Development tools: certificate inspector, hash/bcrypt, JSONPath tester, request diff, and RSA OAEP
+- Team sync secret scanning and conflict-file handling
+- In-app auto-update with Stable and Beta channels
+- Help wiki pages for Database and the RSA OAEP tool
+
+### Changed
+
+- Database connections live in the Database sidebar (per workspace profile in `databases.json`); idle disconnect remains a global setting
+- No schema is selected by default; pick schemas from the picker (DataGrip-style). Opening a connection no longer loads every schema up front
+- SQL query editor shows gray inline suggestions for schemas, tables, and columns, ranked by context
+- Query results toolbar matches the table data view (pager chips, filter, icon copy/export)
+- Connection editor uses Save and Cancel; new connections stay unsaved until Save; Test connection never writes the profile
+- Table data cells truncate long values; cell editors follow the column type
+- Split view moves the focused tab instead of cloning it
+- Prefix autocomplete (header names, query params, and similar fields) shows gray remainder text instead of a floating list; typing `$` still opens the dynamic-variable menu
+- Test Suite Run log pretty-prints HTTP Request JSON responses
+- Silent auto-update uses an in-app overlay until Setup is ready, then the app exits (no empty “Updating Testrix” window)
+- Installer GitHub assets are named `Testrix-Setup` (hyphen)
+- GitHub release notes come from the matching CHANGELOG.md section
+- Team Git sync pauses while a local workspace profile is active; local profiles are not auto-imported or pushed to the team repo
+- Creating a team branch starts from `master` or `main` and keeps the current team profile files on the new branch
+
+### Fixed
+
+- RSA OAEP decrypt loads Java-style Base64-wrapped OpenSSL encrypted PKCS#1 PEMs (`BEGIN RSA PRIVATE KEY` / `Proc-Type: 4,ENCRYPTED`) and headerless PKCS#8 bodies, and accepts a Base64-encoded private-key password
+- Oracle connections: Thick mode / Instant Client when needed, SID URLs, TNS `SERVICE_NAME` (DataGrip-style), JDBC URL paste, semicolon-terminated SQL, schema listing, and SELECT paging without an illegal `_tx_page` alias
+- SQL autocomplete no longer freezes on databases with hundreds of schemas; suggestions stay capped and limited to selected schemas
+- Pick on page for E2E CSS selectors attaches on the first open; Cancel pick aborts; the E2E window shows when a triggered flow has E2E steps
+- Test Suite E2E Assert URL and Wait for URL use the expected URL from the step editor
+- Test Suite manual REQUEST steps send the configured body and query params
+- Reordering or nesting Test Suite sidebar flows and folders no longer drops nested items or wipes flow steps
+- `{{placeholder}}` tokens from a TRIGGER’d flow highlight as known variables
+- Switching workspace profiles reloads Test Suite, saved queries, and other profile-local testing data
+- Selected schemas stay on a connection after collapse, reconnect, or a team pull that omitted the field
+- Drag-reorder of database connections (for example PostgreSQL above Oracle) works instead of always dropping after
+- Connection editor no longer clears username and password when you open the tab
+- In-app updates pick the highest semver on the channel; a beta install no longer follows a stale Stable channel
+- Windows silent installer extracts the payload in chunks and skips re-registering shortcuts on update
+- GitHub Release publish stays draft until Windows, macOS, and Linux installers are attached
+
 ## [1.0.3-beta.10] - 2026-08-17
 
 ### Fixed
@@ -354,7 +423,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Initial public beta of Testrix: local-first desktop API client (HTTP, WebSocket, collections, environments, test suites, load tests, mocks, and capture).
 
-[Unreleased]: https://github.com/matthiaskopeinigg/testrix/compare/v1.0.3-beta.10...HEAD
+[Unreleased]: https://github.com/matthiaskopeinigg/testrix/compare/v1.0.3...HEAD
+[1.0.3]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.3
 [1.0.3-beta.10]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.3-beta.10
 [1.0.3-beta.9]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.3-beta.9
 [1.0.3-beta.8]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.3-beta.8

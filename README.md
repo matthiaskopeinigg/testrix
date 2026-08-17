@@ -6,7 +6,7 @@
 
 [![CI](https://github.com/matthiaskopeinigg/testrix/actions/workflows/ci.yml/badge.svg)](https://github.com/matthiaskopeinigg/testrix/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Latest release](https://img.shields.io/github/v/release/matthiaskopeinigg/testrix?include_prereleases)](https://github.com/matthiaskopeinigg/testrix/releases)
+[![Latest release](https://img.shields.io/github/v/release/matthiaskopeinigg/testrix)](https://github.com/matthiaskopeinigg/testrix/releases/latest)
 
 Local-first desktop API client built with **Angular 21** and **Electron**. Design collections and environments, send HTTP and WebSocket traffic, run test suites (including E2E), load tests, mocks, and capture — all on your machine.
 
