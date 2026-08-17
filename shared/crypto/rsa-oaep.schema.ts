@@ -29,6 +29,8 @@ const PRIVATE_PEM_HEADER = /-{3,}BEGIN (?:ENCRYPTED |RSA )?PRIVATE KEY-{3,}/i;
 const PUBLIC_PEM_HEADER = /-{3,}BEGIN (?:RSA )?PUBLIC KEY-{3,}|-{3,}BEGIN CERTIFICATE-{3,}/i;
 /** Typical RSA 2048 SPKI public key Base64 prefix (no PEM armor). */
 const SPKI_RSA_PUBLIC_PREFIX = /^MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8A/i;
+/** Max Base64 layers to peel (Java configs sometimes wrap PEM twice). */
+const MAX_PEM_BASE64_UNWRAP = 4;
 
 /**
  * Normalizes pasted key material: trim, strip quotes, turn literal `\n` into newlines.
@@ -45,32 +47,58 @@ export function normalizePemInput(raw: string): string {
 }
 
 /**
+ * Peels nested UTF-8 Base64 wrappers until PEM headers appear.
+ *
+ * Java `PasswordService` stores `Base64(PEM)` (and some YAML values wrap that again).
+ * Headerless PKCS#8 DER Base64 is left unchanged so Node can load it as DER.
+ */
+export function unwrapNestedPemEncoding(raw: string): string {
+  let current = normalizePemInput(raw);
+  for (let i = 0; i < MAX_PEM_BASE64_UNWRAP; i++) {
+    if (hasPemBeginMarker(current)) {
+      return current;
+    }
+    const compact = current.replace(/\s+/g, '');
+    if (compact.length < 16 || !looksLikeBase64Alphabet(compact)) {
+      return current;
+    }
+    const decoded = decodeBase64ToUtf8(padBase64(compact.replace(/-/g, '+').replace(/_/g, '/')));
+    if (!decoded || decoded === current || !isMostlyPrintableAscii(decoded)) {
+      return current;
+    }
+    current = decoded.trim();
+  }
+  return current;
+}
+
+/**
  * Returns true when the text is a public PEM or a typical RSA SPKI Base64 blob.
  */
 export function pemLooksLikePublicKey(pem: string): boolean {
-  const normalized = normalizePemInput(pem);
-  if (PUBLIC_PEM_HEADER.test(normalized)) {
+  const resolved = unwrapNestedPemEncoding(pem);
+  if (PUBLIC_PEM_HEADER.test(resolved)) {
     return true;
   }
-  if (PRIVATE_PEM_HEADER.test(normalized)) {
+  if (PRIVATE_PEM_HEADER.test(resolved)) {
     return false;
   }
-  return SPKI_RSA_PUBLIC_PREFIX.test(compactPemBase64(normalized));
+  return SPKI_RSA_PUBLIC_PREFIX.test(compactPemBase64(resolved));
 }
 
 /**
  * Returns true when the PEM looks like a private key (PKCS#8, PKCS#1, encrypted PKCS#8,
+ * OpenSSL `BEGIN RSA PRIVATE KEY` with `Proc-Type: 4,ENCRYPTED`, a Java Base64-wrapped PEM,
  * or a headerless PKCS#8 Base64 body).
  */
 export function pemLooksLikePrivateKey(pem: string): boolean {
-  const normalized = normalizePemInput(pem);
-  if (PRIVATE_PEM_HEADER.test(normalized)) {
+  const resolved = unwrapNestedPemEncoding(pem);
+  if (PRIVATE_PEM_HEADER.test(resolved)) {
     return true;
   }
-  if (pemLooksLikePublicKey(normalized)) {
+  if (pemLooksLikePublicKey(pem)) {
     return false;
   }
-  return looksLikePkcsDerBase64(normalized);
+  return looksLikePkcsDerBase64(normalizePemInput(pem));
 }
 
 /**
@@ -96,7 +124,7 @@ export function wrapPemBlock(label: string, compactBase64: string): string {
 }
 
 function looksLikePkcsDerBase64(text: string): boolean {
-  if (text.includes('-----BEGIN') || /-{3,}BEGIN /i.test(text)) {
+  if (hasPemBeginMarker(text)) {
     return false;
   }
   const compact = text.replace(/\s+/g, '');
@@ -106,8 +134,58 @@ function looksLikePkcsDerBase64(text: string): boolean {
   if (/^[0-9a-fA-F]+$/.test(compact) && compact.length % 2 === 0) {
     return true;
   }
+  return looksLikeBase64Alphabet(compact);
+}
+
+/**
+ * Returns true when the text already has PEM armor.
+ */
+function hasPemBeginMarker(text: string): boolean {
+  return text.includes('-----BEGIN') || /-{3,}BEGIN /i.test(text);
+}
+
+/**
+ * Returns true when compact text is standard or URL-safe Base64.
+ */
+function looksLikeBase64Alphabet(compact: string): boolean {
   const padded = padBase64(compact.replace(/-/g, '+').replace(/_/g, '/'));
   return /^[A-Za-z0-9+/]+=*$/.test(padded);
+}
+
+/**
+ * Decodes standard Base64 to UTF-8. Returns null when the payload is empty or invalid.
+ */
+function decodeBase64ToUtf8(padded: string): string | null {
+  try {
+    const binary = globalThis.atob(padded);
+    if (!binary) {
+      return null;
+    }
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) {
+      bytes[i] = binary.charCodeAt(i);
+    }
+    return new TextDecoder('utf-8', { fatal: false }).decode(bytes);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Returns true when almost every character is printable ASCII (PEM / nested Base64).
+ */
+function isMostlyPrintableAscii(text: string): boolean {
+  if (!text) {
+    return false;
+  }
+  let printable = 0;
+  for (let i = 0; i < text.length; i++) {
+    const code = text.charCodeAt(i);
+    if (code === 9 || code === 10 || code === 13 || (code >= 32 && code <= 126)) {
+      printable += 1;
+    }
+  }
+  return printable / text.length > 0.95;
 }
 
 /**

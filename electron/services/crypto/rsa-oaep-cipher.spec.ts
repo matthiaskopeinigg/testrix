@@ -8,6 +8,20 @@ import { decryptBase64ToUtf8, encryptUtf8ToBase64 } from './rsa-oaep-cipher';
 const PEM_PASSWORD = 'unit-test-pem-password';
 const PLAINTEXT = 'profile-password-42';
 
+function encryptedPkcs1Pair(): { readonly publicPem: string; readonly privatePem: string } {
+  const pair = generateKeyPairSync('rsa', {
+    modulusLength: 2048,
+    publicKeyEncoding: { type: 'spki', format: 'pem' },
+    privateKeyEncoding: {
+      type: 'pkcs1',
+      format: 'pem',
+      cipher: 'des-ede3-cbc',
+      passphrase: PEM_PASSWORD,
+    },
+  });
+  return { publicPem: pair.publicKey, privatePem: pair.privateKey };
+}
+
 function encryptedPkcs8Pair(): { readonly publicPem: string; readonly privatePem: string } {
   const pair = generateKeyPairSync('rsa', {
     modulusLength: 2048,
@@ -150,5 +164,35 @@ describe('rsa-oaep-cipher', () => {
         ciphertext: 'AAAA',
       }),
     ).toThrow(/public key or certificate/i);
+  });
+
+  it('decrypts a Java-style Base64-wrapped OpenSSL encrypted PKCS#1 key', () => {
+    const { publicPem, privatePem } = encryptedPkcs1Pair();
+    expect(privatePem).toContain('BEGIN RSA PRIVATE KEY');
+    expect(privatePem).toMatch(/Proc-Type:\s*4,ENCRYPTED/i);
+
+    const ciphertext = encryptUtf8ToBase64({
+      pem: publicPem,
+      keyPassword: '',
+      plaintext: PLAINTEXT,
+    });
+    const once = Buffer.from(privatePem, 'utf8').toString('base64');
+    const twice = Buffer.from(once, 'utf8').toString('base64');
+    const passwordB64 = Buffer.from(PEM_PASSWORD, 'utf8').toString('base64');
+
+    expect(
+      decryptBase64ToUtf8({
+        pem: once,
+        keyPassword: PEM_PASSWORD,
+        ciphertext,
+      }),
+    ).toBe(PLAINTEXT);
+    expect(
+      decryptBase64ToUtf8({
+        pem: twice,
+        keyPassword: passwordB64,
+        ciphertext,
+      }),
+    ).toBe(PLAINTEXT);
   });
 });

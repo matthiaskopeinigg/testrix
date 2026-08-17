@@ -27,7 +27,7 @@
     <tx-tag>Password not saved</tx-tag>
   </app-dev-tool-stat-strip>
 
-  <tx-form-field label="Private/public key (PEM, or a long Base64/hex body with no BEGIN lines)">
+  <tx-form-field label="Private/public key (PEM, Java Base64-wrapped PEM, or a long Base64/hex body)">
     <tx-textarea
       [rows]="8"
       [monospace]="true"
@@ -37,7 +37,7 @@
   </tx-form-field>
 
   @if (showKeyPassword()) {
-    <tx-form-field label="Private-key password (memory only)">
+    <tx-form-field label="Private-key password (plain or Base64, memory only)">
       <tx-input type="password" [ngModel]="keyPassword()" (ngModelChange)="keyPassword.set($event)" />
     </tx-form-field>
   }

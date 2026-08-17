@@ -4,6 +4,7 @@ import {
   pemLooksLikePrivateKey,
   RSA_OAEP_JAVA_TRANSFORM,
   rsaOaepCipherPayloadSchema,
+  unwrapNestedPemEncoding,
 } from './rsa-oaep.schema';
 
 describe('rsa-oaep.schema', () => {
@@ -29,6 +30,23 @@ describe('rsa-oaep.schema', () => {
     expect(pemLooksLikePrivateKey(body)).toBe(true);
     expect(pemLooksLikePrivateKey(`"${body}"`)).toBe(true);
     expect(pemLooksLikePrivateKey(body.replace(/\+/g, '-').replace(/\//g, '_'))).toBe(true);
+  });
+
+  it('unwraps a Java Base64-wrapped OpenSSL RSA private PEM', () => {
+    const pem = [
+      '-----BEGIN RSA PRIVATE KEY-----',
+      'Proc-Type: 4,ENCRYPTED',
+      'DEK-Info: DES-EDE3-CBC,0123456789ABCDEF',
+      '',
+      'AAAA',
+      '-----END RSA PRIVATE KEY-----',
+    ].join('\n');
+    const once = Buffer.from(pem, 'utf8').toString('base64');
+    const twice = Buffer.from(once, 'utf8').toString('base64');
+    expect(unwrapNestedPemEncoding(once)).toContain('BEGIN RSA PRIVATE KEY');
+    expect(unwrapNestedPemEncoding(twice)).toContain('Proc-Type: 4,ENCRYPTED');
+    expect(pemLooksLikePrivateKey(once)).toBe(true);
+    expect(pemLooksLikePrivateKey(twice)).toBe(true);
   });
 
   it('does not treat a public PEM with escaped newlines as private', () => {

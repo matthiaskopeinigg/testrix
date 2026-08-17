@@ -189,12 +189,12 @@ export const HELP_WIKI_DEVELOPMENT_SECTIONS: readonly HelpWikiSection[] = [
     blocks: [
       {
         type: 'paragraph',
-        text: 'Encrypt UTF-8 plaintext to standard Base64, or decrypt Base64 ciphertext, using RSA/ECB/OAEPWithSHA-1AndMGF1Padding. Paste a public PEM to encrypt, or a password-protected private key to decrypt (and to encrypt by deriving the public key). The private key may be full PEM (BEGIN/END lines) or a headerless Base64/hex PKCS#8 body (a long random-looking string from Java or an env var).',
+        text: 'Encrypt UTF-8 plaintext to standard Base64, or decrypt Base64 ciphertext, using RSA/ECB/OAEPWithSHA-1AndMGF1Padding. Paste a public PEM to encrypt, or a password-protected private key to decrypt (and to encrypt by deriving the public key). The private key may be full PEM (BEGIN/END lines), a Java Base64-wrapped OpenSSL PEM (including nested Base64 of BEGIN RSA PRIVATE KEY with Proc-Type: 4,ENCRYPTED), or a headerless Base64/hex PKCS#8 body.',
       },
       {
         type: 'note',
         title: 'Private-key password',
-        text: 'The private-key password stays in memory only and is never written to the session. Test Suite CACHE steps can use the same cipher with {{rsaPrivateKey}} and {{pemPassword}} from the environment.',
+        text: 'The private-key password stays in memory only and is never written to the session. Paste it as the PEM passphrase, or as Base64 of that passphrase (common in Spring YAML next to a Base64-wrapped key). Test Suite CACHE steps can use the same cipher with {{rsaPrivateKey}} and {{pemPassword}} from the environment.',
       },
     ],
   }),

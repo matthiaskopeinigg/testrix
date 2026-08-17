@@ -9,11 +9,11 @@ import {
 
 import {
   compactPemBase64,
-  normalizePemInput,
   padBase64,
   pemLooksLikePrivateKey,
   pemLooksLikePublicKey,
   RSA_OAEP_JAVA_TRANSFORM,
+  unwrapNestedPemEncoding,
   wrapPemBlock,
 } from '../../../shared/crypto/rsa-oaep.schema';
 
@@ -48,7 +48,7 @@ interface PrivateKeyCandidate {
  * and the public key is derived.
  */
 export function encryptUtf8ToBase64(params: RsaOaepEncryptParams): string {
-  const pem = normalizePemInput(params.pem);
+  const pem = unwrapNestedPemEncoding(params.pem);
   if (!pem) {
     throw new Error('PEM key is required to encrypt.');
   }
@@ -64,13 +64,13 @@ export function encryptUtf8ToBase64(params: RsaOaepEncryptParams): string {
  * Decrypts standard Base64 ciphertext to UTF-8 using RSA OAEP SHA-1 and a private PEM.
  */
 export function decryptBase64ToUtf8(params: RsaOaepDecryptParams): string {
-  const pem = normalizePemInput(params.pem);
+  const pem = unwrapNestedPemEncoding(params.pem);
   if (!pem) {
     throw new Error('PEM key is required to decrypt.');
   }
   if (pemLooksLikePublicKey(pem)) {
     throw new Error(
-      'That value is a public key or certificate. Decrypt needs a private key (BEGIN PRIVATE KEY / BEGIN ENCRYPTED PRIVATE KEY), or the Base64 PKCS#8 body.',
+      'That value is a public key or certificate. Decrypt needs a private key (BEGIN PRIVATE KEY / BEGIN RSA PRIVATE KEY / BEGIN ENCRYPTED PRIVATE KEY), a Java Base64-wrapped PEM, or a headerless PKCS#8 body.',
     );
   }
   const privateKey = loadPrivateKey(pem, params.keyPassword, 'decrypt');
@@ -129,35 +129,59 @@ function loadPrivateKey(pem: string, keyPassword: string, operation: 'encrypt' |
   const candidates = privateKeyLoadCandidates(pem);
   if (candidates.length === 0) {
     throw new Error(
-      'Could not read a private key. Paste PEM including the BEGIN/END lines, or the Base64 PKCS#8 body (often a long MII… string).',
+      'Could not read a private key. Paste PEM including the BEGIN/END lines, a Java Base64-wrapped PEM, or the Base64 PKCS#8 body (often a long MII… string).',
     );
   }
   for (const candidate of candidates) {
-    try {
-      return createPrivateKey({
-        key: candidate.key,
-        format: candidate.format,
-        type: candidate.type,
-        passphrase,
-      });
-    } catch {
-      continue;
+    for (const tryPassphrase of passphraseCandidates(passphrase)) {
+      try {
+        return createPrivateKey({
+          key: candidate.key,
+          format: candidate.format,
+          type: candidate.type,
+          passphrase: tryPassphrase,
+        });
+      } catch {
+        continue;
+      }
     }
   }
   throw new Error(
-    'Could not unlock the private key. Check the PEM (BEGIN/END lines or PKCS#8 Base64) and private-key password.',
+    'Could not unlock the private key. Check the PEM (BEGIN/END lines, Java Base64-wrapped OpenSSL PEM, or PKCS#8 Base64) and private-key password (plain or Base64).',
   );
 }
 
-function privateKeyLoadCandidates(pem: string): PrivateKeyCandidate[] {
-  const normalized = normalizePemInput(pem);
-  if (/-{3,}BEGIN (?:ENCRYPTED |RSA )?PRIVATE KEY-{3,}/i.test(normalized)) {
-    return [{ key: normalized, format: 'pem' }];
+/**
+ * Tries the password as configured, then as UTF-8 of Base64 (Spring YAML often stores both that way).
+ */
+function passphraseCandidates(password: string): string[] {
+  const candidates = [password];
+  const compact = password.replace(/\s+/g, '');
+  if (!/^[A-Za-z0-9+/_-]+=*$/.test(compact) || compact.length < 4) {
+    return candidates;
   }
-  const compact = compactPemBase64(normalized);
+  try {
+    const decoded = Buffer.from(padBase64(compact.replace(/-/g, '+').replace(/_/g, '/')), 'base64').toString(
+      'utf8',
+    );
+    if (decoded && decoded !== password && /^[\x20-\x7E]+$/.test(decoded) && decoded.length <= 256) {
+      candidates.push(decoded);
+    }
+  } catch {
+    return candidates;
+  }
+  return candidates;
+}
+
+function privateKeyLoadCandidates(pem: string): PrivateKeyCandidate[] {
+  const resolved = unwrapNestedPemEncoding(pem);
+  if (/-{3,}BEGIN (?:ENCRYPTED |RSA )?PRIVATE KEY-{3,}/i.test(resolved)) {
+    return [{ key: resolved, format: 'pem' }];
+  }
+  const compact = compactPemBase64(resolved);
   const der = decodeHeaderlessKeyBlob(compact);
   if (!der) {
-    return [{ key: normalized, format: 'pem' }];
+    return [{ key: resolved, format: 'pem' }];
   }
   const standardB64 = der.toString('base64');
   return [
