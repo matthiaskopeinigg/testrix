@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.8]
+
+### Fixed
+
+- RSA OAEP encrypt accepts a one-line public PEM and does not ask for a private-key password
+
 ## [1.0.7]
 
 ### Changed
@@ -469,7 +475,8 @@ Tagged in git. GitHub installers were not published (Authenticode secrets were m
 
 Initial public beta of Testrix: local-first desktop API client (HTTP, WebSocket, collections, environments, test suites, load tests, mocks, and capture).
 
-[Unreleased]: https://github.com/matthiaskopeinigg/testrix/compare/v1.0.7...HEAD
+[Unreleased]: https://github.com/matthiaskopeinigg/testrix/compare/v1.0.8...HEAD
+[1.0.8]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.8
 [1.0.7]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.7
 [1.0.6]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.6
 [1.0.5]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.5

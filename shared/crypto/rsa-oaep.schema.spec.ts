@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  normalizePemArmor,
   pemLooksLikePrivateKey,
   RSA_OAEP_JAVA_TRANSFORM,
   rsaOaepCipherPayloadSchema,
@@ -55,5 +56,15 @@ describe('rsa-oaep.schema', () => {
         '-----BEGIN PUBLIC KEY-----\\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8A\\n-----END PUBLIC KEY-----',
       ),
     ).toBe(false);
+  });
+
+  it('rewrites a one-line public PEM so OpenSSL sees a start line', () => {
+    const oneLine =
+      '-----BEGIN PUBLIC KEY----- MIIBIDANBgkqhkiG9w0BAQEFAAOCAQ0AMIIBCAKCAQEA0EsuGonW8+y5Oq2Hopru-----END PUBLIC KEY-----';
+    const armored = normalizePemArmor(oneLine);
+    expect(armored.startsWith('-----BEGIN PUBLIC KEY-----\n')).toBe(true);
+    expect(armored).toContain('\n-----END PUBLIC KEY-----');
+    expect(armored).not.toMatch(/-----BEGIN PUBLIC KEY----- /);
+    expect(pemLooksLikePrivateKey(oneLine)).toBe(false);
   });
 });

@@ -15,6 +15,7 @@ import {
   RSA_OAEP_JAVA_TRANSFORM,
   unwrapNestedPemEncoding,
   wrapPemBlock,
+  normalizePemArmor,
 } from '../../../shared/crypto/rsa-oaep.schema';
 
 /** Node options matching Java `RSA/ECB/OAEPWithSHA-1AndMGF1Padding`. */
@@ -101,9 +102,10 @@ export function rsaOaepJavaTransform(): string {
 function loadPublicKeyForEncrypt(pem: string, keyPassword: string): KeyObject {
   if (!pemLooksLikePrivateKey(pem)) {
     try {
-      const armored = pem.includes('-----BEGIN')
-        ? pem
-        : wrapPemBlock('PUBLIC KEY', compactPemBase64(pem));
+      const resolved = unwrapNestedPemEncoding(pem);
+      const armored = resolved.includes('-----BEGIN')
+        ? normalizePemArmor(resolved)
+        : wrapPemBlock('PUBLIC KEY', compactPemBase64(resolved));
       return createPublicKey({ key: armored, format: 'pem' });
     } catch (error: unknown) {
       throw new Error(cipherOperationFailureMessage('load public key', error));
@@ -118,28 +120,23 @@ function loadPublicKeyForEncrypt(pem: string, keyPassword: string): KeyObject {
 }
 
 function loadPrivateKey(pem: string, keyPassword: string, operation: 'encrypt' | 'decrypt'): KeyObject {
-  const passphrase = keyPassword.trim();
-  if (!passphrase) {
-    throw new Error(
-      operation === 'decrypt'
-        ? 'Private-key password is required to decrypt.'
-        : 'Private-key password is required to encrypt with a private PEM.',
-    );
-  }
   const candidates = privateKeyLoadCandidates(pem);
   if (candidates.length === 0) {
     throw new Error(
       'Could not read a private key. Paste PEM including the BEGIN/END lines, a Java Base64-wrapped PEM, or the Base64 PKCS#8 body (often a long MII… string).',
     );
   }
+  const passphrases: readonly (string | undefined)[] = keyPassword.trim()
+    ? passphraseCandidates(keyPassword.trim())
+    : [undefined];
   for (const candidate of candidates) {
-    for (const tryPassphrase of passphraseCandidates(passphrase)) {
+    for (const tryPassphrase of passphrases) {
       try {
         return createPrivateKey({
           key: candidate.key,
           format: candidate.format,
           type: candidate.type,
-          passphrase: tryPassphrase,
+          ...(tryPassphrase ? { passphrase: tryPassphrase } : {}),
         });
       } catch {
         continue;
@@ -147,7 +144,11 @@ function loadPrivateKey(pem: string, keyPassword: string, operation: 'encrypt' |
     }
   }
   throw new Error(
-    'Could not unlock the private key. Check the PEM (BEGIN/END lines, Java Base64-wrapped OpenSSL PEM, or PKCS#8 Base64) and private-key password (plain or Base64).',
+    keyPassword.trim()
+      ? 'Could not unlock the private key. Check the PEM (BEGIN/END lines, Java Base64-wrapped OpenSSL PEM, or PKCS#8 Base64) and private-key password (plain or Base64).'
+      : operation === 'decrypt'
+        ? 'Could not read the private key. If it is password-protected, enter the private-key password.'
+        : 'Could not read the private key. Encrypt with a public PEM, or unlock a private PEM with its password.',
   );
 }
 
@@ -175,8 +176,9 @@ function passphraseCandidates(password: string): string[] {
 
 function privateKeyLoadCandidates(pem: string): PrivateKeyCandidate[] {
   const resolved = unwrapNestedPemEncoding(pem);
-  if (/-{3,}BEGIN (?:ENCRYPTED |RSA )?PRIVATE KEY-{3,}/i.test(resolved)) {
-    return [{ key: resolved, format: 'pem' }];
+  const armored = resolved.includes('-----BEGIN') ? normalizePemArmor(resolved) : resolved;
+  if (/-{3,}BEGIN (?:ENCRYPTED |RSA )?PRIVATE KEY-{3,}/i.test(armored)) {
+    return [{ key: armored, format: 'pem' }];
   }
   const compact = compactPemBase64(resolved);
   const der = decodeHeaderlessKeyBlob(compact);

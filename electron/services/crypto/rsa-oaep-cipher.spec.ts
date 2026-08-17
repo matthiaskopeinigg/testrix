@@ -88,7 +88,7 @@ describe('rsa-oaep-cipher', () => {
     ).toThrow(/private-key password/i);
   });
 
-  it('fails encrypt from a private PEM when the password is missing', () => {
+  it('fails encrypt from an encrypted private PEM when the password is missing', () => {
     const { privatePem } = encryptedPkcs8Pair();
     expect(() =>
       encryptUtf8ToBase64({
@@ -96,7 +96,45 @@ describe('rsa-oaep-cipher', () => {
         keyPassword: '',
         plaintext: PLAINTEXT,
       }),
-    ).toThrow(/Private-key password is required to encrypt/);
+    ).toThrow(/private PEM with its password|Could not read the private key/i);
+  });
+
+  it('encrypts a one-line public PEM without a password', () => {
+    const { publicPem, privatePem } = encryptedPkcs8Pair();
+    const oneLine = publicPem.replace(/\s+/g, ' ').replace(/\s+-----END/, '-----END').trim();
+    expect(oneLine).toMatch(/-----BEGIN PUBLIC KEY----- /);
+    const ciphertext = encryptUtf8ToBase64({
+      pem: oneLine,
+      keyPassword: '',
+      plaintext: PLAINTEXT,
+    });
+    expect(
+      decryptBase64ToUtf8({
+        pem: privatePem,
+        keyPassword: PEM_PASSWORD,
+        ciphertext,
+      }),
+    ).toBe(PLAINTEXT);
+  });
+
+  it('encrypts from an unencrypted private PEM without a password', () => {
+    const pair = generateKeyPairSync('rsa', {
+      modulusLength: 2048,
+      publicKeyEncoding: { type: 'spki', format: 'pem' },
+      privateKeyEncoding: { type: 'pkcs8', format: 'pem' },
+    });
+    const ciphertext = encryptUtf8ToBase64({
+      pem: pair.privateKey,
+      keyPassword: '',
+      plaintext: PLAINTEXT,
+    });
+    expect(
+      decryptBase64ToUtf8({
+        pem: pair.privateKey,
+        keyPassword: '',
+        ciphertext,
+      }),
+    ).toBe(PLAINTEXT);
   });
 
   it('decrypts a headerless PKCS#8 Base64 body', () => {

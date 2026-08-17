@@ -13,6 +13,7 @@ import {
   type TestSuiteStepType,
 } from '@shared/testing';
 import type { CacheStepConfig, CacheStepEntry, CacheStepCipher } from '@shared/testing/test-suite-steps.schema';
+import { pemLooksLikePrivateKey } from '@shared/crypto/rsa-oaep.schema';
 import type { TxDropdownOption } from '@app/shared/components/forms/tx-dropdown/tx-dropdown.types';
 
 import { TxButtonComponent } from '@app/shared/components/forms/tx-button/tx-button.component';
@@ -61,8 +62,11 @@ export class TsFlowCacheStepPanelComponent {
 
   protected readonly extractKindOptions = FLOW_STEP_VALIDATION_EXTRACT_KIND_OPTIONS;
   protected readonly cipherModeOptions = FLOW_STEP_CACHE_CIPHER_OPTIONS;
-  protected readonly pemPlaceholder = '{{rsaPrivateKey}}';
-  protected readonly keyPasswordPlaceholder = '{{pemPassword}}';
+
+  /** Placeholder for the CACHE cipher PEM field. */
+  protected pemPlaceholder(entry: CacheStepEntry): string {
+    return this.cipher(entry).mode === 'encrypt' ? '{{rsaPublicKey}}' : '{{rsaPrivateKey}}';
+  }
 
   protected readonly cacheRefOptions = computed(() => buildCacheRefStepOptions(this.refStepOptions()));
 
@@ -124,6 +128,19 @@ export class TsFlowCacheStepPanelComponent {
 
   protected showsCipherFields(entry: CacheStepEntry): boolean {
     return this.cipher(entry).mode !== 'none';
+  }
+
+  /** Password is only needed to unlock a private PEM (decrypt, or encrypt by deriving the public key). */
+  protected showsCipherPassword(entry: CacheStepEntry): boolean {
+    const cipher = this.cipher(entry);
+    if (cipher.mode === 'decrypt') {
+      return true;
+    }
+    if (cipher.mode !== 'encrypt') {
+      return false;
+    }
+    const pem = cipher.pem.trim();
+    return pem.length > 0 && pemLooksLikePrivateKey(pem);
   }
 
   protected isGenerated(entry: CacheStepEntry): boolean {

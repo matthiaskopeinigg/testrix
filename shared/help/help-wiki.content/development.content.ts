@@ -189,7 +189,7 @@ export const HELP_WIKI_DEVELOPMENT_SECTIONS: readonly HelpWikiSection[] = [
     blocks: [
       {
         type: 'paragraph',
-        text: 'Encrypt UTF-8 plaintext to standard Base64, or decrypt Base64 ciphertext, using RSA/ECB/OAEPWithSHA-1AndMGF1Padding. Paste a public PEM to encrypt, or a password-protected private key to decrypt (and to encrypt by deriving the public key). The private key may be full PEM (BEGIN/END lines), a Java Base64-wrapped OpenSSL PEM (including nested Base64 of BEGIN RSA PRIVATE KEY with Proc-Type: 4,ENCRYPTED), or a headerless Base64/hex PKCS#8 body.',
+        text: 'Encrypt UTF-8 plaintext to standard Base64, or decrypt Base64 ciphertext, using RSA/ECB/OAEPWithSHA-1AndMGF1Padding. Paste a public PEM to encrypt (BEGIN/END may be on one line), or a private key to decrypt (and to encrypt by deriving the public key). A private-key password is only needed when that private PEM is encrypted. The private key may be full PEM, a Java Base64-wrapped OpenSSL PEM (including nested Base64 of BEGIN RSA PRIVATE KEY with Proc-Type: 4,ENCRYPTED), or a headerless Base64/hex PKCS#8 body.',
       },
       {
         type: 'note',

@@ -35,6 +35,11 @@ describe('RsaOaepDevToolComponent', () => {
     const fixture = TestBed.createComponent(RsaOaepDevToolComponent);
     fixture.detectChanges();
     expect(fixture.componentInstance['state']().mode).toBe('encode');
+    fixture.componentInstance['state'].update((s) => ({
+      ...s,
+      pem: '-----BEGIN PUBLIC KEY----- MIIBIDANBgkqhkiG9w0BAQEFAAOCAQ0A-----END PUBLIC KEY-----',
+    }));
+    expect(fixture.componentInstance['showKeyPassword']()).toBe(false);
     fixture.componentInstance['keyPassword'].set('secret');
     expect(fixture.componentInstance['state']().mode).toBe('encode');
     fixture.destroy();

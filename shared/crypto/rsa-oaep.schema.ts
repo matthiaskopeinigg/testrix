@@ -27,8 +27,8 @@ export type RsaOaepCipherResult = z.infer<typeof rsaOaepCipherResultSchema>;
 
 const PRIVATE_PEM_HEADER = /-{3,}BEGIN (?:ENCRYPTED |RSA )?PRIVATE KEY-{3,}/i;
 const PUBLIC_PEM_HEADER = /-{3,}BEGIN (?:RSA )?PUBLIC KEY-{3,}|-{3,}BEGIN CERTIFICATE-{3,}/i;
-/** Typical RSA 2048 SPKI public key Base64 prefix (no PEM armor). */
-const SPKI_RSA_PUBLIC_PREFIX = /^MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8A/i;
+/** RSA SPKI Base64 prefix (2048-bit `MIIBIjAN…` and nearby encodings such as `MIIBIDAN…`). */
+const SPKI_RSA_PUBLIC_PREFIX = /^MIIB[A-Za-z0-9+/]+ANBgkqhkiG9w0BAQEF/i;
 /** Max Base64 layers to peel (Java configs sometimes wrap PEM twice). */
 const MAX_PEM_BASE64_UNWRAP = 4;
 
@@ -69,6 +69,50 @@ export function unwrapNestedPemEncoding(raw: string): string {
     current = decoded.trim();
   }
   return current;
+}
+
+/**
+ * Puts PEM BEGIN/END markers on their own lines and wraps the Base64 body.
+ *
+ * One-line pastes (`-----BEGIN PUBLIC KEY----- MIIB…-----END PUBLIC KEY-----`)
+ * fail OpenSSL with `NO_START_LINE` unless the header is the entire first line.
+ *
+ * @param raw Pasted PEM, Java Base64-wrapped PEM, or already-normalized PEM.
+ */
+export function normalizePemArmor(raw: string): string {
+  const resolved = unwrapNestedPemEncoding(raw);
+  const match = resolved.match(/-----BEGIN ([^-]+)-----([\s\S]*?)-----END \1-----/i);
+  if (!match) {
+    return resolved;
+  }
+  const label = match[1].replace(/\s+/g, ' ').trim();
+  let inner = match[2].trim();
+  const metaLines: string[] = [];
+  const procLine = inner.match(/^Proc-Type:\s*[^\r\n]+/i);
+  if (procLine) {
+    metaLines.push(procLine[0].trim());
+    inner = inner.slice(procLine[0].length).trim();
+    const dekLine = inner.match(/^DEK-Info:\s*[^\r\n]+/i);
+    if (dekLine) {
+      metaLines.push(dekLine[0].trim());
+      inner = inner.slice(dekLine[0].length).trim();
+    }
+  } else {
+    const inlineEnc = inner.match(/^(Proc-Type:\s*\S+)\s+(DEK-Info:\s+\S+)\s+/i);
+    if (inlineEnc) {
+      metaLines.push(inlineEnc[1].trim(), inlineEnc[2].trim());
+      inner = inner.slice(inlineEnc[0].length);
+    }
+  }
+  const body = inner.replace(/\s+/g, '');
+  if (!body) {
+    return resolved;
+  }
+  let pem = wrapPemBlock(label, body);
+  if (metaLines.length > 0) {
+    pem = pem.replace(/^(-----BEGIN [^-]+-----)\n/, `$1\n${metaLines.join('\n')}\n\n`);
+  }
+  return pem;
 }
 
 /**
