@@ -66,7 +66,7 @@ export const HELP_WIKI_TESTING_SECTIONS: readonly HelpWikiSection[] = [
           'VALIDATION — assert on prior step response (status, body, headers).',
           'CACHE — generate a value ($uuid, templates) or extract from a prior step into {{variables}} for later E2E and DATABASE steps.',
           'DATABASE — write SQL/Redis inline, or select a saved query from the Database sidebar.',
-          'E2E — browser automation screenshot/step (when configured).',
+          'E2E — browser automation screenshot/step (when configured). Pick on page runs preceding steps, then attaches a CSS selector overlay. If the overlay cannot attach, the E2E window closes instead of staying stuck. Cancel pick aborts prep or picking.',
           'HTTP_LISTENER — wait for an incoming HTTP callback.',
           'HTTP_INTERCEPTOR — apply intercept rules during the step.',
           'WAIT — pause for a duration.',

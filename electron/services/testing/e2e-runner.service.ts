@@ -68,10 +68,13 @@ interface E2eServiceInstance {
   signalExecuteCancel(): void;
   acquireVisibleRunnerInputLock(): void;
   releaseVisibleRunnerInputLock(): void;
+  resetVisibleRunnerInputLock(): void;
+  prepareRunnerForElementPick(): void;
 }
 
 interface E2ePickElementModule {
   runPickElementSession: (payload: E2ePickElementPayload) => Promise<E2ePickElementResult>;
+  closeActiveSession: () => Promise<void>;
 }
 
 /**
@@ -127,6 +130,21 @@ export class E2eRunnerService {
   /** Restores user interaction after {@link acquireVisibleInputLock}. */
   releaseVisibleInputLock(): void {
     this.getService().releaseVisibleRunnerInputLock();
+  }
+
+  /** Clears leftover input-lock so Pick on page can receive clicks. */
+  resetVisibleInputLock(): void {
+    this.getService().resetVisibleRunnerInputLock();
+  }
+
+  /** Shows the runner and clears stealth/input-lock before attaching the CSS picker. */
+  prepareRunnerForElementPick(): void {
+    this.getService().prepareRunnerForElementPick();
+  }
+
+  /** Cancels an in-flight Pick on page session if one is active. */
+  async closePickSession(): Promise<void> {
+    await this.getPickModule().closeActiveSession();
   }
 
   async closeRunner(): Promise<void> {

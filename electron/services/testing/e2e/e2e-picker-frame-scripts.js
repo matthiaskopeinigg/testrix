@@ -32,6 +32,8 @@ function compileFramePickerScript(opts) {
 
   const hintBlock = isTopFrame
     ? `
+  var root = document.documentElement;
+  if (!root) return { ok: false, reason: 'no-document' };
   var hint = document.createElement('div');
   hint.id = '__aw-picker-hint';
   hint.className = '__aw-picker-ui';
@@ -40,17 +42,19 @@ function compileFramePickerScript(opts) {
     'position:fixed;top:0;left:0;right:0;z-index:2147483647;padding:10px 16px;font:13px/1.4 system-ui,sans-serif;background:rgba(15,23,42,0.92);color:#e2e8f0;text-align:center;pointer-events:none;border-bottom:1px solid rgba(249,115,22,0.5);'
   );
   hint.textContent =
-    'Every frame + open Shadow DOM (Usercentrics, etc.) · Iframes: " >>> " · Shadow pierce: " |>| " · Esc cancels';
-  document.documentElement.appendChild(hint);
+    'Click an element to copy its CSS selector · Iframes: " >>> " · Shadow pierce: " |>| " · Esc cancels';
+  root.appendChild(hint);
+  window.__awPickerGen = PICK_GEN;
 `
     : `
   var hint = null;
+  window.__awPickerGen = PICK_GEN;
 `;
 
   const initReport = isTopFrame
     ? `
   var bridge = window.__AW_PICK_BRIDGE__;
-  if (!bridge || typeof bridge.report !== 'function') return;
+  if (!bridge || typeof bridge.report !== 'function') return { ok: false, reason: 'no-bridge' };
   function reportPick(sel) { bridge.report({ selector: sel }); }
 `
     : `
@@ -74,18 +78,16 @@ function compileFramePickerScript(opts) {
     : '';
 
   return `(function AW_PICK_MULTI_FRAME(){
+  var PICK_GEN = ${pickGen};
+  if (window.__awPickerGen === PICK_GEN) {
+    ${isTopFrame ? "if (document.getElementById('__aw-picker-hint')) return { ok: true, already: true };" : 'return { ok: true, already: true };'}
+  }
   try {
     if (typeof window.__AW_PICK_TEARDOWN__ === 'function') window.__AW_PICK_TEARDOWN__();
   } catch (_a0) {}
 
-  var PICK_GEN = ${pickGen};
-  if (window.__awPickerGen === PICK_GEN) return;
-
   ${initReport}
 
-  // Stamp gen only after the top-frame bridge exists. Stamping first made later
-  // reinjects no-op when preload was not ready yet (first Pick on page did nothing).
-  window.__awPickerGen = PICK_GEN;
   ${hintBlock}
 
   var AW_DEEP = ' >>> ';
@@ -319,6 +321,7 @@ function compileFramePickerScript(opts) {
     try { delete window.__AW_PICK_TEARDOWN__; } catch (_) {}
     try { delete window.__awPickerGen; } catch (_) {}
   };
+  return { ok: true };
 })();`;
 }
 

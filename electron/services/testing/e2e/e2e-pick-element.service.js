@@ -16,14 +16,90 @@ function getE2eService() {
 const TEARDOWN_SCRIPT =
   "try{typeof window.__AW_PICK_TEARDOWN__==='function'&&window.__AW_PICK_TEARDOWN__()}catch(e){}";
 
+const FRAME_SCRIPT_TIMEOUT_MS = 2500;
+const PICKER_ATTACH_TIMEOUT_MS = 8000;
+
+/**
+ * @param {Promise<unknown>} promise
+ * @param {number} ms
+ * @param {string} message
+ */
+function withTimeout(promise, ms, message) {
+  let timer;
+  return Promise.race([
+    Promise.resolve(promise).finally(() => clearTimeout(timer)),
+    new Promise((_, reject) => {
+      timer = setTimeout(() => reject(new Error(message)), ms);
+    }),
+  ]);
+}
+
+/**
+ * @param {Electron.WebFrameMain | null | undefined} frame
+ * @param {string} script
+ */
+async function executeFrameScript(frame, script) {
+  if (!frame || frame.isDestroyed() || frame.detached) {
+    return null;
+  }
+  return withTimeout(
+    frame.executeJavaScript(script, true),
+    FRAME_SCRIPT_TIMEOUT_MS,
+    'Picker inject timed out',
+  );
+}
+
+/**
+ * @param {Electron.WebContents} webContents
+ * @param {string} pickGen
+ */
+async function probeTopPicker(webContents, pickGen) {
+  const main = webContents.mainFrame;
+  if (!main || main.isDestroyed()) {
+    return { ok: false, reason: 'no-frame' };
+  }
+  try {
+    const result = await executeFrameScript(
+      main,
+      `(function(){
+        var b = window.__AW_PICK_BRIDGE__;
+        return {
+          ok: !!(document.getElementById('__aw-picker-hint') && b && typeof b.report === 'function'),
+          bridge: !!(b && typeof b.report === 'function'),
+          hint: !!document.getElementById('__aw-picker-hint'),
+          gen: String(window.__awPickerGen || ''),
+          readyState: String(document.readyState || ''),
+        };
+      })()`,
+    );
+    if (!result || typeof result !== 'object') {
+      return { ok: false, reason: 'probe-empty' };
+    }
+    return {
+      ok: result.ok === true,
+      reason: result.ok ? undefined : !result.bridge ? 'no-bridge' : !result.hint ? 'no-hint' : 'not-ready',
+      gen: result.gen,
+      expectedGen: pickGen,
+    };
+  } catch (err) {
+    return {
+      ok: false,
+      reason: err && err.message ? String(err.message) : 'probe-failed',
+    };
+  }
+}
+
 /**
  * CMP / cookie banners usually live in separate WebFrameMain trees; parent-document JS never sees their DOM.
+ * @returns {Promise<{ topOk: boolean, reason?: string }>}
  */
 async function injectPickerIntoAllFrames(webContents, pickGen) {
   const main = webContents.mainFrame;
-  if (!main || main.isDestroyed()) return;
+  if (!main || main.isDestroyed()) {
+    return { topOk: false, reason: 'no-frame' };
+  }
 
-  await main.executeJavaScript(getRelayBootstrapScript(), true).catch(() => {});
+  await executeFrameScript(main, getRelayBootstrapScript()).catch(() => null);
 
   let list;
   try {
@@ -32,6 +108,8 @@ async function injectPickerIntoAllFrames(webContents, pickGen) {
     list = [];
   }
 
+  let topOk = false;
+  let reason = 'no-top-frame';
   for (let i = 0; i < list.length; i++) {
     const frame = list[i];
     if (!frame || frame.isDestroyed() || frame.detached) continue;
@@ -42,8 +120,65 @@ async function injectPickerIntoAllFrames(webContents, pickGen) {
       processId: frame.processId,
       routingId: frame.routingId,
     });
-    await frame.executeJavaScript(script, true).catch(() => {});
+    try {
+      const injected = await executeFrameScript(frame, script);
+      if (isTopFrame) {
+        topOk = !!(injected && injected.ok === true);
+        reason = topOk ? undefined : (injected && injected.reason) || 'top-inject-failed';
+      }
+    } catch (err) {
+      if (isTopFrame) {
+        reason = err && err.message ? String(err.message) : 'top-inject-timeout';
+      }
+    }
   }
+  if (!topOk && reason === 'no-top-frame') {
+    try {
+      const injected = await executeFrameScript(
+        main,
+        compileFramePickerScript({
+          pickGen,
+          isTopFrame: true,
+          processId: main.processId,
+          routingId: main.routingId,
+        }),
+      );
+      topOk = !!(injected && injected.ok === true);
+      reason = topOk ? undefined : (injected && injected.reason) || 'top-inject-failed';
+    } catch (err) {
+      reason = err && err.message ? String(err.message) : 'top-inject-timeout';
+    }
+  }
+  return { topOk, reason };
+}
+
+/**
+ * Retries inject until the top-frame hint and preload bridge are both present.
+ *
+ * @param webContents Runner webContents.
+ * @param pickGen Current pick generation token.
+ * @param win Runner window.
+ * @param isAborted When true, stop retrying (session already cancelled).
+ * @returns Whether the top-frame picker is attached.
+ */
+async function waitForPickerAttached(webContents, pickGen, win, isAborted) {
+  const deadline = Date.now() + PICKER_ATTACH_TIMEOUT_MS;
+  let last = { ok: false, reason: 'not-started' };
+  while (Date.now() < deadline) {
+    if (isAborted?.()) {
+      return { ok: false, reason: 'aborted' };
+    }
+    if (!win || win.isDestroyed() || webContents.isDestroyed()) {
+      return { ok: false, reason: 'window-closed' };
+    }
+    await injectPickerIntoAllFrames(webContents, pickGen).catch(() => ({ topOk: false }));
+    last = await probeTopPicker(webContents, pickGen);
+    if (last.ok) {
+      return last;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 200));
+  }
+  return last;
 }
 
 async function teardownPickerInAllFrames(webContents) {
@@ -58,7 +193,7 @@ async function teardownPickerInAllFrames(webContents) {
   for (let i = 0; i < list.length; i++) {
     const frame = list[i];
     if (!frame || frame.isDestroyed()) continue;
-    await frame.executeJavaScript(TEARDOWN_SCRIPT, true).catch(() => {});
+    await executeFrameScript(frame, TEARDOWN_SCRIPT).catch(() => null);
   }
 }
 
@@ -141,6 +276,11 @@ async function runPickElementSession(payload) {
   try {
     svc.releaseVisibleRunnerInputLock();
   } catch (_) {}
+  try {
+    if (typeof svc.prepareRunnerForElementPick === 'function') {
+      svc.prepareRunnerForElementPick();
+    }
+  } catch (_) {}
 
   const win = svc.window;
   if (!win || win.isDestroyed()) {
@@ -158,10 +298,23 @@ async function runPickElementSession(payload) {
     }
   } catch (_) {}
   try {
-    win.setIgnoreMouseEvents(false);
-    if (!win.isVisible()) win.show();
-    win.focus();
+    if (typeof svc.prepareRunnerForElementPick === 'function') {
+      svc.prepareRunnerForElementPick();
+    } else {
+      win.setIgnoreMouseEvents(false);
+      if (!win.isVisible()) win.show();
+      win.focus();
+    }
   } catch (_) {}
+
+  if (win.webContents && !win.webContents.isDestroyed() && win.webContents.isLoading()) {
+    await Promise.race([
+      new Promise((resolve) => {
+        win.webContents.once('did-stop-loading', resolve);
+      }),
+      new Promise((resolve) => setTimeout(resolve, 3000)),
+    ]);
+  }
 
   const pickGenToken = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
   /** @type {ReturnType<typeof setTimeout>[]} */
@@ -193,11 +346,18 @@ async function runPickElementSession(payload) {
   /** Cancels picker when Escape is pressed even if focus is inside an iframe. */
   let onBeforePickInput = null;
 
+  /** @type {ReturnType<typeof setInterval> | null} */
+  let attachWatch = null;
+
   const cleanupIpcAndClosed = () => {
     ipcMain.removeListener('e2e:pick-element:result', onResult);
     ipcMain.removeListener('e2e:pick-element:cancel', onCancel);
     while (reinjectTimers.length) {
       clearTimeout(reinjectTimers.pop());
+    }
+    if (attachWatch) {
+      clearInterval(attachWatch);
+      attachWatch = null;
     }
     if (win && !win.isDestroyed()) {
       const wc = win.webContents;
@@ -240,10 +400,14 @@ async function runPickElementSession(payload) {
         await teardownPickerInAllFrames(win.webContents);
       }
     } catch (_) {}
-    /** Hide after pick or Cancel so the runner does not stay open in front of the editor. */
+    /** Hide after pick or Cancel. Close on attach/prepare errors so a dead runner cannot linger. */
     if (win && !win.isDestroyed()) {
       try {
-        win.hide();
+        if (result && result.error) {
+          win.close();
+        } else {
+          win.hide();
+        }
       } catch (_) {}
     }
     if (resolveOuter) resolveOuter(result);
@@ -273,7 +437,24 @@ async function runPickElementSession(payload) {
     resolveOuter = resolve;
     void (async () => {
       try {
-        await injectPickerIntoAllFrames(win.webContents, pickGenToken);
+        const attached = await waitForPickerAttached(
+          win.webContents,
+          pickGenToken,
+          win,
+          () => settled,
+        );
+        if (settled) {
+          return;
+        }
+        if (!attached.ok) {
+          logError('e2e pick-element: picker did not attach', attached.reason || 'unknown');
+          await finish({
+            ok: false,
+            error:
+              'Could not attach the CSS selector picker on the page. The E2E window was closed so you are not stuck. Try Pick on page again.',
+          });
+          return;
+        }
       } catch (err) {
         logError('e2e pick-element: inject failed', err);
         await finish({
@@ -297,7 +478,13 @@ async function runPickElementSession(payload) {
       } catch (_) {}
       scheduleReinjectPickers(150);
       scheduleReinjectPickers(400);
-      scheduleReinjectPickers(1000);
+      attachWatch = setInterval(() => {
+        if (settled || !win || win.isDestroyed()) return;
+        void probeTopPicker(win.webContents, pickGenToken).then((probe) => {
+          if (settled || (probe && probe.ok)) return;
+          void injectPickerIntoAllFrames(win.webContents, pickGenToken).catch(() => {});
+        });
+      }, 1500);
       onBeforePickInput = (_e, input) => {
         if (input.type === 'keyDown' && input.key === 'Escape') {
           void finish({ ok: false, cancelled: true });

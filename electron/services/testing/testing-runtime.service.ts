@@ -211,6 +211,8 @@ export class TestingRuntimeService {
   e2eCancel(): void {
     this.flowExecutor.cancel();
     this.manualInputCoordinator.cancelActivePrompts();
+    this.e2eRunner.signalCancel();
+    void this.e2eRunner.closePickSession();
   }
 
   submitFlowManualInput(payload: unknown): { readonly ok: boolean; readonly error?: string } {
@@ -248,9 +250,18 @@ export class TestingRuntimeService {
           requestManualInput: (request) => this.manualInputCoordinator.prompt(request),
         });
         if (!prepared.ok) {
-          return { ok: false, error: prepared.message || 'Failed to prepare flow before pick.' };
+          await this.e2eRunner.closeRunner().catch(() => undefined);
+          const cancelled = /cancelled/i.test(prepared.message || '');
+          return cancelled
+            ? { ok: false, cancelled: true }
+            : { ok: false, error: prepared.message || 'Failed to prepare flow before pick.' };
         }
-        return this.e2eRunner.pickElement({ reuseSession: true });
+        try {
+          return await this.e2eRunner.pickElement({ reuseSession: true });
+        } catch (error: unknown) {
+          await this.e2eRunner.closeRunner().catch(() => undefined);
+          throw error;
+        }
       } finally {
         this.manualInputCoordinator.reset();
       }

@@ -95,7 +95,6 @@ export class TsFlowE2eStepPanelComponent {
 
     this.picking.set(true);
     try {
-      // Runs preceding REQUEST/CACHE/WAIT/E2E steps so {{otpPin}} etc. resolve, then opens the picker.
       const result = await api.e2ePickElement({
         flowId: flow.id,
         stepId,
@@ -114,6 +113,16 @@ export class TsFlowE2eStepPanelComponent {
       this.notifier.reportUnknown(error);
     } finally {
       this.picking.set(false);
+    }
+  }
+
+  /** Aborts flow prep or an attached picker so Pick on page cannot leave a stuck E2E window. */
+  protected async handleCancelPick(): Promise<void> {
+    const api = this.electron.bridge()?.testing;
+    try {
+      await api?.e2eCancel?.();
+    } catch {
+      // The in-flight pick invoke still settles in handlePickOnPage.
     }
   }
 }

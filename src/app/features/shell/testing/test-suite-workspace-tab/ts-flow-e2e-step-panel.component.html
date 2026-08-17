@@ -36,15 +36,23 @@
         />
       </tx-form-field>
       @if (fields().selectorPick) {
-        <tx-button
-          variant="secondary"
-          ariaLabel="Pick element on page"
-          [loading]="picking()"
-          loadingLabel="Picking…"
-          (click)="handlePickOnPage()"
-        >
-          Pick on page
-        </tx-button>
+        @if (picking()) {
+          <tx-button
+            variant="secondary"
+            ariaLabel="Cancel element pick"
+            (click)="handleCancelPick()"
+          >
+            Cancel pick
+          </tx-button>
+        } @else {
+          <tx-button
+            variant="secondary"
+            ariaLabel="Pick element on page"
+            (click)="handlePickOnPage()"
+          >
+            Pick on page
+          </tx-button>
+        }
       }
     </div>
   }

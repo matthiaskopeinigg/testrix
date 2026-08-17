@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.3-beta.7] - 2026-08-17
+
+### Fixed
+
+- Pick on page no longer leaves a stuck E2E window when the CSS selector overlay fails to attach; Cancel pick aborts prep or picking
+
 ## [1.0.3-beta.6] - 2026-08-16
 
 ### Added
@@ -330,7 +336,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Initial public beta of Testrix: local-first desktop API client (HTTP, WebSocket, collections, environments, test suites, load tests, mocks, and capture).
 
-[Unreleased]: https://github.com/matthiaskopeinigg/testrix/compare/v1.0.3-beta.6...HEAD
+[Unreleased]: https://github.com/matthiaskopeinigg/testrix/compare/v1.0.3-beta.7...HEAD
+[1.0.3-beta.7]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.3-beta.7
 [1.0.3-beta.6]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.3-beta.6
 [1.0.3-beta.5]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.3-beta.5
 [1.0.3-beta.4]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.3-beta.4

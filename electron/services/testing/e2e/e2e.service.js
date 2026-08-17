@@ -1411,6 +1411,29 @@ class E2eService {
     } catch (_) {}
   }
 
+  /** Drops any leftover input lock so Pick on page can receive clicks. */
+  resetVisibleRunnerInputLock() {
+    this.visibleRunnerInputLockCount = 0;
+    this.lastRunnerShowPreference = true;
+    this.clearVisibleRunnerInputLock();
+  }
+
+  /**
+   * Makes the runner visible and clickable for Pick on page (clears stealth and input lock).
+   */
+  prepareRunnerForElementPick() {
+    this.resetVisibleRunnerInputLock();
+    const win = this.window;
+    if (!win || win.isDestroyed()) return;
+    try {
+      clearE2eRunnerStealth(win);
+    } catch (_) {}
+    try {
+      if (!win.isVisible()) win.show();
+      win.focus();
+    } catch (_) {}
+  }
+
   /**
    * CSS `:hover` and mega-menus need real pointer delivery; stealth / input-lock modes block it.
    * @returns {() => void} call in `finally` to restore prior runner chrome
