@@ -108,6 +108,38 @@
             <tx-icon name="close" [size]="14" aria-hidden="true" />
           </tx-button>
         </div>
+        <div class="ts-flow-step-panel__cipher-row">
+          <tx-form-field label="Cipher" [controlId]="'ts-cache-cipher-' + $index">
+            <tx-dropdown
+              [controlId]="'ts-cache-cipher-' + $index"
+              [options]="cipherModeOptions"
+              [ngModel]="cipher(entry).mode"
+              (ngModelChange)="patchCipherMode($index, $event)"
+            />
+          </tx-form-field>
+          @if (showsCipherFields(entry)) {
+            <tx-form-field label="PEM key" [controlId]="'ts-cache-pem-' + $index">
+              <tx-variable-input
+                [controlId]="'ts-cache-pem-' + $index"
+                [catalog]="variableCatalog()"
+                [ngModel]="cipher(entry).pem"
+                (ngModelChange)="patchEntryCipher($index, { pem: $event })"
+                (environmentVariableClick)="environmentVariableClick.emit($event)"
+                [placeholder]="pemPlaceholder"
+              />
+            </tx-form-field>
+            <tx-form-field label="Private-key password" [controlId]="'ts-cache-pw-' + $index">
+              <tx-variable-input
+                [controlId]="'ts-cache-pw-' + $index"
+                [catalog]="variableCatalog()"
+                [ngModel]="cipher(entry).keyPassword"
+                (ngModelChange)="patchEntryCipher($index, { keyPassword: $event })"
+                (environmentVariableClick)="environmentVariableClick.emit($event)"
+                [placeholder]="keyPasswordPlaceholder"
+              />
+            </tx-form-field>
+          }
+        </div>
       </div>
     }
   </div>

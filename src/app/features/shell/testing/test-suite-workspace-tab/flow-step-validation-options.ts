@@ -44,8 +44,12 @@ export function validationReferenceHint(
     case 'HTTP_LISTENER':
     case 'HTTP_INTERCEPTOR':
       return 'Assert captured HTTP traffic from the referenced listener or interceptor step.';
+    case 'DATABASE':
+      return 'Assert the cached query result from the referenced database step.';
+    case 'CACHE':
+      return 'Assert the cached (or decrypted) value stored by the referenced CACHE step.';
     default:
-      return 'Pick a prior request, E2E, listener, or interceptor step to validate against.';
+      return 'Pick a prior request, E2E, listener, interceptor, database, or CACHE step to validate against.';
   }
 }
 

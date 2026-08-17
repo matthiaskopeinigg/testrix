@@ -50,6 +50,7 @@ export const HELP_WIKI_SECTION_IDS = [
   'dev-hash',
   'dev-jsonpath',
   'dev-cert-inspector',
+  'dev-rsa-oaep',
   'dev-request-diff',
   // History
   'history',

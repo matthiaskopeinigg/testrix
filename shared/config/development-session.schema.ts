@@ -190,6 +190,13 @@ export const certInspectorToolStateSchema = z.object({
   output: boundedText(64_000).default(''),
 });
 
+export const rsaOaepToolStateSchema = z.object({
+  mode: z.enum(['encode', 'decode']).default('encode'),
+  pem: boundedText(64_000).default(''),
+  input: boundedText(256_000).default(''),
+  output: boundedText(256_000).default(''),
+});
+
 export const requestDiffToolStateSchema = z.object({
   left: boundedText(256_000).default(''),
   right: boundedText(256_000).default(''),
@@ -208,6 +215,7 @@ export const developmentToolsRecordSchema = z.object({
   hash: hashToolStateSchema,
   jsonpath: jsonpathToolStateSchema,
   'cert-inspector': certInspectorToolStateSchema,
+  'rsa-oaep': rsaOaepToolStateSchema,
   'request-diff': requestDiffToolStateSchema,
 });
 
@@ -227,6 +235,7 @@ export type OpenApiToolState = z.infer<typeof openapiToolStateSchema>;
 export type HashToolState = z.infer<typeof hashToolStateSchema>;
 export type JsonpathToolState = z.infer<typeof jsonpathToolStateSchema>;
 export type CertInspectorToolState = z.infer<typeof certInspectorToolStateSchema>;
+export type RsaOaepToolState = z.infer<typeof rsaOaepToolStateSchema>;
 export type RequestDiffToolState = z.infer<typeof requestDiffToolStateSchema>;
 
 /** Default OpenAPI sample document (JSON). */
@@ -267,6 +276,7 @@ export function createDefaultWorkspaceDevelopment(): WorkspaceDevelopmentState {
       hash: {},
       jsonpath: {},
       'cert-inspector': {},
+      'rsa-oaep': {},
       'request-diff': {},
     },
   });

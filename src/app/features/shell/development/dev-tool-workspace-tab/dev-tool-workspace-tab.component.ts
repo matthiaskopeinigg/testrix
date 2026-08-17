@@ -10,6 +10,7 @@ import { OpenApiDevToolComponent } from '../tools/openapi-dev-tool.component';
 import { HashDevToolComponent } from '../tools/hash-dev-tool.component';
 import { JsonpathDevToolComponent } from '../tools/jsonpath-dev-tool.component';
 import { CertInspectorDevToolComponent } from '../tools/cert-inspector-dev-tool.component';
+import { RsaOaepDevToolComponent } from '../tools/rsa-oaep-dev-tool.component';
 import { RequestDiffDevToolComponent } from '../tools/request-diff-dev-tool.component';
 import { RegexDevToolComponent } from '../tools/regex-dev-tool.component';
 import { UrlDevToolComponent } from '../tools/url-dev-tool.component';
@@ -32,6 +33,7 @@ import { UuidGeneratorDevToolComponent } from '../tools/uuid-generator-dev-tool.
     HashDevToolComponent,
     JsonpathDevToolComponent,
     CertInspectorDevToolComponent,
+    RsaOaepDevToolComponent,
     RequestDiffDevToolComponent,
   ],
   templateUrl: './dev-tool-workspace-tab.component.html',

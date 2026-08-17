@@ -115,6 +115,17 @@ export const cacheStepEntrySourceSchema = z.union([
   z.literal(GENERATED_CACHE_SOURCE),
 ]);
 
+/** RSA OAEP wrap applied to a CACHE entry after the value is resolved. */
+export const CACHE_CIPHER_MODES = ['none', 'encrypt', 'decrypt'] as const;
+
+export const cacheStepCipherSchema = z.object({
+  mode: z.enum(CACHE_CIPHER_MODES).default('none'),
+  pem: z.string().default(''),
+  keyPassword: z.string().default(''),
+});
+
+export type CacheStepCipher = z.infer<typeof cacheStepCipherSchema>;
+
 export const cacheStepEntrySchema = z.object({
   variableName: z.string().default(''),
   source: cacheStepEntrySourceSchema,
@@ -125,6 +136,8 @@ export const cacheStepEntrySchema = z.object({
   extract: z.string().optional(),
   /** Template for `generated` entries (`$uuid`, `{{vars}}`). Ignored for extract sources. */
   value: z.string().optional(),
+  /** Optional RSA OAEP wrap applied after the value is resolved. */
+  cipher: cacheStepCipherSchema.optional(),
 });
 
 export type CacheStepEntry = z.infer<typeof cacheStepEntrySchema>;

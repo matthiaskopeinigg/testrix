@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.3-beta.8] - 2026-08-17
+
+### Added
+
+- RSA OAEP SHA-1 encrypt/decrypt Development Tool (Java `OAEPWithSHA-1AndMGF1Padding`) and Test Suite CACHE cipher option, with `{{placeholder}}` support in VALIDATION expected values
+
 ## [1.0.3-beta.7] - 2026-08-17
 
 ### Fixed
@@ -336,7 +342,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Initial public beta of Testrix: local-first desktop API client (HTTP, WebSocket, collections, environments, test suites, load tests, mocks, and capture).
 
-[Unreleased]: https://github.com/matthiaskopeinigg/testrix/compare/v1.0.3-beta.7...HEAD
+[Unreleased]: https://github.com/matthiaskopeinigg/testrix/compare/v1.0.3-beta.8...HEAD
+[1.0.3-beta.8]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.3-beta.8
 [1.0.3-beta.7]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.3-beta.7
 [1.0.3-beta.6]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.3-beta.6
 [1.0.3-beta.5]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.3-beta.5

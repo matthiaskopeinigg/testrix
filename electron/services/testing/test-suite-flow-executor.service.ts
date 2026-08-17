@@ -63,6 +63,7 @@ import type { FlowManualInputRequest, FlowManualInputResult } from '../../../sha
 import { migrateTestSuitesFile } from '../../../shared/testing/test-suite-migrate';
 import { TEST_SUITE_ROOT_ID } from '../../../shared/testing/test-suites.schema';
 
+import { decryptBase64ToUtf8, encryptUtf8ToBase64 } from '../crypto/rsa-oaep-cipher';
 import type { ConfigFileService } from '../config/config-file.service';
 import { databaseQueryService } from '../database/database-query.service';
 import { executeHttpRequest } from '../http/http-request-executor.service';
@@ -344,7 +345,7 @@ export class TestSuiteFlowExecutor {
         await this.executeWait(step);
         return;
       case 'VALIDATION':
-        await this.executeValidation(step, flow, ctx.showBrowser);
+        await this.executeValidation(step, flow, ctx);
         return;
       case 'CACHE':
         await this.executeCache(step, flow, ctx);
@@ -1151,7 +1152,7 @@ export class TestSuiteFlowExecutor {
   private async executeValidation(
     step: TestSuiteFlowStep,
     flow: TestSuiteFlow,
-    showBrowser: boolean,
+    ctx: FlowStepContext,
   ): Promise<void> {
     const cfg = step.config as ValidationStepConfig;
     const refId = cfg.refStepId;
@@ -1173,13 +1174,22 @@ export class TestSuiteFlowExecutor {
       refStep,
       refId,
       rules,
-      showBrowser,
+      ctx.showBrowser,
     );
 
     for (const rule of rules) {
       const actual = resolveValidationActualValue(capture, rule);
-      if (!evaluateValidationRule(rule, actual)) {
-        throw new Error(validationFailureMessage(rule, actual));
+      const expected = this.resolveFlowTemplate(
+        rule.expected ?? '',
+        flow,
+        ctx.environments,
+        ctx.environmentIdOverride,
+        ctx.ancestorFolders,
+        ctx.environmentVariableKeys,
+      );
+      const resolved = { ...rule, expected };
+      if (!evaluateValidationRule(resolved, actual)) {
+        throw new Error(validationFailureMessage(resolved, actual));
       }
     }
   }
@@ -1193,12 +1203,20 @@ export class TestSuiteFlowExecutor {
     const refId = cfg.refStepId;
     const rawEntries = cfg.entries ?? [];
     const extractEntries = rawEntries.filter((entry) => !isGeneratedCacheEntry(entry));
+    const written: Record<string, string> = {};
+
+    const store = (variableName: string, value: string, entry: CacheStepEntry): void => {
+      const next = this.applyCacheEntryCipher(entry, value, variableName, flow, ctx);
+      this.flowVariables.set(variableName, next);
+      written[variableName] = next;
+    };
 
     if (!refId) {
       if (extractEntries.length > 0) {
         throw new Error('Cache step needs a reference step to extract values.');
       }
-      this.applyGeneratedCacheEntries(rawEntries, flow, ctx);
+      this.applyGeneratedCacheEntries(rawEntries, flow, ctx, store);
+      this.storeCacheStepCapture(step.id, written);
       return;
     }
 
@@ -1224,7 +1242,7 @@ export class TestSuiteFlowExecutor {
       }
 
       if (isGeneratedCacheEntry(entry)) {
-        this.flowVariables.set(variableName, this.resolveGeneratedCacheValue(entry, flow, ctx));
+        store(variableName, this.resolveGeneratedCacheValue(entry, flow, ctx), entry);
         continue;
       }
 
@@ -1237,8 +1255,10 @@ export class TestSuiteFlowExecutor {
         throw new Error(cacheEntryExtractFailureMessage(entry, variableName));
       }
 
-      this.flowVariables.set(variableName, value);
+      store(variableName, value, entry);
     }
+
+    this.storeCacheStepCapture(step.id, written);
   }
 
   /** Resolves `$uuid` / `{{vars}}` in generated cache entries and stores them as flow variables. */
@@ -1246,6 +1266,7 @@ export class TestSuiteFlowExecutor {
     entries: readonly CacheStepEntry[],
     flow: TestSuiteFlow,
     ctx: FlowStepContext,
+    store: (variableName: string, value: string, entry: CacheStepEntry) => void,
   ): void {
     for (const entry of entries) {
       if (!isGeneratedCacheEntry(entry)) {
@@ -1255,8 +1276,63 @@ export class TestSuiteFlowExecutor {
       if (!variableName) {
         continue;
       }
-      this.flowVariables.set(variableName, this.resolveGeneratedCacheValue(entry, flow, ctx));
+      store(variableName, this.resolveGeneratedCacheValue(entry, flow, ctx), entry);
     }
+  }
+
+  /**
+   * Wraps a resolved CACHE value with RSA OAEP when the entry cipher mode is encrypt or decrypt.
+   */
+  private applyCacheEntryCipher(
+    entry: CacheStepEntry,
+    value: string,
+    variableName: string,
+    flow: TestSuiteFlow,
+    ctx: FlowStepContext,
+  ): string {
+    const mode = entry.cipher?.mode ?? 'none';
+    if (mode === 'none') {
+      return value;
+    }
+    const pem = this.resolveFlowTemplate(
+      entry.cipher?.pem ?? '',
+      flow,
+      ctx.environments,
+      ctx.environmentIdOverride,
+      ctx.ancestorFolders,
+      ctx.environmentVariableKeys,
+    );
+    const keyPassword = this.resolveFlowTemplate(
+      entry.cipher?.keyPassword ?? '',
+      flow,
+      ctx.environments,
+      ctx.environmentIdOverride,
+      ctx.ancestorFolders,
+      ctx.environmentVariableKeys,
+    );
+    if (!pem.trim()) {
+      throw new Error(`CACHE cipher for "{{${variableName}}}" needs a PEM key.`);
+    }
+    try {
+      if (mode === 'encrypt') {
+        return encryptUtf8ToBase64({ pem, keyPassword, plaintext: value });
+      }
+      return decryptBase64ToUtf8({ pem, keyPassword, ciphertext: value });
+    } catch (error: unknown) {
+      const detail = error instanceof Error ? error.message : String(error);
+      throw new Error(`CACHE cipher for "{{${variableName}}}" failed: ${detail}`);
+    }
+  }
+
+  /** Stores CACHE results as a text capture so VALIDATION can reference this step. */
+  private storeCacheStepCapture(stepId: string, written: Readonly<Record<string, string>>): void {
+    const names = Object.keys(written);
+    if (names.length === 0) {
+      return;
+    }
+    const text =
+      names.length === 1 ? (written[names[0]] ?? '') : JSON.stringify(written, null, 2);
+    this.captures.set(stepId, buildDatabaseStepCapture(text));
   }
 
   /** Resolves a generated cache template against the current flow variable context. */

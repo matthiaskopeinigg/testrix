@@ -9,6 +9,7 @@ export const FLOW_VALIDATION_REFERENCE_STEP_TYPES = [
   'HTTP_LISTENER',
   'HTTP_INTERCEPTOR',
   'DATABASE',
+  'CACHE',
 ] as const satisfies readonly TestSuiteStepType[];
 
 export type FlowValidationReferenceStepType = (typeof FLOW_VALIDATION_REFERENCE_STEP_TYPES)[number];

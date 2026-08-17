@@ -92,6 +92,13 @@ export const FLOW_STEP_VALIDATION_OPERATOR_OPTIONS: readonly TxDropdownOption[] 
   { value: 'is_not_empty', label: 'Is not empty' },
 ];
 
+/** CACHE entry RSA OAEP cipher mode. */
+export const FLOW_STEP_CACHE_CIPHER_OPTIONS: readonly TxDropdownOption[] = [
+  { value: 'none', label: 'None' },
+  { value: 'encrypt', label: 'Encrypt (RSA OAEP)' },
+  { value: 'decrypt', label: 'Decrypt (RSA OAEP)' },
+];
+
 /** Validation rule extract kind options. */
 export const FLOW_STEP_VALIDATION_EXTRACT_KIND_OPTIONS: readonly TxDropdownOption[] = [
   { value: 'jsonpath', label: 'JSONPath' },

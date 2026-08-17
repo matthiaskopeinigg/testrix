@@ -1,0 +1,57 @@
+<app-dev-tool-layout toolId="rsa-oaep">
+  <app-dev-tool-toolbar devToolToolbar>
+    <div leading>
+      <app-dev-tool-mode-chip [active]="state().mode === 'encode'" (selected)="setMode('encode')">
+        Encrypt
+      </app-dev-tool-mode-chip>
+      <app-dev-tool-mode-chip [active]="state().mode === 'decode'" (selected)="setMode('decode')">
+        Decrypt
+      </app-dev-tool-mode-chip>
+    </div>
+    <div trailing>
+      <tx-button variant="primary" [disabled]="busy()" (click)="handleRun()">
+        {{ state().mode === 'encode' ? 'Encrypt' : 'Decrypt' }}
+      </tx-button>
+      <tx-button variant="secondary" (click)="handleCopy()">Copy</tx-button>
+      <tx-button variant="secondary" (click)="handleClearSecrets()">Clear secrets</tx-button>
+    </div>
+  </app-dev-tool-toolbar>
+
+  @if (error(); as message) {
+    <tx-banner variant="error" [title]="message" />
+  }
+
+  <app-dev-tool-stat-strip>
+    <tx-tag>{{ algorithmLabel }}</tx-tag>
+    <tx-tag>Base64 ciphertext</tx-tag>
+    <tx-tag>Password not saved</tx-tag>
+  </app-dev-tool-stat-strip>
+
+  <tx-form-field label="PEM (public or private key)">
+    <tx-textarea
+      [rows]="8"
+      [monospace]="true"
+      [ngModel]="state().pem"
+      (ngModelChange)="state.update((s) => ({ ...s, pem: $event }))"
+    />
+  </tx-form-field>
+
+  @if (showKeyPassword()) {
+    <tx-form-field label="Private-key password (memory only)">
+      <tx-input type="password" [ngModel]="keyPassword()" (ngModelChange)="keyPassword.set($event)" />
+    </tx-form-field>
+  }
+
+  <tx-form-field [label]="state().mode === 'encode' ? 'Plaintext' : 'Ciphertext (Base64)'">
+    <tx-textarea
+      [rows]="6"
+      [monospace]="true"
+      [ngModel]="state().input"
+      (ngModelChange)="state.update((s) => ({ ...s, input: $event }))"
+    />
+  </tx-form-field>
+
+  <tx-form-field [label]="state().mode === 'encode' ? 'Ciphertext (Base64)' : 'Plaintext'">
+    <tx-textarea [rows]="6" [monospace]="true" [ngModel]="state().output" [readOnly]="true" />
+  </tx-form-field>
+</app-dev-tool-layout>

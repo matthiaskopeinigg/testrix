@@ -8,6 +8,7 @@ import { LoggingChannels } from '../ipc/channels/logging.channels';
 import { UpdaterChannels } from '../ipc/channels/updater.channels';
 import { ShellChannels } from '../ipc/channels/shell.channels';
 import { HttpChannels } from '../ipc/channels/http.channels';
+import { CryptoChannels } from '../ipc/channels/crypto.channels';
 import { OAuthChannels } from '../ipc/channels/oauth.channels';
 import { CookieChannels } from '../ipc/channels/cookie.channels';
 import { TestingChannels } from '../ipc/channels/testing.channels';
@@ -170,6 +171,10 @@ const api: ElectronAPI = {
   http: {
     send: (payload) => ipcRenderer.invoke(HttpChannels.send, payload),
     cancel: (requestId) => ipcRenderer.invoke(HttpChannels.cancel, requestId),
+  },
+  crypto: {
+    encrypt: (payload) => ipcRenderer.invoke(CryptoChannels.encrypt, payload),
+    decrypt: (payload) => ipcRenderer.invoke(CryptoChannels.decrypt, payload),
   },
   oauth: {
     ensureToken: (payload) => ipcRenderer.invoke(OAuthChannels.ensureToken, payload),

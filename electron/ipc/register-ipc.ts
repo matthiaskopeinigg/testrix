@@ -7,6 +7,7 @@ import { registerLoggingHandlers } from './handlers/logging.handler';
 import { registerUpdaterHandlers } from './handlers/updater.handler';
 import { registerShellHandlers } from './handlers/shell.handler';
 import { registerHttpHandlers } from './handlers/http.handler';
+import { registerCryptoHandlers } from './handlers/crypto.handler';
 import { registerOAuthHandlers } from './handlers/oauth.handler';
 import { registerCookieHandlers } from './handlers/cookie.handler';
 import { registerWindowControlHandlers } from './handlers/window-control.handler';
@@ -45,6 +46,7 @@ export function registerAllIpcHandlers(
   registerUpdaterHandlers(ipc);
   registerShellHandlers(ipc);
   registerHttpHandlers(ipc);
+  registerCryptoHandlers(ipc);
   registerOAuthHandlers(ipc, {
     getProfileDir: configDeps.getConfigDir,
     getMainWindow,

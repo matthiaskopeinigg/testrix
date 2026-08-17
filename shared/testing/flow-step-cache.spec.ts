@@ -105,6 +105,16 @@ describe('flow-step-cache', () => {
     ).toBeUndefined();
   });
 
+  it('defaults cipher mode to none on legacy CACHE entries', () => {
+    const parsed = cacheStepEntrySchema.parse({
+      variableName: 'encryptedPw',
+      source: 'generated',
+      value: '{{plainPw}}',
+    });
+    expect(parsed.cipher?.mode ?? 'none').toBe('none');
+    expect(createDefaultCacheStepConfig().entries[0]?.cipher?.mode ?? 'none').toBe('none');
+  });
+
   it('reads the generated template from the value field', () => {
     expect(
       generatedCacheEntryTemplate({

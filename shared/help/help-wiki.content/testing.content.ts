@@ -63,8 +63,8 @@ export const HELP_WIKI_TESTING_SECTIONS: readonly HelpWikiSection[] = [
         type: 'list',
         items: [
           'REQUEST — send an HTTP request from the step config.',
-          'VALIDATION — assert on prior step response (status, body, headers).',
-          'CACHE — generate a value ($uuid, templates) or extract from a prior step into {{variables}} for later E2E and DATABASE steps.',
+          'VALIDATION — assert on a prior step (status, body, headers, cached value). Expected can include {{placeholders}} from the environment or earlier CACHE steps.',
+          'CACHE — generate a value ($uuid, templates) or extract from a prior step into {{variables}} for later E2E and DATABASE steps. Each entry can encrypt or decrypt with RSA OAEP SHA-1 (PEM + private-key password, typically {{rsaPrivateKey}} and {{pemPassword}}) before storing.',
           'DATABASE — write SQL/Redis inline, or select a saved query from the Database sidebar.',
           'E2E — browser automation screenshot/step (when configured). Pick on page runs preceding steps, then attaches a CSS selector overlay. If the overlay cannot attach, the E2E window closes instead of staying stuck. Cancel pick aborts prep or picking.',
           'HTTP_LISTENER — wait for an incoming HTTP callback.',
@@ -73,6 +73,11 @@ export const HELP_WIKI_TESTING_SECTIONS: readonly HelpWikiSection[] = [
           'MANUAL — set a flow variable or manual checkpoint.',
           'TRIGGER — run another flow, or every descendant flow under a folder (fail-fast). Nested runs inherit variables and captures; cycles are rejected. Reuse E2E browser session (on by default) keeps the same window, cookies, and login for later steps. Triggered flows with E2E steps show the runner when Show E2E is enabled on this flow or the target.',
         ],
+      },
+      {
+        type: 'note',
+        title: 'RSA OAEP CACHE cipher',
+        text: 'Java services that use Cipher.getInstance("RSA/ECB/OAEPWithSHA-1AndMGF1Padding") interoperate with Testrix RSA OAEP (standard Base64, UTF-8 plaintext). Encrypt a generated or extracted password before an HTTP send, or decrypt a response field and validate it against {{plainPw}}.',
       },
     ],
   }),

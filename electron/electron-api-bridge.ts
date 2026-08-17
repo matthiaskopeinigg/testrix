@@ -178,6 +178,18 @@ export interface ElectronAPI {
     send: (payload: SendHttpRequestPayload) => Promise<OutgoingHttpResponse>;
     cancel: (requestId: string) => Promise<void>;
   };
+  crypto: {
+    encrypt: (payload: {
+      readonly pem: string;
+      readonly keyPassword?: string;
+      readonly input: string;
+    }) => Promise<{ readonly output: string }>;
+    decrypt: (payload: {
+      readonly pem: string;
+      readonly keyPassword?: string;
+      readonly input: string;
+    }) => Promise<{ readonly output: string }>;
+  };
   oauth: {
     ensureToken: (payload: { readonly ownerId: string; readonly auth: unknown }) => Promise<string>;
     clearToken: (ownerId: string) => Promise<void>;

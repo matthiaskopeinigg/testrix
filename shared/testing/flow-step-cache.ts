@@ -107,6 +107,8 @@ export function cacheEntryExtractFailureMessage(
   return `Could not cache a value for flow variable "{{${variableName}}}".`;
 }
 
+const DEFAULT_CACHE_CIPHER = { mode: 'none' as const, pem: '', keyPassword: '' };
+
 /** Default generated-value cache entry (no reference step required). */
 export function defaultGeneratedCacheEntry(): CacheStepEntry {
   return {
@@ -116,6 +118,7 @@ export function defaultGeneratedCacheEntry(): CacheStepEntry {
     value: '',
     extractKind: 'full',
     extract: '',
+    cipher: { ...DEFAULT_CACHE_CIPHER },
   };
 }
 
@@ -136,6 +139,7 @@ export function defaultCacheEntryForReferenceStepType(
         value: '',
         extractKind: 'jsonpath',
         extract: '',
+        cipher: { ...DEFAULT_CACHE_CIPHER },
       };
     case 'DATABASE':
       return {
@@ -145,6 +149,7 @@ export function defaultCacheEntryForReferenceStepType(
         value: '',
         extractKind: 'jsonpath',
         extract: '',
+        cipher: { ...DEFAULT_CACHE_CIPHER },
       };
     case 'E2E':
       return {
@@ -154,6 +159,7 @@ export function defaultCacheEntryForReferenceStepType(
         value: '',
         extractKind: 'full',
         extract: '',
+        cipher: { ...DEFAULT_CACHE_CIPHER },
       };
     default:
       return defaultGeneratedCacheEntry();

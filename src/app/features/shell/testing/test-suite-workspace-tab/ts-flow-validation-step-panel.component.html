@@ -72,10 +72,13 @@
               />
             </tx-form-field>
             <tx-form-field label="Expected" [controlId]="'ts-val-exp-' + $index">
-              <tx-input
+              <tx-variable-input
                 [controlId]="'ts-val-exp-' + $index"
+                [catalog]="variableCatalog()"
                 [ngModel]="rule.expected"
                 (ngModelChange)="patchRule($index, { expected: $event })"
+                (environmentVariableClick)="environmentVariableClick.emit($event)"
+                [placeholder]="expectedPlaceholder"
               />
             </tx-form-field>
             <tx-button variant="secondary" size="icon" ariaLabel="Remove rule" (pressed)="handleRemoveRule($index)">

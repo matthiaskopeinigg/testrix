@@ -41,6 +41,7 @@ export function validationSourcesForReferenceStepType(
     case 'HTTP_INTERCEPTOR':
       return HTTP_RESPONSE_VALIDATION_SOURCES;
     case 'DATABASE':
+    case 'CACHE':
       return DATABASE_VALIDATION_SOURCES;
     default:
       return [];
@@ -68,6 +69,7 @@ export function defaultValidationRuleForReferenceStepType(
         expected: '200',
       };
     case 'DATABASE':
+    case 'CACHE':
       return {
         source: 'cached_value',
         expression: '',
@@ -278,6 +280,6 @@ function truncateForMessage(value: string, max = 120): string {
 
 export function assertReferenceStepCanValidate(stepType: TestSuiteStepType | undefined): void {
   if (!isFlowValidationReferenceStepType(stepType)) {
-    throw new Error('Reference step must be a request, E2E, HTTP listener, or HTTP interceptor step.');
+    throw new Error('Reference step must be a request, E2E, HTTP, database, or CACHE step.');
   }
 }

@@ -14,6 +14,7 @@ export const DEVELOPMENT_TOOL_IDS = [
   'hash',
   'jsonpath',
   'cert-inspector',
+  'rsa-oaep',
   'request-diff',
 ] as const;
 

@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
+import type { DynamicVariableCatalogItem } from '@shared/dynamic-variables';
 import {
   defaultValidationRuleForReferenceStepType,
   findFlowStepById,
@@ -18,6 +19,7 @@ import { TxDropdownComponent } from '@app/shared/components/forms/tx-dropdown/tx
 import { TxFormFieldComponent } from '@app/shared/components/forms/tx-form-field/tx-form-field.component';
 import { TxInputComponent } from '@app/shared/components/forms/tx-input/tx-input.component';
 import { TxSuggestInputComponent } from '@app/shared/components/forms/tx-suggest-input/tx-suggest-input.component';
+import { TxVariableInputComponent } from '@app/shared/components/editors/tx-variable-input/tx-variable-input.component';
 
 import { FLOW_STEP_VALIDATION_OPERATOR_OPTIONS } from './flow-step-editor-options';
 import {
@@ -35,6 +37,7 @@ import {
     TxFormFieldComponent,
     TxInputComponent,
     TxSuggestInputComponent,
+    TxVariableInputComponent,
     TxDropdownComponent,
     TxButtonComponent,
     TxIconComponent,
@@ -47,10 +50,13 @@ export class TsFlowValidationStepPanelComponent {
   readonly config = input<Record<string, unknown>>({});
   readonly flow = input<TestSuiteFlow | null>(null);
   readonly refStepOptions = input<readonly TxDropdownOption[]>([]);
+  readonly variableCatalog = input<readonly DynamicVariableCatalogItem[]>([]);
 
   readonly configChange = output<Record<string, unknown>>();
+  readonly environmentVariableClick = output<{ readonly key: string }>();
 
   protected readonly operatorOptions = FLOW_STEP_VALIDATION_OPERATOR_OPTIONS;
+  protected readonly expectedPlaceholder = '200 or {{plainPw}}';
 
   protected readonly refStepType = computed((): TestSuiteStepType | null => {
     const flow = this.flow();

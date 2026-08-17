@@ -12,7 +12,7 @@ import {
   type TestSuiteFlow,
   type TestSuiteStepType,
 } from '@shared/testing';
-import type { CacheStepConfig, CacheStepEntry } from '@shared/testing/test-suite-steps.schema';
+import type { CacheStepConfig, CacheStepEntry, CacheStepCipher } from '@shared/testing/test-suite-steps.schema';
 import type { TxDropdownOption } from '@app/shared/components/forms/tx-dropdown/tx-dropdown.types';
 
 import { TxButtonComponent } from '@app/shared/components/forms/tx-button/tx-button.component';
@@ -23,7 +23,7 @@ import { TxInputComponent } from '@app/shared/components/forms/tx-input/tx-input
 import { TxSuggestInputComponent } from '@app/shared/components/forms/tx-suggest-input/tx-suggest-input.component';
 import { TxVariableInputComponent } from '@app/shared/components/editors/tx-variable-input/tx-variable-input.component';
 
-import { FLOW_STEP_VALIDATION_EXTRACT_KIND_OPTIONS } from './flow-step-editor-options';
+import { FLOW_STEP_VALIDATION_EXTRACT_KIND_OPTIONS, FLOW_STEP_CACHE_CIPHER_OPTIONS } from './flow-step-editor-options';
 import {
   buildCacheRefStepOptions,
   buildCacheSourceOptions,
@@ -60,6 +60,9 @@ export class TsFlowCacheStepPanelComponent {
   readonly environmentVariableClick = output<{ readonly key: string }>();
 
   protected readonly extractKindOptions = FLOW_STEP_VALIDATION_EXTRACT_KIND_OPTIONS;
+  protected readonly cipherModeOptions = FLOW_STEP_CACHE_CIPHER_OPTIONS;
+  protected readonly pemPlaceholder = '{{rsaPrivateKey}}';
+  protected readonly keyPasswordPlaceholder = '{{pemPassword}}';
 
   protected readonly cacheRefOptions = computed(() => buildCacheRefStepOptions(this.refStepOptions()));
 
@@ -101,6 +104,26 @@ export class TsFlowCacheStepPanelComponent {
     const entries = [...this.entries()];
     entries[index] = { ...entries[index], ...patch };
     this.patch({ entries });
+  }
+
+  protected cipher(entry: CacheStepEntry): CacheStepCipher {
+    return entry.cipher ?? { mode: 'none', pem: '', keyPassword: '' };
+  }
+
+  protected patchEntryCipher(index: number, patch: Partial<CacheStepCipher>): void {
+    const current = this.cipher(this.entries()[index]!);
+    this.patchEntry(index, { cipher: { ...current, ...patch } });
+  }
+
+  protected patchCipherMode(index: number, mode: string): void {
+    if (mode !== 'none' && mode !== 'encrypt' && mode !== 'decrypt') {
+      return;
+    }
+    this.patchEntryCipher(index, { mode });
+  }
+
+  protected showsCipherFields(entry: CacheStepEntry): boolean {
+    return this.cipher(entry).mode !== 'none';
   }
 
   protected isGenerated(entry: CacheStepEntry): boolean {

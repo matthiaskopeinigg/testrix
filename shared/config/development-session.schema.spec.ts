@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { DEVELOPMENT_TOOL_IDS } from './development-tool.schema';
 import {
   createDefaultWorkspaceDevelopment,
   mergeWorkspaceDevelopment,
@@ -9,7 +10,7 @@ import {
 describe('development-session.schema', () => {
   it('creates defaults for all tools', () => {
     const state = createDefaultWorkspaceDevelopment();
-    expect(Object.keys(state.tools)).toHaveLength(9);
+    expect(Object.keys(state.tools)).toHaveLength(DEVELOPMENT_TOOL_IDS.length);
     expect(workspaceDevelopmentSchema.safeParse(state).success).toBe(true);
     expect(state.tools.jwt.profiles.length).toBeGreaterThan(0);
     expect(state.tools.jwt.mode).toBe('decode');

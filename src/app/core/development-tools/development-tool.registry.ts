@@ -77,6 +77,12 @@ export const DEVELOPMENT_TOOLS: readonly DevelopmentToolDefinition[] = [
     icon: 'shield',
   },
   {
+    id: 'rsa-oaep',
+    label: 'RSA OAEP Cipher',
+    description: 'Encrypt and decrypt with RSA OAEP SHA-1 (Java-compatible)',
+    icon: 'lock',
+  },
+  {
     id: 'request-diff',
     label: 'Request / Response Diff',
     description: 'Side-by-side text diff for payloads',

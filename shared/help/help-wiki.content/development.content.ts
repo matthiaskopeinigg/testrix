@@ -180,6 +180,25 @@ export const HELP_WIKI_DEVELOPMENT_SECTIONS: readonly HelpWikiSection[] = [
     ],
   }),
   wikiSection({
+    id: 'dev-rsa-oaep',
+    groupId: 'development',
+    label: 'RSA OAEP',
+    icon: 'lock',
+    title: 'RSA OAEP Cipher',
+    description: 'Encrypt and decrypt with Java-compatible RSA OAEP SHA-1.',
+    blocks: [
+      {
+        type: 'paragraph',
+        text: 'Encrypt UTF-8 plaintext to standard Base64, or decrypt Base64 ciphertext, using RSA/ECB/OAEPWithSHA-1AndMGF1Padding. Paste a public PEM to encrypt, or a password-protected private PEM to decrypt (and to encrypt by deriving the public key).',
+      },
+      {
+        type: 'note',
+        title: 'Private-key password',
+        text: 'The private-key password stays in memory only and is never written to the session. Test Suite CACHE steps can use the same cipher with {{rsaPrivateKey}} and {{pemPassword}} from the environment.',
+      },
+    ],
+  }),
+  wikiSection({
     id: 'dev-request-diff',
     groupId: 'development',
     label: 'Request Diff',

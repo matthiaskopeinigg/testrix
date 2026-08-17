@@ -66,7 +66,9 @@
             [config]="s.config"
             [flow]="flow()"
             [refStepOptions]="refStepOptions()"
+            [variableCatalog]="variableCatalog()"
             (configChange)="patchConfig($event)"
+            (environmentVariableClick)="handlePlaceholderClick($event)"
           />
         }
         @case ('CACHE') {

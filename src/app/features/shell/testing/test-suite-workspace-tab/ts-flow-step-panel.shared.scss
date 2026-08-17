@@ -133,6 +133,13 @@
   }
 }
 
+.ts-flow-step-panel__cipher-row {
+  display: grid;
+  grid-template-columns: minmax(10rem, 12rem) minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: 0.5rem;
+  align-items: end;
+}
+
 .ts-flow-step-panel__hint-inline {
   margin: 0;
   font-size: 0.8125rem;
@@ -143,7 +150,8 @@
   .ts-flow-step-panel__rule-main,
   .ts-flow-step-panel__rule-main--cache,
   .ts-flow-step-panel__rule-main--cache-generated,
-  .ts-flow-step-panel__rule-main--cache-generated-only {
+  .ts-flow-step-panel__rule-main--cache-generated-only,
+  .ts-flow-step-panel__cipher-row {
     grid-template-columns: 1fr;
   }
 }

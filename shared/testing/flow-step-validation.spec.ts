@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { resolveTemplateVariables } from '../dynamic-variables/template-variables';
 import { buildHttpResponseStepCapture } from './flow-step-capture';
 import {
   evaluateValidationRule,
@@ -121,8 +122,9 @@ describe('flow-step-validation', () => {
     )).toBe(true);
   });
 
-  it('maps DATABASE reference steps to cached_value source', () => {
+  it('maps DATABASE and CACHE reference steps to cached_value source', () => {
     expect(validationSourcesForReferenceStepType('DATABASE')).toEqual(['cached_value']);
+    expect(validationSourcesForReferenceStepType('CACHE')).toEqual(['cached_value']);
   });
 
   it('evaluates cached_value from database capture', () => {
@@ -142,5 +144,21 @@ describe('flow-step-validation', () => {
       { source: 'cached_value', expression: '', operator: 'contains', expected: '"id":1' },
       actual,
     )).toBe(true);
+  });
+
+  it('compares expected after template resolution so {{placeholders}} can match', () => {
+    const unresolved = evaluateValidationRule(
+      { source: 'cached_value', expression: '', operator: 'equals', expected: '{{plainPw}}' },
+      's3cret',
+    );
+    expect(unresolved).toBe(false);
+
+    const expected = resolveTemplateVariables('{{plainPw}}', { environment: { plainPw: 's3cret' } });
+    expect(
+      evaluateValidationRule(
+        { source: 'cached_value', expression: '', operator: 'equals', expected },
+        's3cret',
+      ),
+    ).toBe(true);
   });
 });
