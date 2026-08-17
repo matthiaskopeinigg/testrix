@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Tag to pack and publish (e.g. v1.0.0-beta.1)'
+        description: 'Tag to pack into a GitHub Release draft (e.g. v1.0.4)'
         required: true
         type: string
 
@@ -92,7 +92,7 @@ jobs:
           if-no-files-found: error
 
   publish-release:
-    name: Publish GitHub Release
+    name: Create GitHub Release draft
     needs: [pack-windows, pack-linux, pack-macos]
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -107,7 +107,7 @@ jobs:
           merge-multiple: true
       - name: Extract changelog notes
         run: node scripts/changelog-release-notes.mjs --tag "${{ env.RELEASE_TAG }}" --out release-notes.md
-      - name: Publish GitHub Release
+      - name: Create GitHub Release draft
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE_TAG: ${{ env.RELEASE_TAG }}

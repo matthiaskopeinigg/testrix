@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  formatDisplayVersion,
   isPrereleaseVersion,
   isReleaseVersionNewer,
   normalizeReleaseTag,
@@ -10,6 +11,12 @@ import {
 describe('release-version', () => {
   it('normalizes release tags', () => {
     expect(normalizeReleaseTag('v0.9.0-beta.2')).toBe('0.9.0-beta.2');
+  });
+
+  it('formats display versions with a leading v', () => {
+    expect(formatDisplayVersion('1.0.3-beta.9')).toBe('v1.0.3-beta.9');
+    expect(formatDisplayVersion('v1.0.3')).toBe('v1.0.3');
+    expect(formatDisplayVersion('')).toBe('');
   });
 
   it('detects prerelease versions', () => {

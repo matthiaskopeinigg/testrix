@@ -18,9 +18,11 @@ Pushing a `v*` tag runs [.github/workflows/release.yml](../.github/workflows/rel
 
 1. **Test gate** — unit tests + Electron typecheck
 2. **Pack** Windows / Linux / macOS installers
-3. **Publish** a GitHub Release with artifacts. The job creates a **draft**,
-   uploads Windows / macOS / Linux installers (with retries), and only then
-   publishes. Release notes are the matching `CHANGELOG.md` section.
+3. **Create a GitHub Release draft** with artifacts. The job stays **draft**
+   after Windows / macOS / Linux installers are attached. Titles use the tag
+   (`v1.0.3-beta.9`), not `Testrix v…`. Notes are the matching `CHANGELOG.md`
+   section without the version heading or date. Publish from the GitHub UI when
+   you want the release public.
 
 Tags containing `-` (for example `beta`) are marked **prerelease**. Stable tags without a hyphen sign the Windows installer when `WIN_CSC_LINK` and `WIN_CSC_KEY_PASSWORD` are set; otherwise the pack is unsigned (same as a beta).
 

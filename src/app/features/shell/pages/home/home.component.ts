@@ -15,6 +15,7 @@ import { CollectionsService } from '@app/core/collections/collections.service';
 import { ImportExportFlowService } from '@app/core/import-export/import-export-flow.service';
 import { HelpPopupService } from '@app/core/ui/help-popup.service';
 import { looksLikeCurl } from '@shared/http/parse-curl';
+import { formatDisplayVersion } from '@shared/updater/release-version';
 import {
   createHttpKeyValueRow,
   WELCOME_COLLECTION_TEMPLATES,
@@ -181,7 +182,8 @@ export class HomeComponent {
   protected readonly appVersion = computed(() => {
     const bridge = window.testrix;
     const live = typeof bridge?.getVersions === 'function' ? bridge.getVersions() : bridge?.versions;
-    return live?.app?.trim() || live?.installedApp?.trim() || '0.1.0';
+    const raw = live?.app?.trim() || live?.installedApp?.trim() || '0.1.0';
+    return formatDisplayVersion(raw);
   });
 
   protected readonly welcomeTemplates = WELCOME_COLLECTION_TEMPLATES;

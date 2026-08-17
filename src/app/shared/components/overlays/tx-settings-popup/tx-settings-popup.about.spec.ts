@@ -87,7 +87,7 @@ describe('TxSettingsPopupComponent about section', () => {
     });
 
     const text = fixture.nativeElement.textContent ?? '';
-    expect(text).toContain('Version 1.0.0-beta.1');
+    expect(text).toContain('v1.0.0-beta.1');
     expect(text).toContain('Application');
     expect(text).toContain('1.0.0-beta.1');
     expect(text).toContain('no Stable GitHub release');
@@ -109,7 +109,7 @@ describe('TxSettingsPopupComponent about section', () => {
       config: { getConfigDir: () => Promise.resolve('C:\\\\testrix') },
     });
 
-    expect(fixture.nativeElement.textContent).toContain('Version 1.0.0-beta.1');
+    expect(fixture.nativeElement.textContent).toContain('v1.0.0-beta.1');
     expect(fixture.nativeElement.textContent).not.toContain('9.9.9-sim');
   });
 

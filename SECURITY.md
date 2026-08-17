@@ -4,7 +4,7 @@
 
 | Version | Supported |
 | --- | --- |
-| `1.0.3` (latest stable) | Yes |
+| `1.0.4` (latest stable) | Yes |
 | `1.0.x-beta` prereleases | Best effort |
 
 ## Reporting a vulnerability

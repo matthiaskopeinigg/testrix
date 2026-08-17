@@ -15,6 +15,10 @@ const CHANGELOG = `# Changelog
 
 - Dropdown labels include folders
 
+## [1.0.4]
+
+First stable.
+
 ## [1.0.1-beta.7] - 2026-08-15
 
 ### Fixed
@@ -35,11 +39,9 @@ describe('extractChangelogReleaseNotes', () => {
     expect(changelogVersionFromTag('1.0.1-beta.8')).toBe('1.0.1-beta.8');
   });
 
-  it('returns the matching Keep a Changelog section', () => {
+  it('returns the matching Keep a Changelog section without the version heading', () => {
     expect(extractChangelogReleaseNotes(CHANGELOG, 'v1.0.1-beta.8')).toBe(
-      `## [1.0.1-beta.8] - 2026-08-15
-
-### Changed
+      `### Changed
 
 - Dropdown labels include folders
 `,
@@ -48,11 +50,13 @@ describe('extractChangelogReleaseNotes', () => {
 
   it('stops before markdown link references on the last section', () => {
     expect(extractChangelogReleaseNotes(CHANGELOG, 'v1.0.0-beta.1')).toBe(
-      `## [1.0.0-beta.1] - 2026-08-14
-
-Initial public beta.
+      `Initial public beta.
 `,
     );
+  });
+
+  it('returns notes for a heading with no date', () => {
+    expect(extractChangelogReleaseNotes(CHANGELOG, 'v1.0.4')).toBe(`First stable.\n`);
   });
 
   it('throws when the version is missing', () => {

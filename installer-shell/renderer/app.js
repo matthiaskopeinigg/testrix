@@ -237,7 +237,7 @@ async function init() {
     window.setupApi.getPlatform(),
   ]);
   if (ver) {
-    $('meta-version').textContent = `Version ${ver}`;
+    $('meta-version').textContent = `v${String(ver).replace(/^v/i, '')}`;
   }
   renderHelpContent(platform);
 

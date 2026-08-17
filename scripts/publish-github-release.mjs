@@ -1,6 +1,6 @@
 /**
- * Publishes a GitHub Release only after Windows, macOS, and Linux installers
- * are attached. Creates a draft first so a failed asset upload cannot go public.
+ * Attaches Windows, macOS, and Linux installers to a GitHub Release **draft**.
+ * Does not publish. Create the public release from the GitHub UI when ready.
  *
  * Env:
  *   RELEASE_TAG  GitHub tag (e.g. v1.0.2-beta.1)
@@ -81,6 +81,19 @@ function uploadWithRetry(tag, filePath) {
   throw lastError ?? new Error(`Could not upload ${filePath}`);
 }
 
+/**
+ * Returns a GitHub release title from a tag (`v1.0.3-beta.9`).
+ *
+ * @param {string} tag GitHub tag or semver.
+ */
+function githubReleaseTitle(tag) {
+  const trimmed = tag.trim();
+  if (!trimmed) {
+    return trimmed;
+  }
+  return /^v/i.test(trimmed) ? trimmed : `v${trimmed}`;
+}
+
 function main() {
   const tag = (process.env.RELEASE_TAG ?? '').trim();
   if (!tag) {
@@ -109,7 +122,7 @@ function main() {
       'create',
       tag,
       '--title',
-      `Testrix ${tag}`,
+      githubReleaseTitle(tag),
       '--notes-file',
       notesPath,
       '--draft',
@@ -120,7 +133,16 @@ function main() {
     gh(createArgs);
   } else {
     console.log(`Release ${tag} already exists; attaching artifacts`);
-    const editArgs = ['release', 'edit', tag, '--notes-file', notesPath, '--draft'];
+    const editArgs = [
+      'release',
+      'edit',
+      tag,
+      '--title',
+      githubReleaseTitle(tag),
+      '--notes-file',
+      notesPath,
+      '--draft',
+    ];
     if (prerelease) {
       editArgs.push('--prerelease');
     }
@@ -137,8 +159,7 @@ function main() {
     throw new Error(`Release ${tag} is missing assets: ${missing.join(', ')}`);
   }
 
-  gh(['release', 'edit', tag, '--draft=false']);
-  console.log(`Published ${tag} with ${REQUIRED_ASSETS.join(', ')}`);
+  console.log(`Draft ${githubReleaseTitle(tag)} is ready with ${REQUIRED_ASSETS.join(', ')}`);
 }
 
 if (process.argv[1] && basename(process.argv[1]) === 'publish-github-release.mjs') {

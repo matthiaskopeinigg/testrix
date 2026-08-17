@@ -57,7 +57,17 @@ export function extractChangelogReleaseNotes(markdown, tag) {
   if (nextLinkRef >= 0) {
     endOffset = Math.min(endOffset, nextLinkRef);
   }
-  return markdown.slice(from, from + match[0].length + endOffset).trim() + '\n';
+  const section = markdown.slice(from, from + match[0].length + endOffset).trim();
+  return stripChangelogVersionHeading(section) + '\n';
+}
+
+/**
+ * Removes `## [1.0.3-beta.9]` / `## [1.0.3-beta.9] - 2026-08-17` from release notes.
+ *
+ * @param {string} section Changelog section including the version heading.
+ */
+export function stripChangelogVersionHeading(section) {
+  return section.replace(/^## \[[^\]]+\](?:\s+-\s+\d{4}-\d{2}-\d{2})?\s*/, '').trim();
 }
 
 function listChangelogVersions(markdown) {

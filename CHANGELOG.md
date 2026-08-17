@@ -7,11 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Fixed
-
-- Windows stable pack publishes an unsigned installer when Authenticode secrets are not configured, instead of failing the release
-
-## [1.0.3] - 2026-08-17
+## [1.0.4]
 
 First stable release of Testrix. This is the product as of the end of the `1.0.0`–`1.0.3` beta series: a local-first desktop API client (HTTP, WebSocket, collections, environments, test suites, load tests, mocks, and capture) with a Database workspace, team Git sync, and in-app updates.
 
@@ -58,7 +54,9 @@ First stable release of Testrix. This is the product as of the end of the `1.0.0
 - Test Suite Run log pretty-prints HTTP Request JSON responses
 - Silent auto-update uses an in-app overlay until Setup is ready, then the app exits (no empty “Updating Testrix” window)
 - Installer GitHub assets are named `Testrix-Setup` (hyphen)
-- GitHub release notes come from the matching CHANGELOG.md section
+- GitHub release notes come from the matching CHANGELOG.md section (without the version heading or date)
+- GitHub Release titles use the tag (`v1.0.4`) instead of `Testrix v…`
+- GitHub Actions attaches installers to a **draft** and does not publish
 - Team Git sync pauses while a local workspace profile is active; local profiles are not auto-imported or pushed to the team repo
 - Creating a team branch starts from `master` or `main` and keeps the current team profile files on the new branch
 
@@ -78,33 +76,37 @@ First stable release of Testrix. This is the product as of the end of the `1.0.0
 - Connection editor no longer clears username and password when you open the tab
 - In-app updates pick the highest semver on the channel; a beta install no longer follows a stale Stable channel
 - Windows silent installer extracts the payload in chunks and skips re-registering shortcuts on update
-- GitHub Release publish stays draft until Windows, macOS, and Linux installers are attached
+- Windows stable pack publishes an unsigned installer when Authenticode secrets are not configured, instead of failing the release
 
-## [1.0.3-beta.10] - 2026-08-17
+## [1.0.3]
+
+Tagged in git. GitHub installers were not published (Authenticode secrets were missing).
+
+## [1.0.3-beta.10]
 
 ### Fixed
 
 - RSA OAEP decrypt loads Java-style Base64-wrapped OpenSSL encrypted PKCS#1 PEMs (`BEGIN RSA PRIVATE KEY` / `Proc-Type: 4,ENCRYPTED`) and accepts a Base64-encoded private-key password
 
-## [1.0.3-beta.9] - 2026-08-17
+## [1.0.3-beta.9]
 
 ### Fixed
 
 - RSA OAEP decrypt accepts a headerless PKCS#8 private key body (Base64, URL-safe Base64, or hex) without BEGIN/END lines
 
-## [1.0.3-beta.8] - 2026-08-17
+## [1.0.3-beta.8]
 
 ### Added
 
 - RSA OAEP SHA-1 encrypt/decrypt Development Tool (Java `OAEPWithSHA-1AndMGF1Padding`) and Test Suite CACHE cipher option, with `{{placeholder}}` support in VALIDATION expected values
 
-## [1.0.3-beta.7] - 2026-08-17
+## [1.0.3-beta.7]
 
 ### Fixed
 
 - Pick on page no longer leaves a stuck E2E window when the CSS selector overlay fails to attach; Cancel pick aborts prep or picking
 
-## [1.0.3-beta.6] - 2026-08-16
+## [1.0.3-beta.6]
 
 ### Added
 
@@ -114,20 +116,20 @@ First stable release of Testrix. This is the product as of the end of the `1.0.0
 
 - Triggering a flow or folder that has E2E steps shows the E2E window when Show E2E is enabled
 
-## [1.0.3-beta.5] - 2026-08-16
+## [1.0.3-beta.5]
 
 ### Fixed
 
 - Test Suite E2E Assert URL and Wait for URL use the expected URL from the step editor instead of an empty CSS selector
 
-## [1.0.3-beta.4] - 2026-08-16
+## [1.0.3-beta.4]
 
 ### Fixed
 
 - Team Git sync pauses while a local workspace profile is active, and local profiles are no longer auto-imported or pushed to the team repo
 - Creating a team branch starts from `master` or `main` and keeps the current team profile files on the new branch
 
-## [1.0.3-beta.3] - 2026-08-16
+## [1.0.3-beta.3]
 
 ### Changed
 
@@ -139,7 +141,7 @@ First stable release of Testrix. This is the product as of the end of the `1.0.0
 - Test Suite `{{placeholder}}` tokens from a TRIGGER'd flow highlight as known variables, and clicking one opens the producing step (or the environment variable)
 - Switching workspace profiles reloads Test Suite, saved queries, and other profile-local testing data instead of keeping the previous profile’s list
 
-## [1.0.3-beta.2] - 2026-08-16
+## [1.0.3-beta.2]
 
 ### Changed
 
@@ -149,7 +151,7 @@ First stable release of Testrix. This is the product as of the end of the `1.0.0
 
 - Reordering or nesting Test Suite sidebar flows and folders no longer drops nested items or wipes flow steps
 
-## [1.0.3-beta.1] - 2026-08-16
+## [1.0.3-beta.1]
 
 ### Changed
 
@@ -161,7 +163,7 @@ First stable release of Testrix. This is the product as of the end of the `1.0.0
 - Test Suite manual REQUEST steps send the configured body (and query params) instead of an empty body
 - Header and query-param autocomplete no longer remounts the input after the first character
 
-## [1.0.2-beta.9] - 2026-08-16
+## [1.0.2-beta.9]
 
 ### Added
 
@@ -171,13 +173,13 @@ First stable release of Testrix. This is the product as of the end of the `1.0.0
 
 - Test Suite, Regression, Load Test, Mock Server, Capture, Interceptor, and Monitors chrome no longer allows selecting labels and tree text (inputs, editors, and run/error output stay selectable)
 
-## [1.0.2-beta.8] - 2026-08-16
+## [1.0.2-beta.8]
 
 ### Fixed
 
 - Unit tests compile again: the silent-update handshake helper no longer lives under `shared/` (Angular was typechecking Node `fs`)
 
-## [1.0.2-beta.7] - 2026-08-16
+## [1.0.2-beta.7]
 
 ### Added
 
@@ -195,13 +197,13 @@ First stable release of Testrix. This is the product as of the end of the `1.0.0
 - Update check on a beta install no longer follows a stale Stable channel (there is no GitHub “latest” stable release)
 - `npm run test:updater` silent-downgrades to the previous published beta (GitHub builds ignore the simulated-version env var)
 
-## [1.0.2-beta.6] - 2026-08-16
+## [1.0.2-beta.6]
 
 ### Fixed
 
 - Pick on page for E2E browser steps no longer fails with “Something went wrong” (`ipcMain` was missing in the picker session)
 
-## [1.0.2-beta.5] - 2026-08-16
+## [1.0.2-beta.5]
 
 ### Fixed
 
@@ -209,13 +211,13 @@ First stable release of Testrix. This is the product as of the end of the `1.0.0
 - Dragging a later connection above an earlier one (for example PostgreSQL above Oracle) now reorders instead of always dropping after
 - Connection editor no longer clears username and password when you open the tab; blank fields keep the stored secrets on Save and Test
 
-## [1.0.2-beta.4] - 2026-08-16
+## [1.0.2-beta.4]
 
 ### Fixed
 
 - Electron typecheck for Oracle query column names (`v1.0.2-beta.3` failed the release test gate)
 
-## [1.0.2-beta.3] - 2026-08-16
+## [1.0.2-beta.3]
 
 ### Added
 
@@ -237,7 +239,7 @@ First stable release of Testrix. This is the product as of the end of the `1.0.0
 - Execute chooser highlights the statement at the caret (including after `;`); Esc restores the caret
 - Connection picker no longer shows expand chevrons on leaf connections
 
-## [1.0.2-beta.2] - 2026-08-16
+## [1.0.2-beta.2]
 
 ### Added
 
@@ -248,13 +250,13 @@ First stable release of Testrix. This is the product as of the end of the `1.0.0
 
 - Connection context menu no longer includes Open data (still available on tables and views)
 
-## [1.0.2-beta.1] - 2026-08-16
+## [1.0.2-beta.1]
 
 ### Fixed
 
 - GitHub Release publish stays draft until Windows, macOS, and Linux installers are attached (`v1.0.1-beta.9` went public without `Testrix-Setup.exe`)
 
-## [1.0.1-beta.9] - 2026-08-16
+## [1.0.1-beta.9]
 
 ### Added
 
@@ -273,38 +275,38 @@ First stable release of Testrix. This is the product as of the end of the `1.0.0
 - In-app silent updates exit the running app more reliably so the installer can replace files
 - Windows silent installer extracts the payload in chunks and skips re-registering shortcuts on update
 
-## [1.0.1-beta.8] - 2026-08-15
+## [1.0.1-beta.8]
 
 ### Changed
 
 - Database query (and test-suite) connection dropdown shows folder path prefixes (`Prod/Primary (oracle)`) so identically named connections in different folders are distinguishable
 
-## [1.0.1-beta.7] - 2026-08-15
+## [1.0.1-beta.7]
 
 ### Fixed
 
 - Oracle service-name connections match DataGrip JDBC more closely (TNS `SERVICE_NAME` instead of Easy Connect), with clearer ORA-12505 / ORA-12514 guidance and JDBC URL paste support
 
-## [1.0.1-beta.6] - 2026-08-15
+## [1.0.1-beta.6]
 
 ### Fixed
 
 - SQL query autocomplete no longer freezes the app: broke a catalog prefetch → revision → ghost refresh loop, debounced schema loads, and capped tables/columns fed into suggestions
 
-## [1.0.1-beta.5] - 2026-08-15
+## [1.0.1-beta.5]
 
 ### Fixed
 
 - SQL `FROM` / `JOIN` autocomplete no longer freezes on Oracle (and similar) databases with hundreds of schemas — bare `FROM` no longer dumps every schema name; suggestions stay capped and prefix-filtered
 
-## [1.0.1-beta.4] - 2026-08-15
+## [1.0.1-beta.4]
 
 ### Fixed
 
 - Schema picker: clearer space between the action buttons and the schema list
 - SQL schema / table autocomplete no longer freezes after opening Schemas… on databases with hundreds of schemas (suggestions stay limited to selected schemas)
 
-## [1.0.1-beta.3] - 2026-08-15
+## [1.0.1-beta.3]
 
 ### Fixed
 
@@ -316,34 +318,34 @@ First stable release of Testrix. This is the product as of the end of the `1.0.0
 - Opening a connection no longer loads every schema up front (avoids freezes on databases with hundreds of schemas); the full list loads only when you open Schemas…
 - SQL query editor shows gray inline suggestions (like the WHERE filter) for schemas, tables, and columns, ranked by context (FROM, `schema.`, `table.`)
 
-## [1.0.1-beta.2] - 2026-08-15
+## [1.0.1-beta.2]
 
 ### Fixed
 
 - Oracle queries no longer fail with ORA-00911 when SQL ends with a semicolon
 - Oracle schemas and tables appear in the sidebar (uppercase driver column aliases are mapped correctly)
 
-## [1.0.1-beta.1] - 2026-08-15
+## [1.0.1-beta.1]
 
 ### Fixed
 
 - Oracle connections that work in DataGrip but fail in Thin mode with password verifier 0x939: load Instant Client (Thick mode) when it is on PATH or set on the connection, and support SID URLs
 - In-app updates pick the highest semver beta instead of GitHub's list order
 
-## [1.0.0-beta.9] - 2026-08-15
+## [1.0.0-beta.9]
 
 ### Added
 
 - Database connections for Oracle, MariaDB, CockroachDB, ClickHouse, and MongoDB
 
-## [1.0.0-beta.8] - 2026-08-15
+## [1.0.0-beta.8]
 
 ### Changed
 
 - Table data cells truncate long values to a fixed max width (full text on hover)
 - Cell editors follow the column type: booleans are true/false only, integers accept digits, decimals accept one point, and json must parse
 
-## [1.0.0-beta.7] - 2026-08-15
+## [1.0.0-beta.7]
 
 ### Changed
 
@@ -360,7 +362,7 @@ First stable release of Testrix. This is the product as of the end of the `1.0.0
 - Typed WHERE text turning gray while a suggestion remainder is shown
 - Table data grid clipping horizontal scroll
 
-## [1.0.0-beta.6] - 2026-08-15
+## [1.0.0-beta.6]
 
 ### Changed
 
@@ -370,7 +372,7 @@ First stable release of Testrix. This is the product as of the end of the `1.0.0
 
 - Certificate inspector SHA-256 fingerprint in unit tests (Node Web Crypto)
 
-## [1.0.0-beta.5] - 2026-08-15
+## [1.0.0-beta.5]
 
 ### Added
 
@@ -393,7 +395,7 @@ First stable release of Testrix. This is the product as of the end of the `1.0.0
 - Flow step editor shows the type chip once (no repeated type headings)
 - Split view moves the focused tab instead of cloning it; empty panes stay until closed
 
-## [1.0.0-beta.4] - 2026-08-15
+## [1.0.0-beta.4]
 
 ### Added
 
@@ -405,13 +407,13 @@ First stable release of Testrix. This is the product as of the end of the `1.0.0
 - Load-test results panel stays collapsed until a run starts
 - Manual load-test requests now send the configured body instead of an empty payload
 
-## [1.0.0-beta.3] - 2026-08-14
+## [1.0.0-beta.3]
 
 ### Fixed
 
 - Installer pack on Linux, macOS, and Windows (`afterPack` hook must live inside `installer-shell/`)
 
-## [1.0.0-beta.2] - 2026-08-14
+## [1.0.0-beta.2]
 
 ### Fixed
 
@@ -423,11 +425,12 @@ First stable release of Testrix. This is the product as of the end of the `1.0.0
 
 - Patch and security dependency updates (Electron 42.9, sharp 0.35, GitHub Actions)
 
-## [1.0.0-beta.1] - 2026-08-14
+## [1.0.0-beta.1]
 
 Initial public beta of Testrix: local-first desktop API client (HTTP, WebSocket, collections, environments, test suites, load tests, mocks, and capture).
 
-[Unreleased]: https://github.com/matthiaskopeinigg/testrix/compare/v1.0.3...HEAD
+[Unreleased]: https://github.com/matthiaskopeinigg/testrix/compare/v1.0.4...HEAD
+[1.0.4]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.4
 [1.0.3]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.3
 [1.0.3-beta.10]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.3-beta.10
 [1.0.3-beta.9]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.3-beta.9

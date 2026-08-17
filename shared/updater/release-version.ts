@@ -10,6 +10,16 @@ export function normalizeReleaseTag(tag: string): string {
 }
 
 /**
+ * Formats an app or release version for UI and GitHub titles (`v1.0.3-beta.9`).
+ *
+ * @param version Raw semver, with or without a leading `v`.
+ */
+export function formatDisplayVersion(version: string): string {
+  const normalized = normalizeReleaseTag(version);
+  return normalized ? `v${normalized}` : '';
+}
+
+/**
  * Returns true when `version` is a semver prerelease (e.g. `0.9.0-beta.2`).
  *
  * @param version Normalized or tagged app/release version.
