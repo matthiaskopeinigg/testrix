@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Windows stable pack publishes an unsigned installer when Authenticode secrets are not configured, instead of failing the release
+
 ## [1.0.3] - 2026-08-17
 
 First stable release of Testrix. This is the product as of the end of the `1.0.0`–`1.0.3` beta series: a local-first desktop API client (HTTP, WebSocket, collections, environments, test suites, load tests, mocks, and capture) with a Database workspace, team Git sync, and in-app updates.

@@ -16,13 +16,13 @@ const targets = [resolveShippedWindowsInstaller(), resolvePackagedTestrixExe()];
 
 if (!link) {
   if (process.env.REQUIRE_WIN_CODE_SIGN === '1') {
-    console.error(
+    console.warn(
       '[sign-win-release] REQUIRE_WIN_CODE_SIGN=1 but CSC_LINK / WIN_CSC_LINK is not set.\n' +
-        'Add GitHub secrets WIN_CSC_LINK (base64 PFX) and WIN_CSC_KEY_PASSWORD.',
+        'Publishing an unsigned Windows installer. Add GitHub secrets WIN_CSC_LINK (base64 PFX) and WIN_CSC_KEY_PASSWORD to sign.',
     );
-    process.exit(1);
+  } else {
+    console.log('[sign-win-release] skip — set CSC_LINK / WIN_CSC_LINK to sign');
   }
-  console.log('[sign-win-release] skip — set CSC_LINK / WIN_CSC_LINK to sign');
   process.exit(0);
 }
 

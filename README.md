@@ -29,7 +29,7 @@ Download the latest installer from [GitHub Releases](https://github.com/matthias
 | macOS | `Testrix-Setup.dmg` |
 | Linux | `Testrix-Setup.AppImage` |
 
-Prerelease tags (for example `v1.0.0-beta.*`) publish unsigned or lighter Windows builds; stable tags (`vX.Y.Z` without a hyphen) may include signed Windows installers when secrets are configured.
+Prerelease tags (for example `v1.0.0-beta.*`) publish unsigned Windows builds. Stable tags (`vX.Y.Z` without a hyphen) sign the Windows installer when `WIN_CSC_LINK` is configured; otherwise they ship unsigned as well.
 
 ## Develop
 

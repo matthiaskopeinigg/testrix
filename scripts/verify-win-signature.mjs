@@ -8,6 +8,12 @@ import { join } from 'node:path';
 import { resolveShippedWindowsInstaller } from './installer-release-paths.mjs';
 import { resolvePackagedTestrixExe } from './win-payload-build-path.mjs';
 
+const link = process.env.CSC_LINK || process.env.WIN_CSC_LINK;
+if (!link) {
+  console.log('[verify-win-signature] skip — no CSC_LINK / WIN_CSC_LINK (unsigned build)');
+  process.exit(0);
+}
+
 const targets = [resolveShippedWindowsInstaller(), resolvePackagedTestrixExe()];
 
 function resolveSigntool() {

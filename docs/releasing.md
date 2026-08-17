@@ -22,7 +22,7 @@ Pushing a `v*` tag runs [.github/workflows/release.yml](../.github/workflows/rel
    uploads Windows / macOS / Linux installers (with retries), and only then
    publishes. Release notes are the matching `CHANGELOG.md` section.
 
-Tags containing `-` (for example `beta`) are marked **prerelease**. Stable tags without a hyphen may require Windows code-signing secrets (`WIN_CSC_LINK`, `WIN_CSC_KEY_PASSWORD`).
+Tags containing `-` (for example `beta`) are marked **prerelease**. Stable tags without a hyphen sign the Windows installer when `WIN_CSC_LINK` and `WIN_CSC_KEY_PASSWORD` are set; otherwise the pack is unsigned (same as a beta).
 
 Retry a pack from the Actions UI with **workflow_dispatch** and the tag name (for example `v1.0.0-beta.1`). CI also supports **workflow_dispatch**.
 
