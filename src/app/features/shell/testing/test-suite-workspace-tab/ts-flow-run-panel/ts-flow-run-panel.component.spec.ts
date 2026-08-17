@@ -85,6 +85,50 @@ describe('TsFlowRunPanelComponent', () => {
     expect(handler).toHaveBeenCalledWith('step-wait');
   });
 
+  it('shows nested TRIGGER children when the child flow failed', () => {
+    const trigger = createFlowStep('TRIGGER', 'Run Flow-2');
+    trigger.id = 'trigger-2';
+    trigger.lastRunStatus = 'failed';
+    trigger.error = 'Flow-2 / Set password: element not found';
+    trigger.lastRunChildren = [
+      {
+        kind: 'step',
+        id: 'e2e-1',
+        flowId: 'flow-2',
+        flowName: 'Flow-2',
+        name: 'Set password',
+        stepType: 'E2E',
+        status: 'failed',
+        error: 'element not found',
+      },
+    ];
+
+    fixture.componentRef.setInput('flow', {
+      id: 'flow-3',
+      name: 'Flow-3',
+      nodes: [trigger],
+      lastRunAt: '2026-01-01T00:00:00.000Z',
+      lastRunStatus: 'failed' as const,
+    });
+    fixture.componentRef.setInput('liveStepStatuses', { 'trigger-2': 'failed' });
+    fixture.componentRef.setInput('liveStepErrors', {
+      'trigger-2': 'Flow-2 / Set password: element not found',
+    });
+    fixture.detectChanges();
+
+    const names = [...fixture.nativeElement.querySelectorAll('.ts-flow-run-panel__row-name')].map(
+      (el: HTMLElement) => el.textContent?.trim(),
+    );
+    expect(names).toEqual(['Run Flow-2', 'Set password']);
+
+    fixture.nativeElement.querySelector('.ts-flow-run-panel__chevron')?.click();
+    fixture.detectChanges();
+    const collapsed = [...fixture.nativeElement.querySelectorAll('.ts-flow-run-panel__row-name')].map(
+      (el: HTMLElement) => el.textContent?.trim(),
+    );
+    expect(collapsed).toEqual(['Run Flow-2']);
+  });
+
   it('shows progress bar while running', () => {
     const step = createFlowStep('WAIT', 'Wait');
     step.id = 'step-wait';

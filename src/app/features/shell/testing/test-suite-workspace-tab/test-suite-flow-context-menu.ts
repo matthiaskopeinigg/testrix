@@ -8,6 +8,7 @@ export function buildEmptyFlowStepContextMenu(): readonly TxContextMenuItem[] {
 /** Context menu for a flow step row. */
 export function buildFlowStepContextMenu(): readonly TxContextMenuItem[] {
   return [
+    { id: 'add-step', label: 'Add step…', icon: 'plus' },
     { id: 'clone', label: 'Clone', icon: 'copy' },
     { id: 'delete', label: 'Delete step', icon: 'trash', danger: true },
   ];

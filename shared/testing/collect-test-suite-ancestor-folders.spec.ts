@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { findTestSuiteFlowInTree } from './collect-test-suite-ancestor-folders';
+import { findTestSuiteFlowInTree, collectFlowsInTree } from './collect-test-suite-ancestor-folders';
 import type { TestSuiteTreeItem } from './test-suites.schema';
 
 const tree: readonly TestSuiteTreeItem[] = [
@@ -46,5 +46,16 @@ describe('findTestSuiteFlowInTree', () => {
       'child-folder',
     ]);
     expect(location?.ancestorFolders[1]?.environmentId).toBe('env-child');
+  });
+});
+
+describe('collectFlowsInTree', () => {
+  it('returns flows in preorder including nested folders', () => {
+    const flows = collectFlowsInTree(tree);
+    expect(flows.map((flow) => flow.id)).toEqual(['flow-1']);
+  });
+
+  it('returns an empty list when the tree has no flows', () => {
+    expect(collectFlowsInTree([])).toEqual([]);
   });
 });

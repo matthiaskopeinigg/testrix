@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { flowStepRunCaptureSchema } from './flow-step-capture';
+import { flowRunNestedChildrenSchema } from './flow-run-child-log.schema';
 import { testSuiteStepStatusSchema } from './test-suite-steps.schema';
 
 const boundedText = (max: number) => z.string().max(max);
@@ -86,6 +87,7 @@ export const regressionFlowResultSchema = z.object({
   stepDurations: z.record(z.string(), z.number()).optional(),
   stepErrors: z.record(z.string(), boundedText(4_000)).optional(),
   stepCaptures: z.record(z.string(), flowStepRunCaptureSchema).optional(),
+  nestedChildren: flowRunNestedChildrenSchema.optional(),
   validationFailures: z.array(regressionValidationFailureSchema).default([]),
   passedStepCount: z.number().int().min(0).default(0),
   failedStepCount: z.number().int().min(0).default(0),

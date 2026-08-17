@@ -45,6 +45,7 @@ export const HELP_WIKI_TESTING_SECTIONS: readonly HelpWikiSection[] = [
         items: [
           'Create folders and flows from the Test Suite sidebar.',
           'Flow tabs use Overview (metadata, settings) and Steps (step tree, editor, run log) sections.',
+          'Right-click a step to add a new step after it, clone it, or delete it. Right-click empty space in the step tree to add at the end.',
           'Section layout (Sidebar vs Tabs) is under Settings → Test Suite → Editor layout.',
           'Run the flow to execute steps sequentially with pass/fail status.',
         ],
@@ -71,7 +72,7 @@ export const HELP_WIKI_TESTING_SECTIONS: readonly HelpWikiSection[] = [
           'HTTP_INTERCEPTOR — apply intercept rules during the step.',
           'WAIT — pause for a duration.',
           'MANUAL — set a flow variable or manual checkpoint.',
-          'TRIGGER — run another flow, or every descendant flow under a folder (fail-fast). Nested runs inherit variables and captures; cycles are rejected. Reuse E2E browser session (on by default) keeps the same window, cookies, and login for later steps. Triggered flows with E2E steps show the runner when Show E2E is enabled on this flow or the target.',
+          'TRIGGER — run another flow, or every descendant flow under a folder (fail-fast). Nested runs inherit variables and captures, so a later target can use {{vars}} cached by an earlier target in the same parent. The run log lists triggered steps under the TRIGGER row (expand/collapse). Cycles are rejected. Reuse E2E browser session (on by default) keeps the same window, cookies, and login for later steps. Triggered flows with E2E steps show the runner when Show E2E is enabled on this flow or the target.',
         ],
       },
       {

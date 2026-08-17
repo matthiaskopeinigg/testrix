@@ -56,4 +56,24 @@ describe('WorkspaceSidebarPanelShellComponent', () => {
 
     expect(emitted).toEqual([false]);
   });
+
+  it('retargets toolbar padding right-clicks onto the projected panel body', () => {
+    const fixture = TestBed.createComponent(WorkspaceSidebarPanelShellComponent);
+    fixture.detectChanges();
+
+    const body = document.createElement('div');
+    body.className = 'collections-sidebar-panel__body';
+    const shellBody = fixture.nativeElement.querySelector('.workspace-panel-shell__body') as HTMLElement;
+    shellBody.appendChild(body);
+
+    const handler = vi.fn();
+    body.addEventListener('contextmenu', handler);
+
+    const toolbar = fixture.nativeElement.querySelector(
+      '.workspace-panel-shell__toolbar-wrap',
+    ) as HTMLElement;
+    toolbar.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 8, clientY: 8 }));
+
+    expect(handler).toHaveBeenCalledTimes(1);
+  });
 });

@@ -516,4 +516,32 @@ describe('buildOutgoingRequest', () => {
     });
     expect(forcedNone?.outgoing.environmentId).toBeNull();
   });
+
+  it('resolves collection URL templates from run-scope shared variables', () => {
+    const requestNodes: CollectionNode[] = [
+      {
+        id: 'req-shared',
+        label: 'Signup',
+        kind: 'request',
+        method: 'POST',
+        url: 'https://api.example.com/users/{{email}}',
+        settings: createDefaultCollectionRequestSettings(),
+      },
+    ];
+
+    const result = buildOutgoingRequest({
+      requestId: 'req-shared',
+      nodes: requestNodes,
+      http: createDefaultHttpSettings(),
+      environments: createDefaultEnvironments(),
+      appVersion: '1.0.0',
+      runScope: {
+        runId: 'flow-step-1',
+        sharedVariables: { email: 'cached@example.com' },
+      },
+    });
+
+    expect(result?.outgoing.url).toBe('https://api.example.com/users/cached@example.com');
+    expect(result?.outgoing.variableContext['email']).toBe('cached@example.com');
+  });
 });

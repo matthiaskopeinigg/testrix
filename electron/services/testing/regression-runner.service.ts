@@ -17,6 +17,7 @@ import {
   REGRESSION_RUN_SAMPLES_MAX,
   TEST_SUITE_ROOT_ID,
   resolveRegressionFlowIds,
+  stripFlowRunChildLogCaptures,
   type RegressionFlowResult,
   type RegressionFlowTimelineEntry,
   type RegressionProfile,
@@ -96,6 +97,14 @@ function buildFlowResult(
     stepDurations: result.stepDurations,
     stepErrors: includeErrors ? result.stepErrors : undefined,
     stepCaptures: includeCaptures ? result.stepCaptures : undefined,
+    nestedChildren: includeCaptures
+      ? result.nestedChildren
+      : Object.fromEntries(
+          Object.entries(result.nestedChildren).map(([id, children]) => [
+            id,
+            stripFlowRunChildLogCaptures(children),
+          ]),
+        ),
     passedStepCount,
     failedStepCount,
     skippedStepCount,

@@ -2,6 +2,7 @@ export * from './json-path';
 export * from './flow-manual-input.schema';
 export * from './flow-request-body';
 export * from './flow-run-log';
+export * from './flow-run-child-log.schema';
 export * from './flow-step-clone';
 export * from './flow-step-capture';
 export * from './flow-step-validation';

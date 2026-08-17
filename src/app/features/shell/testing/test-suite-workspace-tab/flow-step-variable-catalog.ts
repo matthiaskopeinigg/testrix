@@ -6,9 +6,11 @@ import {
 } from '@shared/config';
 import { DYNAMIC_VARIABLES, type DynamicVariableCatalogItem } from '@shared/dynamic-variables';
 import {
+  collectFlowsInTree,
   flattenEnabledFlowSteps,
   resolveTriggerTargetFlows,
   type TestSuiteFlow,
+  type TestSuiteFlowLocation,
   type TestSuiteFlowStep,
   type TestSuiteTreeItem,
 } from '@shared/testing';
@@ -20,7 +22,9 @@ import { FLOW_STEP_GUIDED_TITLES } from './flow-step-labels';
  * Builds a variable catalog from dynamic variables, the flow environment, and prior step placeholders.
  *
  * TRIGGER steps inherit CACHE / MANUAL / DATABASE / listener placeholders from the target flow
- * (and nested TRIGGERs), matching runtime variable sharing.
+ * (and nested TRIGGERs), matching runtime variable sharing. Callers that TRIGGER this flow
+ * after earlier targets (or earlier folder siblings) contribute those placeholders too, so a
+ * child flow can use `{{email}}` cached by a sibling the parent ran first.
  */
 export function collectPriorFlowPlaceholderKeys(
   flow: TestSuiteFlow,
@@ -30,6 +34,7 @@ export function collectPriorFlowPlaceholderKeys(
   suiteItems: readonly TestSuiteTreeItem[] = [],
 ): readonly DynamicVariableCatalogItem[] {
   const extras: DynamicVariableCatalogItem[] = [];
+  appendInboundTriggerPlaceholders(extras, flow.id, suiteItems, new Set());
   appendProducedPlaceholders(extras, flow, flattenEnabledFlowSteps(flow.nodes), {
     stopAtStepId: currentStepId,
     suiteItems,
@@ -134,18 +139,11 @@ function appendTriggerTargetPlaceholders(
     readonly visitedFlowIds: Set<string>;
   },
 ): void {
-  if (options.suiteItems.length === 0) {
+  const locations = resolveStepTriggerLocations(step, options.suiteItems);
+  if (!locations) {
     return;
   }
-  const cfg = step.config as { targetType?: string; targetId?: string };
-  const resolved = resolveTriggerTargetFlows(options.suiteItems, {
-    targetType: cfg.targetType === 'folder' ? 'folder' : 'flow',
-    targetId: cfg.targetId ?? '',
-  });
-  if (!resolved.ok) {
-    return;
-  }
-  for (const location of resolved.locations) {
+  for (const location of locations) {
     if (options.visitedFlowIds.has(location.flow.id)) {
       continue;
     }
@@ -155,6 +153,85 @@ function appendTriggerTargetPlaceholders(
       visitedFlowIds: options.visitedFlowIds,
     });
   }
+}
+
+/**
+ * Adds placeholders produced before `targetFlowId` runs on a caller path
+ * (prior steps, earlier folder siblings, and callers of those callers).
+ */
+function appendInboundTriggerPlaceholders(
+  extras: DynamicVariableCatalogItem[],
+  targetFlowId: string,
+  suiteItems: readonly TestSuiteTreeItem[],
+  inboundVisited: Set<string>,
+): void {
+  if (suiteItems.length === 0 || inboundVisited.has(targetFlowId)) {
+    return;
+  }
+  inboundVisited.add(targetFlowId);
+
+  for (const caller of collectFlowsInTree(suiteItems)) {
+    if (inboundVisited.has(caller.id)) {
+      continue;
+    }
+    const steps = flattenEnabledFlowSteps(caller.nodes);
+    let matched = false;
+    for (const step of steps) {
+      if (step.stepType !== 'TRIGGER') {
+        continue;
+      }
+      const locations = resolveStepTriggerLocations(step, suiteItems);
+      if (!locations) {
+        continue;
+      }
+      const targetIndex = locations.findIndex((location) => location.flow.id === targetFlowId);
+      if (targetIndex < 0) {
+        continue;
+      }
+
+      const expansionVisited = new Set<string>([targetFlowId, caller.id]);
+      appendProducedPlaceholders(extras, caller, steps, {
+        stopAtStepId: step.id,
+        suiteItems,
+        visitedFlowIds: expansionVisited,
+      });
+      for (let index = 0; index < targetIndex; index += 1) {
+        const sibling = locations[index]!;
+        if (expansionVisited.has(sibling.flow.id)) {
+          continue;
+        }
+        expansionVisited.add(sibling.flow.id);
+        appendProducedPlaceholders(extras, sibling.flow, flattenEnabledFlowSteps(sibling.flow.nodes), {
+          suiteItems,
+          visitedFlowIds: expansionVisited,
+        });
+      }
+      matched = true;
+      break;
+    }
+    if (matched) {
+      appendInboundTriggerPlaceholders(extras, caller.id, suiteItems, inboundVisited);
+    }
+  }
+}
+
+/** Resolves a TRIGGER step to its fail-fast target locations, or `null`. */
+function resolveStepTriggerLocations(
+  step: TestSuiteFlowStep,
+  suiteItems: readonly TestSuiteTreeItem[],
+): readonly TestSuiteFlowLocation[] | null {
+  if (suiteItems.length === 0) {
+    return null;
+  }
+  const cfg = step.config as { targetType?: string; targetId?: string };
+  const resolved = resolveTriggerTargetFlows(suiteItems, {
+    targetType: cfg.targetType === 'folder' ? 'folder' : 'flow',
+    targetId: cfg.targetId ?? '',
+  });
+  if (!resolved.ok) {
+    return null;
+  }
+  return resolved.locations;
 }
 
 function pushNamedPlaceholder(

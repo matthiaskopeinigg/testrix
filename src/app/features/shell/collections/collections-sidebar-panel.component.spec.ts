@@ -271,6 +271,15 @@ describe('CollectionsSidebarPanelComponent', () => {
     expect(fixture.componentInstance['contextMenuOpen']()).toBe(true);
   });
 
+  it('opens the empty-area context menu from the tree padding below the last row', () => {
+    const pad = fixture.nativeElement.querySelector('.tx-tree__empty-space') as HTMLElement | null;
+    expect(pad).toBeTruthy();
+    pad?.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, clientX: 40, clientY: 80 }));
+    fixture.detectChanges();
+    expect(fixture.componentInstance['contextMenuOpen']()).toBe(true);
+    expect(fixture.componentInstance['contextNodeId']()).toBeNull();
+  });
+
   it('closes workspace tabs when a collection item is deleted', () => {
     fixture.componentInstance['deleteNodeId'].set('req-login');
     fixture.componentInstance['handleDeleteConfirmed']();

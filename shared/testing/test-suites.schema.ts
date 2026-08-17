@@ -7,6 +7,7 @@ import {
   type TestSuiteStepType,
 } from './test-suite-steps.schema';
 import { flowStepRunCaptureSchema } from './flow-step-capture';
+import { flowRunChildLogSchema } from './flow-run-child-log.schema';
 
 const boundedText = (max: number) => z.string().max(max);
 
@@ -39,6 +40,7 @@ export const testSuiteFlowStepSchema = z.object({
   lastRunStatus: testSuiteStepStatusSchema.optional(),
   lastRunDurationMs: z.number().int().min(0).optional(),
   lastRunCapture: flowStepRunCaptureSchema.nullable().optional(),
+  lastRunChildren: z.array(flowRunChildLogSchema).optional(),
   error: boundedText(4_000).optional(),
 });
 

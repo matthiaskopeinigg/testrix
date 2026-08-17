@@ -48,3 +48,24 @@ export function findTestSuiteFlowInTree(
   walk(items, []);
   return result;
 }
+
+/**
+ * Collects every flow in the suite tree in preorder (folders before nested
+ * siblings).
+ */
+export function collectFlowsInTree(items: readonly TestSuiteTreeItem[]): readonly TestSuiteFlow[] {
+  const flows: TestSuiteFlow[] = [];
+  const walk = (list: readonly TestSuiteTreeItem[]): void => {
+    for (const item of list) {
+      if (isTestSuiteFlow(item)) {
+        flows.push(item);
+        continue;
+      }
+      if (isTestSuiteFolder(item)) {
+        walk(item.children);
+      }
+    }
+  };
+  walk(items);
+  return flows;
+}

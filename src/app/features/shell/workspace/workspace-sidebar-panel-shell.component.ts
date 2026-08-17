@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, input, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, inject, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
 import { TxDividerComponent } from '@app/shared/components/forms/tx-divider/tx-divider.component';
@@ -6,6 +6,7 @@ import { TxIconComponent } from '@app/shared/components/forms/tx-icon/tx-icon.co
 import { TxInputComponent } from '@app/shared/components/forms/tx-input/tx-input.component';
 import { TxTooltipDirective } from '@app/shared/components/overlays/tx-tooltip/tx-tooltip.directive';
 import { TxSidebarToolbarDirective } from '@app/shared/components/chrome/tx-sidebar/tx-sidebar-panel-content.directive';
+import { dispatchEmptyAreaContextMenu } from '@app/shared/components/chrome/tx-sidebar/dispatch-empty-area-context-menu';
 
 
 /**
@@ -28,6 +29,8 @@ import { TxSidebarToolbarDirective } from '@app/shared/components/chrome/tx-side
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class WorkspaceSidebarPanelShellComponent {
+  private readonly host = inject(ElementRef<HTMLElement>);
+
   readonly searchPlaceholder = input('Search…');
   readonly searchAriaLabel = input('Search');
   /** When false, hides the expand/collapse-all control (e.g. panels without folders). */
@@ -62,5 +65,13 @@ export class WorkspaceSidebarPanelShellComponent {
   /** Mock toolbar action. */
   protected handleSort(): void {
     // Placeholder for sort popover
+  }
+
+  /**
+   * Right-click on toolbar chrome (not the search field or icon buttons) opens the
+   * same empty-area tree menu as leftover space below the last row.
+   */
+  protected handleChromeContextMenu(event: MouseEvent): void {
+    dispatchEmptyAreaContextMenu(event, this.host.nativeElement);
   }
 }

@@ -324,6 +324,7 @@ export interface ElectronRendererBridge {
       readonly stepCaptures?: Readonly<Record<string, import('@shared/testing').FlowStepRunCapture>>;
       readonly stepDurations?: Readonly<Record<string, number>>;
       readonly stepErrors?: Readonly<Record<string, string>>;
+      readonly nestedChildren?: import('@shared/testing').FlowRunNestedChildren;
       readonly durationMs?: number;
     }>;
     e2eCancel: () => Promise<void>;

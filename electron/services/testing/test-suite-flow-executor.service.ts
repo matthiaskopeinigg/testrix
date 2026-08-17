@@ -36,6 +36,10 @@ import {
   flowNeedsBrowserRunnerDeep,
   resolveTriggerTargetFlows,
   triggerFlowCycleMessage,
+  stripFlowRunChildLogCaptures,
+  rollupFlowRunChildStatus,
+  type FlowRunChildLog,
+  type FlowRunNestedChildren,
   type FlowRunProgressEvent,
   type FlowStepRunCapture,
   type TestSuiteAncestorFolderRef,
@@ -76,6 +80,7 @@ export interface TestSuiteFlowRunResult {
   readonly stepCaptures: Readonly<Record<string, FlowStepRunCapture>>;
   readonly stepDurations: Readonly<Record<string, number>>;
   readonly stepErrors: Readonly<Record<string, string>>;
+  readonly nestedChildren: FlowRunNestedChildren;
   readonly durationMs: number;
 }
 
@@ -117,6 +122,7 @@ interface FlowStepContext {
   readonly suiteItems: readonly TestSuiteTreeItem[];
   /** True when the root run pinned `showBrowser` (always true for a flow run). */
   readonly showBrowserLocked: boolean;
+  readonly reportProgress: () => void;
 }
 
 /**
@@ -127,6 +133,7 @@ export class TestSuiteFlowExecutor {
   private e2eRunner: E2eRunnerService | null = null;
   private readonly captures = new Map<string, FlowStepRunCapture>();
   private readonly flowVariables = new Map<string, string>();
+  private readonly nestedChildrenByTriggerId = new Map<string, FlowRunChildLog[]>();
   private readonly activeInterceptorStepIds = new Set<string>();
   private browserSessionReady = false;
 
@@ -148,6 +155,7 @@ export class TestSuiteFlowExecutor {
     this.cancelled = false;
     this.captures.clear();
     this.flowVariables.clear();
+    this.nestedChildrenByTriggerId.clear();
     this.activeInterceptorStepIds.clear();
     this.browserSessionReady = false;
 
@@ -161,6 +169,7 @@ export class TestSuiteFlowExecutor {
         stepCaptures: {},
         stepDurations: {},
         stepErrors: {},
+        nestedChildren: {},
         durationMs: 0,
       };
     }
@@ -182,6 +191,7 @@ export class TestSuiteFlowExecutor {
         stepCaptures: {},
         stepDurations: {},
         stepErrors: {},
+        nestedChildren: {},
         durationMs: 0,
       };
     }
@@ -201,6 +211,7 @@ export class TestSuiteFlowExecutor {
         stepCaptures: {},
         stepDurations: {},
         stepErrors: {},
+        nestedChildren: {},
         durationMs: 0,
       };
     }
@@ -212,7 +223,11 @@ export class TestSuiteFlowExecutor {
     const stepErrors: Record<string, string> = {};
     const flowStartedAt = Date.now();
     const emitProgress = (): void => {
-      onProgress?.({ flowId, stepStatuses: { ...stepStatuses } });
+      onProgress?.({
+        flowId,
+        stepStatuses: { ...stepStatuses },
+        nestedChildren: this.snapshotNestedChildren(true),
+      });
     };
     const snapshotCaptures = (): Record<string, FlowStepRunCapture> =>
       Object.fromEntries(this.captures.entries());
@@ -226,6 +241,7 @@ export class TestSuiteFlowExecutor {
       stepCaptures: snapshotCaptures(),
       stepDurations,
       stepErrors,
+      nestedChildren: this.snapshotNestedChildren(false),
       durationMs: Date.now() - flowStartedAt,
     });
 
@@ -287,6 +303,7 @@ export class TestSuiteFlowExecutor {
             ancestorFlowIds: [flow.id],
             suiteItems,
             showBrowserLocked,
+            reportProgress: emitProgress,
           });
           await this.refreshPendingInterceptorCaptures(showBrowser);
           stepDurations[step.id] = Date.now() - stepStartedAt;
@@ -384,6 +401,11 @@ export class TestSuiteFlowExecutor {
     if (!resolved.ok) {
       throw new Error(resolved.message);
     }
+
+    const children: FlowRunChildLog[] = [];
+    this.nestedChildrenByTriggerId.set(step.id, children);
+    const groupByFlow = resolved.locations.length > 1;
+
     for (const location of resolved.locations) {
       const cycle = triggerFlowCycleMessage(ctx.ancestorFlowIds, location.flow.id, location.flow.name);
       if (cycle) {
@@ -392,7 +414,59 @@ export class TestSuiteFlowExecutor {
       if (!reuseE2eSession) {
         await this.resetBrowserSessionForIsolatedTrigger();
       }
-      await this.runNestedFlow(location, ctx);
+
+      if (groupByFlow) {
+        const groupId = `flow:${location.flow.id}`;
+        const publishGroup = (patch: Partial<FlowRunChildLog> & Pick<FlowRunChildLog, 'status'>): void => {
+          const index = children.findIndex((entry) => entry.id === groupId);
+          const current = index >= 0 ? children[index]! : undefined;
+          const next: FlowRunChildLog = {
+            kind: 'flow',
+            id: groupId,
+            flowId: location.flow.id,
+            flowName: location.flow.name,
+            name: location.flow.name,
+            status: patch.status,
+            error: patch.error ?? current?.error,
+            durationMs: patch.durationMs ?? current?.durationMs,
+            children: patch.children ?? current?.children ?? [],
+          };
+          if (index >= 0) {
+            children[index] = next;
+          } else {
+            children.push(next);
+          }
+          ctx.reportProgress();
+        };
+        publishGroup({ status: 'running', children: [] });
+        try {
+          const logs = await this.runNestedFlow(location, ctx, (nestedLogs) => {
+            publishGroup({
+              status: rollupFlowRunChildStatus(nestedLogs),
+              children: nestedLogs,
+            });
+          });
+          publishGroup({
+            status: rollupFlowRunChildStatus(logs),
+            children: logs,
+          });
+        } catch (error: unknown) {
+          const message = error instanceof Error ? error.message : 'Step failed';
+          const index = children.findIndex((entry) => entry.id === groupId);
+          publishGroup({
+            status: 'failed',
+            error: message,
+            children: index >= 0 ? children[index]?.children : [],
+          });
+          throw error;
+        }
+        continue;
+      }
+
+      await this.runNestedFlow(location, ctx, (logs) => {
+        children.splice(0, children.length, ...logs);
+        ctx.reportProgress();
+      });
     }
   }
 
@@ -400,7 +474,8 @@ export class TestSuiteFlowExecutor {
   private async runNestedFlow(
     location: TestSuiteFlowLocation,
     parentCtx: FlowStepContext,
-  ): Promise<void> {
+    onLogs: (logs: readonly FlowRunChildLog[]) => void,
+  ): Promise<FlowRunChildLog[]> {
     let flow = location.flow;
     if (parentCtx.environmentIdOverride !== undefined) {
       flow = { ...flow, environmentId: parentCtx.environmentIdOverride };
@@ -424,18 +499,81 @@ export class TestSuiteFlowExecutor {
       showBrowser: parentCtx.showBrowser,
     };
 
-    for (const nestedStep of steps) {
+    const logs: FlowRunChildLog[] = steps.map((nestedStep) =>
+      this.createWaitingNestedStepLog(flow, nestedStep),
+    );
+    onLogs(logs);
+
+    for (let index = 0; index < steps.length; index++) {
+      const nestedStep = steps[index]!;
       if (this.cancelled) {
+        logs[index] = { ...logs[index]!, status: 'failed', error: 'Run cancelled.' };
+        for (let rest = index + 1; rest < logs.length; rest++) {
+          logs[rest] = { ...logs[rest]!, status: 'skipped' };
+        }
+        onLogs(logs);
         throw new Error('Run cancelled.');
       }
+
+      logs[index] = { ...logs[index]!, status: 'running' };
+      onLogs(logs);
+      const stepStartedAt = Date.now();
       try {
         await this.executeStep(nestedStep, flow, ctx);
         await this.refreshPendingInterceptorCaptures(ctx.showBrowser);
+        const nested = this.nestedChildrenByTriggerId.get(nestedStep.id);
+        logs[index] = {
+          ...logs[index]!,
+          status: 'passed',
+          durationMs: Date.now() - stepStartedAt,
+          lastRunCapture: this.captures.get(nestedStep.id) ?? null,
+          ...(nested && nested.length > 0 ? { children: nested } : {}),
+        };
+        onLogs(logs);
       } catch (error: unknown) {
         const message = error instanceof Error ? error.message : 'Step failed';
+        const nested = this.nestedChildrenByTriggerId.get(nestedStep.id);
+        logs[index] = {
+          ...logs[index]!,
+          status: 'failed',
+          durationMs: Date.now() - stepStartedAt,
+          error: message,
+          lastRunCapture: this.captures.get(nestedStep.id) ?? null,
+          ...(nested && nested.length > 0 ? { children: nested } : {}),
+        };
+        for (let rest = index + 1; rest < logs.length; rest++) {
+          logs[rest] = { ...logs[rest]!, status: 'skipped' };
+        }
+        onLogs(logs);
         throw new Error(`${flow.name} / ${nestedStep.name}: ${message}`);
       }
     }
+    return logs;
+  }
+
+  /** Snapshot of TRIGGER → nested run children for progress or the final result. */
+  private snapshotNestedChildren(stripCaptures: boolean): FlowRunNestedChildren {
+    const entries = [...this.nestedChildrenByTriggerId.entries()].map(([id, children]) => [
+      id,
+      stripCaptures ? stripFlowRunChildLogCaptures(children) : children,
+    ] as const);
+    return Object.fromEntries(entries);
+  }
+
+  /** Builds a waiting nested step row for the run log. */
+  private createWaitingNestedStepLog(
+    flow: TestSuiteFlow,
+    step: TestSuiteFlowStep,
+  ): FlowRunChildLog {
+    return {
+      kind: 'step',
+      id: step.id,
+      flowId: flow.id,
+      flowName: flow.name,
+      name: step.name.trim() || step.stepType,
+      stepType: step.stepType,
+      status: 'waiting',
+    };
   }
 
   private buildVariableContext(
@@ -452,7 +590,12 @@ export class TestSuiteFlowExecutor {
       environmentVariableKeys,
       ancestorFolders,
     );
-    return { ...env, ...Object.fromEntries(this.flowVariables) };
+    return { ...env, ...this.snapshotFlowVariables() };
+  }
+
+  /** Copies CACHE / MANUAL / DATABASE aliases for template resolution. */
+  private snapshotFlowVariables(): Record<string, string> {
+    return Object.fromEntries(this.flowVariables);
   }
 
   private resolveFlowTemplate(
@@ -1054,7 +1197,10 @@ export class TestSuiteFlowExecutor {
         http: ctx.http,
         environments: ctx.environments,
         appVersion: ctx.appVersion,
-        runScope: { runId: `flow-${step.id}` },
+        runScope: {
+          runId: `flow-${step.id}`,
+          sharedVariables: this.snapshotFlowVariables(),
+        },
         environmentVariableKeys: ctx.environmentVariableKeys,
         environmentIdOverride: ctx.environmentIdOverride ?? '',
       });

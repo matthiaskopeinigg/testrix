@@ -31,6 +31,10 @@ describe('TxTreeComponent', () => {
     expect(rows.length).toBeGreaterThan(0);
   });
 
+  it('renders an empty hit area after the last row', () => {
+    expect(fixture.nativeElement.querySelector('.tx-tree__empty-space')).toBeTruthy();
+  });
+
   it('expands a folder when the chevron is clicked', () => {
     const chevron = fixture.nativeElement.querySelector(
       '.tx-tree-row__chevron',

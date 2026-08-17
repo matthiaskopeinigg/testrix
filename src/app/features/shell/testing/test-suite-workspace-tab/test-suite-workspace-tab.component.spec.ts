@@ -60,6 +60,7 @@ describe('TestSuiteWorkspaceTabComponent', () => {
             updateFlowStep: vi.fn(),
             deleteFlowNode: vi.fn(),
             addFlowStep: vi.fn().mockReturnValue({ id: 'step-new', stepType: 'WAIT' }),
+            addFlowStepAfter: vi.fn().mockReturnValue({ id: 'step-after', stepType: 'WAIT' }),
             addFlowStepFolder: vi.fn(),
             applyFlowRunStatuses: vi.fn(),
             resolveFlowEnvironmentId: vi.fn().mockReturnValue(null),
@@ -124,6 +125,14 @@ describe('TestSuiteWorkspaceTabComponent', () => {
     fixture.componentInstance['handleAddStepType']('WAIT');
     const testSuite = TestBed.inject(TestSuiteService);
     expect(testSuite.addFlowStep).toHaveBeenCalledWith(FLOW_ID, 'WAIT', null);
+  });
+
+  it('inserts a step after the row that opened the add menu', () => {
+    fixture.componentInstance['handleAddStepRequest'](REQUEST_STEP.id);
+    fixture.componentInstance['handleAddStepType']('WAIT');
+    const testSuite = TestBed.inject(TestSuiteService);
+    expect(testSuite.addFlowStepAfter).toHaveBeenCalledWith(FLOW_ID, REQUEST_STEP.id, 'WAIT');
+    expect(testSuite.addFlowStep).not.toHaveBeenCalled();
   });
 
   it('opens add step dialog', () => {

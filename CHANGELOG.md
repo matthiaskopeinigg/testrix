@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.9]
+
+### Added
+
+- The run log expands TRIGGER children so a nested flow failure shows the step that failed
+- Sidebar trees keep empty space under the last row; right-click the panel title or toolbar padding for the same root menu
+- Right-click a flow step to add a new step after it
+
+### Fixed
+
+- A flow triggered after a sibling (or later in a triggered folder) can use `{{variables}}` that earlier flow cached
+
 ## [1.0.8]
 
 ### Fixed
@@ -475,7 +487,8 @@ Tagged in git. GitHub installers were not published (Authenticode secrets were m
 
 Initial public beta of Testrix: local-first desktop API client (HTTP, WebSocket, collections, environments, test suites, load tests, mocks, and capture).
 
-[Unreleased]: https://github.com/matthiaskopeinigg/testrix/compare/v1.0.8...HEAD
+[Unreleased]: https://github.com/matthiaskopeinigg/testrix/compare/v1.0.9...HEAD
+[1.0.9]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.9
 [1.0.8]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.8
 [1.0.7]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.7
 [1.0.6]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.6

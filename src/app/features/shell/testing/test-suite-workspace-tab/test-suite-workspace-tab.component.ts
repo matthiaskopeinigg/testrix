@@ -25,6 +25,7 @@ import {
   getFlowRunBlockingReason,
   normalizeFlowStepNodes,
   type FlowManualInputPrompt,
+  type FlowRunNestedChildren,
 } from '@shared/testing';
 import type { TestSuiteFlowNode, TestSuiteFlowStep, TestSuiteStepStatus, TestSuiteStepType } from '@shared/testing';
 import { parseTestSuiteTabResourceId } from '@shared/testing';
@@ -161,9 +162,12 @@ export class TestSuiteWorkspaceTabComponent {
 
   protected readonly selectedStepId = signal<string | null>(null);
   protected readonly addStepModalOpen = signal(false);
+  /** When set, the add-step modal inserts the new step after this id. */
+  protected readonly addStepAfterId = signal<string | null>(null);
   protected readonly running = signal(false);
   protected readonly liveStepStatuses = signal<Record<string, TestSuiteStepStatus>>({});
   protected readonly liveStepErrors = signal<Record<string, string>>({});
+  protected readonly liveNestedChildren = signal<FlowRunNestedChildren>({});
   protected readonly lastRunMessage = signal<string | null>(null);
   protected readonly stepsPanelWidth = signal(DEFAULT_STEPS_PANEL_WIDTH_PX);
   protected readonly resultsPanelHeight = signal(DEFAULT_RESULTS_PANEL_HEIGHT_PX);
@@ -586,13 +590,19 @@ export class TestSuiteWorkspaceTabComponent {
     void this.persistTabUi({ selectedStepId: clone.id });
   }
 
-  protected handleAddStepRequest(): void {
+  /**
+   * Opens the add-step type picker. When `afterStepId` is set, the new step is
+   * inserted immediately after that step.
+   */
+  protected handleAddStepRequest(afterStepId: string | null = null): void {
+    this.addStepAfterId.set(afterStepId);
     this.addStepModalOpen.set(true);
     void this.persistTabUi({ addStepModalOpen: true });
   }
 
   protected handleAddStepModalClosed(): void {
     this.addStepModalOpen.set(false);
+    this.addStepAfterId.set(null);
     void this.persistTabUi({ addStepModalOpen: false });
   }
 
@@ -601,7 +611,11 @@ export class TestSuiteWorkspaceTabComponent {
     if (!flow) {
       return;
     }
-    const step = this.testSuite.addFlowStep(flow.id, type, null);
+    const afterId = this.addStepAfterId();
+    const step = afterId
+      ? this.testSuite.addFlowStepAfter(flow.id, afterId, type)
+      : this.testSuite.addFlowStep(flow.id, type, null);
+    this.addStepAfterId.set(null);
     this.addStepModalOpen.set(false);
     void this.persistTabUi({ addStepModalOpen: false, selectedStepId: step?.id ?? null });
     if (step) {
@@ -624,7 +638,7 @@ export class TestSuiteWorkspaceTabComponent {
 
     switch (actionId) {
       case 'add-step':
-        this.handleAddStepRequest();
+        this.handleAddStepRequest(nodeId);
         break;
       case 'clone':
         if (nodeId) {
@@ -715,6 +729,7 @@ export class TestSuiteWorkspaceTabComponent {
 
     this.liveStepStatuses.set(buildInitialFlowRunStatuses(enabledSteps.map((step) => step.id)));
     this.liveStepErrors.set({});
+    this.liveNestedChildren.set({});
     this.lastRunMessage.set(null);
     this.running.set(true);
 
@@ -722,6 +737,9 @@ export class TestSuiteWorkspaceTabComponent {
     const unsubscribeProgress = bridge?.testing.onFlowRunProgress?.((event) => {
       if (event.flowId === p.id) {
         this.liveStepStatuses.set({ ...event.stepStatuses });
+        if (event.nestedChildren) {
+          this.liveNestedChildren.set({ ...event.nestedChildren });
+        }
       }
     });
 
@@ -730,6 +748,7 @@ export class TestSuiteWorkspaceTabComponent {
       if (result?.stepStatuses) {
         this.liveStepStatuses.set({ ...result.stepStatuses });
         this.liveStepErrors.set({ ...(result.stepErrors ?? {}) });
+        this.liveNestedChildren.set({ ...(result.nestedChildren ?? {}) });
         this.testSuite.applyFlowRunStatuses(
           p.id,
           result.stepStatuses,
@@ -738,6 +757,7 @@ export class TestSuiteWorkspaceTabComponent {
           result.stepDurations ?? {},
           result.stepErrors ?? {},
           result.durationMs ?? 0,
+          result.nestedChildren ?? {},
         );
         if (!result.ok) {
           const failedStepId = findFirstFailedFlowStepId(enabledSteps, result.stepStatuses);

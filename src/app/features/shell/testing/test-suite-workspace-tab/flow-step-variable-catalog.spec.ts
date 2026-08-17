@@ -502,6 +502,236 @@ describe('collectPriorFlowPlaceholderKeys', () => {
     expect(catalog.some((item) => item.label === '{{email}}')).toBe(true);
   });
 
+  it('includes placeholders cached by an earlier sibling TRIGGER on a caller flow', () => {
+    const flow1 = baseFlow(
+      [
+        {
+          id: 'cache-email',
+          type: 'step',
+          parentId: null,
+          stepType: 'CACHE',
+          name: 'Cache email',
+          enabled: true,
+          config: {
+            refStepId: null,
+            entries: [
+              { variableName: 'email', source: 'generated', expression: '', value: 'a@b.c' },
+            ],
+          },
+        },
+      ],
+      'flow-1',
+      'Flow-1',
+    );
+
+    const flow2 = baseFlow(
+      [
+        {
+          id: 'request-1',
+          type: 'step',
+          parentId: null,
+          stepType: 'REQUEST',
+          name: 'Use email',
+          enabled: true,
+          config: {},
+        },
+      ],
+      'flow-2',
+      'Flow-2',
+    );
+
+    const flow3 = baseFlow(
+      [
+        {
+          id: 'trigger-1',
+          type: 'step',
+          parentId: null,
+          stepType: 'TRIGGER',
+          name: 'Run Flow-1',
+          enabled: true,
+          config: { targetType: 'flow', targetId: 'flow-1' },
+        },
+        {
+          id: 'trigger-2',
+          type: 'step',
+          parentId: null,
+          stepType: 'TRIGGER',
+          name: 'Run Flow-2',
+          enabled: true,
+          config: { targetType: 'flow', targetId: 'flow-2' },
+        },
+        {
+          id: 'cache-later',
+          type: 'step',
+          parentId: null,
+          stepType: 'CACHE',
+          name: 'After children',
+          enabled: true,
+          config: {
+            refStepId: null,
+            entries: [
+              { variableName: 'laterVar', source: 'generated', expression: '', value: 'nope' },
+            ],
+          },
+        },
+      ],
+      'flow-3',
+      'Flow-3',
+    );
+
+    const catalog = collectPriorFlowPlaceholderKeys(flow2, 'request-1', null, undefined, [
+      flow1,
+      flow2,
+      flow3,
+    ]);
+
+    expect(findCatalogPlaceholderSource(catalog, 'email')).toEqual({
+      flowId: 'flow-1',
+      stepId: 'cache-email',
+    });
+    expect(catalog.some((item) => item.label === '{{laterVar}}')).toBe(false);
+  });
+
+  it('excludes placeholders from a sibling TRIGGER that runs after this flow', () => {
+    const flow1 = baseFlow(
+      [
+        {
+          id: 'cache-email',
+          type: 'step',
+          parentId: null,
+          stepType: 'CACHE',
+          name: 'Cache email',
+          enabled: true,
+          config: {
+            refStepId: null,
+            entries: [
+              { variableName: 'email', source: 'generated', expression: '', value: 'a@b.c' },
+            ],
+          },
+        },
+      ],
+      'flow-1',
+    );
+
+    const flow2 = baseFlow(
+      [
+        {
+          id: 'request-1',
+          type: 'step',
+          parentId: null,
+          stepType: 'REQUEST',
+          name: 'Use email',
+          enabled: true,
+          config: {},
+        },
+      ],
+      'flow-2',
+    );
+
+    const flow3 = baseFlow(
+      [
+        {
+          id: 'trigger-2',
+          type: 'step',
+          parentId: null,
+          stepType: 'TRIGGER',
+          name: 'Run Flow-2',
+          enabled: true,
+          config: { targetType: 'flow', targetId: 'flow-2' },
+        },
+        {
+          id: 'trigger-1',
+          type: 'step',
+          parentId: null,
+          stepType: 'TRIGGER',
+          name: 'Run Flow-1',
+          enabled: true,
+          config: { targetType: 'flow', targetId: 'flow-1' },
+        },
+      ],
+      'flow-3',
+    );
+
+    const catalog = collectPriorFlowPlaceholderKeys(flow2, 'request-1', null, undefined, [
+      flow1,
+      flow2,
+      flow3,
+    ]);
+
+    expect(catalog.some((item) => item.label === '{{email}}')).toBe(false);
+  });
+
+  it('includes placeholders from earlier flows in a caller folder TRIGGER', () => {
+    const flow1 = baseFlow(
+      [
+        {
+          id: 'cache-email',
+          type: 'step',
+          parentId: null,
+          stepType: 'CACHE',
+          name: 'Cache email',
+          enabled: true,
+          config: {
+            refStepId: null,
+            entries: [
+              { variableName: 'email', source: 'generated', expression: '', value: 'a@b.c' },
+            ],
+          },
+        },
+      ],
+      'flow-1',
+    );
+
+    const flow2 = baseFlow(
+      [
+        {
+          id: 'request-1',
+          type: 'step',
+          parentId: null,
+          stepType: 'REQUEST',
+          name: 'Use email',
+          enabled: true,
+          config: {},
+        },
+      ],
+      'flow-2',
+    );
+
+    const folder: TestSuiteTreeItem = {
+      id: 'folder-1',
+      name: 'Auth',
+      description: '',
+      tags: [],
+      children: [flow1, flow2],
+      updatedAt: '2026-01-01T00:00:00.000Z',
+    };
+
+    const flow3 = baseFlow(
+      [
+        {
+          id: 'trigger-folder',
+          type: 'step',
+          parentId: null,
+          stepType: 'TRIGGER',
+          name: 'Run folder',
+          enabled: true,
+          config: { targetType: 'folder', targetId: 'folder-1' },
+        },
+      ],
+      'flow-3',
+    );
+
+    const catalog = collectPriorFlowPlaceholderKeys(flow2, 'request-1', null, undefined, [
+      folder,
+      flow3,
+    ]);
+
+    expect(findCatalogPlaceholderSource(catalog, 'email')).toEqual({
+      flowId: 'flow-1',
+      stepId: 'cache-email',
+    });
+  });
+
   it('prefers a flow placeholder over an environment variable with the same key', () => {
     const flow = baseFlow([
       {

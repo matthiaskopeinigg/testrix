@@ -313,7 +313,7 @@ export const DESIGN_SYSTEM_COMPONENTS: readonly DesignSystemComponentEntry[] = [
     selector: 'tx-tree',
     importPath: '@app/shared/components/data/tx-tree/tx-tree.component',
     description:
-      'Hierarchical list with expand/collapse, selection, and pointer drag-and-drop (configurable drag/drop policies).',
+      'Hierarchical list with expand/collapse, selection, and pointer drag-and-drop (configurable drag/drop policies). Trees keep an empty hit area below the last row so a full sidebar still has a place to open the root context menu.',
     supportsDebug: true,
     kind: 'component',
   },

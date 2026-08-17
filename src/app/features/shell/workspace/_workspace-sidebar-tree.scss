@@ -2,9 +2,12 @@
 
 /** Standard tx-tree host inside workspace sidebar panels (Collections, Environments, Testing, …). */
 @mixin workspace-sidebar-tree-host {
+  display: flex;
   flex: 1 1 auto;
-  min-height: 0;
+  flex-direction: column;
+  min-height: 100%;
   padding-top: 0.15rem;
+  --tx-tree-empty-space-min-height: 2.75rem;
 
   @include panel.workspace-sidebar-tree-tokens;
 }
@@ -13,5 +16,5 @@
   display: flex;
   flex: 1 1 auto;
   flex-direction: column;
-  min-height: 0;
+  min-height: 100%;
 }

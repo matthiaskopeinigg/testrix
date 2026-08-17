@@ -18,6 +18,8 @@ import { shouldSuppressTxTreeOutsideInteraction } from '../../data/tx-tree/tx-tr
 import { TxIconComponent } from '../../forms/tx-icon/tx-icon.component';
 import { TxTooltipDirective } from '../../overlays/tx-tooltip/tx-tooltip.directive';
 
+import { dispatchEmptyAreaContextMenu } from './dispatch-empty-area-context-menu';
+
 import type { TxSidebarItem } from './tx-sidebar.types';
 import {
   TX_SIDEBAR_PANEL_DEFAULT_WIDTH_PX,
@@ -177,6 +179,14 @@ export class TxSidebarComponent {
       return;
     }
     this.closePanel();
+  }
+
+  /**
+   * Right-click on the panel title opens the same empty-area menu as the tree padding
+   * (add folder / item) without hunting for leftover space under a full tree.
+   */
+  protected handlePanelChromeContextMenu(event: MouseEvent): void {
+    dispatchEmptyAreaContextMenu(event, this.host.nativeElement);
   }
 
   protected isRailActive(item: TxSidebarItem): boolean {

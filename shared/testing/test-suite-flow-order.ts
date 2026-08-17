@@ -1,3 +1,4 @@
+import type { FlowRunNestedChildren } from './flow-run-child-log.schema';
 import type { TestSuiteFlow, TestSuiteFlowNode, TestSuiteFlowStep } from './test-suites.schema';
 import { isFlowFolderNode, isFlowStepNode } from './test-suites.schema';
 import type { E2eStepConfig, HttpInterceptorStepConfig, HttpListenerStepConfig, RequestStepConfig, TestSuiteStepStatus } from './test-suite-steps.schema';
@@ -21,6 +22,7 @@ export function flattenFlowNodesInRunOrder(nodes: readonly TestSuiteFlowNode[]):
 export interface FlowRunProgressEvent {
   readonly flowId: string;
   readonly stepStatuses: Readonly<Record<string, TestSuiteStepStatus>>;
+  readonly nestedChildren?: FlowRunNestedChildren;
 }
 
 /** Initial live statuses when a flow run starts (first step running, rest waiting). */

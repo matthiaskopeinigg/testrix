@@ -47,6 +47,7 @@ export function cloneFlowStep(source: TestSuiteFlowStep, newId: string): TestSui
     lastRunStatus: 'never',
     lastRunDurationMs: undefined,
     lastRunCapture: null,
+    lastRunChildren: undefined,
     error: undefined,
   };
 }

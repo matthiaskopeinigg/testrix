@@ -57,7 +57,7 @@
       [attr.aria-label]="activePanelTitle()"
       [style.width.px]="panelWidth()"
     >
-      <header class="tx-sidebar__panel-header">
+      <header class="tx-sidebar__panel-header" (contextmenu)="handlePanelChromeContextMenu($event)">
         <div class="tx-sidebar__panel-header-start">
           @if (panelBackHandler(); as onBack) {
             <button

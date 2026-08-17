@@ -45,23 +45,49 @@
         <p class="ts-flow-run-panel__empty-hint">Run the flow to see step results here.</p>
       </div>
     } @else {
-      <ul class="ts-flow-run-panel__timeline">
+      <ul class="ts-flow-run-panel__timeline" role="tree" aria-label="Flow run steps">
         @for (row of timelineRows(); track row.id) {
-          <li>
-            <button
-              type="button"
+          <li role="none">
+            <div
               class="ts-flow-run-panel__row"
-              [class.is-selected]="selectedStepId() === row.id"
+              role="treeitem"
+              [class.is-selected]="isRowSelected(row.id)"
               [class.is-status-running]="row.status === 'running'"
               [class.is-status-waiting]="row.status === 'waiting'"
               [class.is-status-passed]="row.status === 'passed'"
               [class.is-status-failed]="row.status === 'failed'"
               [class.is-status-skipped]="row.status === 'skipped'"
+              [style.padding-inline-start.rem]="0.55 + row.depth * 0.85"
+              [attr.aria-level]="row.depth + 1"
+              [attr.aria-expanded]="row.hasChildren ? row.expanded : null"
               [attr.aria-label]="row.name + ' — ' + row.subtitle"
-              (click)="handleRowClick(row.id)"
+              tabindex="0"
+              (click)="handleRowClick(row)"
+              (keydown.enter)="handleRowClick(row)"
+              (keydown.space)="$event.preventDefault(); handleRowClick(row)"
             >
+              <button
+                type="button"
+                class="ts-flow-run-panel__chevron"
+                [class.is-hidden]="!row.hasChildren"
+                [attr.aria-label]="row.expanded ? 'Collapse nested steps' : 'Expand nested steps'"
+                [attr.aria-hidden]="!row.hasChildren"
+                [disabled]="!row.hasChildren"
+                tabindex="-1"
+                (click)="handleToggleExpand(row, $event)"
+              >
+                @if (row.hasChildren) {
+                  <tx-icon
+                    name="chevronRight"
+                    [size]="12"
+                    [class.ts-flow-run-panel__chevron-icon--expanded]="row.expanded"
+                  />
+                }
+              </button>
               @if (row.index !== null) {
                 <span class="ts-flow-run-panel__index" aria-hidden="true">{{ row.index }}</span>
+              } @else {
+                <span class="ts-flow-run-panel__index" aria-hidden="true"></span>
               }
               <span class="ts-flow-run-panel__row-icon" aria-hidden="true">
                 <tx-icon [name]="row.icon" [size]="14" />
@@ -92,7 +118,7 @@
                   {{ tag.label }}
                 </tx-tag>
               }
-            </button>
+            </div>
           </li>
         }
       </ul>
@@ -178,7 +204,7 @@
             </div>
           }
         </section>
-      } @else if (selectedStepId()) {
+      } @else if (detailsLogId() || selectedStepId()) {
         <p class="ts-flow-run-panel__details-hint">No run output for this step yet.</p>
       }
     }

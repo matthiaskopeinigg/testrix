@@ -763,6 +763,7 @@ export class RegressionWorkspaceTabComponent {
             result.stepDurations,
             result.stepErrors,
             result.durationMs,
+            result.nestedChildren,
           );
         }
       }

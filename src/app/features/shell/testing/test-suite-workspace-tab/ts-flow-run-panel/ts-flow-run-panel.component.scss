@@ -125,7 +125,7 @@
 
 .ts-flow-run-panel__row {
   display: grid;
-  grid-template-columns: 1rem 1.35rem minmax(0, 1fr) auto auto;
+  grid-template-columns: 1.1rem 1rem 1.35rem minmax(0, 1fr) auto auto;
   align-items: center;
   column-gap: 0.45rem;
   width: 100%;
@@ -169,6 +169,38 @@
 
   &.is-status-skipped {
     @include flow-shared.ts-flow-status-row('skipped');
+  }
+}
+
+.ts-flow-run-panel__chevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.1rem;
+  height: 1.1rem;
+  padding: 0;
+  border: none;
+  border-radius: var(--tx-radius-sm, 8px);
+  background: transparent;
+  color: var(--tx-text-1);
+  cursor: pointer;
+
+  tx-icon {
+    transition: transform var(--tx-duration-fast, 120ms) var(--tx-ease-standard, ease);
+  }
+
+  .ts-flow-run-panel__chevron-icon--expanded {
+    transform: rotate(90deg);
+  }
+
+  &.is-hidden {
+    visibility: hidden;
+    pointer-events: none;
+  }
+
+  &:hover:not(:disabled) {
+    color: var(--tx-text-0);
+    background: color-mix(in srgb, var(--tx-accent) 10%, transparent);
   }
 }
 

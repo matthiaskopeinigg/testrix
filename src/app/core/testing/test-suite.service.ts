@@ -22,6 +22,8 @@ import {
   type TestSuiteTreeItem,
   type TestSuitesFile,
   cloneFlowStepNode,
+  insertFlowNodeAfter,
+  type FlowRunNestedChildren,
 } from '@shared/testing';
 import {
   findFlowStepById,
@@ -290,6 +292,34 @@ export class TestSuiteService {
     return this.insertFlowNode(flowId, parentId, step);
   }
 
+  /**
+   * Adds a step immediately after `afterStepId` (same parent). Falls back to the
+   * flow root when the anchor step is missing.
+   */
+  addFlowStepAfter(
+    flowId: string,
+    afterStepId: string,
+    stepType: TestSuiteStepType,
+    name?: string,
+  ): TestSuiteFlowStep | null {
+    let inserted: TestSuiteFlowStep | null = null;
+    this.updateFlow(flowId, (flow) => {
+      const after = findFlowStepById(flow.nodes, afterStepId);
+      if (!after) {
+        return flow;
+      }
+      const step = createFlowStep(stepType, name ?? defaultStepName(stepType), after.parentId);
+      step.id = newTestingId();
+      const nodes = insertFlowNodeAfter(flow.nodes, afterStepId, step);
+      if (!nodes) {
+        return flow;
+      }
+      inserted = step;
+      return { ...flow, nodes, updatedAt: new Date().toISOString() };
+    });
+    return inserted ?? this.addFlowStep(flowId, stepType, null, name);
+  }
+
   addFlowStepFolder(flowId: string, parentId: string | null, name = 'Folder'): TestSuiteFlowNode | null {
     const folder = createFlowFolder(name, parentId);
     const withId = { ...folder, id: newTestingId() };
@@ -347,6 +377,7 @@ export class TestSuiteService {
     stepDurations: Readonly<Record<string, number>> = {},
     stepErrors: Readonly<Record<string, string>> = {},
     durationMs = 0,
+    nestedChildren: FlowRunNestedChildren = {},
   ): void {
     const ts = new Date().toISOString();
     this.updateFlow(flowId, (flow) => ({
@@ -354,7 +385,14 @@ export class TestSuiteService {
       lastRunStatus: ok ? 'passed' : 'failed',
       lastRunAt: ts,
       lastRunDurationMs: durationMs >= 0 ? durationMs : 0,
-      nodes: applyStepRunDataToNodes(flow.nodes, stepStatuses, stepCaptures, stepDurations, stepErrors),
+      nodes: applyStepRunDataToNodes(
+        flow.nodes,
+        stepStatuses,
+        stepCaptures,
+        stepDurations,
+        stepErrors,
+        nestedChildren,
+      ),
       updatedAt: ts,
     }));
   }
@@ -623,6 +661,7 @@ function applyStepRunDataToNodes(
   stepCaptures: Readonly<Record<string, import('@shared/testing').FlowStepRunCapture>>,
   stepDurations: Readonly<Record<string, number>>,
   stepErrors: Readonly<Record<string, string>>,
+  nestedChildren: FlowRunNestedChildren,
 ): TestSuiteFlowNode[] {
   return nodes.map((node) => {
     if (isFlowFolderNode(node)) {
@@ -634,6 +673,7 @@ function applyStepRunDataToNodes(
           stepCaptures,
           stepDurations,
           stepErrors,
+          nestedChildren,
         ),
       };
     }
@@ -641,9 +681,7 @@ function applyStepRunDataToNodes(
     const capture = stepCaptures[node.id];
     const duration = stepDurations[node.id];
     const error = stepErrors[node.id];
-    if (!status && !capture && duration == null && !error) {
-      return node;
-    }
+    const children = nestedChildren[node.id];
     return {
       ...node,
       ...(status ? { lastRunStatus: status } : {}),
@@ -654,6 +692,7 @@ function applyStepRunDataToNodes(
         : status === 'passed' || status === 'skipped'
           ? { error: undefined }
           : {}),
+      lastRunChildren: children && children.length > 0 ? [...children] : undefined,
     };
   });
 }
