@@ -48,6 +48,16 @@ import { RgFlowStepDiffPanelComponent } from './rg-flow-step-diff-panel.componen
 import { RgStepCaptureDiffPanelComponent } from './rg-step-capture-diff-panel.component';
 
 export type RgRunState = 'idle' | 'running' | 'completed';
+
+/** Flow row shown on the live dashboard, including in-flight workers. */
+interface DashboardFlowRow {
+  readonly flowId: string;
+  readonly flowName: string;
+  readonly status: RegressionFlowResult['status'] | 'running';
+  readonly durationMs: number;
+  readonly passedStepCount: number;
+  readonly failedStepCount: number;
+}
 export type RgResultsView = 'live' | 'history' | 'compare';
 
 type RgResultsSectionId =
@@ -210,6 +220,43 @@ export class RgTabResultsPanelComponent {
       return run.flowResults;
     }
     return [];
+  });
+
+  protected readonly dashboardFlowRows = computed((): readonly DashboardFlowRow[] => {
+    const completed = this.flowResults();
+    if (this.runState() !== 'running') {
+      return completed;
+    }
+    const byId = new Map(completed.map((row) => [row.flowId, row]));
+    const seen = new Set<string>();
+    const rows: DashboardFlowRow[] = [];
+    for (const entry of this.liveFlowTimeline()) {
+      if (seen.has(entry.flowId)) {
+        continue;
+      }
+      seen.add(entry.flowId);
+      const result = byId.get(entry.flowId);
+      if (result) {
+        rows.push(result);
+        continue;
+      }
+      if (entry.status === 'running' || entry.status === 'cancelled') {
+        rows.push({
+          flowId: entry.flowId,
+          flowName: entry.flowName,
+          status: entry.status,
+          durationMs: entry.durationMs,
+          passedStepCount: 0,
+          failedStepCount: 0,
+        });
+      }
+    }
+    for (const result of completed) {
+      if (!seen.has(result.flowId)) {
+        rows.push(result);
+      }
+    }
+    return rows;
   });
 
   protected readonly exportRecord = computed(() => this.displayRun());
@@ -460,7 +507,7 @@ export class RgTabResultsPanelComponent {
   }
 
   protected flowStatusVariant(
-    status: RegressionFlowResult['status'],
+    status: DashboardFlowRow['status'],
   ): 'success' | 'warning' | 'error' | 'default' {
     if (status === 'passed') {
       return 'success';

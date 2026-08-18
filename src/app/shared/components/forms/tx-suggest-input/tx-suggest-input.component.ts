@@ -299,7 +299,11 @@ export class TxSuggestInputComponent implements ControlValueAccessor {
   }
 
   writeValue(value: unknown): void {
-    this.value.set(value == null ? '' : String(value));
+    const next = value == null ? '' : String(value);
+    if (next === this.value()) {
+      return;
+    }
+    this.value.set(next);
   }
 
   registerOnChange(fn: (value: string) => void): void {

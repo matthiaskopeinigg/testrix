@@ -67,3 +67,16 @@
   padding-top: 0.65rem;
   border-top: 1px solid color-mix(in srgb, var(--tx-border-0) 55%, transparent);
 }
+
+.rg-settings-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.65rem;
+  width: 100%;
+}
+
+.rg-settings-stack tx-toggle {
+  display: flex;
+  width: 100%;
+}

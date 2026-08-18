@@ -41,10 +41,11 @@ export { isReleaseVersionNewer, normalizeReleaseTag };
 /**
  * Resolves the newest GitHub release for the selected update channel.
  *
- * Both channels scan `/releases` and pick by semver. `/releases/latest` only
- * tracks GitHub's Latest badge, which is never a prerelease.
+ * Both channels scan `/releases` and pick by semver on that channel only.
+ * `/releases/latest` only tracks GitHub's Latest badge, which is never a
+ * prerelease.
  *
- * @param channel Installed update channel.
+ * @param channel Selected update channel.
  */
 export async function fetchLatestGitHubRelease(
   channel: UpdateChannel,

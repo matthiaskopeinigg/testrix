@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 
@@ -51,6 +52,14 @@ export interface E2ePickElementResult {
   readonly cancelled?: boolean;
 }
 
+interface E2eServiceCtor {
+  new (options?: { readonly partition?: string; readonly windowTitle?: string }): E2eServiceInstance;
+}
+
+interface E2eServiceModule extends E2eServiceInstance {
+  readonly E2eService?: E2eServiceCtor;
+}
+
 interface E2eServiceInstance {
   execute(
     action: string,
@@ -78,14 +87,33 @@ interface E2ePickElementModule {
 }
 
 /**
- * Thin TypeScript facade over the ported api-workbench E2E runner singleton.
+ * Thin TypeScript facade over the ported E2E runner.
+ *
+ * Interactive Test Suite runs share the module singleton. Isolated instances
+ * (regression workers) each own a BrowserWindow and session partition.
  */
 export class E2eRunnerService {
   private service: E2eServiceInstance | null = null;
   private pickModule: E2ePickElementModule | null = null;
 
+  /**
+   * @param isolated When true, creates a dedicated runner window instead of the shared singleton.
+   */
+  constructor(private readonly isolated = false) {}
+
   private getService(): E2eServiceInstance {
-    this.service ??= requireE2e(path.join(e2eModuleDir(), 'e2e.service.js')) as E2eServiceInstance;
+    if (this.service) {
+      return this.service;
+    }
+    const loaded = requireE2e(path.join(e2eModuleDir(), 'e2e.service.js')) as E2eServiceModule;
+    if (this.isolated && loaded.E2eService) {
+      this.service = new loaded.E2eService({
+        partition: `persist:testrix-e2e-runner-${randomUUID()}`,
+        windowTitle: 'Testrix — E2E Runner',
+      });
+      return this.service;
+    }
+    this.service = loaded;
     return this.service;
   }
 

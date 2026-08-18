@@ -41,7 +41,7 @@
           }
           <tx-button
             [variant]="runButtonVariant()"
-            [loading]="running() || runActionPending()"
+            [loading]="runActionPending()"
             loadingLabel="Working"
             [hint]="runButtonTitle()"
             [disabled]="!running() && !canStartRegression()"

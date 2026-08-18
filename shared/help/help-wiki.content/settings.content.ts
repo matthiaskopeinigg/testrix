@@ -320,7 +320,7 @@ export const HELP_WIKI_SETTINGS_SECTIONS: readonly HelpWikiSection[] = [
     blocks: [
       {
         type: 'paragraph',
-        text: 'View the app version prominently in the hero, check for updates (with visible checking/available/error/disabled feedback), and inspect Electron/Chromium runtime details.',
+        text: 'View the app version prominently in the hero, pick Stable or Beta (checks only offer that channel), check for updates (with visible checking/available/error/disabled feedback), and inspect Electron/Chromium runtime details.',
       },
     ],
   }),

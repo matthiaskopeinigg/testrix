@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0-beta.2]
+
+### Changed
+
+- Update checks only offer releases on the selected channel (Beta no longer offers a newer stable)
+- Regression Cancel stays clickable while a run is in progress
+- Parallel regression E2E flows each use their own browser window
+- Regression dashboard lists in-flight flows, not only completed ones
+- Deleted test-suite flows are unlinked from regressions and are not run
+- Saving a Database connection shows a success toast
+
+### Fixed
+
+- Shared text fields keep the caret when Angular writes back the same value
+
 ## [1.1.0-beta.1]
 
 ### Added
@@ -510,7 +525,8 @@ Tagged in git. GitHub installers were not published (Authenticode secrets were m
 
 Initial public beta of Testrix: local-first desktop API client (HTTP, WebSocket, collections, environments, test suites, load tests, mocks, and capture).
 
-[Unreleased]: https://github.com/matthiaskopeinigg/testrix/compare/v1.1.0-beta.1...HEAD
+[Unreleased]: https://github.com/matthiaskopeinigg/testrix/compare/v1.1.0-beta.2...HEAD
+[1.1.0-beta.2]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.1.0-beta.2
 [1.1.0-beta.1]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.1.0-beta.1
 [1.0.9]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.9
 [1.0.8]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.8

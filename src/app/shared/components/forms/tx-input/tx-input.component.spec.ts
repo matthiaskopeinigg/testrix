@@ -47,6 +47,18 @@ describe('TxInputComponent', () => {
     expect(fixture.nativeElement.querySelector('.tx-input__clear')).toBeTruthy();
   });
 
+  it('does not rewrite an unchanged writeValue so the caret stays put', () => {
+    const input = fixture.nativeElement.querySelector('input.tx-input') as HTMLInputElement;
+    fixture.componentInstance.writeValue('hello');
+    fixture.detectChanges();
+    input.focus();
+    input.setSelectionRange(2, 2);
+    fixture.componentInstance.writeValue('hello');
+    fixture.detectChanges();
+    expect(input.selectionStart).toBe(2);
+    expect(input.value).toBe('hello');
+  });
+
   it('clears value when clear is pressed', async () => {
     const cleared = vi.fn();
     fixture.componentRef.setInput('type', 'search');

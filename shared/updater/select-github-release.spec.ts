@@ -29,7 +29,7 @@ describe('selectNewestReleaseForChannel', () => {
     expect(newest?.tag_name).toBe('v1.0.1-beta.1');
   });
 
-  it('ignores drafts on the beta channel and includes a newer stable', () => {
+  it('ignores drafts and stables on the beta channel', () => {
     const newest = selectNewestReleaseForChannel(
       [
         { tag_name: 'v1.0.0-beta.11', draft: true },
@@ -39,10 +39,10 @@ describe('selectNewestReleaseForChannel', () => {
       'beta',
     );
 
-    expect(newest?.tag_name).toBe('v1.0.0');
+    expect(newest?.tag_name).toBe('v1.0.0-beta.9');
   });
 
-  it('picks a newer stable over an older published beta on the beta channel', () => {
+  it('does not offer a newer stable while the beta channel is selected', () => {
     const newest = selectNewestReleaseForChannel(
       [
         { tag_name: 'v1.0.3-beta.10', draft: false },
@@ -51,7 +51,7 @@ describe('selectNewestReleaseForChannel', () => {
       'beta',
     );
 
-    expect(newest?.tag_name).toBe('v1.0.4');
+    expect(newest?.tag_name).toBe('v1.0.3-beta.10');
   });
 
   it('picks the newest stable tag and ignores betas', () => {

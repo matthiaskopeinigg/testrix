@@ -88,6 +88,13 @@ describe('resolveRegressionFlowIds', () => {
     });
     expect(ids).toEqual(['f2']);
   });
+
+  it('drops linked ids that no longer exist in the test suite', () => {
+    const ids = resolveRegressionFlowIds(artifact(), createDefaultRegressionProfile(), {
+      existingFlowIds: ['f2'],
+    });
+    expect(ids).toEqual(['f2']);
+  });
 });
 
 describe('filterFailedFlowIdsStillLinked', () => {

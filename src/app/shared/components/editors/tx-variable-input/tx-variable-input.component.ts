@@ -406,7 +406,11 @@ export class TxVariableInputComponent implements ControlValueAccessor {
   }
 
   writeValue(value: unknown): void {
-    this.value.set(value == null ? '' : String(value));
+    const next = value == null ? '' : String(value);
+    if (next === this.value()) {
+      return;
+    }
+    this.value.set(next);
     this.scheduleMirrorScrollSync();
   }
 

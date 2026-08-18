@@ -16,6 +16,7 @@ import {
   REGRESSION_MAX_PARALLELISM,
   REGRESSION_RUN_SAMPLES_MAX,
   TEST_SUITE_ROOT_ID,
+  collectTestSuiteFlowIds,
   resolveRegressionFlowIds,
   stripFlowRunChildLogCaptures,
   type RegressionFlowResult,
@@ -52,7 +53,7 @@ interface FlowWorker {
 }
 
 function createFlowWorker(): FlowWorker {
-  const e2eRunner = new E2eRunnerService();
+  const e2eRunner = new E2eRunnerService(true);
   const executor = new TestSuiteFlowExecutor();
   executor.setE2eRunner(e2eRunner);
   return { executor, e2eRunner };
@@ -200,9 +201,12 @@ export class RegressionRunner {
     this.running = true;
     this.activeWorkers.clear();
 
+    const suites = migrateTestSuitesFile(await files.readTestSuites());
+    const root = suites.suites.find((suite) => suite.id === TEST_SUITE_ROOT_ID) ?? suites.suites[0];
     const flowIds = resolveRegressionFlowIds(artifact, this.profile, {
       flowIdsOverride: parsed.flowIdsOverride,
       selectedFlowIds: parsed.selectedFlowIds,
+      existingFlowIds: collectTestSuiteFlowIds(root?.flows ?? []),
     });
 
     if (flowIds.length === 0) {
@@ -378,88 +382,99 @@ export class RegressionRunner {
       status: 'running',
     };
     this.flowTimeline.push(timelineEntry);
-    this.emitProgress(sender, { flowTimeline: [...this.flowTimeline] });
-
-    let attempt = 0;
-    let result: TestSuiteFlowRunResult | null = null;
-    const maxAttempts = 1 + this.profile.retryFailedFlows;
-
-    while (attempt < maxAttempts && !this.cancelled) {
-      attempt += 1;
-      result = await worker.executor.executeFlow(
-        flowId,
-        files,
-        (event) => {
-          sender?.send(TestingChannels.regressionRunProgress, {
-            regressionId: this.regressionId,
-            runId: this.runId,
-            flowId: event.flowId,
-            stepStatuses: event.stepStatuses,
-            flowTimeline: [...this.flowTimeline],
-          });
-        },
-        executeOptions,
-      );
-      if (result.ok) {
-        break;
-      }
-    }
-
-    if (!result) {
-      if (this.cancelled) {
-        const entryIndex = this.flowTimeline.indexOf(timelineEntry);
-        if (entryIndex >= 0) {
-          this.flowTimeline[entryIndex] = {
-            ...timelineEntry,
-            durationMs: 0,
-            status: 'cancelled',
-          };
-        }
-      }
-      return;
-    }
-
-    const flowResult = buildFlowResult(
-      flowId,
-      flowName,
-      result,
-      attempt,
-      this.profile.includeStepCaptures,
-      this.profile.includeStepErrors,
-    );
-    this.flowResults.push(flowResult);
-    this.flowDurationsMs.push(result.durationMs);
-
-    const entryIndex = this.flowTimeline.indexOf(timelineEntry);
-    if (entryIndex >= 0) {
-      this.flowTimeline[entryIndex] = {
-        ...timelineEntry,
-        durationMs: result.durationMs,
-        status: flowResult.status,
-      };
-    }
-
     this.metrics = {
       ...this.metrics,
-      completed: this.flowResults.length,
-      passed: this.flowResults.filter((r) => r.status === 'passed').length,
-      failed: this.flowResults.filter((r) => r.status === 'failed').length,
-      passRatePercent:
-        this.flowResults.length > 0
-          ? (this.flowResults.filter((r) => r.status === 'passed').length /
-              this.flowResults.filter((r) => r.status === 'passed' || r.status === 'failed').length) *
-            100
-          : 0,
+      activeParallelism: this.metrics.activeParallelism + 1,
     };
+    this.emitProgress(sender, { flowTimeline: [...this.flowTimeline] });
 
-    sender?.send(TestingChannels.regressionRunProgress, {
-      regressionId: this.regressionId,
-      runId: this.runId,
-      flowId,
-      flowResult,
-      flowTimeline: [...this.flowTimeline],
-      done: false,
-    });
+    try {
+      let attempt = 0;
+      let result: TestSuiteFlowRunResult | null = null;
+      const maxAttempts = 1 + this.profile.retryFailedFlows;
+
+      while (attempt < maxAttempts && !this.cancelled) {
+        attempt += 1;
+        result = await worker.executor.executeFlow(
+          flowId,
+          files,
+          (event) => {
+            sender?.send(TestingChannels.regressionRunProgress, {
+              regressionId: this.regressionId,
+              runId: this.runId,
+              flowId: event.flowId,
+              stepStatuses: event.stepStatuses,
+              flowTimeline: [...this.flowTimeline],
+            });
+          },
+          executeOptions,
+        );
+        if (result.ok) {
+          break;
+        }
+      }
+
+      if (!result) {
+        if (this.cancelled) {
+          const cancelledIndex = this.flowTimeline.indexOf(timelineEntry);
+          if (cancelledIndex >= 0) {
+            this.flowTimeline[cancelledIndex] = {
+              ...timelineEntry,
+              durationMs: 0,
+              status: 'cancelled',
+            };
+          }
+        }
+        return;
+      }
+
+      const flowResult = buildFlowResult(
+        flowId,
+        flowName,
+        result,
+        attempt,
+        this.profile.includeStepCaptures,
+        this.profile.includeStepErrors,
+      );
+      this.flowResults.push(flowResult);
+      this.flowDurationsMs.push(result.durationMs);
+
+      const entryIndex = this.flowTimeline.indexOf(timelineEntry);
+      if (entryIndex >= 0) {
+        this.flowTimeline[entryIndex] = {
+          ...timelineEntry,
+          durationMs: result.durationMs,
+          status: flowResult.status,
+        };
+      }
+
+      this.metrics = {
+        ...this.metrics,
+        completed: this.flowResults.length,
+        passed: this.flowResults.filter((r) => r.status === 'passed').length,
+        failed: this.flowResults.filter((r) => r.status === 'failed').length,
+        passRatePercent:
+          this.flowResults.length > 0
+            ? (this.flowResults.filter((r) => r.status === 'passed').length /
+                this.flowResults.filter((r) => r.status === 'passed' || r.status === 'failed').length) *
+              100
+            : 0,
+      };
+
+      sender?.send(TestingChannels.regressionRunProgress, {
+        regressionId: this.regressionId,
+        runId: this.runId,
+        flowId,
+        flowResult,
+        flowTimeline: [...this.flowTimeline],
+        done: false,
+      });
+    } finally {
+      this.metrics = {
+        ...this.metrics,
+        activeParallelism: Math.max(0, this.metrics.activeParallelism - 1),
+      };
+    }
   }
 
   private async recordRemainingAsSkipped(

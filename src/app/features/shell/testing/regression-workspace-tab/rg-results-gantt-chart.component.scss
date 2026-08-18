@@ -26,6 +26,8 @@
   display: flex;
   flex-direction: column;
   gap: 0.45rem;
+  max-height: 18rem;
+  overflow-y: auto;
 }
 
 .rg-gantt__lane {
