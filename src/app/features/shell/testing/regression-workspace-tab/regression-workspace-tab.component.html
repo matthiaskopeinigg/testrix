@@ -179,8 +179,10 @@
                   <app-rg-tab-flows-panel
                     [flowIds]="artifact()?.flowIds ?? []"
                     [expandedIds]="flowsExpandedIds()"
+                    [linkedFolderId]="artifact()?.linkedFolderId ?? null"
                     (flowIdsChange)="handleFlowIdsChange($event)"
                     (expandedIdsChange)="handleFlowsExpandedIdsChange($event)"
+                    (linkedFolderIdChange)="handleLinkedFolderIdChange($event)"
                   />
                 </div>
               </div>
@@ -200,6 +202,7 @@
                     [profile]="artifact()!.profile"
                     [thresholds]="artifact()!.thresholds"
                     [environmentOptions]="environmentOptions()"
+                    [flowOptions]="flowOptions()"
                     (nameChange)="handleNameChange($event)"
                     (releaseChange)="handleReleaseChange($event)"
                     (tagsChange)="handleTagsChange($event)"
@@ -248,6 +251,8 @@
                     [selectedFlowDiffId]="selectedFlowDiffId()"
                     [selectedStepDiffId]="selectedStepDiffId()"
                     [captureDiffNormalizeJson]="captureDiffNormalizeJson()"
+                    [countFlakesAsFailed]="countFlakesAsFailed()"
+                    [exportArtifact]="exportArtifact()"
                     (resultsViewChange)="handleResultsViewChange($event)"
                     (selectedRunIdChange)="handleSelectedRunChange($event)"
                     (compareSelectionChange)="handleCompareSelectionChange($event)"
@@ -256,6 +261,7 @@
                     (selectedFlowDiffIdChange)="handleSelectedFlowDiffIdChange($event)"
                     (selectedStepDiffIdChange)="handleSelectedStepDiffIdChange($event)"
                     (captureDiffNormalizeJsonChange)="handleCaptureDiffNormalizeJsonChange($event)"
+                    (countFlakesAsFailedChange)="handleCountFlakesAsFailedChange($event)"
                     (clearRuns)="handleClearRuns()"
                     (deleteRun)="handleDeleteRun($event)"
                     (rerunFailed)="handleRerunFailed($event)"
@@ -285,6 +291,8 @@
             [selectedFlowDiffId]="selectedFlowDiffId()"
             [selectedStepDiffId]="selectedStepDiffId()"
             [captureDiffNormalizeJson]="captureDiffNormalizeJson()"
+            [countFlakesAsFailed]="countFlakesAsFailed()"
+            [exportArtifact]="exportArtifact()"
             (resultsViewChange)="handleResultsViewChange($event)"
             (selectedRunIdChange)="handleSelectedRunChange($event)"
             (compareSelectionChange)="handleCompareSelectionChange($event)"
@@ -293,6 +301,7 @@
             (selectedFlowDiffIdChange)="handleSelectedFlowDiffIdChange($event)"
             (selectedStepDiffIdChange)="handleSelectedStepDiffIdChange($event)"
             (captureDiffNormalizeJsonChange)="handleCaptureDiffNormalizeJsonChange($event)"
+            (countFlakesAsFailedChange)="handleCountFlakesAsFailedChange($event)"
             (clearRuns)="handleClearRuns()"
             (deleteRun)="handleDeleteRun($event)"
             (rerunFailed)="handleRerunFailed($event)"

@@ -248,11 +248,23 @@ export function registerTestingHandlers(ipc: IpcMainBinder, deps: TestingHandler
   );
   ipc.handle(
     TestingChannels.e2eExecuteFlow,
-    wrapInvokeHandler(TestingChannels.e2eExecuteFlow, async (event, flowId: unknown) => {
+    wrapInvokeHandler(TestingChannels.e2eExecuteFlow, async (event, flowId: unknown, options?: unknown) => {
       if (typeof flowId !== 'string') {
         return { ok: false, message: 'Invalid flow id.' };
       }
-      return runtime.e2eExecuteFlow(flowId, event.sender);
+      const opts =
+        options && typeof options === 'object' && !Array.isArray(options)
+          ? (options as Record<string, unknown>)
+          : {};
+      return runtime.e2eExecuteFlow(flowId, event.sender, {
+        startAtStepId: typeof opts.startAtStepId === 'string' ? opts.startAtStepId : undefined,
+        stopAfterStepId: typeof opts.stopAfterStepId === 'string' ? opts.stopAfterStepId : undefined,
+        stopBeforeStepId: typeof opts.stopBeforeStepId === 'string' ? opts.stopBeforeStepId : undefined,
+        initialVariables:
+          opts.initialVariables && typeof opts.initialVariables === 'object'
+            ? (opts.initialVariables as Record<string, string>)
+            : undefined,
+      });
     }),
   );
   ipc.handle(
@@ -275,6 +287,17 @@ export function registerTestingHandlers(ipc: IpcMainBinder, deps: TestingHandler
     wrapInvokeHandler(TestingChannels.flowManualInputSubmit, async (_event, payload: unknown) =>
       runtime.submitFlowManualInput(payload),
     ),
+  );
+  ipc.handle(
+    TestingChannels.e2eUpdateCheckpointBaseline,
+    wrapInvokeHandler(TestingChannels.e2eUpdateCheckpointBaseline, async (_event, payload: unknown) => {
+      const body =
+        payload && typeof payload === 'object' ? (payload as Record<string, unknown>) : {};
+      return runtime.e2eUpdateCheckpointBaseline({
+        flowId: typeof body.flowId === 'string' ? body.flowId : '',
+        stepId: typeof body.stepId === 'string' ? body.stepId : '',
+      });
+    }),
   );
   ipc.handle(
     TestingChannels.regressionStatus,

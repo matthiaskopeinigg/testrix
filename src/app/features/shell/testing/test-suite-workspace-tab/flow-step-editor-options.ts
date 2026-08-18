@@ -1,5 +1,5 @@
 import { HTTP_METHOD_IDS } from '@shared/config';
-import { TEST_SUITE_STEP_TYPES, type TestSuiteStepType } from '@shared/testing';
+import type { TestSuiteStepType } from '@shared/testing';
 
 import type { TxDropdownOption } from '@app/shared/components/forms/tx-dropdown/tx-dropdown.types';
 
@@ -16,6 +16,11 @@ const STEP_LABELS: Record<TestSuiteStepType, string> = {
   WAIT: 'Wait',
   MANUAL: 'Manual input',
   TRIGGER: 'Trigger flow',
+  IF: 'If / Else',
+  FOR_EACH: 'For each',
+  WHILE: 'While',
+  PARALLEL: 'Parallel',
+  RETRY: 'Retry',
 };
 
 const E2E_ACTION_LABELS: Record<string, string> = {
@@ -127,10 +132,36 @@ export interface FlowStepAddTile {
   readonly icon: (typeof FLOW_STEP_ADD_ICONS)[TestSuiteStepType];
 }
 
-/** Tiles for the add-step modal grid. */
-export const FLOW_STEP_ADD_TILES: readonly FlowStepAddTile[] = TEST_SUITE_STEP_TYPES.map((type) => ({
-  type,
-  label: STEP_LABELS[type],
-  hint: FLOW_STEP_ADD_HINTS[type],
-  icon: FLOW_STEP_ADD_ICONS[type],
+/** Labeled section in the add-step picker. */
+export interface FlowStepAddGroup {
+  readonly id: string;
+  readonly label: string;
+  readonly tiles: readonly FlowStepAddTile[];
+}
+
+function addTile(type: TestSuiteStepType): FlowStepAddTile {
+  return {
+    type,
+    label: STEP_LABELS[type],
+    hint: FLOW_STEP_ADD_HINTS[type],
+    icon: FLOW_STEP_ADD_ICONS[type],
+  };
+}
+
+const ADD_STEP_GROUP_TYPES: readonly { readonly id: string; readonly label: string; readonly types: readonly TestSuiteStepType[] }[] =
+  [
+    { id: 'common', label: 'Common', types: ['E2E', 'REQUEST', 'VALIDATION', 'CACHE'] },
+    { id: 'flow-control', label: 'Flow control', types: ['IF', 'FOR_EACH', 'WHILE', 'PARALLEL', 'RETRY', 'WAIT'] },
+    { id: 'http', label: 'HTTP extras', types: ['HTTP_LISTENER', 'HTTP_INTERCEPTOR'] },
+    { id: 'more', label: 'More', types: ['TRIGGER', 'DATABASE', 'MANUAL'] },
+  ];
+
+/** Tiles grouped for the add-step modal. */
+export const FLOW_STEP_ADD_GROUPS: readonly FlowStepAddGroup[] = ADD_STEP_GROUP_TYPES.map((group) => ({
+  id: group.id,
+  label: group.label,
+  tiles: group.types.map(addTile),
 }));
+
+/** Tiles for the add-step modal grid (flat, Common first). */
+export const FLOW_STEP_ADD_TILES: readonly FlowStepAddTile[] = FLOW_STEP_ADD_GROUPS.flatMap((group) => group.tiles);

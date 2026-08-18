@@ -1,12 +1,12 @@
 import type { TestSuiteFlowNode } from '@shared/testing';
-import { flattenEnabledFlowSteps, isFlowFolderNode, isFlowStepNode } from '@shared/testing';
+import { flattenAllEnabledFlowSteps, isFlowFolderNode, isFlowLaneNode, isFlowStepNode } from '@shared/testing';
 
 /** Maps enabled step ids to 1-based run order index. */
 export function buildFlowStepRunOrderIndex(
   nodes: readonly TestSuiteFlowNode[],
 ): Readonly<Record<string, number>> {
   const map: Record<string, number> = {};
-  flattenEnabledFlowSteps(nodes).forEach((step, index) => {
+  flattenAllEnabledFlowSteps(nodes).forEach((step, index) => {
     map[step.id] = index + 1;
   });
   return map;
@@ -20,7 +20,7 @@ export function flowStepIndexInRunOrder(
   return buildFlowStepRunOrderIndex(nodes)[stepId] ?? null;
 }
 
-/** Finds any flow node (step or folder) by id. */
+/** Finds any flow node (step, folder, or lane) by id. */
 export function findFlowNodeById(
   nodes: readonly TestSuiteFlowNode[],
   nodeId: string,
@@ -29,8 +29,14 @@ export function findFlowNodeById(
     if (node.id === nodeId) {
       return node;
     }
-    if (isFlowFolderNode(node)) {
-      const found = findFlowNodeById(node.children, nodeId);
+    const children =
+      isFlowFolderNode(node) || isFlowLaneNode(node)
+        ? node.children
+        : isFlowStepNode(node)
+          ? (node.children ?? [])
+          : [];
+    if (children.length > 0) {
+      const found = findFlowNodeById(children, nodeId);
       if (found) {
         return found;
       }
@@ -41,7 +47,7 @@ export function findFlowNodeById(
 
 /** Counts enabled steps in run order. */
 export function countEnabledFlowSteps(nodes: readonly TestSuiteFlowNode[]): number {
-  return flattenEnabledFlowSteps(nodes).length;
+  return flattenAllEnabledFlowSteps(nodes).length;
 }
 
 /** Whether the node id refers to a folder. */

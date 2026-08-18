@@ -6,6 +6,7 @@ import {
   testSuiteStepTypeSchema,
   type TestSuiteStepType,
 } from './test-suite-steps.schema';
+import { flowConditionSchema, type FlowCondition } from './flow-condition';
 import { flowStepRunCaptureSchema } from './flow-step-capture';
 import { flowRunChildLogSchema } from './flow-run-child-log.schema';
 
@@ -42,9 +43,25 @@ export const testSuiteFlowStepSchema = z.object({
   lastRunCapture: flowStepRunCaptureSchema.nullable().optional(),
   lastRunChildren: z.array(flowRunChildLogSchema).optional(),
   error: boundedText(4_000).optional(),
+  skipUnless: flowConditionSchema.optional(),
 });
 
-export type TestSuiteFlowStep = z.infer<typeof testSuiteFlowStepSchema>;
+export type TestSuiteFlowStep = z.infer<typeof testSuiteFlowStepSchema> & {
+  readonly children?: readonly TestSuiteFlowNode[];
+};
+
+export const FLOW_LANE_KINDS = ['then', 'elseIf', 'else', 'body'] as const;
+export type FlowLaneKind = (typeof FLOW_LANE_KINDS)[number];
+
+export type TestSuiteFlowLane = {
+  readonly id: string;
+  readonly type: 'lane';
+  readonly laneKind: FlowLaneKind;
+  readonly name: string;
+  readonly parentId: string | null;
+  readonly children: readonly TestSuiteFlowNode[];
+  readonly condition?: FlowCondition;
+};
 
 export type TestSuiteFlowFolder = {
   readonly id: string;
@@ -55,7 +72,25 @@ export type TestSuiteFlowFolder = {
   readonly expanded: boolean;
 };
 
-export type TestSuiteFlowNode = TestSuiteFlowFolder | TestSuiteFlowStep;
+export type TestSuiteFlowNode = TestSuiteFlowFolder | TestSuiteFlowStep | TestSuiteFlowLane;
+
+export const testSuiteFlowLaneSchema: z.ZodType<TestSuiteFlowLane> = z.lazy(() =>
+  z.object({
+    id: z.string().min(1),
+    type: z.literal('lane'),
+    laneKind: z.enum(FLOW_LANE_KINDS),
+    name: boundedText(256),
+    parentId: z.string().nullable(),
+    children: z.array(testSuiteFlowNodeSchema).default([]),
+    condition: flowConditionSchema.optional(),
+  }),
+);
+
+export const testSuiteFlowStepNodeSchema: z.ZodType<TestSuiteFlowStep> = z.lazy(() =>
+  testSuiteFlowStepSchema.extend({
+    children: z.array(testSuiteFlowNodeSchema).optional(),
+  }),
+);
 
 export const testSuiteFlowFolderSchema: z.ZodType<TestSuiteFlowFolder> = z.lazy(() =>
   z.object({
@@ -69,7 +104,7 @@ export const testSuiteFlowFolderSchema: z.ZodType<TestSuiteFlowFolder> = z.lazy(
 );
 
 export const testSuiteFlowNodeSchema: z.ZodType<TestSuiteFlowNode> = z.lazy(() =>
-  z.union([testSuiteFlowFolderSchema, testSuiteFlowStepSchema]),
+  z.union([testSuiteFlowFolderSchema, testSuiteFlowLaneSchema, testSuiteFlowStepNodeSchema]),
 );
 
 export const testSuiteFlowSchema = z.object({
@@ -87,6 +122,13 @@ export const testSuiteFlowSchema = z.object({
   lastRunAt: z.string().nullable().default(null),
   lastRunDurationMs: z.number().int().min(0).nullable().optional(),
   nodes: z.array(testSuiteFlowNodeSchema).default([]),
+  /** Isolated full-flow re-runs; column names become `{{key}}`. Cap 50 rows. */
+  dataset: z
+    .object({
+      enabled: z.boolean().default(false),
+      rows: z.array(z.record(z.string(), z.string())).max(50).default([]),
+    })
+    .optional(),
   updatedAt: z.string(),
 });
 
@@ -246,14 +288,53 @@ export function isFlowFolderNode(node: TestSuiteFlowNode): node is TestSuiteFlow
   return node.type === 'folder';
 }
 
+export function isFlowLaneNode(node: TestSuiteFlowNode): node is TestSuiteFlowLane {
+  return node.type === 'lane';
+}
+
+const LANE_LABELS: Record<FlowLaneKind, string> = {
+  then: 'Then',
+  elseIf: 'Else if',
+  else: 'Else',
+  body: 'Body',
+};
+
+/** Creates a first-class Then/Else/Body lane (not a user-renamable folder). */
+export function createFlowLane(
+  laneKind: FlowLaneKind,
+  parentId: string | null = null,
+  condition?: FlowCondition,
+): TestSuiteFlowLane {
+  return {
+    id: `ts_lane_${Date.now()}_${laneKind}`,
+    type: 'lane',
+    laneKind,
+    name: LANE_LABELS[laneKind],
+    parentId,
+    children: [],
+    condition,
+  };
+}
+
+function defaultChildrenForStep(stepType: TestSuiteStepType, parentId: string): TestSuiteFlowNode[] {
+  if (stepType === 'IF') {
+    return [createFlowLane('then', parentId), createFlowLane('else', parentId)];
+  }
+  if (stepType === 'FOR_EACH' || stepType === 'WHILE' || stepType === 'RETRY') {
+    return [createFlowLane('body', parentId)];
+  }
+  return [];
+}
+
 /** Creates a new flow step with default config for the given type. */
 export function createFlowStep(
   stepType: TestSuiteStepType,
   name: string,
   parentId: string | null = null,
+  id = `ts_step_${Date.now()}`,
 ): TestSuiteFlowStep {
-  return testSuiteFlowStepSchema.parse({
-    id: `ts_step_${Date.now()}`,
+  const parsed = testSuiteFlowStepSchema.parse({
+    id,
     type: 'step',
     name,
     parentId,
@@ -261,6 +342,8 @@ export function createFlowStep(
     config: defaultConfigForStepType(stepType) as Record<string, unknown>,
     enabled: true,
   });
+  const children = defaultChildrenForStep(stepType, id);
+  return children.length > 0 ? { ...parsed, children } : parsed;
 }
 
 /** Creates a new flow-internal folder. */

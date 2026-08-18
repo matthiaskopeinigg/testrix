@@ -13,6 +13,7 @@ import {
 
 import type { TestSuiteStepStatus } from '@shared/testing';
 
+import { TxButtonComponent } from '@app/shared/components/forms/tx-button/tx-button.component';
 import { TxIconComponent } from '@app/shared/components/forms/tx-icon/tx-icon.component';
 import { TxTagComponent } from '@app/shared/components/forms/tx-tag/tx-tag.component';
 import type { TxTagVariant } from '@app/shared/components/forms/tx-tag/tx-tag.component';
@@ -41,6 +42,7 @@ import {
   type FlowStepTreeNode,
 } from './test-suite-flow-tree.adapter';
 import { flowStepCanDrop } from './test-suite-flow-tree.mutations';
+import { TsFlowStepDiagramComponent } from './ts-flow-step-diagram.component';
 
 @Component({
   selector: 'app-ts-flow-step-tree',
@@ -50,6 +52,8 @@ import { flowStepCanDrop } from './test-suite-flow-tree.mutations';
     TxTreeNodeTemplateDirective,
     TxIconComponent,
     TxTagComponent,
+    TxButtonComponent,
+    TsFlowStepDiagramComponent,
   ],
   templateUrl: './ts-flow-step-tree.component.html',
   styleUrl: './ts-flow-step-tree.component.scss',
@@ -67,6 +71,8 @@ export class TsFlowStepTreeComponent {
   readonly selectedStepIdChange = output<string | null>();
   readonly nodesChange = output<readonly FlowStepTreeNode[]>();
   readonly rowContextMenu = output<TxTreeRowContextMenuEvent>();
+
+  protected readonly viewMode = signal<'tree' | 'diagram'>('tree');
 
   protected readonly treeNodes = computed(() => toFlowStepTreeNodes(this.nodes()));
 

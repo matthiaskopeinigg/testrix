@@ -1,6 +1,6 @@
 import { resolveTriggerTargetFlows } from './collect-trigger-targets';
 import { flowNeedsBrowserRunner } from './flow-http-middleware-config';
-import { flattenEnabledFlowSteps } from './test-suite-flow-order';
+import { flattenAllEnabledFlowSteps } from './test-suite-flow-order';
 import { triggerStepConfigSchema } from './test-suite-steps.schema';
 import type { TestSuiteFlow, TestSuiteTreeItem } from './test-suites.schema';
 
@@ -66,7 +66,7 @@ function walkTriggerTargets(
   visitingFlowIds: ReadonlySet<string>,
   visit: (
     flow: FlowBrowserWalkFlow,
-    nestedSteps: ReturnType<typeof flattenEnabledFlowSteps>,
+    nestedSteps: ReturnType<typeof flattenAllEnabledFlowSteps>,
     visiting: Set<string>,
   ) => boolean,
 ): boolean {
@@ -91,7 +91,7 @@ function walkTriggerTargets(
         continue;
       }
       visiting.add(location.flow.id);
-      const nestedSteps = flattenEnabledFlowSteps(location.flow.nodes);
+      const nestedSteps = flattenAllEnabledFlowSteps(location.flow.nodes);
       if (visit(location.flow, nestedSteps, visiting)) {
         return true;
       }

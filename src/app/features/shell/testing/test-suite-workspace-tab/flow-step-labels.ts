@@ -15,6 +15,11 @@ export const FLOW_STEP_GUIDED_TITLES: Record<TestSuiteStepType, string> = {
   WAIT: 'Pause for a moment',
   MANUAL: 'Ask for user input',
   TRIGGER: 'Execute linked flow/folder',
+  IF: 'Branch on a condition',
+  FOR_EACH: 'Repeat for each item',
+  WHILE: 'Repeat while true',
+  PARALLEL: 'Run steps in parallel',
+  RETRY: 'Retry a block of steps',
 };
 
 /** One-line hint for the add-step modal. */
@@ -29,6 +34,11 @@ export const FLOW_STEP_ADD_HINTS: Record<TestSuiteStepType, string> = {
   WAIT: 'Delay before the next step.',
   MANUAL: 'Pause for human input.',
   TRIGGER: 'Run another flow or folder, optionally reusing the E2E browser session.',
+  IF: 'Run Then or Else lanes from a condition.',
+  FOR_EACH: 'Run the body once per item (capped).',
+  WHILE: 'Repeat the body while the condition matches (capped).',
+  PARALLEL: 'Run allowed steps at the same time.',
+  RETRY: 'Re-run the body when a child step fails.',
 };
 
 /** Icon name for add-step tiles (matches tree icons). */
@@ -46,6 +56,11 @@ export const FLOW_STEP_ADD_ICONS: Record<
   WAIT: 'clock',
   MANUAL: 'edit',
   TRIGGER: 'zap',
+  IF: 'gitBranch',
+  FOR_EACH: 'list',
+  WHILE: 'clock',
+  PARALLEL: 'layers',
+  RETRY: 'refresh',
 };
 
 /**

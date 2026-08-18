@@ -49,6 +49,16 @@ describe('collectPriorFlowPlaceholderKeys', () => {
     );
   });
 
+  it('includes enabled dataset column keys', () => {
+    const flow = {
+      ...baseFlow(),
+      dataset: { enabled: true, rows: [{ username: 'admin', password: 'secret' }] },
+    };
+    const catalog = collectPriorFlowPlaceholderKeys(flow, 'step-2', null);
+    expect(catalog.some((item) => item.label === '{{username}}')).toBe(true);
+    expect(catalog.some((item) => item.label === '{{password}}')).toBe(true);
+  });
+
   it('includes manual step placeholders from prior steps only', () => {
     const flow = baseFlow([
       {

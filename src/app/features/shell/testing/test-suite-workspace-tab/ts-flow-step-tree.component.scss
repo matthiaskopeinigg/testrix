@@ -13,9 +13,16 @@
 .ts-flow-step-tree__header {
   display: flex;
   align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
   flex-shrink: 0;
   padding: 0.55rem 0.75rem 0.45rem;
   border-bottom: 1px solid color-mix(in srgb, var(--tx-border-0) 48%, transparent);
+}
+
+.ts-flow-step-tree__view-toggle {
+  display: inline-flex;
+  gap: 0.25rem;
 }
 
 .ts-flow-step-tree__header-main {
@@ -190,6 +197,27 @@
   width: 100%;
   min-height: 2rem;
   padding: 0.2rem 0.15rem;
+
+  &.is-lane {
+    border-left: 3px solid var(--tx-accent);
+    padding-left: 0.35rem;
+  }
+
+  &.is-lane-then {
+    border-left-color: var(--tx-success);
+  }
+
+  &.is-lane-else-if {
+    border-left-color: var(--tx-warning, var(--tx-accent));
+  }
+
+  &.is-lane-else {
+    border-left-color: var(--tx-text-2);
+  }
+
+  &.is-lane-body {
+    border-left-color: var(--tx-accent);
+  }
   border-radius: var(--tx-radius-sm, 8px);
   transition: background-color 160ms ease;
 

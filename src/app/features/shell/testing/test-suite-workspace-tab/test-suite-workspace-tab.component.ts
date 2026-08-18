@@ -21,14 +21,15 @@ import {
 import {
   buildInitialFlowRunStatuses,
   findFirstFailedFlowStepId,
-  flattenEnabledFlowSteps,
+  flattenAllEnabledFlowSteps,
+  flattenFlowNodesInRunOrder,
   getFlowRunBlockingReason,
-  normalizeFlowStepNodes,
+  isFlowLaneNode,
   type FlowManualInputPrompt,
   type FlowRunNestedChildren,
 } from '@shared/testing';
 import type { TestSuiteFlowNode, TestSuiteFlowStep, TestSuiteStepStatus, TestSuiteStepType } from '@shared/testing';
-import { parseTestSuiteTabResourceId } from '@shared/testing';
+import { parseTestSuiteTabResourceId, isTestSuiteCallGraphTab } from '@shared/testing';
 
 import { ConfigService } from '@app/core/config/config.service';
 import { resolveTabEditorLayout } from '@app/core/config/workspace-tab-editor-layout';
@@ -56,7 +57,6 @@ import { TxInputComponent } from '@app/shared/components/forms/tx-input/tx-input
 import { TxTagsInputComponent } from '@app/shared/components/forms/tx-tags-input/tx-tags-input.component';
 import { TxTagComponent } from '@app/shared/components/forms/tx-tag/tx-tag.component';
 import { TxTextareaComponent } from '@app/shared/components/forms/tx-textarea/tx-textarea.component';
-import { TxToggleComponent } from '@app/shared/components/forms/tx-toggle/tx-toggle.component';
 import { TxVerticalSplitPaneComponent } from '@app/shared/components/chrome/tx-vertical-split-pane/tx-vertical-split-pane.component';
 import type { TxTreeRowContextMenuEvent } from '@app/shared/components/data/tx-tree/tx-tree.types';
 
@@ -79,9 +79,11 @@ import {
 import { TsAddFlowStepModalComponent } from './ts-add-flow-step-modal.component';
 import { TsFlowManualInputDialogComponent, type FlowManualInputDialogSubmit } from './ts-flow-manual-input-dialog.component';
 import { TsFlowRunPanelComponent } from './ts-flow-run-panel/ts-flow-run-panel.component';
+import { TsFlowOverviewPanelComponent } from './ts-flow-overview-panel.component';
 import { TsFlowSettingsPanelComponent } from './ts-flow-settings-panel.component';
 import { TsFlowStepEditorComponent } from './ts-flow-step-editor.component';
 import { TsFlowStepTreeComponent } from './ts-flow-step-tree.component';
+import { TsCallGraphWorkspaceTabComponent } from './ts-call-graph-workspace-tab.component';
 import {
   TestSuiteFolderTabComponent,
   folderCardResourceId,
@@ -102,6 +104,7 @@ interface TsFlowNavItem {
 const FLOW_NAV_ITEMS: readonly TsFlowNavItem[] = [
   { id: 'overview', label: 'Overview', icon: 'info' },
   { id: 'steps', label: 'Steps', icon: 'list' },
+  { id: 'settings', label: 'Settings', icon: 'sliders' },
 ];
 
 @Component({
@@ -126,10 +129,12 @@ const FLOW_NAV_ITEMS: readonly TsFlowNavItem[] = [
     TestSuiteFolderTabComponent,
     TsFlowStepTreeComponent,
     TsFlowStepEditorComponent,
+    TsFlowOverviewPanelComponent,
     TsFlowSettingsPanelComponent,
     TsFlowRunPanelComponent,
     TsAddFlowStepModalComponent,
     TsFlowManualInputDialogComponent,
+    TsCallGraphWorkspaceTabComponent,
     WorkspaceSectionNavSliderDirective,
   ],
   templateUrl: './test-suite-workspace-tab.component.html',
@@ -189,6 +194,8 @@ export class TestSuiteWorkspaceTabComponent {
   private panelSizeSaveTimer: ReturnType<typeof setTimeout> | null = null;
 
   protected readonly parsed = computed(() => parseTestSuiteTabResourceId(this.resourceId()));
+
+  protected readonly isCallGraphTab = computed(() => isTestSuiteCallGraphTab(this.resourceId()));
 
   protected readonly editorLayout = computed((): WorkspaceEditorLayoutId =>
     resolveTabEditorLayout(this.configService.settings(), 'testSuite'),
@@ -409,7 +416,7 @@ export class TestSuiteWorkspaceTabComponent {
           this.selectedStepId.set(saved);
           return;
         }
-        const first = flattenEnabledFlowSteps(flow.nodes)[0];
+        const first = flattenAllEnabledFlowSteps(flow.nodes)[0];
         if (first) {
           this.selectedStepId.set(first.id);
           void this.persistTabUi({ selectedStepId: first.id });
@@ -503,6 +510,14 @@ export class TestSuiteWorkspaceTabComponent {
     this.testSuite.patchFlow(flow.id, { e2eKeepWindowOpen: keepOpen });
   }
 
+  protected handleFlowDatasetChange(dataset: NonNullable<import('@shared/testing').TestSuiteFlow['dataset']>): void {
+    const flow = this.flow();
+    if (!flow) {
+      return;
+    }
+    this.testSuite.patchFlow(flow.id, { dataset });
+  }
+
   protected handleFlowDescriptionChange(description: string): void {
     const flow = this.flow();
     if (!flow) {
@@ -536,6 +551,13 @@ export class TestSuiteWorkspaceTabComponent {
   }
 
   protected handleSelectedStepChange(stepId: string | null): void {
+    const flow = this.flow();
+    if (flow && stepId) {
+      const node = flattenFlowNodesInRunOrder(flow.nodes).find((entry) => entry.id === stepId);
+      if (node && isFlowLaneNode(node) && node.parentId) {
+        stepId = node.parentId;
+      }
+    }
     this.selectedStepId.set(stepId);
     this.stepFailureDismissed.set(false);
     void this.persistTabUi({ selectedStepId: stepId });
@@ -554,9 +576,7 @@ export class TestSuiteWorkspaceTabComponent {
     if (!flow) {
       return;
     }
-    const nodes = normalizeFlowStepNodes(
-      fromFlowStepTreeNodesWithExisting(treeNodes, flow.nodes),
-    );
+    const nodes = fromFlowStepTreeNodesWithExisting(treeNodes, flow.nodes);
     this.testSuite.patchFlow(flow.id, { nodes });
   }
 
@@ -654,6 +674,16 @@ export class TestSuiteWorkspaceTabComponent {
           this.openDeleteDialog(nodeId);
         }
         break;
+      case 'run-from':
+        if (nodeId) {
+          void this.handleRun({ startAtStepId: nodeId });
+        }
+        break;
+      case 'run-to':
+        if (nodeId) {
+          void this.handleRun({ stopAfterStepId: nodeId });
+        }
+        break;
     }
   }
 
@@ -710,7 +740,10 @@ export class TestSuiteWorkspaceTabComponent {
     this.schedulePanelSizePersist({ stepsPanelWidthPx: width });
   }
 
-  protected async handleRun(): Promise<void> {
+  protected async handleRun(options?: {
+    readonly startAtStepId?: string;
+    readonly stopAfterStepId?: string;
+  }): Promise<void> {
     const p = this.parsed();
     if (!p || p.kind !== 'flow') {
       return;
@@ -733,7 +766,7 @@ export class TestSuiteWorkspaceTabComponent {
     }
 
     const flow = this.flow();
-    const enabledSteps = flow ? flattenEnabledFlowSteps(flow.nodes) : [];
+    const enabledSteps = flow ? flattenAllEnabledFlowSteps(flow.nodes) : [];
 
     this.liveStepStatuses.set(buildInitialFlowRunStatuses(enabledSteps.map((step) => step.id)));
     this.liveStepErrors.set({});
@@ -752,7 +785,10 @@ export class TestSuiteWorkspaceTabComponent {
     });
 
     try {
-      const result = await bridge?.testing.e2eExecuteFlow(p.id);
+      const result = await bridge?.testing.e2eExecuteFlow(p.id, {
+        startAtStepId: options?.startAtStepId,
+        stopAfterStepId: options?.stopAfterStepId,
+      });
       if (result?.stepStatuses) {
         this.liveStepStatuses.set({ ...result.stepStatuses });
         this.liveStepErrors.set({ ...(result.stepErrors ?? {}) });

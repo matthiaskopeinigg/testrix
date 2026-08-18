@@ -7,23 +7,35 @@
     </span>
   </div>
 
-  <div class="ts-add-step-modal__grid" role="listbox" aria-label="Step types">
-    @for (tile of addTiles; track tile.type) {
-      <button
-        type="button"
-        class="ts-add-step-modal__tile"
-        role="option"
-        [attr.aria-label]="tile.label + '. ' + tile.hint"
-        (click)="handleSelect(tile.type)"
-      >
-        <span class="ts-add-step-modal__tile-icon" aria-hidden="true">
-          <tx-icon [name]="tile.icon" [size]="18" />
-        </span>
-        <span class="ts-add-step-modal__tile-body">
-          <span class="ts-add-step-modal__tile-label">{{ tile.label }}</span>
-          <span class="ts-add-step-modal__tile-hint">{{ tile.hint }}</span>
-        </span>
-      </button>
+  <div class="ts-add-step-modal__groups">
+    @for (group of addGroups; track group.id) {
+      <section class="ts-add-step-modal__group" [attr.aria-label]="group.label">
+        <h3 class="ts-add-step-modal__group-title">{{ group.label }}</h3>
+        <div
+          class="ts-add-step-modal__grid"
+          [class.ts-add-step-modal__grid--common]="group.id === 'common'"
+          role="listbox"
+          [attr.aria-label]="group.label + ' step types'"
+        >
+          @for (tile of group.tiles; track tile.type) {
+            <button
+              type="button"
+              class="ts-add-step-modal__tile"
+              role="option"
+              [attr.aria-label]="tile.label + '. ' + tile.hint"
+              (click)="handleSelect(tile.type)"
+            >
+              <span class="ts-add-step-modal__tile-icon" aria-hidden="true">
+                <tx-icon [name]="tile.icon" [size]="18" />
+              </span>
+              <span class="ts-add-step-modal__tile-body">
+                <span class="ts-add-step-modal__tile-label">{{ tile.label }}</span>
+                <span class="ts-add-step-modal__tile-hint">{{ tile.hint }}</span>
+              </span>
+            </button>
+          }
+        </div>
+      </section>
     }
   </div>
 </tx-modal>

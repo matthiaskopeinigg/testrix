@@ -105,6 +105,25 @@
         placeholder="screenshot.png"
       />
     </tx-form-field>
+    <tx-toggle
+      label="Visual checkpoint"
+      hint="Compare against a per-profile baseline PNG. First run writes the baseline. Share by copying the e2e-checkpoints folder, not team JSON."
+      [ngModel]="cfg().checkpoint === true"
+      (ngModelChange)="patch({ checkpoint: $event })"
+    />
+    @if (cfg().checkpoint) {
+      <tx-form-field label="Diff threshold (%)" controlId="ts-e2e-checkpoint-threshold">
+        <tx-slider
+          controlId="ts-e2e-checkpoint-threshold"
+          [min]="0"
+          [max]="5"
+          [step]="0.1"
+          [ngModel]="cfg().diffThresholdPercent"
+          (ngModelChange)="patch({ diffThresholdPercent: $event })"
+        />
+      </tx-form-field>
+      <tx-button variant="secondary" (pressed)="handleUpdateBaseline()">Update baseline</tx-button>
+    }
   }
 
   @if (fields().timeout) {

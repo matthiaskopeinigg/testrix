@@ -1,6 +1,13 @@
 <div class="request-panel ts-flow-step-panel">
   <p class="request-panel__hint">{{ referenceHint() }}</p>
 
+  <tx-toggle
+    label="Continue on failure"
+    hint="Record this step as failed and keep running. The flow still fails at the end."
+    [ngModel]="cfg().continueOnFailure === true"
+    (ngModelChange)="patch({ continueOnFailure: $event })"
+  />
+
   <tx-form-field label="Reference step (optional)" controlId="ts-val-ref">
     <tx-dropdown
       controlId="ts-val-ref"
@@ -124,5 +131,8 @@
     </div>
 
     <tx-button variant="add" (pressed)="handleAddRule()">Add rule</tx-button>
+    @if (canSeedFromLastRun()) {
+      <tx-button variant="secondary" (pressed)="handleSeedFromLastRun()">Seed rules from last run</tx-button>
+    }
   }
 </div>

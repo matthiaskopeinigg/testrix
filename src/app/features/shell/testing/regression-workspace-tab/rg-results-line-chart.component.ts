@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
 
 export interface RgLineChartStats {
   readonly min: number;
@@ -95,6 +95,17 @@ interface ChartValueRange {
                 [attr.stroke]="secondaryStrokeColor()"
               />
             }
+            @for (point of pointHits(); track point.id) {
+              <circle
+                class="rg-line-chart__point"
+                [class.is-selected]="selectedPointId() === point.id"
+                [attr.cx]="point.x"
+                [attr.cy]="point.y"
+                r="1.6"
+                [attr.fill]="strokeColor()"
+                (click)="handlePointClick(point.id, $event)"
+              />
+            }
           } @else {
             <line class="rg-line-chart__baseline" x1="0" y1="42" x2="100" y2="42" />
           }
@@ -122,6 +133,10 @@ export class RgResultsLineChartComponent {
   readonly primaryLabel = input('Current run');
   readonly secondaryLabel = input('Compare run');
   readonly elapsedSec = input(0);
+  readonly pointIds = input<readonly string[]>([]);
+  readonly selectedPointId = input<string | null>(null);
+
+  readonly pointSelected = output<string>();
 
   protected readonly gradientId = computed(() =>
     `rg-chart-${this.title().replace(/\s+/g, '-').toLowerCase()}`,
@@ -174,6 +189,26 @@ export class RgResultsLineChartComponent {
     return buildPolyline(secondary, this.combinedRange(), 100, 44, 3);
   });
 
+  protected readonly pointHits = computed(() => {
+    const ids = this.pointIds();
+    const values = this.values();
+    if (ids.length === 0 || ids.length !== values.length) {
+      return [];
+    }
+    const range = this.combinedRange();
+    const span = Math.max(range.max - range.min, 0.001);
+    const innerHeight = 44 - 3 * 2;
+    const step = values.length <= 1 ? 0 : 100 / (values.length - 1);
+    return values.map((value, index) => {
+      const normalized = (value - range.min) / span;
+      return {
+        id: ids[index] ?? String(index),
+        x: index * step,
+        y: 44 - 3 - normalized * innerHeight,
+      };
+    });
+  });
+
   protected readonly areaPoints = computed(() => {
     const line = this.linePoints();
     if (!line) {
@@ -205,6 +240,11 @@ export class RgResultsLineChartComponent {
     }
     const unit = this.unit();
     return `${this.title()}. Latest ${formatMetric(stats.latest)} ${unit}. Range ${formatMetric(stats.min)} to ${formatMetric(stats.max)} ${unit}.`;
+  }
+
+  protected handlePointClick(id: string, event: MouseEvent): void {
+    event.stopPropagation();
+    this.pointSelected.emit(id);
   }
 }
 

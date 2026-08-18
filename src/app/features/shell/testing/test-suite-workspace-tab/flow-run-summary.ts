@@ -1,6 +1,6 @@
 import type { TestSuiteFlow, TestSuiteFlowNode, TestSuiteStepStatus } from '@shared/testing';
 import {
-  flattenEnabledFlowSteps,
+  flattenAllEnabledFlowSteps,
   flattenFlowNodesInRunOrder,
   formatFlowRunDuration,
   formatFlowRunTimestamp,
@@ -34,7 +34,7 @@ export function buildFlowRunProgress(
   nodes: readonly TestSuiteFlowNode[],
   liveStepStatuses: Readonly<Record<string, TestSuiteStepStatus>>,
 ): FlowRunProgress | null {
-  const steps = flattenEnabledFlowSteps(nodes);
+  const steps = flattenAllEnabledFlowSteps(nodes);
   if (steps.length === 0) {
     return null;
   }

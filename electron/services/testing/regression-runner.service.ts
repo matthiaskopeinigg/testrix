@@ -19,6 +19,8 @@ import {
   collectTestSuiteFlowIds,
   resolveRegressionFlowIds,
   stripFlowRunChildLogCaptures,
+  classifyRegressionFlowCounts,
+  datasetRowDisplaySuffix,
   type RegressionFlowResult,
   type RegressionFlowTimelineEntry,
   type RegressionProfile,
@@ -83,6 +85,9 @@ function buildFlowResult(
   attemptCount: number,
   includeCaptures: boolean,
   includeErrors: boolean,
+  attempts: readonly { status: 'passed' | 'failed' | 'skipped' | 'cancelled'; durationMs: number; message?: string }[] = [],
+  isCritical = false,
+  datasetRowIndex?: number,
 ): RegressionFlowResult {
   let passedStepCount = 0;
   let failedStepCount = 0;
@@ -103,6 +108,8 @@ function buildFlowResult(
       : result.ok
         ? 'passed'
         : 'failed';
+  const flaked =
+    status === 'passed' && attempts.some((attempt) => attempt.status === 'failed');
 
   return regressionFlowResultSchema.parse({
     flowId,
@@ -111,6 +118,10 @@ function buildFlowResult(
     durationMs: result.durationMs,
     message: result.message,
     attemptCount,
+    flaked,
+    attempts: [...attempts],
+    isCritical,
+    datasetRowIndex,
     stepStatuses: result.stepStatuses,
     stepDurations: result.stepDurations,
     stepErrors: includeErrors ? result.stepErrors : undefined,
@@ -234,6 +245,12 @@ export class RegressionRunner {
     if (this.profile.shuffleOrder) {
       shuffleInPlace(scheduled);
     }
+    const bootstrapId = this.profile.bootstrapFlowId?.trim();
+    if (bootstrapId) {
+      const without = scheduled.filter((id) => id !== bootstrapId);
+      scheduled.length = 0;
+      scheduled.push(bootstrapId, ...without);
+    }
     this.scheduledFlowIds = scheduled;
 
     this.metrics = createStartingRegressionRunMetrics(
@@ -244,18 +261,19 @@ export class RegressionRunner {
     );
     this.startMetricsTick(sender);
 
+    const reuseSession = this.profile.reuseE2eSession === true;
     const executeOptions: TestSuiteFlowExecuteOptions = {
       environmentIdOverride: this.profile.environmentId ?? undefined,
-      /** Many linked flows can each open a runner; never present E2E chrome during a regression. */
       e2eShowWindowOverride: false,
-      e2eKeepWindowOpenOverride: false,
+      e2eKeepWindowOpenOverride: reuseSession ? true : false,
+      preserveBrowserSession: reuseSession,
     };
 
     try {
-      if (this.profile.executionMode === 'parallel') {
-        await this.runParallel(scheduled, files, sender, executeOptions);
-      } else {
+      if (reuseSession || this.profile.executionMode !== 'parallel') {
         await this.runSequential(scheduled, files, sender, executeOptions);
+      } else {
+        await this.runParallel(scheduled, files, sender, executeOptions);
       }
       await this.recordRemainingAsSkipped(scheduled, files, sender);
     } catch (error: unknown) {
@@ -391,11 +409,58 @@ export class RegressionRunner {
     sender: WebContents | undefined,
     executeOptions: TestSuiteFlowExecuteOptions,
   ): Promise<void> {
+    const flow = await findSuiteFlow(flowId, files);
+    const rows =
+      flow?.dataset?.enabled === true && (flow.dataset.rows?.length ?? 0) > 0 ? flow.dataset.rows : null;
+    if (rows) {
+      for (let index = 0; index < rows.length; index++) {
+        if (this.cancelled || this.shouldStopAfterFailure()) {
+          return;
+        }
+        const row = rows[index]!;
+        const displayName = `${flow?.name ?? flowId}${datasetRowDisplaySuffix(index, row)}`;
+        await this.runSingleFlowOnce(
+          flowId,
+          displayName,
+          workerSlot,
+          worker,
+          files,
+          sender,
+          {
+            ...executeOptions,
+            expandDataset: false,
+            initialVariables: row,
+          },
+          index,
+        );
+      }
+      return;
+    }
+    await this.runSingleFlowOnce(
+      flowId,
+      flow?.name ?? flowId,
+      workerSlot,
+      worker,
+      files,
+      sender,
+      executeOptions,
+    );
+  }
+
+  private async runSingleFlowOnce(
+    flowId: string,
+    flowName: string,
+    workerSlot: number,
+    worker: FlowWorker,
+    files: ConfigFileService,
+    sender: WebContents | undefined,
+    executeOptions: TestSuiteFlowExecuteOptions,
+    datasetRowIndex?: number,
+  ): Promise<void> {
     if (this.cancelled) {
       return;
     }
 
-    const flowName = await resolveFlowName(flowId, files);
     const offsetMs = Date.now() - this.runStartedAt;
     const timelineEntry: RegressionFlowTimelineEntry = {
       flowId,
@@ -416,6 +481,8 @@ export class RegressionRunner {
       let attempt = 0;
       let result: TestSuiteFlowRunResult | null = null;
       const maxAttempts = 1 + this.profile.retryFailedFlows;
+      const attempts: { status: 'passed' | 'failed' | 'skipped' | 'cancelled'; durationMs: number; message?: string }[] =
+        [];
 
       while (attempt < maxAttempts && !this.cancelled) {
         attempt += 1;
@@ -438,6 +505,17 @@ export class RegressionRunner {
           await worker.e2eRunner.resetAfterFailure().catch(() => undefined);
           result = failedFlowRunFromThrow(error);
         }
+        const attemptStatus =
+          result.message === 'Run cancelled.'
+            ? 'cancelled'
+            : result.ok
+              ? 'passed'
+              : 'failed';
+        attempts.push({
+          status: attemptStatus,
+          durationMs: result.durationMs,
+          message: result.message,
+        });
         if (result.ok) {
           break;
         }
@@ -467,6 +545,9 @@ export class RegressionRunner {
         attempt,
         this.profile.includeStepCaptures,
         this.profile.includeStepErrors,
+        attempts,
+        await resolveFlowIsCritical(flowId, files),
+        datasetRowIndex,
       );
       this.flowResults.push(flowResult);
       this.flowDurationsMs.push(result.durationMs);
@@ -480,16 +561,17 @@ export class RegressionRunner {
         };
       }
 
+      const counts = classifyRegressionFlowCounts(this.flowResults);
       this.metrics = {
         ...this.metrics,
         completed: this.flowResults.length,
-        passed: this.flowResults.filter((r) => r.status === 'passed').length,
-        failed: this.flowResults.filter((r) => r.status === 'failed').length,
+        passed: counts.passed,
+        failed: counts.failed,
+        skipped: counts.skipped,
+        flaked: counts.flaked,
         passRatePercent:
-          this.flowResults.length > 0
-            ? (this.flowResults.filter((r) => r.status === 'passed').length /
-                this.flowResults.filter((r) => r.status === 'passed' || r.status === 'failed').length) *
-              100
+          counts.passed + counts.failed > 0
+            ? (counts.passed / (counts.passed + counts.failed)) * 100
             : 0,
       };
 
@@ -624,16 +706,31 @@ function findRegressionArtifact(
 }
 
 async function resolveFlowName(flowId: string, files: ConfigFileService): Promise<string> {
+  const flow = await findSuiteFlow(flowId, files);
+  return flow?.name ?? flowId;
+}
+
+async function resolveFlowIsCritical(flowId: string, files: ConfigFileService): Promise<boolean> {
+  const flow = await findSuiteFlow(flowId, files);
+  return flow?.isCritical === true;
+}
+
+async function findSuiteFlow(
+  flowId: string,
+  files: ConfigFileService,
+): Promise<import('../../../shared/testing').TestSuiteFlow | null> {
   const raw = await files.readTestSuites();
   const file = migrateTestSuitesFile(raw);
   const root = file.suites.find((s) => s.id === TEST_SUITE_ROOT_ID) ?? file.suites[0];
   if (!root) {
-    return flowId;
+    return null;
   }
-  const walk = (items: readonly import('../../../shared/testing').TestSuiteTreeItem[]): string | null => {
+  const walk = (
+    items: readonly import('../../../shared/testing').TestSuiteTreeItem[],
+  ): import('../../../shared/testing').TestSuiteFlow | null => {
     for (const item of items) {
       if ('nodes' in item && item.id === flowId) {
-        return item.name;
+        return item;
       }
       if (!('nodes' in item)) {
         const found = walk(item.children);
@@ -644,5 +741,5 @@ async function resolveFlowName(flowId: string, files: ConfigFileService): Promis
     }
     return null;
   };
-  return walk(root.flows) ?? flowId;
+  return walk(root.flows);
 }

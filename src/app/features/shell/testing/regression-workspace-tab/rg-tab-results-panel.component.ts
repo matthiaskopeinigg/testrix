@@ -12,6 +12,7 @@ import type {
 import type { RegressionTabUi } from '@shared/config';
 import {
   buildRegressionHealthOverview,
+  classifyRegressionFlowCounts,
   compareRegressionRunSummaries,
   compareRegressionRuns,
   createIdleRegressionRunMetrics,
@@ -30,6 +31,7 @@ import { TxFormFieldComponent } from '@app/shared/components/forms/tx-form-field
 import { TxIconComponent } from '@app/shared/components/forms/tx-icon/tx-icon.component';
 import { TxTooltipDirective } from '@app/shared/components/overlays/tx-tooltip/tx-tooltip.directive';
 import { TxTagComponent } from '@app/shared/components/forms/tx-tag/tx-tag.component';
+import { TxToggleComponent } from '@app/shared/components/forms/tx-toggle/tx-toggle.component';
 
 import { TsFlowRunPanelComponent } from '../test-suite-workspace-tab/ts-flow-run-panel/ts-flow-run-panel.component';
 
@@ -53,6 +55,10 @@ interface DashboardFlowRow {
   readonly durationMs: number;
   readonly passedStepCount: number;
   readonly failedStepCount: number;
+  readonly attemptCount?: number;
+  readonly flaked?: boolean;
+  readonly isCritical?: boolean;
+  readonly attempts?: RegressionFlowResult['attempts'];
 }
 export type RgResultsView = 'live' | 'history' | 'compare';
 
@@ -79,6 +85,7 @@ type RgResultsSectionId =
     TxIconComponent,
     TxTooltipDirective,
     TxTagComponent,
+    TxToggleComponent,
     RgResultsRunTimelineComponent,
     RgResultsStatCardComponent,
     RgResultsGanttChartComponent,
@@ -114,6 +121,8 @@ export class RgTabResultsPanelComponent {
   readonly selectedFlowDiffId = input<string | null>(null);
   readonly selectedStepDiffId = input<string | null>(null);
   readonly captureDiffNormalizeJson = input(true);
+  readonly countFlakesAsFailed = input(false);
+  readonly exportArtifact = input<{ readonly name: string; readonly release: string } | null>(null);
 
   readonly resultsViewChange = output<RgResultsView>();
   readonly selectedRunIdChange = output<string | null>();
@@ -123,6 +132,7 @@ export class RgTabResultsPanelComponent {
   readonly selectedFlowDiffIdChange = output<string | null>();
   readonly selectedStepDiffIdChange = output<string | null>();
   readonly captureDiffNormalizeJsonChange = output<boolean>();
+  readonly countFlakesAsFailedChange = output<boolean>();
   readonly clearRuns = output<void>();
   readonly deleteRun = output<string>();
   readonly rerunFailed = output<RegressionRun | undefined>();
@@ -175,6 +185,7 @@ export class RgTabResultsPanelComponent {
         passedCount: m.passed,
         failedCount: m.failed,
         skippedCount: m.skipped,
+        flakedCount: m.flaked,
         profileSnapshot: createDefaultRegressionProfile(),
         thresholdsSnapshot: this.thresholds(),
         flowResults: [...this.liveFlowResults()],
@@ -187,20 +198,41 @@ export class RgTabResultsPanelComponent {
   });
 
   protected readonly displayMetrics = computed(() => {
+    const countFlakesAsFailed = this.countFlakesAsFailed();
     if (this.runState() === 'running') {
-      return this.metrics() ?? createIdleRegressionRunMetrics();
+      const live = this.metrics() ?? createIdleRegressionRunMetrics();
+      if (!countFlakesAsFailed) {
+        return live;
+      }
+      const classified = classifyRegressionFlowCounts(this.liveFlowResults(), true);
+      return {
+        ...live,
+        passed: classified.passed,
+        failed: classified.failed,
+        skipped: classified.skipped,
+        flaked: classified.flaked,
+        passRatePercent:
+          classified.passed + classified.failed > 0
+            ? (classified.passed / (classified.passed + classified.failed)) * 100
+            : 0,
+      };
     }
     const run = this.displayRun();
     if (run) {
+      const classified = classifyRegressionFlowCounts(run.flowResults, countFlakesAsFailed);
       return {
         ...createIdleRegressionRunMetrics(),
         running: false,
-        completed: run.passedCount + run.failedCount + run.skippedCount,
+        completed: classified.passed + classified.failed + classified.skipped,
         total: run.flowResults.length,
-        passed: run.passedCount,
-        failed: run.failedCount,
-        skipped: run.skippedCount,
-        passRatePercent: run.summary?.passRatePercent ?? 0,
+        passed: classified.passed,
+        failed: classified.failed,
+        skipped: classified.skipped,
+        flaked: classified.flaked,
+        passRatePercent:
+          classified.passed + classified.failed > 0
+            ? (classified.passed / (classified.passed + classified.failed)) * 100
+            : (run.summary?.passRatePercent ?? 0),
         acceptancePercent: run.summary?.acceptancePercent ?? this.thresholds().acceptancePercent,
         elapsedSec: (run.summary?.totalDurationMs ?? 0) / 1000,
         samples: run.samples,
@@ -340,6 +372,20 @@ export class RgTabResultsPanelComponent {
     const samples = liveSamples ?? run?.samples ?? [];
     return samples.map((sample) => sample.avgFlowDurationMs);
   });
+
+  protected readonly historyChronologicalRuns = computed(() => [...this.runs()].reverse());
+
+  protected readonly historyPassRateSeries = computed(() =>
+    this.historyChronologicalRuns().map((run) => run.summary?.passRatePercent ?? 0),
+  );
+
+  protected readonly historyP95Series = computed(() =>
+    this.historyChronologicalRuns().map((run) => run.summary?.p95FlowDurationMs ?? 0),
+  );
+
+  protected readonly historyPointIds = computed(() =>
+    this.historyChronologicalRuns().map((run) => run.id),
+  );
 
   protected readonly thresholdChecks = computed(() => {
     const run = this.displayRun();
@@ -531,7 +577,11 @@ export class RgTabResultsPanelComponent {
 
   protected flowStatusVariant(
     status: DashboardFlowRow['status'],
+    flaked?: boolean,
   ): 'success' | 'warning' | 'error' | 'default' {
+    if (flaked && status === 'passed') {
+      return 'warning';
+    }
     if (status === 'passed') {
       return 'success';
     }
@@ -542,6 +592,21 @@ export class RgTabResultsPanelComponent {
       return 'warning';
     }
     return 'default';
+  }
+
+  protected flowStatusLabel(flow: DashboardFlowRow): string {
+    if (flow.status === 'running') {
+      return 'running';
+    }
+    if (flow.flaked && flow.status === 'passed') {
+      const attempt = flow.attemptCount ?? 1;
+      return `passed on attempt ${attempt}`;
+    }
+    return flow.status;
+  }
+
+  protected handleCountFlakesAsFailedChange(value: boolean): void {
+    this.countFlakesAsFailedChange.emit(value);
   }
 
   protected handleViewChange(view: RgResultsView): void {
@@ -644,9 +709,21 @@ export class RgTabResultsPanelComponent {
     if (runs.length < 2) {
       return;
     }
+    const latest = runs[0]!;
+    const pinnedId = this.pinnedBaselineRunId();
+    const pinned =
+      pinnedId && runs.some((run) => run.id === pinnedId) ? pinnedId : null;
+    if (pinned && pinned !== latest.id) {
+      this.handleCompareSelection({ a: pinned, b: latest.id });
+      return;
+    }
+    if (pinned && runs[1]) {
+      this.handleCompareSelection({ a: pinned, b: runs[1].id });
+      return;
+    }
     this.handleCompareSelection({
       a: runs[Math.min(1, runs.length - 1)]!.id,
-      b: runs[0]!.id,
+      b: latest.id,
     });
   }
 

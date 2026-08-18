@@ -1,0 +1,87 @@
+@if (layout().nodes.length === 0) {
+  <div class="ts-flow-step-diagram__empty" role="status">
+    <p class="ts-flow-step-diagram__empty-title">No steps yet</p>
+    <p class="ts-flow-step-diagram__empty-hint">Right-click here to add a step.</p>
+  </div>
+} @else {
+  <div class="ts-flow-step-diagram__toolbar" role="toolbar" aria-label="Diagram zoom">
+    <tx-button variant="secondary" size="icon" ariaLabel="Zoom out" (pressed)="handleZoomOut()">
+      <tx-icon name="minus" [size]="14" aria-hidden="true" />
+    </tx-button>
+    <span class="ts-flow-step-diagram__zoom-label">{{ zoomPercent() }}%</span>
+    <tx-button variant="secondary" size="icon" ariaLabel="Zoom in" (pressed)="handleZoomIn()">
+      <tx-icon name="plus" [size]="14" aria-hidden="true" />
+    </tx-button>
+    <tx-button variant="secondary" (pressed)="handleFit()">Fit</tx-button>
+  </div>
+    <div
+    #viewport
+    class="ts-flow-step-diagram__viewport"
+    (wheel)="handleWheel($event)"
+    (pointerdown)="handlePointerDown($event)"
+    (pointermove)="handlePointerMove($event)"
+    (pointerup)="handlePointerUp($event)"
+    (pointercancel)="handlePointerUp($event)"
+  >
+    <div class="ts-flow-step-diagram__world" [style.transform]="worldTransform()">
+      <svg
+        class="ts-flow-step-diagram__svg"
+        [attr.width]="layout().width"
+        [attr.height]="layout().height"
+        [attr.viewBox]="'0 0 ' + layout().width + ' ' + layout().height"
+      >
+        @for (edge of layout().edges; track edge.id) {
+          <path class="ts-flow-step-diagram__edge" [attr.d]="edge.d" />
+          @if (edge.label && edge.labelX != null && edge.labelY != null) {
+            <text class="ts-flow-step-diagram__edge-label" [attr.x]="edge.labelX" [attr.y]="edge.labelY">
+              {{ edge.label }}
+            </text>
+          }
+        }
+        @for (node of layout().nodes; track node.id) {
+          <g
+            class="ts-flow-step-diagram__node"
+            [class.is-selected]="selectedStepId() === node.id"
+            [class.is-status-running]="liveStepStatuses()[node.id] === 'running'"
+            [class.is-status-passed]="liveStepStatuses()[node.id] === 'passed'"
+            [class.is-status-failed]="liveStepStatuses()[node.id] === 'failed'"
+            [class.is-status-skipped]="liveStepStatuses()[node.id] === 'skipped'"
+            [class.is-selectable]="node.selectable"
+            (click)="handleNodeClick(node.id, node.selectable, $event)"
+          >
+            @if (node.shape === 'diamond') {
+              <polygon
+                [attr.points]="
+                  node.x + node.width / 2 + ',' + node.y + ' ' +
+                  (node.x + node.width) + ',' + (node.y + node.height / 2) + ' ' +
+                  (node.x + node.width / 2) + ',' + (node.y + node.height) + ' ' +
+                  node.x + ',' + (node.y + node.height / 2)
+                "
+              />
+            } @else {
+              <rect
+                [attr.x]="node.x"
+                [attr.y]="node.y"
+                [attr.width]="node.width"
+                [attr.height]="node.height"
+                [attr.rx]="node.shape === 'bar' ? 2 : 8"
+              />
+            }
+            @if (node.label) {
+              <text
+                [attr.x]="node.x + node.width / 2"
+                [attr.y]="node.y + node.height / 2 + 4"
+                text-anchor="middle"
+              >
+                {{ node.label }}
+              </text>
+            }
+            @if (node.title) {
+              <title>{{ node.title }}</title>
+            }
+          </g>
+        }
+      </svg>
+    </div>
+  </div>
+}

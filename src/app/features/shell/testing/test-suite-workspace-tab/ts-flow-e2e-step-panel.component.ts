@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, input, output, si
 import { FormsModule } from '@angular/forms';
 
 import type { DynamicVariableCatalogItem } from '@shared/dynamic-variables';
-import { type E2eStepConfig, type TestSuiteFlow } from '@shared/testing';
+import { createDefaultE2eStepConfig, type E2eStepConfig, type TestSuiteFlow } from '@shared/testing';
 
 import { ElectronService } from '@app/core/electron/electron.service';
 import { ErrorNotificationService } from '@app/core/errors/error-notification.service';
@@ -10,6 +10,8 @@ import { TxButtonComponent } from '@app/shared/components/forms/tx-button/tx-but
 import { TxDropdownComponent } from '@app/shared/components/forms/tx-dropdown/tx-dropdown.component';
 import { TxFormFieldComponent } from '@app/shared/components/forms/tx-form-field/tx-form-field.component';
 import { TxInputComponent } from '@app/shared/components/forms/tx-input/tx-input.component';
+import { TxSliderComponent } from '@app/shared/components/forms/tx-slider/tx-slider.component';
+import { TxToggleComponent } from '@app/shared/components/forms/tx-toggle/tx-toggle.component';
 import { TxVariableInputComponent } from '@app/shared/components/editors/tx-variable-input/tx-variable-input.component';
 
 import {
@@ -28,6 +30,8 @@ import { FLOW_STEP_E2E_ACTION_OPTIONS } from './flow-step-editor-options';
     TxInputComponent,
     TxDropdownComponent,
     TxVariableInputComponent,
+    TxToggleComponent,
+    TxSliderComponent,
   ],
   templateUrl: './ts-flow-e2e-step-panel.component.html',
   styleUrl: './ts-flow-step-panel.shared.scss',
@@ -58,12 +62,7 @@ export class TsFlowE2eStepPanelComponent {
   );
 
   protected cfg(): E2eStepConfig {
-    return (this.config() ?? {
-      action: 'NAVIGATE_TO',
-      selector: '',
-      value: '',
-      timeout: 5000,
-    }) as E2eStepConfig;
+    return { ...createDefaultE2eStepConfig(), ...(this.config() ?? {}) } as E2eStepConfig;
   }
 
   protected patch(patch: Partial<E2eStepConfig>): void {
@@ -113,6 +112,20 @@ export class TsFlowE2eStepPanelComponent {
       this.notifier.reportUnknown(error);
     } finally {
       this.picking.set(false);
+    }
+  }
+
+  protected async handleUpdateBaseline(): Promise<void> {
+    const flow = this.flow();
+    const stepId = this.stepId();
+    const api = this.electron.bridge()?.testing;
+    if (!flow || !stepId || !api?.e2eUpdateCheckpointBaseline) {
+      this.notifier.reportUnknown(new Error('Update baseline is only available in the desktop app after a failed compare.'));
+      return;
+    }
+    const result = await api.e2eUpdateCheckpointBaseline({ flowId: flow.id, stepId });
+    if (!result.ok) {
+      this.notifier.reportUnknown(new Error(result.error ?? 'Could not update the checkpoint baseline.'));
     }
   }
 

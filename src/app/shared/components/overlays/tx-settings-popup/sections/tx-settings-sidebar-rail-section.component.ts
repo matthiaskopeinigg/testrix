@@ -46,16 +46,27 @@ export class TxSettingsSidebarRailSectionComponent {
   readonly hiddenChange = output<WorkspaceSidebarUserItemId[]>();
 
   protected readonly rows = computed((): readonly SidebarRailSettingsRow[] => {
-    const order = normalizeSidebarItemOrder(this.order());
     const hidden = new Set(normalizeHiddenSidebarItems(this.hidden()));
-    return order.map((id, index) => ({
+    const mainOrder = normalizeSidebarItemOrder(this.order()).filter((id) => id !== 'history');
+    const mainRows = mainOrder.map((id, index) => ({
       id,
       label: WORKSPACE_SIDEBAR_USER_ITEM_LABELS[id],
       icon: WORKSPACE_SIDEBAR_USER_ITEM_ICONS[id] as TxIconName,
       visible: !hidden.has(id),
       canMoveUp: index > 0,
-      canMoveDown: index < order.length - 1,
+      canMoveDown: index < mainOrder.length - 1,
     }));
+    return [
+      ...mainRows,
+      {
+        id: 'history',
+        label: WORKSPACE_SIDEBAR_USER_ITEM_LABELS.history,
+        icon: WORKSPACE_SIDEBAR_USER_ITEM_ICONS.history as TxIconName,
+        visible: !hidden.has('history'),
+        canMoveUp: false,
+        canMoveDown: false,
+      },
+    ];
   });
 
   /**

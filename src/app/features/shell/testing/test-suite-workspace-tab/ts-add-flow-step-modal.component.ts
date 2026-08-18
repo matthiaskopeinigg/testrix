@@ -5,7 +5,7 @@ import type { TestSuiteStepType } from '@shared/testing';
 import { TxIconComponent } from '@app/shared/components/forms/tx-icon/tx-icon.component';
 import { TxModalComponent } from '@app/shared/components/overlays/tx-modal/tx-modal.component';
 
-import { FLOW_STEP_ADD_TILES } from './flow-step-editor-options';
+import { FLOW_STEP_ADD_GROUPS } from './flow-step-editor-options';
 
 @Component({
   selector: 'app-ts-add-flow-step-modal',
@@ -22,7 +22,7 @@ export class TsAddFlowStepModalComponent {
   readonly select = output<TestSuiteStepType>();
   readonly closed = output<void>();
 
-  protected readonly addTiles = FLOW_STEP_ADD_TILES;
+  protected readonly addGroups = FLOW_STEP_ADD_GROUPS;
 
   protected readonly modalTitle = computed(() => 'Add flow step');
 

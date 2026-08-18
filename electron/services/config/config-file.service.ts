@@ -128,6 +128,11 @@ export class ConfigFileService {
     private readonly getActiveProfileDir: () => string,
   ) {}
 
+  /** Active profile workspace directory (collections, suites, checkpoints). */
+  profileDir(): string {
+    return this.getActiveProfileDir();
+  }
+
   private settingsPath(): string {
     return path.join(this.getSharedConfigDir(), SETTINGS_FILE_NAME);
   }

@@ -47,6 +47,9 @@ export const flowStepE2eElementCaptureSchema = z.object({
   elementText: boundedText(512_000).default(''),
   elementHtml: boundedText(512_000).default(''),
   elementExists: z.boolean().default(false),
+  savedPath: boundedText(4_096).optional(),
+  actualPath: boundedText(4_096).optional(),
+  diffPath: boundedText(4_096).optional(),
 });
 
 export type FlowStepE2eElementCapture = z.infer<typeof flowStepE2eElementCaptureSchema>;

@@ -1,0 +1,107 @@
+<div class="request-panel ts-flow-step-panel">
+  @switch (step().stepType) {
+    @case ('IF') {
+      <p class="ts-flow-step-panel__hint">First matching Then / Else if wins. Unchosen lanes are skipped.</p>
+      <tx-form-field label="If condition" controlId="ts-if-condition">
+        <app-ts-flow-condition-builder
+          controlIdPrefix="ts-if"
+          [condition]="ifCfg().condition"
+          [variableCatalog]="variableCatalog()"
+          (conditionChange)="handleIfCondition($event)"
+          (environmentVariableClick)="environmentVariableClick.emit($event)"
+        />
+      </tx-form-field>
+      @for (lane of elseIfLanes(); track lane.id) {
+        <tx-form-field [label]="'Else if'" [controlId]="'ts-elif-' + lane.id">
+          <app-ts-flow-condition-builder
+            [controlIdPrefix]="'ts-elif-' + lane.id"
+            [condition]="lane.condition ?? emptyCondition()"
+            [variableCatalog]="variableCatalog()"
+            (conditionChange)="elseIfConditionChange.emit({ laneId: lane.id, condition: $event })"
+            (environmentVariableClick)="environmentVariableClick.emit($event)"
+          />
+        </tx-form-field>
+      }
+      <tx-button variant="secondary" (pressed)="addElseIf.emit()">Add else if</tx-button>
+    }
+    @case ('FOR_EACH') {
+      <p class="ts-flow-step-panel__hint">
+        Loops the Body lane over a JSON array or comma-separated list. Distinct from a flow-level dataset.
+      </p>
+      <tx-form-field label="Source" controlId="ts-foreach-source">
+        <tx-variable-input
+          controlId="ts-foreach-source"
+          [catalog]="variableCatalog()"
+          [ngModel]="forEachCfg().source"
+          (ngModelChange)="patchForEach({ source: $event })"
+          (environmentVariableClick)="environmentVariableClick.emit($event)"
+          [placeholder]="sourcePlaceholder"
+        />
+      </tx-form-field>
+      <tx-form-field label="Item variable" controlId="ts-foreach-item">
+        <tx-input
+          controlId="ts-foreach-item"
+          [ngModel]="forEachCfg().itemVariable"
+          (ngModelChange)="patchForEach({ itemVariable: $event })"
+          placeholder="item"
+        />
+      </tx-form-field>
+      <tx-form-field label="Max iterations" controlId="ts-foreach-max">
+        <tx-slider
+          controlId="ts-foreach-max"
+          [min]="1"
+          [max]="200"
+          [step]="1"
+          [ngModel]="forEachCfg().maxIterations"
+          (ngModelChange)="patchForEach({ maxIterations: $event })"
+        />
+      </tx-form-field>
+    }
+    @case ('WHILE') {
+      <tx-form-field label="While condition" controlId="ts-while-condition">
+        <app-ts-flow-condition-builder
+          controlIdPrefix="ts-while"
+          [condition]="whileCfg().condition"
+          [variableCatalog]="variableCatalog()"
+          (conditionChange)="handleWhileCondition($event)"
+          (environmentVariableClick)="environmentVariableClick.emit($event)"
+        />
+      </tx-form-field>
+      <tx-form-field label="Max iterations" controlId="ts-while-max">
+        <tx-slider
+          controlId="ts-while-max"
+          [min]="1"
+          [max]="200"
+          [step]="1"
+          [ngModel]="whileCfg().maxIterations"
+          (ngModelChange)="patchWhile({ maxIterations: $event })"
+        />
+      </tx-form-field>
+    }
+    @case ('PARALLEL') {
+      <tx-banner variant="info" title="Parallel branches">
+        Child steps run together. E2E, MANUAL, TRIGGER, listeners, and nested PARALLEL are not allowed.
+      </tx-banner>
+    }
+    @case ('RETRY') {
+      <tx-form-field label="Max attempts" controlId="ts-retry-attempts">
+        <tx-slider
+          controlId="ts-retry-attempts"
+          [min]="1"
+          [max]="10"
+          [step]="1"
+          [ngModel]="retryCfg().maxAttempts"
+          (ngModelChange)="patchRetry({ maxAttempts: $event })"
+        />
+      </tx-form-field>
+      <tx-form-field label="Delay between attempts (ms)" controlId="ts-retry-delay">
+        <tx-input
+          controlId="ts-retry-delay"
+          type="number"
+          [ngModel]="retryCfg().delayMs"
+          (ngModelChange)="patchRetry({ delayMs: toNumber($event, 0) })"
+        />
+      </tx-form-field>
+    }
+  }
+</div>

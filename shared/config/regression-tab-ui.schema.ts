@@ -46,6 +46,7 @@ export const regressionTabUiSchema = z.object({
   captureDiffNormalizeJson: z.boolean().default(true),
   flowsExpandedIds: z.array(z.string()).default([]),
   selectedFlowIds: z.array(z.string()).default([]),
+  countFlakesAsFailed: z.boolean().default(false),
 });
 
 export type RegressionTabUi = z.infer<typeof regressionTabUiSchema>;

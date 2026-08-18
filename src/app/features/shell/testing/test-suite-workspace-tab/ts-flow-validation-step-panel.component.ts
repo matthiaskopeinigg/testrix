@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 
 import type { DynamicVariableCatalogItem } from '@shared/dynamic-variables';
 import {
+  buildValidationStepConfigFromCapture,
   defaultValidationRuleForReferenceStepType,
   findFlowStepById,
   isE2eElementValidationSource,
@@ -17,6 +18,7 @@ import type { TxDropdownOption } from '@app/shared/components/forms/tx-dropdown/
 import { ElectronService } from '@app/core/electron/electron.service';
 import { ErrorNotificationService } from '@app/core/errors/error-notification.service';
 import { TxButtonComponent } from '@app/shared/components/forms/tx-button/tx-button.component';
+import { TxToggleComponent } from '@app/shared/components/forms/tx-toggle/tx-toggle.component';
 import { TxIconComponent } from '@app/shared/components/forms/tx-icon/tx-icon.component';
 import { TxDropdownComponent } from '@app/shared/components/forms/tx-dropdown/tx-dropdown.component';
 import { TxFormFieldComponent } from '@app/shared/components/forms/tx-form-field/tx-form-field.component';
@@ -43,6 +45,7 @@ import {
     TxVariableInputComponent,
     TxDropdownComponent,
     TxButtonComponent,
+    TxToggleComponent,
     TxIconComponent,
   ],
   templateUrl: './ts-flow-validation-step-panel.component.html',
@@ -200,6 +203,39 @@ export class TsFlowValidationStepPanelComponent {
 
   protected handleRemoveRule(index: number): void {
     this.patch({ rules: this.rules().filter((_, i) => i !== index) });
+  }
+
+  protected canSeedFromLastRun(): boolean {
+    const capture = this.refStepCapture();
+    return Boolean(capture && capture.kind === 'http_response' && this.cfg().refStepId);
+  }
+
+  protected handleSeedFromLastRun(): void {
+    const capture = this.refStepCapture();
+    const refId = this.cfg().refStepId;
+    if (!capture || capture.kind !== 'http_response' || !refId) {
+      return;
+    }
+    const seeded = buildValidationStepConfigFromCapture(
+      {
+        id: 'seed',
+        captureItemId: 'seed',
+        at: capture.capturedAt,
+        method: 'GET',
+        url: '',
+        statusCode: capture.statusCode,
+        responseBody: capture.bodyText,
+        requestHeaders: [],
+        responseHeaders: [],
+        requestBody: '',
+        requestBodyTruncated: false,
+        requestBodyIsBinary: false,
+        responseBodyTruncated: false,
+        responseBodyIsBinary: false,
+      },
+      refId,
+    );
+    this.patch({ rules: seeded.rules });
   }
 
   protected capturePreview(): string | null {

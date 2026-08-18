@@ -7,7 +7,7 @@ import type {
   TestSuiteFlowNode,
   TestSuiteFlowStep,
 } from './test-suites.schema';
-import { isFlowFolderNode } from './test-suites.schema';
+import { isFlowFolderNode, isFlowLaneNode } from './test-suites.schema';
 
 /** Maps a finished regression flow status onto a test-suite last-run status. */
 export function regressionFlowStatusToStepStatus(
@@ -56,7 +56,7 @@ export function overlayRegressionResultOnFlow(
 }
 
 function overlayFlowNode(node: TestSuiteFlowNode, result: RegressionFlowResult): TestSuiteFlowNode {
-  if (isFlowFolderNode(node)) {
+  if (isFlowFolderNode(node) || isFlowLaneNode(node)) {
     return {
       ...node,
       children: node.children.map((child) => overlayFlowNode(child, result)),

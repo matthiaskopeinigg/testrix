@@ -1,4 +1,5 @@
 import { app, type BrowserWindow, type WebContents } from 'electron';
+import path from 'node:path';
 
 import {
   createIdleLoadTestRunMetrics,
@@ -18,6 +19,7 @@ import {
 
 import { TestingChannels } from '../../ipc/channels/testing.channels';
 import type { ConfigFileService } from '../config/config-file.service';
+import { updateE2eCheckpointBaseline } from './e2e-checkpoint';
 import { CaptureRunner } from './capture-runner.service';
 import { InterceptorRunner } from './interceptor-runner.service';
 import { LoadTestRunner } from './load-test-runner.service';
@@ -217,6 +219,22 @@ export class TestingRuntimeService {
 
   submitFlowManualInput(payload: unknown): { readonly ok: boolean; readonly error?: string } {
     return this.manualInputCoordinator.submit(payload);
+  }
+
+  async e2eUpdateCheckpointBaseline(payload: {
+    readonly flowId?: string;
+    readonly stepId?: string;
+  }): Promise<{ readonly ok: boolean; readonly error?: string }> {
+    const flowId = typeof payload.flowId === 'string' ? payload.flowId.trim() : '';
+    const stepId = typeof payload.stepId === 'string' ? payload.stepId.trim() : '';
+    if (!flowId || !stepId) {
+      return { ok: false, error: 'Flow and step ids are required.' };
+    }
+    return updateE2eCheckpointBaseline(
+      path.join(this.files.profileDir(), 'e2e-checkpoints'),
+      flowId,
+      stepId,
+    );
   }
 
   async e2eExecute(payload: E2eExecutePayload): Promise<E2eExecuteResult> {

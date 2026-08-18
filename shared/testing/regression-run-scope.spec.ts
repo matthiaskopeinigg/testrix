@@ -36,6 +36,7 @@ function runWithFailures(failedIds: string[]): RegressionRun {
     passedCount: 0,
     failedCount: failedIds.length,
     skippedCount: 0,
+    flakedCount: 0,
     profileSnapshot: createDefaultRegressionProfile(),
     thresholdsSnapshot: { acceptancePercent: 100 },
     flowResults: failedIds.map((flowId) => ({

@@ -47,6 +47,7 @@ export const TestingChannels = {
   flowRunProgress: 'testing:flowRunProgress',
   flowManualInputPrompt: 'testing:flowManualInputPrompt',
   flowManualInputSubmit: 'testing:flowManualInputSubmit',
+  e2eUpdateCheckpointBaseline: 'testing:e2eUpdateCheckpointBaseline',
   regressionStart: 'testing:regressionStart',
   regressionCancel: 'testing:regressionCancel',
   regressionStatus: 'testing:regressionStatus',

@@ -76,6 +76,19 @@ describe('regression-metrics-aggregate', () => {
     expect(result.results.some((row) => row.label === 'Acceptance rate' && row.pass)).toBe(true);
   });
 
+  it('fails acceptance when a critical flow failed', () => {
+    const results = [
+      flowResult({ flowId: 'a', flowName: 'A', status: 'passed', passedStepCount: 2 }),
+      flowResult({ flowId: 'login', flowName: 'Login', status: 'failed', isCritical: true, failedStepCount: 1 }),
+    ];
+    const summary = buildRegressionRunSummary(results, 5000, 50, [{ workerSlot: 0 }]);
+    expect(summary?.passRatePercent).toBe(50);
+    expect(summary?.meetsAcceptance).toBe(false);
+    const thresholds = evaluateRegressionThresholds(1, 1, 5000, 100, { acceptancePercent: 50 }, 1);
+    expect(thresholds.pass).toBe(false);
+    expect(thresholds.results.some((row) => row.label === 'Critical flows' && !row.pass)).toBe(true);
+  });
+
   it('computes percentile helper', () => {
     expect(percentile([10, 20, 30, 40], 50)).toBe(20);
     expect(percentile([], 50)).toBe(0);

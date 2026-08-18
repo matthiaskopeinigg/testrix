@@ -117,6 +117,9 @@ export function workspaceTabResourceExists(
     case 'dev-tool':
       return findDevelopmentTool(resourceId) !== null;
     case 'test-suite': {
+      if (resourceId.startsWith('tsg:')) {
+        return true;
+      }
       const parsed = parseTestSuiteTabResourceId(resourceId);
       if (!parsed) {
         return false;

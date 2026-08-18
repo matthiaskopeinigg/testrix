@@ -20,11 +20,14 @@ import {
 import type { RegressionProfile, RegressionRun, RegressionThresholds } from '@shared/testing';
 import {
   collectFailedFlowIdsFromRun,
+  collectFlowsInTree,
   createIdleRegressionRunMetrics,
   createStartingRegressionRunMetrics,
   filterFailedFlowIdsStillLinked,
+  regressionFlowIdsEqual,
   regressionRunProgressEventSchema,
   resolveRegressionFlowIds,
+  syncRegressionFlowIdsFromLinkedFolder,
   type RegressionFlowResult,
   type RegressionFlowTimelineEntry,
   type RegressionRunMetrics,
@@ -135,6 +138,7 @@ export class RegressionWorkspaceTabComponent {
   protected readonly selectedFlowDiffId = signal<string | null>(null);
   protected readonly selectedStepDiffId = signal<string | null>(null);
   protected readonly captureDiffNormalizeJson = signal(true);
+  protected readonly countFlakesAsFailed = signal(false);
   protected readonly flowsExpandedIds = signal<string[]>([]);
   protected readonly liveFlowTimeline = signal<readonly RegressionFlowTimelineEntry[]>([]);
   protected readonly liveFlowResults = signal<readonly RegressionFlowResult[]>([]);
@@ -175,6 +179,11 @@ export class RegressionWorkspaceTabComponent {
   );
 
   protected readonly title = computed(() => this.artifact()?.name ?? 'Regression');
+
+  protected readonly exportArtifact = computed(() => {
+    const artifact = this.artifact();
+    return artifact ? { name: artifact.name, release: artifact.release } : null;
+  });
 
   protected readonly lastRun = computed(() => this.artifact()?.runs[0] ?? null);
 
@@ -278,6 +287,13 @@ export class RegressionWorkspaceTabComponent {
     return options;
   });
 
+  protected readonly flowOptions = computed((): readonly TxDropdownOption[] =>
+    collectFlowsInTree(this.testSuite.flows()).map((flow) => ({
+      value: flow.id,
+      label: flow.name,
+    })),
+  );
+
   constructor() {
     effect(() => {
       if (!this.active()) {
@@ -309,7 +325,12 @@ export class RegressionWorkspaceTabComponent {
       this.selectedFlowDiffId.set(ui.selectedFlowDiffId);
       this.selectedStepDiffId.set(ui.selectedStepDiffId);
       this.captureDiffNormalizeJson.set(ui.captureDiffNormalizeJson);
+      this.countFlakesAsFailed.set(ui.countFlakesAsFailed);
       this.flowsExpandedIds.set([...ui.flowsExpandedIds]);
+      const golden = this.regression.findArtifact(this.artifactId())?.goldenRunId ?? null;
+      if (golden) {
+        this.pinnedBaselineRunId.set(golden);
+      }
     });
 
     effect(() => {
@@ -354,6 +375,19 @@ export class RegressionWorkspaceTabComponent {
         return;
       }
       untracked(() => this.resetLiveMetrics());
+    });
+
+    effect(() => {
+      if (!this.active()) {
+        return;
+      }
+      const artifact = this.artifact();
+      const suiteItems = this.testSuite.flows();
+      if (!artifact?.linkedFolderId) {
+        return;
+      }
+      untracked(() => this.syncLinkedFolderFlows());
+      void suiteItems;
     });
 
     this.destroyRef.onDestroy(() => {
@@ -428,6 +462,17 @@ export class RegressionWorkspaceTabComponent {
     this.scheduleTabUiPersist();
   }
 
+  protected handleLinkedFolderIdChange(folderId: string | null): void {
+    const id = this.artifactId();
+    if (!id) {
+      return;
+    }
+    this.regression.patchLinkedFolderId(id, folderId);
+    if (folderId) {
+      this.syncLinkedFolderFlows();
+    }
+  }
+
   protected handleResultsViewChange(view: 'live' | 'history' | 'compare'): void {
     this.resultsView.set(view);
     this.scheduleTabUiPersist();
@@ -452,6 +497,10 @@ export class RegressionWorkspaceTabComponent {
 
   protected handlePinnedBaselineChange(runId: string | null): void {
     this.pinnedBaselineRunId.set(runId);
+    const id = this.artifactId();
+    if (id) {
+      this.regression.patchGoldenRunId(id, runId);
+    }
     this.scheduleTabUiPersist();
   }
 
@@ -477,6 +526,11 @@ export class RegressionWorkspaceTabComponent {
 
   protected handleCaptureDiffNormalizeJsonChange(normalizeJson: boolean): void {
     this.captureDiffNormalizeJson.set(normalizeJson);
+    this.scheduleTabUiPersist();
+  }
+
+  protected handleCountFlakesAsFailedChange(value: boolean): void {
+    this.countFlakesAsFailed.set(value);
     this.scheduleTabUiPersist();
   }
 
@@ -599,7 +653,7 @@ export class RegressionWorkspaceTabComponent {
   }
 
   private startRegressionRun(options: Partial<RegressionStartOptions>): void {
-    const artifact = this.artifact();
+    let artifact = this.artifact();
     const artifactId = this.artifactId();
     if (!artifact || !artifactId) {
       return;
@@ -617,6 +671,9 @@ export class RegressionWorkspaceTabComponent {
       this.notifier.reportUnknown(new Error('This regression is archived and cannot be run.'));
       return;
     }
+
+    this.syncLinkedFolderFlows();
+    artifact = this.regression.findArtifact(artifactId) ?? artifact;
 
     const flowIds = options.flowIdsOverride?.length
       ? options.flowIdsOverride
@@ -805,6 +862,23 @@ export class RegressionWorkspaceTabComponent {
     return count;
   }
 
+  private syncLinkedFolderFlows(): void {
+    const artifact = this.regression.findArtifact(this.artifactId());
+    if (!artifact?.linkedFolderId) {
+      return;
+    }
+    const next = syncRegressionFlowIdsFromLinkedFolder(
+      artifact.flowIds,
+      artifact.linkedFolderId,
+      this.testSuite.flows(),
+    );
+    if (regressionFlowIdsEqual(next.flowIds, artifact.flowIds)) {
+      return;
+    }
+    this.regression.patchFlowIds(artifact.id, next.flowIds);
+    this.selectedFlowIds.set([...next.flowIds]);
+  }
+
   private scheduleArtifactPatch(patch: Parameters<RegressionService['patchArtifact']>[1]): void {
     const id = this.artifactId();
     if (!id) {
@@ -852,6 +926,7 @@ export class RegressionWorkspaceTabComponent {
               selectedFlowDiffId: this.selectedFlowDiffId(),
               selectedStepDiffId: this.selectedStepDiffId(),
               captureDiffNormalizeJson: this.captureDiffNormalizeJson(),
+              countFlakesAsFailed: this.countFlakesAsFailed(),
               flowsExpandedIds: this.flowsExpandedIds(),
             },
           },

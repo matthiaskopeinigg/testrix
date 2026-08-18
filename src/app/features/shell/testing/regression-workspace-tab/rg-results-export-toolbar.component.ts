@@ -1,12 +1,15 @@
-import { ChangeDetectionStrategy, Component, input, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, input, output, signal, inject } from '@angular/core';
 
 import {
   buildRegressionDiffReport,
   buildRegressionRunReport,
+  generateRegressionHtmlReport,
   serializeRegressionRunExport,
+  type RegressionArtifact,
   type RegressionRun,
 } from '@shared/testing';
 
+import { FileDialogService } from '@app/core/platform/file-dialog.service';
 import { TxButtonComponent } from '@app/shared/components/forms/tx-button/tx-button.component';
 
 @Component({
@@ -20,6 +23,9 @@ import { TxButtonComponent } from '@app/shared/components/forms/tx-button/tx-but
       </tx-button>
       <tx-button variant="secondary" [disabled]="!record()" (pressed)="handleCopyReport()">
         Copy report
+      </tx-button>
+      <tx-button variant="secondary" [disabled]="!record() || !artifact()" (pressed)="handleExportHtml()">
+        Export HTML
       </tx-button>
       <tx-button variant="secondary" [disabled]="!record()" (pressed)="handleDownload()">
         Download JSON
@@ -38,10 +44,13 @@ import { TxButtonComponent } from '@app/shared/components/forms/tx-button/tx-but
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class RgResultsExportToolbarComponent {
+  private readonly files = inject(FileDialogService);
+
   readonly record = input<RegressionRun | null>(null);
   readonly compareRecord = input<RegressionRun | null>(null);
+  readonly artifact = input<Pick<RegressionArtifact, 'name' | 'release'> | null>(null);
 
-  readonly exported = output<{ readonly kind: 'json' | 'report' | 'download' | 'diff' }>();
+  readonly exported = output<{ readonly kind: 'json' | 'report' | 'download' | 'diff' | 'html' }>();
 
   protected readonly feedback = signal('');
 
@@ -63,6 +72,26 @@ export class RgResultsExportToolbarComponent {
     await navigator.clipboard.writeText(buildRegressionRunReport(record));
     this.showFeedback('Report copied');
     this.exported.emit({ kind: 'report' });
+  }
+
+  protected async handleExportHtml(): Promise<void> {
+    const record = this.record();
+    const artifact = this.artifact();
+    if (!record || !artifact) {
+      return;
+    }
+    const html = generateRegressionHtmlReport({
+      artifact,
+      record,
+      compareRecord: this.compareRecord(),
+    });
+    const path = await this.files.saveText(html, `regression-run-${record.id}.html`, [
+      { name: 'HTML', extensions: ['html'] },
+    ]);
+    if (path) {
+      this.showFeedback('HTML report saved');
+      this.exported.emit({ kind: 'html' });
+    }
   }
 
   protected async handleCopyDiffReport(): Promise<void> {

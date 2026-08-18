@@ -16,6 +16,11 @@ describe('testSuiteTabUiSchema', () => {
     expect(ui.activeFlowSection).toBe('steps');
   });
 
+  it('parses the settings section', () => {
+    const ui = testSuiteTabUiSchema.parse({ activeFlowSection: 'settings' });
+    expect(ui.activeFlowSection).toBe('settings');
+  });
+
   it('parses layout fields', () => {
     const ui = testSuiteTabUiSchema.parse({
       stepsPanelWidthPx: 320,

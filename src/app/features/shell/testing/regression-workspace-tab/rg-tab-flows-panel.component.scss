@@ -18,6 +18,13 @@
   gap: 0.65rem;
 }
 
+.rg-flows-panel__folder-link {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.65rem;
+}
+
 .rg-flows-panel__summary {
   display: flex;
   flex-wrap: wrap;

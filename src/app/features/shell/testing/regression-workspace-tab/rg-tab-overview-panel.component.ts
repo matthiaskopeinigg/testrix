@@ -199,7 +199,7 @@ export class RgTabOverviewPanelComponent {
       },
       {
         label: 'Flows',
-        value: `${run.passedCount} passed · ${run.failedCount} failed`,
+        value: `${run.passedCount} passed · ${run.flakedCount ?? 0} flaked · ${run.failedCount} failed`,
         icon: 'testing',
       },
       {

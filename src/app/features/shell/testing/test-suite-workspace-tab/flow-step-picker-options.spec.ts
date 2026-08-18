@@ -18,6 +18,53 @@ describe('flow-step-picker-options', () => {
     expect(buildPriorStepOptions(flow, 'b').map((o) => o.value)).toEqual(['a']);
   });
 
+  it('lists REQUEST steps inside an IF Then lane as prior steps', () => {
+    const inner = {
+      type: 'step' as const,
+      id: 'req-1',
+      name: 'Then request',
+      enabled: true,
+      stepType: 'REQUEST' as const,
+      config: {},
+      parentId: null,
+    };
+    const iff = {
+      type: 'step' as const,
+      id: 'if-1',
+      name: 'Branch',
+      enabled: true,
+      stepType: 'IF' as const,
+      config: {},
+      parentId: null,
+      children: [
+        {
+          type: 'lane' as const,
+          id: 'then-1',
+          laneKind: 'then' as const,
+          name: 'Then',
+          parentId: 'if-1',
+          children: [inner],
+        },
+      ],
+    };
+    const validation = {
+      type: 'step' as const,
+      id: 'val-1',
+      name: 'Validate',
+      enabled: true,
+      stepType: 'VALIDATION' as const,
+      config: {},
+      parentId: null,
+    };
+    const flow = {
+      id: 'f1',
+      name: 'Flow',
+      nodes: [iff, validation],
+    } as TestSuiteFlow;
+
+    expect(buildPriorStepOptions(flow, 'val-1').map((o) => o.value)).toEqual(['if-1', 'req-1']);
+  });
+
   it('omits the current flow from the TRIGGER tree', () => {
     const items: readonly TestSuiteTreeItem[] = [
       {

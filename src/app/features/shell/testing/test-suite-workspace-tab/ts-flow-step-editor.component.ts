@@ -1,8 +1,8 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, input, output, signal, untracked } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
 import { getEnvironmentDefinition } from '@shared/config';
-import type { TestSuiteFlow, TestSuiteFlowStep, TestSuiteTreeItem } from '@shared/testing';
+import type { FlowCondition, TestSuiteFlow, TestSuiteFlowStep, TestSuiteTreeItem } from '@shared/testing';
 import { resolveFlowStepRunError } from '@shared/testing';
 
 import { ConfigService } from '@app/core/config/config.service';
@@ -19,6 +19,7 @@ import { TxFormFieldComponent } from '@app/shared/components/forms/tx-form-field
 import { TxIconComponent } from '@app/shared/components/forms/tx-icon/tx-icon.component';
 import type { TxIconName } from '@app/shared/icons';
 import { TxInputComponent } from '@app/shared/components/forms/tx-input/tx-input.component';
+import { TxTagComponent } from '@app/shared/components/forms/tx-tag/tx-tag.component';
 import { TxTextareaComponent } from '@app/shared/components/forms/tx-textarea/tx-textarea.component';
 import { TxToggleComponent } from '@app/shared/components/forms/tx-toggle/tx-toggle.component';
 
@@ -40,6 +41,8 @@ import { TsFlowStepFailureAlertComponent } from './ts-flow-step-failure-alert.co
 import { TsFlowTriggerStepPanelComponent } from './ts-flow-trigger-step-panel.component';
 import { TsFlowValidationStepPanelComponent } from './ts-flow-validation-step-panel.component';
 import { TsFlowCacheStepPanelComponent } from './ts-flow-cache-step-panel.component';
+import { TsFlowConditionBuilderComponent } from './ts-flow-condition-builder.component';
+import { TsFlowControlStepPanelComponent } from './ts-flow-control-step-panel.component';
 import { TsFlowWaitStepPanelComponent } from './ts-flow-wait-step-panel.component';
 
 @Component({
@@ -53,6 +56,7 @@ import { TsFlowWaitStepPanelComponent } from './ts-flow-wait-step-panel.componen
     TxToggleComponent,
     TxButtonComponent,
     TxIconComponent,
+    TxTagComponent,
     TxBannerComponent,
     TsFlowStepFailureAlertComponent,
     TsFlowRequestStepPanelComponent,
@@ -65,6 +69,8 @@ import { TsFlowWaitStepPanelComponent } from './ts-flow-wait-step-panel.componen
     TsFlowTriggerStepPanelComponent,
     TsFlowHttpMiddlewareStepPanelComponent,
     TsFlowHttpInterceptorStepPanelComponent,
+    TsFlowConditionBuilderComponent,
+    TsFlowControlStepPanelComponent,
   ],
   templateUrl: './ts-flow-step-editor.component.html',
   styleUrl: './ts-flow-step-editor.component.scss',
@@ -90,6 +96,18 @@ export class TsFlowStepEditorComponent {
   readonly failureReopened = output<void>();
   /** Same-flow step to select when the user clicks a `{{placeholder}}` produced here. */
   readonly selectStep = output<string>();
+
+  protected readonly skipUnlessOpen = signal(false);
+
+  private readonly resetSkipUnlessOpen = effect(() => {
+    void this.step()?.id;
+    untracked(() => this.skipUnlessOpen.set(false));
+  });
+
+  protected readonly skipUnlessConfigured = computed(() => {
+    const clauses = this.step()?.skipUnless?.clauses ?? [];
+    return clauses.some((clause) => clause.left.trim().length > 0);
+  });
 
   protected readonly stepTypeIcon = computed((): TxIconName => {
     const step = this.step();
@@ -181,6 +199,10 @@ export class TsFlowStepEditorComponent {
     this.stepChange.emit(patch);
   }
 
+  protected handleSkipUnlessToggle(): void {
+    this.skipUnlessOpen.update((open) => !open);
+  }
+
   protected patchConfig(config: Record<string, unknown>): void {
     this.stepChange.emit({ config });
   }
@@ -234,5 +256,22 @@ export class TsFlowStepEditorComponent {
     } catch {
       // ignore invalid JSON while typing
     }
+  }
+
+  protected handleAddElseIf(): void {
+    const flow = this.flow();
+    const step = this.step();
+    if (!flow || !step) {
+      return;
+    }
+    this.testSuite.addElseIfLane(flow.id, step.id);
+  }
+
+  protected handleElseIfCondition(event: { readonly laneId: string; readonly condition: FlowCondition }): void {
+    const flow = this.flow();
+    if (!flow) {
+      return;
+    }
+    this.testSuite.patchFlowLane(flow.id, event.laneId, { condition: event.condition });
   }
 }

@@ -5,9 +5,32 @@
       <span class="ts-flow-step-tree__count">{{ stepCount() }}</span>
     }
   </div>
+  <div class="ts-flow-step-tree__view-toggle">
+    <tx-button
+      variant="secondary"
+      [attr.aria-pressed]="viewMode() === 'tree'"
+      (pressed)="viewMode.set('tree')"
+    >
+      Tree
+    </tx-button>
+    <tx-button
+      variant="secondary"
+      [attr.aria-pressed]="viewMode() === 'diagram'"
+      (pressed)="viewMode.set('diagram')"
+    >
+      Diagram
+    </tx-button>
+  </div>
 </header>
 
-@if (treeNodes().length === 0) {
+@if (viewMode() === 'diagram') {
+  <app-ts-flow-step-diagram
+    [nodes]="nodes()"
+    [liveStepStatuses]="liveStepStatuses()"
+    [selectedStepId]="selectedStepId()"
+    (selectedStepIdChange)="selectedStepIdChange.emit($event)"
+  />
+} @else if (treeNodes().length === 0) {
   <div class="ts-flow-step-tree__empty-card" role="status">
     <span class="ts-flow-step-tree__empty-icon" aria-hidden="true">
       <tx-icon name="layers" [size]="20" aria-hidden="true" />
@@ -35,6 +58,11 @@
           <span
             class="ts-flow-step-tree__row"
             [class.is-disabled]="row.node.data?.enabled === false"
+            [class.is-lane]="row.node.data?.kind === 'lane'"
+            [class.is-lane-then]="row.node.data?.laneKind === 'then'"
+            [class.is-lane-else-if]="row.node.data?.laneKind === 'elseIf'"
+            [class.is-lane-else]="row.node.data?.laneKind === 'else'"
+            [class.is-lane-body]="row.node.data?.laneKind === 'body'"
             [class.is-validation-ref]="hasValidationReference(row)"
             [class.is-validation-target]="isValidationRefTarget(row)"
             [class.is-validation-link-highlight]="isValidationLinkHighlighted(row)"

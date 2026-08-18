@@ -1,15 +1,15 @@
 import { z } from 'zod';
 
-export const TEST_SUITE_FLOW_SECTION_IDS = ['overview', 'steps'] as const;
+export const TEST_SUITE_FLOW_SECTION_IDS = ['overview', 'steps', 'settings'] as const;
 
 export const testSuiteFlowSectionIdSchema = z.enum(TEST_SUITE_FLOW_SECTION_IDS);
 
 export type TestSuiteFlowSectionId = z.infer<typeof testSuiteFlowSectionIdSchema>;
 
-/** Maps legacy titlebar section ids to the current overview/steps model. */
+/** Maps legacy titlebar section ids to the current overview/steps/settings model. */
 export function normalizeTestSuiteFlowSectionId(value: unknown): TestSuiteFlowSectionId {
-  if (value === 'overview') {
-    return 'overview';
+  if (value === 'overview' || value === 'steps' || value === 'settings') {
+    return value;
   }
   return 'steps';
 }
@@ -25,7 +25,7 @@ export const testSuiteTabUiSchema = z.object({
   /** Height of the run log panel in pixels. */
   resultsPanelHeightPx: z.number().int().min(120).max(4000).optional(),
   isResultsPanelHidden: z.boolean().default(false),
-  /** Active workspace section (`overview` | `steps`). */
+  /** Active workspace section (`overview` | `steps` | `settings`). */
   activeFlowSection: z.preprocess(
     normalizeTestSuiteFlowSectionId,
     testSuiteFlowSectionIdSchema,

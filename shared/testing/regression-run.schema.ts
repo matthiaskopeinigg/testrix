@@ -45,6 +45,10 @@ export const regressionProfileSchema = z.object({
   includeStepCaptures: z.boolean().default(true),
   includeStepErrors: z.boolean().default(true),
   allFlowsAtOnce: z.boolean().default(false),
+  /** Run this flow first (counted) when reuseE2eSession is on. */
+  bootstrapFlowId: z.string().nullable().optional(),
+  /** Force sequential and keep one E2E session across flows. */
+  reuseE2eSession: z.boolean().default(false),
 });
 
 export type RegressionProfile = z.infer<typeof regressionProfileSchema>;
@@ -78,6 +82,14 @@ export const regressionValidationFailureSchema = z.object({
 
 export type RegressionValidationFailure = z.infer<typeof regressionValidationFailureSchema>;
 
+export const regressionFlowAttemptSchema = z.object({
+  status: regressionFlowResultStatusSchema,
+  durationMs: z.number().int().min(0).default(0),
+  message: boundedText(4_000).optional(),
+});
+
+export type RegressionFlowAttempt = z.infer<typeof regressionFlowAttemptSchema>;
+
 export const regressionFlowResultSchema = z.object({
   flowId: z.string().min(1),
   flowName: boundedText(256),
@@ -85,6 +97,12 @@ export const regressionFlowResultSchema = z.object({
   durationMs: z.number().int().min(0).default(0),
   message: boundedText(4_000).optional(),
   attemptCount: z.number().int().min(1).default(1),
+  /** True when the flow passed only after an earlier failed attempt. */
+  flaked: z.boolean().optional(),
+  attempts: z.array(regressionFlowAttemptSchema).optional(),
+  /** Copied from the suite flow at run time. */
+  isCritical: z.boolean().optional(),
+  datasetRowIndex: z.number().int().min(0).optional(),
   stepStatuses: z.record(z.string(), testSuiteStepStatusSchema).optional(),
   stepDurations: z.record(z.string(), z.number()).optional(),
   stepErrors: z.record(z.string(), boundedText(4_000)).optional(),
@@ -161,6 +179,7 @@ export const regressionRunSchema = z.object({
   passedCount: z.number().int().min(0).default(0),
   failedCount: z.number().int().min(0).default(0),
   skippedCount: z.number().int().min(0).default(0),
+  flakedCount: z.number().int().min(0).default(0),
   profileSnapshot: regressionProfileSchema,
   thresholdsSnapshot: regressionThresholdsSchema,
   summary: regressionRunSummarySchema.optional(),
@@ -181,6 +200,7 @@ export const regressionRunMetricsSchema = z.object({
   passed: z.number().int().min(0).default(0),
   failed: z.number().int().min(0).default(0),
   skipped: z.number().int().min(0).default(0),
+  flaked: z.number().int().min(0).default(0),
   activeParallelism: z.number().int().min(0).default(0),
   passRatePercent: z.number().min(0).max(100).default(0),
   acceptancePercent: z.number().min(0).max(100).default(100),

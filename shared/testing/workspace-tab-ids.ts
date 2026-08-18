@@ -43,7 +43,7 @@ export function shouldStripWorkspaceTabOnRestore(kind: WorkspaceTabKind, resourc
     return !resourceId.startsWith('lk:');
   }
   if (kind === 'test-suite') {
-    return !resourceId.startsWith('ts:');
+    return !resourceId.startsWith('ts:') && !resourceId.startsWith('tsg:');
   }
   if (kind === 'database') {
     return !(
@@ -75,6 +75,14 @@ export function parseTestSuiteTabResourceId(
     return { kind: 'flow', id: resourceId.slice('ts:flw:'.length) };
   }
   return null;
+}
+
+/** Workspace tab id for the suite-level TRIGGER call graph. */
+export const TEST_SUITE_CALL_GRAPH_TAB_RESOURCE_ID = 'tsg:graph' as const;
+
+/** True when the tab is the Test Suite TRIGGER call graph. */
+export function isTestSuiteCallGraphTab(resourceId: string): boolean {
+  return resourceId === TEST_SUITE_CALL_GRAPH_TAB_RESOURCE_ID || resourceId.startsWith('tsg:');
 }
 
 export function loadTestTabResourceId(id: string): string {

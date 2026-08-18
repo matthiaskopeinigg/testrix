@@ -55,7 +55,11 @@ export type RgFlowDiffFilter = 'all' | 'changed' | 'regressions' | 'improvements
             </thead>
             <tbody>
               @for (row of rows(); track row.flowId) {
-                <tr>
+                <tr
+                  class="rg-flow-diff__row"
+                  [class.is-selected]="selectedFlowId() === row.flowId"
+                  (click)="handleRowClick(row.flowId)"
+                >
                   <td>{{ row.flowName }}</td>
                   <td>{{ row.statusA ?? '—' }}</td>
                   <td>{{ row.statusB ?? '—' }}</td>
@@ -81,8 +85,10 @@ export class RgResultsFlowDiffTableComponent {
   readonly runA = input<RegressionRun | null>(null);
   readonly runB = input<RegressionRun | null>(null);
   readonly filter = input<RgFlowDiffFilter>('all');
+  readonly selectedFlowId = input<string | null>(null);
 
   readonly filterChange = output<RgFlowDiffFilter>();
+  readonly flowSelected = output<string>();
 
   protected readonly filterOptions: readonly { readonly id: RgFlowDiffFilter; readonly label: string }[] = [
     { id: 'all', label: 'All' },
@@ -104,6 +110,10 @@ export class RgResultsFlowDiffTableComponent {
 
   protected handleFilterSelect(next: RgFlowDiffFilter): void {
     this.filterChange.emit(next);
+  }
+
+  protected handleRowClick(flowId: string): void {
+    this.flowSelected.emit(flowId);
   }
 
   protected formatDuration(value: number | null): string {

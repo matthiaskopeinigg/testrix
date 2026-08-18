@@ -10,6 +10,8 @@ describe('test-suite-flow-context-menu', () => {
   it('includes add step on a flow step row', () => {
     expect(buildFlowStepContextMenu().map((item) => item.id)).toEqual([
       'add-step',
+      'run-from',
+      'run-to',
       'clone',
       'delete',
     ]);

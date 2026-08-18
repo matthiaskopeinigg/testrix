@@ -121,6 +121,19 @@ describe('TestSuiteWorkspaceTabComponent', () => {
     expect(urlInput).toBeTruthy();
   });
 
+  it('keeps skip unless collapsed below the step action', () => {
+    fixture.componentInstance['handleSelectedStepChange'](REQUEST_STEP.id);
+    fixture.detectChanges();
+
+    const skip = fixture.nativeElement.querySelector('.ts-flow-step-editor__skip') as HTMLElement | null;
+    const body = fixture.nativeElement.querySelector('.ts-flow-step-editor__body') as HTMLElement | null;
+    expect(skip).toBeTruthy();
+    expect(body).toBeTruthy();
+    expect(skip?.querySelector('app-ts-flow-condition-builder')).toBeNull();
+    expect(skip?.querySelector('.ts-flow-step-editor__skip-toggle')?.getAttribute('aria-expanded')).toBe('false');
+    expect(body?.nextElementSibling).toBe(skip);
+  });
+
   it('adds a step at the flow root', async () => {
     fixture.componentInstance['handleAddStepType']('WAIT');
     const testSuite = TestBed.inject(TestSuiteService);

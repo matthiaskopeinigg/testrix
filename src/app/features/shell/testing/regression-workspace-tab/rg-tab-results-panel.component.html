@@ -11,6 +11,9 @@
             {{ resultsViewLabel() }}
             @if (hasDisplayableData()) {
               <span> · {{ elapsedLabel() }} elapsed</span>
+              @if (displayMetrics().flaked > 0) {
+                <span> · {{ displayMetrics().flaked }} flaked</span>
+              }
             }
           </p>
         </div>
@@ -76,6 +79,14 @@
         class="rg-results-panel__export"
         [record]="exportRecord()"
         [compareRecord]="compareExportRecord()"
+        [artifact]="exportArtifact()"
+      />
+
+      <tx-toggle
+        label="Count flakes as failed"
+        hint="Treat recovered retries as failed in the red count"
+        [ngModel]="countFlakesAsFailed()"
+        (ngModelChange)="handleCountFlakesAsFailedChange($event)"
       />
 
       @if (canRerunFailed()) {
@@ -115,6 +126,35 @@
               (ngModelChange)="handleCompareRunBChange($event)"
             />
           </tx-form-field>
+        </section>
+      }
+
+      @if (resultsView() === 'history' && historyChronologicalRuns().length >= 2) {
+        <section class="rg-results-panel__history-trend" aria-label="Pass-rate trend">
+          <div class="rg-results-panel__chart-row">
+            <app-rg-results-line-chart
+              title="Pass rate history"
+              unit="%"
+              primaryLabel="Stored runs"
+              [values]="historyPassRateSeries()"
+              [pointIds]="historyPointIds()"
+              [selectedPointId]="selectedRunId()"
+              [elapsedSec]="0"
+              strokeColor="var(--tx-success)"
+              (pointSelected)="handleSelectedRunChange($event)"
+            />
+            <app-rg-results-line-chart
+              title="p95 duration"
+              unit="ms"
+              primaryLabel="Stored runs"
+              [values]="historyP95Series()"
+              [pointIds]="historyPointIds()"
+              [selectedPointId]="selectedRunId()"
+              [elapsedSec]="0"
+              strokeColor="var(--tx-warning)"
+              (pointSelected)="handleSelectedRunChange($event)"
+            />
+          </div>
         </section>
       }
 
@@ -196,7 +236,9 @@
                 [runA]="compareRuns()?.a ?? null"
                 [runB]="compareRuns()?.b ?? null"
                 [filter]="diffFilter()"
+                [selectedFlowId]="selectedFlowDiffId()"
                 (filterChange)="diffFilterChange.emit($event)"
+                (flowSelected)="handleFlowSelected($event)"
               />
 
               @if (selectedFlowDiffId(); as flowId) {
@@ -340,6 +382,12 @@
                   [value]="formatStat('' + displayMetrics().failed)"
                 />
                 <app-rg-results-stat-card
+                  label="Flaked"
+                  icon="clock"
+                  [tone]="displayMetrics().flaked > 0 ? 'warning' : 'default'"
+                  [value]="formatStat('' + displayMetrics().flaked)"
+                />
+                <app-rg-results-stat-card
                   label="Skipped"
                   icon="minus"
                   tone="warning"
@@ -476,9 +524,12 @@
                       >
                         <td>{{ flow.flowName }}</td>
                         <td>
-                          <tx-tag [variant]="flowStatusVariant(flow.status)" casing="normal">
-                            {{ flow.status }}
+                          <tx-tag [variant]="flowStatusVariant(flow.status, flow.flaked)" casing="normal">
+                            {{ flowStatusLabel(flow) }}
                           </tx-tag>
+                          @if (flow.isCritical) {
+                            <tx-tag variant="error" casing="normal">critical</tx-tag>
+                          }
                         </td>
                         <td>{{ flow.durationMs }} ms</td>
                         <td>
@@ -505,6 +556,19 @@
                       </tx-button>
                     </header>
                     <div class="rg-results-panel__flow-log-body">
+                      @if (selectedInspectFlowResult()?.attempts?.length) {
+                        <ul class="rg-results-panel__attempts" aria-label="Retry attempts">
+                          @for (attempt of selectedInspectFlowResult()!.attempts!; track $index) {
+                            <li>
+                              Attempt {{ $index + 1 }}: {{ attempt.status }}
+                              ({{ attempt.durationMs }} ms)
+                              @if (attempt.message) {
+                                — {{ attempt.message }}
+                              }
+                            </li>
+                          }
+                        </ul>
+                      }
                       <app-ts-flow-run-panel
                         [flow]="runFlow"
                         [lastRunMessage]="selectedInspectFlowResult()?.message ?? null"

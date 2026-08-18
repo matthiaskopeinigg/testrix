@@ -45,10 +45,14 @@ export const HELP_WIKI_TESTING_SECTIONS: readonly HelpWikiSection[] = [
         type: 'list',
         items: [
           'Create folders and flows from the Test Suite sidebar.',
-          'Flow tabs use Overview (metadata, settings) and Steps (step tree, editor, run log) sections.',
+          'Flow tabs use Overview (summary), Steps (tree, editor, run log), and Settings (tags, E2E, dataset).',
           'Right-click a step to add a new step after it, clone it, or delete it. Right-click empty space in the step tree to add at the end.',
           'Section layout (Sidebar vs Tabs) is under Settings → Test Suite → Editor layout.',
           'Run the flow to execute steps sequentially with pass/fail status.',
+          'Open Call graph from the Test Suite sidebar to see which flows TRIGGER which (folder targets expand to descendants).',
+          'Enable a flow dataset (CSV/JSON, max 50 rows) on Settings to re-run the whole flow per row. Nested TRIGGER children do not re-expand their own dataset.',
+          'Right-click a step to run from this step or run to here. HTTP/DB skip earlier steps; E2E replays preceding browser steps first.',
+          'Switch the Steps section to Diagram for an IF flowchart (diamonds, Then/Else columns). Sequential steps wrap into rows. Scroll to zoom, drag the canvas to pan, or use Fit.',
         ],
       },
     ],
@@ -74,6 +78,9 @@ export const HELP_WIKI_TESTING_SECTIONS: readonly HelpWikiSection[] = [
           'WAIT — pause for a duration.',
           'MANUAL — set a flow variable or manual checkpoint.',
           'TRIGGER — run another flow, or every descendant flow under a folder (fail-fast). Nested runs inherit variables and captures, so a later target can use {{vars}} cached by an earlier target in the same parent. The run log lists triggered steps under the TRIGGER row (expand/collapse). Cycles are rejected. Reuse E2E browser session (on by default) keeps the same window, cookies, and login for later steps. Triggered flows with E2E steps show the runner when Show E2E is enabled on this flow or the target.',
+          'Skip unless on any step is under the action fields (collapsed until opened).',
+          'VALIDATION — Continue on failure records the step as failed and keeps running; the flow still fails at the end.',
+          'E2E SCREENSHOT checkpoints compare against a per-profile baseline in e2e-checkpoints/{flowId}/{stepId}.png (not Git). First run writes the baseline. Optional selector crops the element. Update baseline after a failed compare. Share baselines by copying that folder.',
         ],
       },
       {
@@ -118,6 +125,18 @@ export const HELP_WIKI_TESTING_SECTIONS: readonly HelpWikiSection[] = [
         type: 'paragraph',
         text: 'Regression artifacts capture expected behavior across flows or captures. Re-run to compare results and review step-level diffs. Workspace tabs use section navigation; layout is under Settings → Regression. Linked E2E flows always run with the browser hidden so a large suite does not open one window per flow.',
       },
+      {
+        type: 'list',
+        items: [
+          'Recovered retries count as flaked (amber), not failed, unless you turn on Count flakes as failed.',
+          'A failed critical flow fails acceptance even when the pass rate is above the threshold.',
+          'Link a Test Suite folder so descendant flows stay synced; extra flows outside the folder stay linked.',
+          'Pin a golden run on the artifact. Compare defaults to that pin versus the latest run.',
+          'History shows pass-rate and p95 duration across stored runs. Export HTML next to Copy report.',
+          'Reuse E2E session forces sequential runs and keeps one browser until the artifact finishes. Optional bootstrap flow runs first and counts in the pass rate.',
+          'Flow datasets expand to one result per row (retry/flake apply per row).',
+        ],
+      },
     ],
   }),
   wikiSection({
@@ -154,7 +173,7 @@ export const HELP_WIKI_TESTING_SECTIONS: readonly HelpWikiSection[] = [
     blocks: [
       {
         type: 'paragraph',
-        text: 'Capture opens an embedded browser session and logs HTTP traffic. Session tabs have Overview (summary, start URL) and Traffic sections. Layout is under Settings → Capture. Filter the log, multi-select rows, and Generate a collection folder, OpenAPI spec, or mock endpoints. Duplicate method+path rows are collapsed and hop-by-hop headers are stripped.',
+        text: 'Capture opens an embedded browser session and logs HTTP traffic. Session tabs have Overview (summary, start URL) and Traffic sections. Layout is under Settings → Capture. Filter the log, multi-select rows, and Generate a collection folder, a Test Suite flow of REQUEST + VALIDATION pairs, an OpenAPI spec, or mock endpoints. Duplicate method+path rows are collapsed and hop-by-hop headers are stripped. Seed rules from last run on a VALIDATION step uses the same capture helper.',
       },
     ],
   }),

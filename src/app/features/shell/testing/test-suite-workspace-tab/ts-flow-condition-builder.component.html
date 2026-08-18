@@ -1,0 +1,40 @@
+<div class="ts-flow-step-panel__rules">
+  @for (clause of clauses(); track $index) {
+    <div class="ts-flow-step-panel__rule">
+      <div class="ts-flow-step-panel__rule-main">
+        <tx-form-field label="Left" [controlId]="controlIdPrefix() + '-left-' + $index">
+          <tx-variable-input
+            [controlId]="controlIdPrefix() + '-left-' + $index"
+            [catalog]="variableCatalog()"
+            [ngModel]="clause.left"
+            (ngModelChange)="patchClause($index, { left: $event })"
+            (environmentVariableClick)="environmentVariableClick.emit($event)"
+            [placeholder]="examplePlaceholder"
+          />
+        </tx-form-field>
+        <tx-form-field label="Operator" [controlId]="controlIdPrefix() + '-op-' + $index">
+          <tx-dropdown
+            [controlId]="controlIdPrefix() + '-op-' + $index"
+            [options]="operatorOptions"
+            [ngModel]="clause.operator"
+            (ngModelChange)="patchClause($index, { operator: $event })"
+          />
+        </tx-form-field>
+        @if (!unary(clause.operator)) {
+          <tx-form-field label="Right" [controlId]="controlIdPrefix() + '-right-' + $index">
+            <tx-variable-input
+              [controlId]="controlIdPrefix() + '-right-' + $index"
+              [catalog]="variableCatalog()"
+              [ngModel]="clause.right"
+              (ngModelChange)="patchClause($index, { right: $event })"
+              (environmentVariableClick)="environmentVariableClick.emit($event)"
+              placeholder="200"
+            />
+          </tx-form-field>
+        }
+      </div>
+      <tx-button variant="secondary" (pressed)="handleRemoveClause($index)">Remove</tx-button>
+    </div>
+  }
+  <tx-button variant="secondary" (pressed)="handleAddClause()">Add clause (AND)</tx-button>
+</div>

@@ -235,6 +235,18 @@ export class RegressionService {
   }
 
   /**
+   * Links a Test Suite folder so descendant flows stay synced onto `flowIds`.
+   */
+  patchLinkedFolderId(id: string, linkedFolderId: string | null): void {
+    this.patchArtifact(id, { linkedFolderId });
+  }
+
+  /** Pins a golden baseline run on the artifact (cleared when the run ages out). */
+  patchGoldenRunId(id: string, goldenRunId: string | null): void {
+    this.patchArtifact(id, { goldenRunId });
+  }
+
+  /**
    * Drops deleted test-suite flow ids from every regression artifact.
    *
    * @param flowIds Flow ids that no longer exist in the test suite.
@@ -410,13 +422,16 @@ export class RegressionService {
     if (!artifact) {
       return;
     }
-    this.patchArtifact(artifactId, {
-      runs: prependRegressionRun(artifact.runs, record, REGRESSION_RUN_HISTORY_MAX),
-    });
+    const runs = prependRegressionRun(artifact.runs, record, REGRESSION_RUN_HISTORY_MAX);
+    const goldenRunId =
+      artifact.goldenRunId && runs.some((run) => run.id === artifact.goldenRunId)
+        ? artifact.goldenRunId
+        : null;
+    this.patchArtifact(artifactId, { runs, goldenRunId });
   }
 
   clearRuns(artifactId: string): void {
-    this.patchArtifact(artifactId, { runs: [] });
+    this.patchArtifact(artifactId, { runs: [], goldenRunId: null });
   }
 
   deleteRun(artifactId: string, runId: string): void {
@@ -424,9 +439,12 @@ export class RegressionService {
     if (!artifact) {
       return;
     }
-    this.patchArtifact(artifactId, {
-      runs: artifact.runs.filter((run) => run.id !== runId),
-    });
+    const runs = artifact.runs.filter((run) => run.id !== runId);
+    const goldenRunId =
+      artifact.goldenRunId && artifact.goldenRunId !== runId && runs.some((run) => run.id === artifact.goldenRunId)
+        ? artifact.goldenRunId
+        : null;
+    this.patchArtifact(artifactId, { runs, goldenRunId });
   }
 
   private patchNode(

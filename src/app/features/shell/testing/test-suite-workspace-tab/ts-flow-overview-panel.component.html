@@ -1,0 +1,125 @@
+<div class="ts-flow-overview">
+  <header class="ts-flow-overview__hero">
+    <div>
+      <h2 class="ts-flow-overview__title">Overview</h2>
+      <p class="ts-flow-overview__subtitle">
+        Last run, step mix, and a shortcut into Settings.
+      </p>
+    </div>
+  </header>
+
+  <div class="ts-flow-overview__layout">
+    <section class="ts-flow-overview-card ts-flow-overview-card--about" aria-label="About this flow">
+      <h3 class="ts-flow-overview-card__title">About</h3>
+      <tx-form-field label="Description" controlId="ts-flow-description">
+        <tx-textarea
+          controlId="ts-flow-description"
+          placeholder="Describe this flow…"
+          [rows]="3"
+          [ngModel]="flow().description"
+          (ngModelChange)="descriptionChange.emit($event)"
+        />
+      </tx-form-field>
+
+      @if (flow().tags.length > 0) {
+        <div class="ts-flow-overview-about__tags">
+          @for (tag of flow().tags; track tag) {
+            <tx-tag variant="default" casing="normal">{{ tag }}</tx-tag>
+          }
+        </div>
+      }
+
+      <p class="ts-flow-overview-about__line">
+        <tx-icon name="globe" [size]="12" aria-hidden="true" />
+        Environment: <strong>{{ environmentName() }}</strong>
+      </p>
+
+      <div class="ts-flow-overview-about__flags">
+        @if (flow().isCritical === true) {
+          <tx-tag variant="warning" casing="normal">Critical</tx-tag>
+        }
+        @if (hasE2eSteps()) {
+          <tx-tag variant="info" casing="normal">E2E</tx-tag>
+        }
+        @if (flow().dataset?.enabled === true) {
+          <tx-tag variant="info" casing="normal">Dataset</tx-tag>
+        }
+      </div>
+    </section>
+
+    <section class="ts-flow-overview-card ts-flow-overview-card--run" aria-label="Last run">
+      <div class="ts-flow-overview-card__head">
+        <h3 class="ts-flow-overview-card__title">Last run</h3>
+        @if (runSummary(); as summary) {
+          <tx-tag [variant]="summary.statusVariant" casing="normal">
+            {{ summary.statusLabel }}
+          </tx-tag>
+        }
+      </div>
+
+      @if (runSummary(); as summary) {
+        @if (summary.runAtLabel) {
+          <p class="ts-flow-overview-run__time">{{ summary.runAtLabel }}</p>
+        }
+
+        <div class="ts-flow-overview-run__stats">
+          @for (stat of lastRunStats(); track stat.label) {
+            <article class="ts-flow-overview-run-stat">
+              <tx-icon [name]="stat.icon" [size]="14" aria-hidden="true" />
+              <span class="ts-flow-overview-run-stat__label">{{ stat.label }}</span>
+              <strong class="ts-flow-overview-run-stat__value">{{ stat.value }}</strong>
+            </article>
+          }
+        </div>
+
+        <div class="ts-flow-overview-run__footer">
+          @if (summary.countsLabel) {
+            <p class="ts-flow-overview-run__history">{{ summary.countsLabel }}</p>
+          }
+          <tx-button variant="secondary" (pressed)="openSteps.emit()">Open steps</tx-button>
+        </div>
+      } @else {
+        <div class="ts-flow-overview-empty">
+          <span class="ts-flow-overview-empty__icon" aria-hidden="true">
+            <tx-icon name="play" [size]="18" />
+          </span>
+          <p class="ts-flow-overview-empty__title">No runs yet</p>
+          <p class="ts-flow-overview-empty__hint">
+            Run this flow from the toolbar to capture step results here.
+          </p>
+        </div>
+      }
+    </section>
+  </div>
+
+  <section class="ts-flow-overview-config" aria-label="Configuration summary">
+    <div class="ts-flow-overview-config__head">
+      <h3 class="ts-flow-overview-card__title">Configuration</h3>
+      <p class="ts-flow-overview-config__hint">Jump to a section to edit settings.</p>
+    </div>
+
+    <div class="ts-flow-overview-config__grid">
+      @for (card of configCards(); track card.label) {
+        <button
+          type="button"
+          class="ts-flow-overview-config-card"
+          (click)="sectionSelect.emit(card.section)"
+        >
+          <span class="ts-flow-overview-config-card__icon" aria-hidden="true">
+            <tx-icon [name]="card.icon" [size]="16" />
+          </span>
+          <span class="ts-flow-overview-config-card__body">
+            <span class="ts-flow-overview-config-card__label">{{ card.label }}</span>
+            <span class="ts-flow-overview-config-card__value">{{ card.value }}</span>
+          </span>
+          <tx-icon
+            class="ts-flow-overview-config-card__chevron"
+            name="chevronRight"
+            [size]="14"
+            aria-hidden="true"
+          />
+        </button>
+      }
+    </div>
+  </section>
+</div>

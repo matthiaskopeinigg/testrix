@@ -27,10 +27,29 @@
   border: 1px solid color-mix(in srgb, var(--tx-border-0) 65%, transparent);
 }
 
+.ts-add-step-modal__groups {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.ts-add-step-modal__group-title {
+  margin: 0 0 0.45rem;
+  font-size: 0.6875rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--tx-text-2);
+}
+
 .ts-add-step-modal__grid {
   display: grid;
   gap: 0.55rem;
   grid-template-columns: repeat(3, minmax(0, 1fr));
+
+  &--common {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
 }
 
 .ts-add-step-modal__tile {
@@ -105,13 +124,15 @@
 }
 
 @media (max-width: 40rem) {
-  .ts-add-step-modal__grid {
+  .ts-add-step-modal__grid,
+  .ts-add-step-modal__grid--common {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
 @media (max-width: 26rem) {
-  .ts-add-step-modal__grid {
+  .ts-add-step-modal__grid,
+  .ts-add-step-modal__grid--common {
     grid-template-columns: 1fr;
   }
 }

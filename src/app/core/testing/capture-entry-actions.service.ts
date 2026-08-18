@@ -10,6 +10,7 @@ import {
   generateCollectionRequestsFromCapture,
   generateMockEndpointsFromCapture,
   generateOpenApiFromCapture,
+  dedupeCaptureEntriesByMethodPath,
   type CaptureLogEntry,
 } from '@shared/testing';
 import { parseTestSuiteTabResourceId, mockServerTabResourceId, testSuiteTabResourceId } from '@shared/testing';
@@ -107,6 +108,58 @@ export class CaptureEntryActionsService {
       resourceId: testSuiteTabResourceId('flow', flow.id),
       kind: 'test-suite',
     });
+    return flow.id;
+  }
+
+  /**
+   * Creates one flow of REQUEST + VALIDATION pairs from selected capture rows
+   * (deduped by method+path).
+   */
+  generateFlowFromCapture(entries: readonly CaptureLogEntry[]): string | null {
+    if (!this.testSuite.rootSuite()) {
+      this.notifier.reportUnknown(
+        new Error('Test suite is not loaded. Open the Test Suite panel and try again.'),
+      );
+      return null;
+    }
+    const unique = dedupeCaptureEntriesByMethodPath(entries);
+    if (unique.length === 0) {
+      this.notifier.reportUnknown(new Error('Select captured requests to generate a flow.'));
+      return null;
+    }
+    const flowName =
+      unique.length === 1 ? captureFlowNameFromEntry(unique[0]!) : `From capture (${unique.length})`;
+    const flow = this.testSuite.addFlow(flowName, this.resolveFlowParentId());
+    if (!flow) {
+      this.notifier.reportUnknown(new Error('Could not create a test suite flow from capture.'));
+      return null;
+    }
+    for (const entry of unique) {
+      const requestLabel = captureEntryRequestLabel(entry);
+      const requestStep = this.testSuite.addFlowStep(flow.id, 'REQUEST', null, requestLabel);
+      if (!requestStep) {
+        continue;
+      }
+      this.testSuite.updateFlowStep(flow.id, requestStep.id, {
+        name: requestLabel,
+        config: buildRequestStepConfigFromCapture(entry),
+      });
+      const validationStep = this.testSuite.addFlowStep(flow.id, 'VALIDATION', null, 'Validate response');
+      if (!validationStep) {
+        continue;
+      }
+      this.testSuite.updateFlowStep(flow.id, validationStep.id, {
+        name: 'Validate response',
+        config: buildValidationStepConfigFromCapture(entry, requestStep.id),
+      });
+    }
+    this.workspaceEditor.openResource({
+      resourceId: testSuiteTabResourceId('flow', flow.id),
+      kind: 'test-suite',
+    });
+    this.notifications.showSuccess(
+      `Created a flow with ${unique.length} request${unique.length === 1 ? '' : 's'} from capture.`,
+    );
     return flow.id;
   }
 

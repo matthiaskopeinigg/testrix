@@ -12,6 +12,7 @@ import {
   viewChild,
 } from '@angular/core';
 
+import { FormsModule } from '@angular/forms';
 import { TestSuiteService } from '@app/core/testing/test-suite.service';
 import {
   collectTestSuiteFolderIdsInSubtree,
@@ -23,8 +24,12 @@ import { TxTreeComponent } from '@app/shared/components/data/tx-tree/tx-tree.com
 import { TxTreeNodeTemplateDirective } from '@app/shared/components/data/tx-tree/tx-tree-node-template.directive';
 import type { TxTreeNodeClickEvent } from '@app/shared/components/data/tx-tree/tx-tree.types';
 import { TxButtonComponent } from '@app/shared/components/forms/tx-button/tx-button.component';
+import { TxFormFieldComponent } from '@app/shared/components/forms/tx-form-field/tx-form-field.component';
 import { TxIconComponent } from '@app/shared/components/forms/tx-icon/tx-icon.component';
+import { TxTreeSelectComponent } from '@app/shared/components/forms/tx-tree-select/tx-tree-select.component';
+import { TxBannerComponent } from '@app/shared/components/feedback/tx-banner/tx-banner.component';
 import { WorkspaceSidebarPanelShellComponent } from '@app/features/shell/workspace/workspace-sidebar-panel-shell.component';
+import { buildTriggerTargetTree } from '@app/features/shell/testing/test-suite-workspace-tab/flow-step-picker-options';
 
 import {
   isFolderFullySelected,
@@ -41,10 +46,14 @@ const SEARCH_DEBOUNCE_MS = 100;
   selector: 'app-rg-tab-flows-panel',
   standalone: true,
   imports: [
+    FormsModule,
+    TxBannerComponent,
     TxButtonComponent,
+    TxFormFieldComponent,
     TxIconComponent,
     TxTreeComponent,
     TxTreeNodeTemplateDirective,
+    TxTreeSelectComponent,
     WorkspaceSidebarPanelShellComponent,
   ],
   templateUrl: './rg-tab-flows-panel.component.html',
@@ -59,9 +68,11 @@ export class RgTabFlowsPanelComponent {
 
   readonly flowIds = input<readonly string[]>([]);
   readonly expandedIds = input<readonly string[]>([]);
+  readonly linkedFolderId = input<string | null>(null);
 
   readonly flowIdsChange = output<readonly string[]>();
   readonly expandedIdsChange = output<readonly string[]>();
+  readonly linkedFolderIdChange = output<string | null>();
 
   protected readonly searchQuery = signal('');
   protected readonly searchQueryDebounced = signal('');
@@ -80,6 +91,18 @@ export class RgTabFlowsPanelComponent {
   protected readonly linkedCount = computed(() => this.flowIds().length);
 
   protected readonly linkedSet = computed(() => new Set(this.flowIds()));
+
+  protected readonly folderTree = computed(() =>
+    buildTriggerTargetTree(this.testSuite.flows(), 'folder', ''),
+  );
+
+  protected readonly linkedFolderName = computed(() => {
+    const id = this.linkedFolderId();
+    if (!id) {
+      return null;
+    }
+    return this.testSuite.findFolder(id)?.name ?? null;
+  });
 
   protected readonly treeSelectionIds = computed(() => [...this.flowIds()]);
 
@@ -184,6 +207,15 @@ export class RgTabFlowsPanelComponent {
 
   protected handleClearSelection(): void {
     this.emitFlowIds([]);
+  }
+
+  protected handleLinkedFolderChange(folderId: string): void {
+    const next = folderId.trim() || null;
+    this.linkedFolderIdChange.emit(next);
+  }
+
+  protected handleUnlinkFolder(): void {
+    this.linkedFolderIdChange.emit(null);
   }
 
   protected handleSelectAllVisible(): void {

@@ -33,6 +33,16 @@
     >
       <tx-icon name="list" [size]="16" aria-hidden="true" />
     </button>
+    <button
+      type="button"
+      class="workspace-panel-shell__icon-btn"
+      aria-label="Open TRIGGER call graph"
+      txTooltip="Call graph"
+      txTooltipPosition="bottom"
+      (click)="handleOpenCallGraph($event)"
+    >
+      <tx-icon name="gitBranch" [size]="16" aria-hidden="true" />
+    </button>
   </div>
 
   <div class="test-suite-sidebar-panel__body" (contextmenu)="handleTreeAreaContextMenu($event)">

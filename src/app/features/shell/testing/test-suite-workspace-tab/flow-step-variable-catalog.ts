@@ -7,7 +7,8 @@ import {
 import { DYNAMIC_VARIABLES, type DynamicVariableCatalogItem } from '@shared/dynamic-variables';
 import {
   collectFlowsInTree,
-  flattenEnabledFlowSteps,
+  collectDatasetVariableKeys,
+  flattenAllEnabledFlowSteps,
   normalizeFlowVariableKey,
   resolveTriggerTargetFlows,
   type TestSuiteFlow,
@@ -36,7 +37,16 @@ export function collectPriorFlowPlaceholderKeys(
 ): readonly DynamicVariableCatalogItem[] {
   const extras: DynamicVariableCatalogItem[] = [];
   appendInboundTriggerPlaceholders(extras, flow.id, suiteItems, new Set());
-  appendProducedPlaceholders(extras, flow, flattenEnabledFlowSteps(flow.nodes), {
+  const datasetKeys = collectDatasetVariableKeys(flow.dataset);
+  for (const key of datasetKeys) {
+    extras.push({
+      id: `dataset-${flow.id}-${key}`,
+      label: `{{${key}}}`,
+      insert: `{{${key}}}`,
+      detail: 'Value from the flow dataset row',
+    });
+  }
+  appendProducedPlaceholders(extras, flow, flattenAllEnabledFlowSteps(flow.nodes), {
     stopAtStepId: currentStepId,
     suiteItems,
     visitedFlowIds: new Set([flow.id]),
@@ -149,7 +159,7 @@ function appendTriggerTargetPlaceholders(
       continue;
     }
     options.visitedFlowIds.add(location.flow.id);
-    appendProducedPlaceholders(extras, location.flow, flattenEnabledFlowSteps(location.flow.nodes), {
+    appendProducedPlaceholders(extras, location.flow, flattenAllEnabledFlowSteps(location.flow.nodes), {
       suiteItems: options.suiteItems,
       visitedFlowIds: options.visitedFlowIds,
     });
@@ -175,7 +185,7 @@ function appendInboundTriggerPlaceholders(
     if (inboundVisited.has(caller.id)) {
       continue;
     }
-    const steps = flattenEnabledFlowSteps(caller.nodes);
+    const steps = flattenAllEnabledFlowSteps(caller.nodes);
     let matched = false;
     for (const step of steps) {
       if (step.stepType !== 'TRIGGER') {
@@ -202,7 +212,7 @@ function appendInboundTriggerPlaceholders(
           continue;
         }
         expansionVisited.add(sibling.flow.id);
-        appendProducedPlaceholders(extras, sibling.flow, flattenEnabledFlowSteps(sibling.flow.nodes), {
+        appendProducedPlaceholders(extras, sibling.flow, flattenAllEnabledFlowSteps(sibling.flow.nodes), {
           suiteItems,
           visitedFlowIds: expansionVisited,
         });

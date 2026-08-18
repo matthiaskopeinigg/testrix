@@ -1,0 +1,122 @@
+:host {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.ts-flow-step-diagram__toolbar {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0.6rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--tx-border-0) 48%, transparent);
+}
+
+.ts-flow-step-diagram__zoom-label {
+  min-width: 2.75rem;
+  text-align: center;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--tx-text-1);
+}
+
+.ts-flow-step-diagram__viewport {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  cursor: grab;
+  touch-action: none;
+
+  &:active {
+    cursor: grabbing;
+  }
+}
+
+.ts-flow-step-diagram__world {
+  transform-origin: 0 0;
+  will-change: transform;
+}
+
+.ts-flow-step-diagram__svg {
+  display: block;
+}
+
+.ts-flow-step-diagram__empty {
+  margin: 0.75rem;
+  padding: 1rem;
+  border-radius: var(--tx-radius-sm, 8px);
+  border: 1px dashed color-mix(in srgb, var(--tx-border-0) 70%, transparent);
+  color: var(--tx-text-2);
+}
+
+.ts-flow-step-diagram__empty-title {
+  margin: 0 0 0.25rem;
+  font-weight: 700;
+  color: var(--tx-text-0);
+}
+
+.ts-flow-step-diagram__empty-hint {
+  margin: 0;
+  font-size: 0.8125rem;
+}
+
+.ts-flow-step-diagram__edge {
+  fill: none;
+  stroke: var(--tx-border-0);
+  stroke-width: 1.4;
+}
+
+.ts-flow-step-diagram__edge-label {
+  fill: var(--tx-text-2);
+  font-size: 0.65rem;
+  font-weight: 600;
+  pointer-events: none;
+}
+
+.ts-flow-step-diagram__node {
+  rect,
+  polygon {
+    fill: var(--tx-surface-elevated);
+    stroke: var(--tx-border-0);
+    stroke-width: 1.2;
+  }
+
+  text {
+    fill: var(--tx-text-0);
+    font-size: 0.7rem;
+    pointer-events: none;
+  }
+
+  &.is-selectable {
+    cursor: pointer;
+  }
+
+  &.is-selected rect,
+  &.is-selected polygon {
+    stroke: var(--tx-accent);
+    stroke-width: 2;
+  }
+
+  &.is-status-running rect,
+  &.is-status-running polygon {
+    stroke: var(--tx-accent);
+  }
+
+  &.is-status-passed rect,
+  &.is-status-passed polygon {
+    stroke: var(--tx-success);
+  }
+
+  &.is-status-failed rect,
+  &.is-status-failed polygon {
+    stroke: var(--tx-danger);
+  }
+
+  &.is-status-skipped {
+    opacity: 0.45;
+  }
+}

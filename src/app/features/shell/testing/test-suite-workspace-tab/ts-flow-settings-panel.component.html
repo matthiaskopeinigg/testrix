@@ -1,4 +1,11 @@
-<section class="ts-flow-settings" aria-label="Flow options">
+<section class="ts-flow-settings" aria-label="Flow settings">
+  <header class="ts-flow-settings__hero">
+    <h2 class="ts-flow-settings__title">Settings</h2>
+    <p class="ts-flow-settings__subtitle">
+      Tags, critical gating, E2E window, and dataset rows.
+    </p>
+  </header>
+
   <tx-form-field label="Tags" controlId="ts-flow-settings-tags-field">
     <tx-tags-input
       class="ts-flow-settings__tags"
@@ -38,5 +45,22 @@
         />
       }
     </div>
+  </tx-form-field>
+
+  <tx-form-field label="Dataset" controlId="ts-flow-dataset">
+    <tx-toggle
+      label="Enable dataset"
+      hint="Re-run this flow once per row. Column names become placeholders. Keep passwords in the vault, not this table."
+      [ngModel]="datasetEnabled()"
+      (ngModelChange)="handleDatasetEnabled($event)"
+    />
+    <tx-button variant="secondary" (pressed)="handleImportDataset()">Import CSV or JSON</tx-button>
+    @if (datasetGridRows().length > 0) {
+      <tx-data-grid
+        [columns]="datasetColumns()"
+        [rows]="datasetGridRows()"
+        emptyLabel="No dataset rows"
+      />
+    }
   </tx-form-field>
 </section>

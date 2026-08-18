@@ -311,7 +311,7 @@ const api: ElectronAPI = {
         ipcRenderer.removeListener(TestingChannels.regressionRunProgress, handler);
       };
     },
-    e2eExecuteFlow: (flowId) => ipcRenderer.invoke(TestingChannels.e2eExecuteFlow, flowId),
+    e2eExecuteFlow: (flowId, options) => ipcRenderer.invoke(TestingChannels.e2eExecuteFlow, flowId, options),
     e2eCancel: () => ipcRenderer.invoke(TestingChannels.e2eCancel),
     onFlowRunProgress: (listener) => {
       const handler = (_event: IpcRendererEvent, payload: FlowRunProgressEvent): void => {
@@ -333,6 +333,8 @@ const api: ElectronAPI = {
     },
     flowManualInputSubmit: (payload) =>
       ipcRenderer.invoke(TestingChannels.flowManualInputSubmit, payload),
+    e2eUpdateCheckpointBaseline: (payload) =>
+      ipcRenderer.invoke(TestingChannels.e2eUpdateCheckpointBaseline, payload),
     e2eExecute: (payload) => ipcRenderer.invoke(E2eChannels.execute, payload),
     e2eSignalCancel: () => ipcRenderer.send(E2eChannels.signalCancel),
     clearE2eRunnerSession: () => ipcRenderer.invoke(E2eChannels.clearRunnerSession),

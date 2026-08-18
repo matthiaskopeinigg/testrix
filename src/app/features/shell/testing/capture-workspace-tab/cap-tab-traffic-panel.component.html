@@ -49,6 +49,9 @@
       <tx-button variant="secondary" [disabled]="filtered().length === 0" (pressed)="handleGenerateCollection()">
         Collection
       </tx-button>
+      <tx-button variant="secondary" [disabled]="filtered().length === 0" (pressed)="handleGenerateFlow()">
+        Flow
+      </tx-button>
       <tx-button variant="secondary" [disabled]="filtered().length === 0" (pressed)="handleGenerateOpenApi()">
         OpenAPI
       </tx-button>

@@ -11,7 +11,7 @@ import {
   viewChild,
 } from '@angular/core';
 
-import { isTestSuiteFlow, TEST_SUITE_MAX_FOLDER_DEPTH, testSuiteTabResourceId } from '@shared/testing';
+import { isTestSuiteFlow, TEST_SUITE_MAX_FOLDER_DEPTH, testSuiteTabResourceId, TEST_SUITE_CALL_GRAPH_TAB_RESOURCE_ID } from '@shared/testing';
 
 import { ConfigService } from '@app/core/config/config.service';
 import { ImportExportDialogService } from '@app/core/import-export/import-export-dialog.service';
@@ -507,6 +507,14 @@ export class TestSuiteSidebarPanelComponent {
   private openTab(kind: TestSuiteTreeKind, id: string): void {
     this.workspaceEditor.openResource({
       resourceId: testSuiteTabResourceId(kind, id),
+      kind: 'test-suite',
+    });
+  }
+
+  protected handleOpenCallGraph(event: Event): void {
+    event.stopPropagation();
+    this.workspaceEditor.openResource({
+      resourceId: TEST_SUITE_CALL_GRAPH_TAB_RESOURCE_ID,
       kind: 'test-suite',
     });
   }

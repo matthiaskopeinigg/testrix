@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, input, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
 import {
@@ -8,6 +8,7 @@ import {
   type RegressionThresholds,
 } from '@shared/testing';
 
+import { TxBannerComponent } from '@app/shared/components/feedback/tx-banner/tx-banner.component';
 import { TxDropdownComponent } from '@app/shared/components/forms/tx-dropdown/tx-dropdown.component';
 import type { TxDropdownOption } from '@app/shared/components/forms/tx-dropdown/tx-dropdown.types';
 import { TxFormFieldComponent } from '@app/shared/components/forms/tx-form-field/tx-form-field.component';
@@ -22,6 +23,7 @@ import { TxToggleComponent } from '@app/shared/components/forms/tx-toggle/tx-tog
   standalone: true,
   imports: [
     FormsModule,
+    TxBannerComponent,
     TxDropdownComponent,
     TxFormFieldComponent,
     TxInputComponent,
@@ -85,6 +87,27 @@ import { TxToggleComponent } from '@app/shared/components/forms/tx-toggle/tx-tog
         />
       </tx-form-field>
 
+      <tx-toggle
+        label="Reuse E2E session"
+        hint="Force sequential runs and keep one browser session across flows. Parallel workers never share partitions."
+        [ngModel]="profile().reuseE2eSession === true"
+        (ngModelChange)="handleReuseE2e($event)"
+      />
+      @if (profile().reuseE2eSession) {
+        <tx-banner variant="info" title="Sequential E2E">
+          Reuse E2E session keeps parallelism at 1 so later flows share cookies and login.
+        </tx-banner>
+      }
+      <tx-form-field label="Bootstrap flow" controlId="rg-bootstrap-flow">
+        <tx-dropdown
+          id="rg-bootstrap-flow"
+          ariaLabel="Bootstrap flow"
+          [options]="bootstrapFlowOptions()"
+          [ngModel]="profile().bootstrapFlowId ?? ''"
+          (ngModelChange)="handleProfileChange({ bootstrapFlowId: $event || null })"
+        />
+      </tx-form-field>
+
       <tx-form-field label="Execution mode" controlId="rg-execution-mode">
         <tx-dropdown
           id="rg-execution-mode"
@@ -95,7 +118,7 @@ import { TxToggleComponent } from '@app/shared/components/forms/tx-toggle/tx-tog
         />
       </tx-form-field>
 
-      @if (profile().executionMode === 'parallel') {
+      @if (profile().executionMode === 'parallel' && !profile().reuseE2eSession) {
         <div class="rg-settings-stack">
           <tx-toggle
             label="All flows at once"
@@ -262,6 +285,7 @@ export class RgTabSettingsPanelComponent {
   readonly profile = input.required<RegressionProfile>();
   readonly thresholds = input.required<RegressionThresholds>();
   readonly environmentOptions = input<readonly TxDropdownOption[]>([]);
+  readonly flowOptions = input<readonly TxDropdownOption[]>([]);
 
   readonly nameChange = output<string>();
   readonly releaseChange = output<string>();
@@ -280,6 +304,18 @@ export class RgTabSettingsPanelComponent {
     { value: 'selected', label: 'Selected flows only' },
     { value: 'failed-from-last', label: 'Failed from last run' },
   ];
+
+  protected readonly bootstrapFlowOptions = computed((): readonly TxDropdownOption[] => [
+    { value: '', label: 'None' },
+    ...this.flowOptions(),
+  ]);
+
+  protected handleReuseE2e(enabled: boolean): void {
+    this.profileChange.emit({
+      reuseE2eSession: enabled,
+      ...(enabled ? { executionMode: 'sequential' as const } : {}),
+    });
+  }
 
   protected handleProfileChange(patch: Partial<RegressionProfile>): void {
     this.profileChange.emit(patch);

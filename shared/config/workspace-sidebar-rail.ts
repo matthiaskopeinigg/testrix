@@ -4,9 +4,9 @@
 
 export const WORKSPACE_SIDEBAR_USER_ITEM_IDS = [
   'collections',
-  'environments',
   'testing',
   'data',
+  'environments',
   'development',
   'history',
 ] as const;
@@ -38,6 +38,9 @@ export const WORKSPACE_SIDEBAR_FOOTER_PINNED_IDS = ['debug', 'help'] as const;
 
 export type WorkspaceSidebarFooterPinnedId = (typeof WORKSPACE_SIDEBAR_FOOTER_PINNED_IDS)[number];
 
+/** Footer rail ids: optional Debug, History (when visible), then Help. */
+export type WorkspaceSidebarFooterItemId = WorkspaceSidebarFooterPinnedId | 'history';
+
 export const WORKSPACE_SIDEBAR_FOOTER_LABELS: Record<WorkspaceSidebarFooterPinnedId, string> = {
   debug: 'Debug',
   help: 'Help',
@@ -45,7 +48,7 @@ export const WORKSPACE_SIDEBAR_FOOTER_LABELS: Record<WorkspaceSidebarFooterPinne
 
 export interface WorkspaceSidebarRailIds {
   readonly main: readonly WorkspaceSidebarUserItemId[];
-  readonly footer: readonly WorkspaceSidebarFooterPinnedId[];
+  readonly footer: readonly WorkspaceSidebarFooterItemId[];
 }
 
 /**
@@ -102,6 +105,7 @@ export function normalizeHiddenSidebarItems(raw: unknown): WorkspaceSidebarUserI
 
 /**
  * Builds the visible main-rail and footer ids from persisted order/hidden lists.
+ * History stays pinned in the footer (above Help) when visible.
  */
 export function resolveWorkspaceSidebarRail(
   order: readonly string[],
@@ -109,10 +113,13 @@ export function resolveWorkspaceSidebarRail(
   options: { readonly includeDebug: boolean },
 ): WorkspaceSidebarRailIds {
   const hiddenSet = new Set(normalizeHiddenSidebarItems(hidden));
-  const main = normalizeSidebarItemOrder(order).filter((id) => !hiddenSet.has(id));
-  const footer: WorkspaceSidebarFooterPinnedId[] = [];
+  const main = normalizeSidebarItemOrder(order).filter((id) => id !== 'history' && !hiddenSet.has(id));
+  const footer: WorkspaceSidebarFooterItemId[] = [];
   if (options.includeDebug) {
     footer.push('debug');
+  }
+  if (!hiddenSet.has('history')) {
+    footer.push('history');
   }
   footer.push('help');
   return { main, footer };
@@ -120,6 +127,7 @@ export function resolveWorkspaceSidebarRail(
 
 /**
  * Moves `id` up (`-1`) or down (`+1`) in a normalized order list.
+ * History is footer-pinned and cannot be reordered.
  */
 export function moveWorkspaceSidebarItem(
   order: readonly WorkspaceSidebarUserItemId[],
@@ -127,9 +135,15 @@ export function moveWorkspaceSidebarItem(
   delta: -1 | 1,
 ): WorkspaceSidebarUserItemId[] {
   const next = normalizeSidebarItemOrder(order);
+  if (id === 'history') {
+    return next;
+  }
   const index = next.indexOf(id);
   const target = index + delta;
   if (index < 0 || target < 0 || target >= next.length) {
+    return next;
+  }
+  if (next[target] === 'history') {
     return next;
   }
   const copy = [...next];

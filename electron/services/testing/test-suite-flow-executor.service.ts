@@ -1,3 +1,6 @@
+import * as fs from 'node:fs/promises';
+import * as path from 'node:path';
+
 import { applySharedVariablesToOutgoingRequest } from '../../../shared/http/apply-shared-variables-to-outgoing-request';
 import { buildOutgoingRequest, type BuildOutgoingRequestResult } from '../../../shared/http/build-outgoing-request';
 import { buildManualOutgoingRequest } from '../../../shared/http/build-manual-outgoing-request';
@@ -19,8 +22,8 @@ import {
   evaluateValidationRule,
   findFlowStepById,
   findTestSuiteFlowInTree,
-  flattenEnabledFlowSteps,
-  markRemainingFlowStepsSkipped,
+  flattenAllEnabledFlowSteps,
+  collectDescendantStepIds,
   resolveE2eValidationSelector,
   resolveGlobalE2eScreenshotDirectory,
   resolveE2eUrlExpectation,
@@ -41,6 +44,10 @@ import {
   triggerFlowCycleMessage,
   stripFlowRunChildLogCaptures,
   rollupFlowRunChildStatus,
+  evaluateFlowCondition,
+  shouldRunSkipUnless,
+  parseForEachSource,
+  datasetRowDisplaySuffix,
   type FlowRunChildLog,
   type FlowRunNestedChildren,
   type FlowRunProgressEvent,
@@ -57,23 +64,35 @@ import {
   type CacheStepEntry,
   type DatabaseStepConfig,
   type E2eStepConfig,
+  type ForEachStepConfig,
   type HttpInterceptorStepConfig,
   type HttpListenerStepConfig,
+  type IfStepConfig,
   type ManualStepConfig,
   type RequestStepConfig,
+  type RetryStepConfig,
   triggerStepConfigSchema,
   type ValidationRule,
   type ValidationStepConfig,
   type WaitStepConfig,
+  type WhileStepConfig,
 } from '../../../shared/testing/test-suite-steps.schema';
 import type { FlowManualInputRequest, FlowManualInputResult } from '../../../shared/testing/flow-manual-input.schema';
 import { migrateTestSuitesFile } from '../../../shared/testing/test-suite-migrate';
-import { TEST_SUITE_ROOT_ID } from '../../../shared/testing/test-suites.schema';
+import {
+  isFlowFolderNode,
+  isFlowLaneNode,
+  isFlowStepNode,
+  TEST_SUITE_ROOT_ID,
+  type TestSuiteFlowLane,
+  type TestSuiteFlowNode,
+} from '../../../shared/testing/test-suites.schema';
 
 import { decryptBase64ToUtf8, encryptUtf8ToBase64 } from '../crypto/rsa-oaep-cipher';
 import type { ConfigFileService } from '../config/config-file.service';
 import { databaseQueryService } from '../database/database-query.service';
 import { executeHttpRequest } from '../http/http-request-executor.service';
+import { compareE2eCheckpoint } from './e2e-checkpoint';
 import type { E2eExecutePayload, E2eExecuteResult, E2eRunnerService } from './e2e-runner.service';
 
 export interface TestSuiteFlowRunResult {
@@ -102,6 +121,19 @@ export interface TestSuiteFlowExecuteOptions {
    * so REQUEST/CACHE/WAIT populate flow variables and navigate the browser).
    */
   readonly stopBeforeStepId?: string;
+  /** Skip enabled steps before this id (HTTP/DB skip; E2E still replays preceding E2E). */
+  readonly startAtStepId?: string;
+  /** Stop after this step completes (inclusive). */
+  readonly stopAfterStepId?: string;
+  /** Seeded `{{variables}}` for a dataset row or nested caller. */
+  readonly initialVariables?: Readonly<Record<string, string>>;
+  /**
+   * When false, skip flow-level dataset expansion (regression already loops rows).
+   * Default true for interactive runs.
+   */
+  readonly expandDataset?: boolean;
+  /** Keep the E2E window and session after this flow (regression reuse). */
+  readonly preserveBrowserSession?: boolean;
   readonly requestManualInput?: (request: FlowManualInputRequest) => Promise<FlowManualInputResult>;
 }
 
@@ -126,6 +158,23 @@ interface FlowStepContext {
   /** True when the root run pinned `showBrowser` (always true for a flow run). */
   readonly showBrowserLocked: boolean;
   readonly reportProgress: () => void;
+  readonly startAtStepId?: string;
+  readonly stopAfterStepId?: string;
+  readonly stopBeforeStepId?: string;
+  /** Nested TRIGGER ignores start-at. */
+  readonly ignoreStartAt?: boolean;
+  readonly checkpointDir?: string;
+}
+
+type FlowRunOutcome = 'ok' | 'continue' | 'fail' | 'prepared';
+
+interface FlowRunGraph {
+  readonly stepStatuses: Record<string, TestSuiteStepStatus>;
+  readonly stepDurations: Record<string, number>;
+  readonly stepErrors: Record<string, string>;
+  softFailed: boolean;
+  started: boolean;
+  failMessage: string | null;
 }
 
 /**
@@ -158,6 +207,14 @@ export class TestSuiteFlowExecutor {
     this.cancelled = false;
     this.captures.clear();
     this.flowVariables.clear();
+    if (options.initialVariables) {
+      for (const [key, value] of Object.entries(options.initialVariables)) {
+        const normalized = normalizeFlowVariableKey(key);
+        if (normalized) {
+          this.flowVariables.set(normalized, value);
+        }
+      }
+    }
     this.nestedChildrenByTriggerId.clear();
     this.activeInterceptorStepIds.clear();
     this.browserSessionReady = false;
@@ -185,7 +242,7 @@ export class TestSuiteFlowExecutor {
         : resolveTestSuiteFlowEnvironmentId(flow.environmentId, ancestorFolders);
     flow = { ...flow, environmentId: pinnedEnvironmentId };
 
-    const steps = flattenEnabledFlowSteps(flow.nodes);
+    const steps = flattenAllEnabledFlowSteps(flow.nodes);
     if (steps.length === 0) {
       return {
         ok: false,
@@ -219,41 +276,11 @@ export class TestSuiteFlowExecutor {
       };
     }
 
-    const stepStatuses: Record<string, TestSuiteStepStatus> = buildInitialFlowRunStatuses(
-      steps.map((step) => step.id),
-    );
-    const stepDurations: Record<string, number> = {};
-    const stepErrors: Record<string, string> = {};
+    const datasetRows =
+      options.expandDataset !== false && flow.dataset?.enabled && flow.dataset.rows.length > 0
+        ? flow.dataset.rows
+        : null;
     const flowStartedAt = Date.now();
-    const emitProgress = (): void => {
-      onProgress?.({
-        flowId,
-        stepStatuses: { ...stepStatuses },
-        nestedChildren: this.snapshotNestedChildren(true),
-      });
-    };
-    const snapshotCaptures = (): Record<string, FlowStepRunCapture> =>
-      Object.fromEntries(this.captures.entries());
-    const finish = (
-      ok: boolean,
-      message: string,
-    ): TestSuiteFlowRunResult => ({
-      ok,
-      message,
-      stepStatuses,
-      stepCaptures: snapshotCaptures(),
-      stepDurations,
-      stepErrors,
-      nestedChildren: this.snapshotNestedChildren(false),
-      durationMs: Date.now() - flowStartedAt,
-    });
-
-    emitProgress();
-
-    if (lockVisibleRunnerInput && this.e2eRunner) {
-      this.e2eRunner.acquireVisibleInputLock();
-    }
-
     const [collections, settings, environments, savedQueries] = await Promise.all([
       files.readCollections(),
       files.readSettings(),
@@ -261,72 +288,168 @@ export class TestSuiteFlowExecutor {
       files.readSavedQueries(),
     ]);
 
+    const checkpointDir = path.join(files.profileDir(), 'e2e-checkpoints');
+
+    const buildCtx = (emitProgress: () => void): FlowStepContext => ({
+      flowId: flow.id,
+      requestManualInput: options.requestManualInput,
+      collections: collections.nodes,
+      http: settings.http,
+      environments,
+      databaseConnections: settings.databases.connections,
+      savedQueryNodes: savedQueries.nodes,
+      appVersion: '0.0.0',
+      showBrowser,
+      e2eScreenshotFolder: settings.http.testing.e2eScreenshotFolder,
+      e2eIgnoreInvalidSsl: settings.testSuite.e2eIgnoreInvalidSsl === true,
+      environmentIdOverride: pinnedEnvironmentId,
+      ancestorFolders,
+      environmentVariableKeys: {
+        useFolderPathInKeys: settings.environments.useFolderPathInKeys,
+      },
+      ancestorFlowIds: [flow.id],
+      suiteItems,
+      showBrowserLocked,
+      reportProgress: emitProgress,
+      startAtStepId: options.startAtStepId,
+      stopAfterStepId: options.stopAfterStepId,
+      stopBeforeStepId: options.stopBeforeStepId,
+      checkpointDir,
+    });
+
+    if (lockVisibleRunnerInput && this.e2eRunner) {
+      this.e2eRunner.acquireVisibleInputLock();
+    }
+
     let keepBrowserAfterRun = false;
     try {
-      for (let index = 0; index < steps.length; index++) {
-        const step = steps[index]!;
-        if (options.stopBeforeStepId && step.id === options.stopBeforeStepId) {
-          markRemainingFlowStepsSkipped(stepStatuses, steps, index);
-          emitProgress();
-          keepBrowserAfterRun = true;
-          return finish(true, `Prepared flow through step before "${step.name}".`);
-        }
-        if (this.cancelled) {
-          if (stepStatuses[step.id] === 'running') {
-            stepStatuses[step.id] = 'failed';
-            stepErrors[step.id] = 'Run cancelled.';
+      if (datasetRows) {
+        const datasetLogs: FlowRunChildLog[] = [];
+        this.nestedChildrenByTriggerId.set('dataset', datasetLogs);
+        let anyFailed = false;
+        let lastStatuses: Record<string, TestSuiteStepStatus> = {};
+        let lastDurations: Record<string, number> = {};
+        let lastErrors: Record<string, string> = {};
+        for (let rowIndex = 0; rowIndex < datasetRows.length; rowIndex++) {
+          const row = datasetRows[rowIndex]!;
+          if (this.cancelled) {
+            return {
+              ok: false,
+              message: 'Run cancelled.',
+              stepStatuses: lastStatuses,
+              stepCaptures: Object.fromEntries(this.captures.entries()),
+              stepDurations: lastDurations,
+              stepErrors: lastErrors,
+              nestedChildren: this.snapshotNestedChildren(false),
+              durationMs: Date.now() - flowStartedAt,
+            };
           }
-          markRemainingFlowStepsSkipped(stepStatuses, steps, index);
-          emitProgress();
-          return finish(false, 'Run cancelled.');
-        }
-
-        if (index > 0) {
-          stepStatuses[step.id] = 'running';
-          emitProgress();
-        }
-
-        const stepStartedAt = Date.now();
-        try {
-          await this.executeStep(step, flow, {
+          this.captures.clear();
+          this.flowVariables.clear();
+          this.seedFlowVariables(row);
+          if (rowIndex > 0) {
+            await this.resetBrowserSessionForIsolatedTrigger();
+          }
+          const rowName = `${flow.name}${datasetRowDisplaySuffix(rowIndex, row)}`;
+          datasetLogs.push({
+            kind: 'flow',
+            id: `dataset:${rowIndex}`,
             flowId: flow.id,
-            requestManualInput: options.requestManualInput,
-            collections: collections.nodes,
-            http: settings.http,
-            environments,
-            databaseConnections: settings.databases.connections,
-            savedQueryNodes: savedQueries.nodes,
-            appVersion: '0.0.0',
-            showBrowser,
-            e2eScreenshotFolder: settings.http.testing.e2eScreenshotFolder,
-            e2eIgnoreInvalidSsl: settings.testSuite.e2eIgnoreInvalidSsl === true,
-            environmentIdOverride: pinnedEnvironmentId,
-            ancestorFolders,
-            environmentVariableKeys: {
-              useFolderPathInKeys: settings.environments.useFolderPathInKeys,
-            },
-            ancestorFlowIds: [flow.id],
-            suiteItems,
-            showBrowserLocked,
-            reportProgress: emitProgress,
+            flowName: flow.name,
+            name: rowName,
+            status: 'running',
+            children: [],
           });
-          await this.refreshPendingInterceptorCaptures(showBrowser);
-          stepDurations[step.id] = Date.now() - stepStartedAt;
-      stepStatuses[step.id] = 'passed';
+          const emitProgress = (): void => {
+            onProgress?.({
+              flowId,
+              stepStatuses: { ...lastStatuses },
+              nestedChildren: this.snapshotNestedChildren(true),
+            });
+          };
+          const graph = this.createRunGraph(steps);
+          graph.started = !options.startAtStepId;
+          lastStatuses = graph.stepStatuses;
+          lastDurations = graph.stepDurations;
+          lastErrors = graph.stepErrors;
           emitProgress();
-        } catch (error: unknown) {
-          stepDurations[step.id] = Date.now() - stepStartedAt;
-          stepStatuses[step.id] = 'failed';
-          const message = error instanceof Error ? error.message : 'Step failed';
-          stepErrors[step.id] = message;
-          markRemainingFlowStepsSkipped(stepStatuses, steps, index);
-          emitProgress();
-          return finish(false, `${step.name}: ${message}`);
+          const outcome = await this.runSteps(flow.nodes, flow, buildCtx(emitProgress), graph);
+          const rowOk = outcome === 'ok' && !graph.softFailed;
+          anyFailed = anyFailed || !rowOk;
+          datasetLogs[rowIndex] = {
+            ...datasetLogs[rowIndex]!,
+            status: rowOk ? 'passed' : 'failed',
+            durationMs: Date.now() - flowStartedAt,
+            error: graph.failMessage ?? undefined,
+            children: [],
+          };
+          if (outcome === 'prepared') {
+            keepBrowserAfterRun = true;
+            return {
+              ok: true,
+              message: graph.failMessage ?? `Prepared flow through dataset row ${rowIndex + 1}.`,
+              stepStatuses: graph.stepStatuses,
+              stepCaptures: Object.fromEntries(this.captures.entries()),
+              stepDurations: graph.stepDurations,
+              stepErrors: graph.stepErrors,
+              nestedChildren: this.snapshotNestedChildren(false),
+              durationMs: Date.now() - flowStartedAt,
+            };
+          }
         }
+        keepBrowserAfterRun = keepBrowserOpen && !anyFailed;
+        return {
+          ok: !anyFailed,
+          message: anyFailed
+            ? `Flow "${flow.name}" failed one or more dataset rows.`
+            : `Flow "${flow.name}" completed.`,
+          stepStatuses: lastStatuses,
+          stepCaptures: Object.fromEntries(this.captures.entries()),
+          stepDurations: lastDurations,
+          stepErrors: lastErrors,
+          nestedChildren: this.snapshotNestedChildren(false),
+          durationMs: Date.now() - flowStartedAt,
+        };
       }
 
-      keepBrowserAfterRun = keepBrowserOpen;
-      return finish(true, `Flow "${flow.name}" completed.`);
+      const graph = this.createRunGraph(steps);
+      graph.started = !options.startAtStepId;
+      const emitProgress = (): void => {
+        onProgress?.({
+          flowId,
+          stepStatuses: { ...graph.stepStatuses },
+          nestedChildren: this.snapshotNestedChildren(true),
+        });
+      };
+      emitProgress();
+      const outcome = await this.runSteps(flow.nodes, flow, buildCtx(emitProgress), graph);
+      if (outcome === 'prepared') {
+        keepBrowserAfterRun = true;
+        return {
+          ok: true,
+          message: graph.failMessage ?? `Prepared flow.`,
+          stepStatuses: graph.stepStatuses,
+          stepCaptures: Object.fromEntries(this.captures.entries()),
+          stepDurations: graph.stepDurations,
+          stepErrors: graph.stepErrors,
+          nestedChildren: this.snapshotNestedChildren(false),
+          durationMs: Date.now() - flowStartedAt,
+        };
+      }
+      const ok = outcome === 'ok' && !graph.softFailed;
+      keepBrowserAfterRun = keepBrowserOpen && ok;
+      return {
+        ok,
+        message: !ok
+          ? (graph.failMessage ?? `Flow "${flow.name}" failed.`)
+          : `Flow "${flow.name}" completed.`,
+        stepStatuses: graph.stepStatuses,
+        stepCaptures: Object.fromEntries(this.captures.entries()),
+        stepDurations: graph.stepDurations,
+        stepErrors: graph.stepErrors,
+        nestedChildren: this.snapshotNestedChildren(false),
+        durationMs: Date.now() - flowStartedAt,
+      };
     } finally {
       if (lockVisibleRunnerInput && this.e2eRunner) {
         this.e2eRunner.releaseVisibleInputLock();
@@ -337,7 +460,7 @@ export class TestSuiteFlowExecutor {
       if (this.e2eRunner && this.browserSessionReady && !keepBrowserAfterRun) {
         await this.e2eRunner.resetAfterFailure().catch(() => undefined);
       }
-      if (!options.stopBeforeStepId) {
+      if (!options.stopBeforeStepId && !options.preserveBrowserSession) {
         this.browserSessionReady = false;
       }
     }
@@ -349,6 +472,429 @@ export class TestSuiteFlowExecutor {
     const file = migrateTestSuitesFile(raw);
     const root = file.suites.find((s) => s.id === TEST_SUITE_ROOT_ID) ?? file.suites[0];
     return root?.flows ?? [];
+  }
+
+  private seedFlowVariables(row: Readonly<Record<string, string>>): void {
+    for (const [key, value] of Object.entries(row)) {
+      const normalized = normalizeFlowVariableKey(key);
+      if (normalized) {
+        this.flowVariables.set(normalized, value);
+      }
+    }
+  }
+
+  private createRunGraph(steps: readonly TestSuiteFlowStep[]): FlowRunGraph {
+    return {
+      stepStatuses: buildInitialFlowRunStatuses(steps.map((step) => step.id)),
+      stepDurations: {},
+      stepErrors: {},
+      softFailed: false,
+      started: false,
+      failMessage: null,
+    };
+  }
+
+  private markWaitingSkipped(graph: FlowRunGraph, ids: readonly string[]): void {
+    for (const id of ids) {
+      if (graph.stepStatuses[id] === 'waiting' || graph.stepStatuses[id] === 'running') {
+        graph.stepStatuses[id] = 'skipped';
+      }
+    }
+  }
+
+  private resolveCondition(
+    flow: TestSuiteFlow,
+    ctx: FlowStepContext,
+  ): (raw: string) => string {
+    return (raw: string) =>
+      this.resolveFlowTemplate(
+        raw,
+        flow,
+        ctx.environments,
+        ctx.environmentIdOverride,
+        ctx.ancestorFolders,
+        ctx.environmentVariableKeys,
+      );
+  }
+
+  /**
+   * Walks folders, lanes, and flow-control containers without flattening IF children.
+   */
+  private async runSteps(
+    nodes: readonly TestSuiteFlowNode[],
+    flow: TestSuiteFlow,
+    ctx: FlowStepContext,
+    graph: FlowRunGraph,
+  ): Promise<FlowRunOutcome> {
+    for (const node of nodes) {
+      if (graph.started && ctx.stopAfterStepId && graph.stepStatuses[ctx.stopAfterStepId] === 'passed') {
+        this.markWaitingSkipped(graph, collectDescendantStepIds(node));
+        continue;
+      }
+      if (isFlowFolderNode(node) || isFlowLaneNode(node)) {
+        const outcome = await this.runSteps(node.children, flow, ctx, graph);
+        if (outcome !== 'continue' && outcome !== 'ok') {
+          return outcome;
+        }
+        continue;
+      }
+      if (!isFlowStepNode(node)) {
+        continue;
+      }
+      const outcome = await this.runFlowStep(node, flow, ctx, graph);
+      if (outcome !== 'continue' && outcome !== 'ok') {
+        return outcome;
+      }
+    }
+    return graph.failMessage && !graph.softFailed ? 'fail' : 'ok';
+  }
+
+  private async runFlowStep(
+    step: TestSuiteFlowStep,
+    flow: TestSuiteFlow,
+    ctx: FlowStepContext,
+    graph: FlowRunGraph,
+  ): Promise<FlowRunOutcome> {
+    if (!step.enabled) {
+      this.markWaitingSkipped(graph, collectDescendantStepIds(step));
+      return 'continue';
+    }
+
+    const startAt = ctx.ignoreStartAt ? undefined : ctx.startAtStepId;
+    if (startAt && !graph.started) {
+      if (step.id === startAt) {
+        graph.started = true;
+      }
+    }
+    const beforeStart = Boolean(startAt && !graph.started);
+
+    if (ctx.stopBeforeStepId && step.id === ctx.stopBeforeStepId) {
+      this.markWaitingSkipped(graph, Object.keys(graph.stepStatuses));
+      graph.failMessage = `Prepared flow through step before "${step.name}".`;
+      return 'prepared';
+    }
+
+    if (this.cancelled) {
+      graph.stepStatuses[step.id] = 'failed';
+      graph.stepErrors[step.id] = 'Run cancelled.';
+      graph.failMessage = 'Run cancelled.';
+      this.markWaitingSkipped(graph, Object.keys(graph.stepStatuses));
+      ctx.reportProgress();
+      return 'fail';
+    }
+
+    const resolve = this.resolveCondition(flow, ctx);
+    if (!beforeStart && !shouldRunSkipUnless(step.skipUnless, resolve)) {
+      this.markWaitingSkipped(graph, collectDescendantStepIds(step));
+      graph.stepStatuses[step.id] = 'skipped';
+      ctx.reportProgress();
+      return 'continue';
+    }
+
+    if (beforeStart) {
+      if (step.stepType === 'E2E') {
+        return this.runLeafStep(step, flow, ctx, graph);
+      }
+      if (
+        step.stepType === 'IF' ||
+        step.stepType === 'FOR_EACH' ||
+        step.stepType === 'WHILE' ||
+        step.stepType === 'PARALLEL' ||
+        step.stepType === 'RETRY'
+      ) {
+        return this.runSteps(step.children ?? [], flow, ctx, graph);
+      }
+      this.markWaitingSkipped(graph, [step.id]);
+      return 'continue';
+    }
+
+    switch (step.stepType) {
+      case 'IF':
+        return this.runIfStep(step, flow, ctx, graph, resolve);
+      case 'FOR_EACH':
+        return this.runForEachStep(step, flow, ctx, graph, resolve);
+      case 'WHILE':
+        return this.runWhileStep(step, flow, ctx, graph, resolve);
+      case 'PARALLEL':
+        return this.runParallelStep(step, flow, ctx, graph);
+      case 'RETRY':
+        return this.runRetryStep(step, flow, ctx, graph);
+      default:
+        return this.runLeafStep(step, flow, ctx, graph);
+    }
+  }
+
+  /** Publishes nested run-log rows for IF / loop / PARALLEL children. */
+  private bindContainerChildLogs(
+    step: TestSuiteFlowStep,
+    flow: TestSuiteFlow,
+    ctx: FlowStepContext,
+    graph: FlowRunGraph,
+  ): FlowStepContext {
+    const childSteps = flattenAllEnabledFlowSteps(step.children ?? []);
+    const sync = (): void => {
+      this.nestedChildrenByTriggerId.set(
+        step.id,
+        childSteps.map((child) => ({
+          kind: 'step',
+          id: child.id,
+          flowId: flow.id,
+          flowName: flow.name,
+          name: child.name.trim() || child.stepType,
+          stepType: child.stepType,
+          status: graph.stepStatuses[child.id] ?? 'waiting',
+          durationMs: graph.stepDurations[child.id],
+          error: graph.stepErrors[child.id],
+        })),
+      );
+    };
+    sync();
+    return {
+      ...ctx,
+      reportProgress: () => {
+        sync();
+        ctx.reportProgress();
+      },
+    };
+  }
+
+  private async runIfStep(
+    step: TestSuiteFlowStep,
+    flow: TestSuiteFlow,
+    ctx: FlowStepContext,
+    graph: FlowRunGraph,
+    resolve: (raw: string) => string,
+  ): Promise<FlowRunOutcome> {
+    const cfg = step.config as IfStepConfig;
+    const lanes = (step.children ?? []).filter(isFlowLaneNode);
+    graph.stepStatuses[step.id] = 'running';
+    const nestedCtx = this.bindContainerChildLogs(step, flow, ctx, graph);
+    nestedCtx.reportProgress();
+    const startedAt = Date.now();
+
+    let matched: TestSuiteFlowLane | null = null;
+    if (evaluateFlowCondition(cfg.condition, resolve)) {
+      matched = lanes.find((lane) => lane.laneKind === 'then') ?? null;
+    } else {
+      for (const lane of lanes.filter((entry) => entry.laneKind === 'elseIf')) {
+        if (evaluateFlowCondition(lane.condition, resolve)) {
+          matched = lane;
+          break;
+        }
+      }
+      if (!matched) {
+        matched = lanes.find((lane) => lane.laneKind === 'else') ?? null;
+      }
+    }
+
+    for (const lane of lanes) {
+      if (lane.id === matched?.id) {
+        continue;
+      }
+      this.markWaitingSkipped(graph, collectDescendantStepIds(lane));
+    }
+
+    let outcome: FlowRunOutcome = 'ok';
+    if (matched) {
+      outcome = await this.runSteps(matched.children, flow, nestedCtx, graph);
+    }
+    graph.stepDurations[step.id] = Date.now() - startedAt;
+    if (outcome === 'fail' || outcome === 'prepared') {
+      graph.stepStatuses[step.id] = outcome === 'fail' ? 'failed' : 'passed';
+      nestedCtx.reportProgress();
+      return outcome;
+    }
+    graph.stepStatuses[step.id] = graph.softFailed ? 'failed' : 'passed';
+    nestedCtx.reportProgress();
+    if (ctx.stopAfterStepId === step.id) {
+      this.markWaitingSkipped(graph, Object.keys(graph.stepStatuses));
+    }
+    return 'ok';
+  }
+
+  private bodyLaneChildren(step: TestSuiteFlowStep): readonly TestSuiteFlowNode[] {
+    const body = (step.children ?? []).find((node) => isFlowLaneNode(node) && node.laneKind === 'body');
+    if (body && isFlowLaneNode(body)) {
+      return body.children;
+    }
+    return step.children ?? [];
+  }
+
+  private async runForEachStep(
+    step: TestSuiteFlowStep,
+    flow: TestSuiteFlow,
+    ctx: FlowStepContext,
+    graph: FlowRunGraph,
+    resolve: (raw: string) => string,
+  ): Promise<FlowRunOutcome> {
+    const cfg = step.config as ForEachStepConfig;
+    graph.stepStatuses[step.id] = 'running';
+    ctx.reportProgress();
+    const startedAt = Date.now();
+    const items = parseForEachSource(resolve(cfg.source)).slice(0, cfg.maxIterations);
+    const itemKey = normalizeFlowVariableKey(cfg.itemVariable) || 'item';
+    const body = this.bodyLaneChildren(step);
+    const iterationLogs: FlowRunChildLog[] = [];
+    this.nestedChildrenByTriggerId.set(step.id, iterationLogs);
+
+    let outcome: FlowRunOutcome = 'ok';
+    for (let index = 0; index < items.length; index++) {
+      this.flowVariables.set(itemKey, items[index]!);
+      this.flowVariables.set('index', String(index));
+      iterationLogs.push({
+        kind: 'step',
+        id: `${step.id}:${index}`,
+        flowId: flow.id,
+        flowName: flow.name,
+        name: `${step.name} [${index}]`,
+        stepType: 'FOR_EACH',
+        status: 'running',
+      });
+      ctx.reportProgress();
+      outcome = await this.runSteps(body, flow, ctx, graph);
+      iterationLogs[index] = {
+        ...iterationLogs[index]!,
+        status: outcome === 'fail' ? 'failed' : 'passed',
+      };
+      if (outcome !== 'ok' && outcome !== 'continue') {
+        break;
+      }
+    }
+    graph.stepDurations[step.id] = Date.now() - startedAt;
+    graph.stepStatuses[step.id] = outcome === 'fail' ? 'failed' : 'passed';
+    ctx.reportProgress();
+    return outcome === 'continue' ? 'ok' : outcome;
+  }
+
+  private async runWhileStep(
+    step: TestSuiteFlowStep,
+    flow: TestSuiteFlow,
+    ctx: FlowStepContext,
+    graph: FlowRunGraph,
+    resolve: (raw: string) => string,
+  ): Promise<FlowRunOutcome> {
+    const cfg = step.config as WhileStepConfig;
+    graph.stepStatuses[step.id] = 'running';
+    const nestedCtx = this.bindContainerChildLogs(step, flow, ctx, graph);
+    nestedCtx.reportProgress();
+    const startedAt = Date.now();
+    const body = this.bodyLaneChildren(step);
+    let outcome: FlowRunOutcome = 'ok';
+    for (let index = 0; index < cfg.maxIterations; index++) {
+      if (!evaluateFlowCondition(cfg.condition, resolve)) {
+        break;
+      }
+      this.flowVariables.set('index', String(index));
+      outcome = await this.runSteps(body, flow, nestedCtx, graph);
+      if (outcome !== 'ok' && outcome !== 'continue') {
+        break;
+      }
+    }
+    graph.stepDurations[step.id] = Date.now() - startedAt;
+    graph.stepStatuses[step.id] = outcome === 'fail' ? 'failed' : 'passed';
+    nestedCtx.reportProgress();
+    return outcome === 'continue' ? 'ok' : outcome;
+  }
+
+  private async runParallelStep(
+    step: TestSuiteFlowStep,
+    flow: TestSuiteFlow,
+    ctx: FlowStepContext,
+    graph: FlowRunGraph,
+  ): Promise<FlowRunOutcome> {
+    const children = step.children ?? [];
+    const forbidden = flattenAllEnabledFlowSteps(children).find((child) =>
+      ['E2E', 'MANUAL', 'TRIGGER', 'HTTP_LISTENER', 'HTTP_INTERCEPTOR', 'PARALLEL'].includes(child.stepType),
+    );
+    if (forbidden) {
+      graph.stepStatuses[step.id] = 'failed';
+      graph.stepErrors[step.id] =
+        `PARALLEL cannot contain ${forbidden.stepType} steps (including nested).`;
+      graph.failMessage = `${step.name}: ${graph.stepErrors[step.id]}`;
+      ctx.reportProgress();
+      return 'fail';
+    }
+    graph.stepStatuses[step.id] = 'running';
+    const nestedCtx = this.bindContainerChildLogs(step, flow, ctx, graph);
+    nestedCtx.reportProgress();
+    const startedAt = Date.now();
+    const results = await Promise.all(children.map((child) => this.runSteps([child], flow, nestedCtx, graph)));
+    const failed = results.find((outcome) => outcome === 'fail' || outcome === 'prepared');
+    graph.stepDurations[step.id] = Date.now() - startedAt;
+    if (failed) {
+      graph.stepStatuses[step.id] = failed === 'fail' ? 'failed' : 'passed';
+      nestedCtx.reportProgress();
+      return failed;
+    }
+    graph.stepStatuses[step.id] = 'passed';
+    nestedCtx.reportProgress();
+    return 'ok';
+  }
+
+  private async runRetryStep(
+    step: TestSuiteFlowStep,
+    flow: TestSuiteFlow,
+    ctx: FlowStepContext,
+    graph: FlowRunGraph,
+  ): Promise<FlowRunOutcome> {
+    const cfg = step.config as RetryStepConfig;
+    graph.stepStatuses[step.id] = 'running';
+    const nestedCtx = this.bindContainerChildLogs(step, flow, ctx, graph);
+    nestedCtx.reportProgress();
+    const startedAt = Date.now();
+    const body = this.bodyLaneChildren(step);
+    let last: FlowRunOutcome = 'fail';
+    for (let attempt = 1; attempt <= cfg.maxAttempts; attempt++) {
+      last = await this.runSteps(body, flow, nestedCtx, graph);
+      if (last === 'ok' || last === 'continue' || last === 'prepared') {
+        break;
+      }
+      if (attempt < cfg.maxAttempts && cfg.delayMs > 0) {
+        await new Promise((resolve) => setTimeout(resolve, cfg.delayMs));
+      }
+    }
+    graph.stepDurations[step.id] = Date.now() - startedAt;
+    graph.stepStatuses[step.id] = last === 'fail' ? 'failed' : 'passed';
+    nestedCtx.reportProgress();
+    return last === 'continue' ? 'ok' : last;
+  }
+
+  private async runLeafStep(
+    step: TestSuiteFlowStep,
+    flow: TestSuiteFlow,
+    ctx: FlowStepContext,
+    graph: FlowRunGraph,
+  ): Promise<FlowRunOutcome> {
+    graph.stepStatuses[step.id] = 'running';
+    ctx.reportProgress();
+    const startedAt = Date.now();
+    try {
+      await this.executeStep(step, flow, ctx);
+      await this.refreshPendingInterceptorCaptures(ctx.showBrowser);
+      graph.stepDurations[step.id] = Date.now() - startedAt;
+      graph.stepStatuses[step.id] = 'passed';
+      ctx.reportProgress();
+      if (ctx.stopAfterStepId === step.id) {
+        this.markWaitingSkipped(graph, Object.keys(graph.stepStatuses));
+      }
+      return 'ok';
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Step failed';
+      graph.stepDurations[step.id] = Date.now() - startedAt;
+      graph.stepStatuses[step.id] = 'failed';
+      graph.stepErrors[step.id] = message;
+      graph.failMessage = `${step.name}: ${message}`;
+      const continueOnFailure =
+        step.stepType === 'VALIDATION' && (step.config as ValidationStepConfig).continueOnFailure === true;
+      if (continueOnFailure) {
+        graph.softFailed = true;
+        ctx.reportProgress();
+        return 'ok';
+      }
+      this.markWaitingSkipped(graph, Object.keys(graph.stepStatuses));
+      ctx.reportProgress();
+      return 'fail';
+    }
   }
 
   private async executeStep(
@@ -485,7 +1031,7 @@ export class TestSuiteFlowExecutor {
     if (parentCtx.environmentIdOverride !== undefined) {
       flow = { ...flow, environmentId: parentCtx.environmentIdOverride };
     }
-    const steps = flattenEnabledFlowSteps(flow.nodes);
+    const steps = flattenAllEnabledFlowSteps(flow.nodes);
     if (steps.length === 0) {
       throw new Error(`Flow "${flow.name}" has no enabled steps to run.`);
     }
@@ -502,56 +1048,47 @@ export class TestSuiteFlowExecutor {
       ancestorFolders: location.ancestorFolders,
       ancestorFlowIds: [...parentCtx.ancestorFlowIds, flow.id],
       showBrowser: parentCtx.showBrowser,
+      ignoreStartAt: true,
+      startAtStepId: undefined,
+      stopAfterStepId: undefined,
+      stopBeforeStepId: undefined,
     };
 
+    const graph = this.createRunGraph(steps);
+    graph.started = true;
     const logs: FlowRunChildLog[] = steps.map((nestedStep) =>
       this.createWaitingNestedStepLog(flow, nestedStep),
     );
     onLogs(logs);
 
-    for (let index = 0; index < steps.length; index++) {
-      const nestedStep = steps[index]!;
-      if (this.cancelled) {
-        logs[index] = { ...logs[index]!, status: 'failed', error: 'Run cancelled.' };
-        for (let rest = index + 1; rest < logs.length; rest++) {
-          logs[rest] = { ...logs[rest]!, status: 'skipped' };
+    const report = ctx.reportProgress;
+    const nestedCtx: FlowStepContext = {
+      ...ctx,
+      reportProgress: () => {
+        for (const log of logs) {
+          const status = graph.stepStatuses[log.id];
+          if (!status) {
+            continue;
+          }
+          const index = logs.indexOf(log);
+          logs[index] = {
+            ...log,
+            status,
+            durationMs: graph.stepDurations[log.id],
+            error: graph.stepErrors[log.id],
+            lastRunCapture: this.captures.get(log.id) ?? null,
+            children: this.nestedChildrenByTriggerId.get(log.id),
+          };
         }
         onLogs(logs);
-        throw new Error('Run cancelled.');
-      }
+        report();
+      },
+    };
 
-      logs[index] = { ...logs[index]!, status: 'running' };
-      onLogs(logs);
-      const stepStartedAt = Date.now();
-      try {
-        await this.executeStep(nestedStep, flow, ctx);
-        await this.refreshPendingInterceptorCaptures(ctx.showBrowser);
-        const nested = this.nestedChildrenByTriggerId.get(nestedStep.id);
-        logs[index] = {
-          ...logs[index]!,
-          status: 'passed',
-          durationMs: Date.now() - stepStartedAt,
-          lastRunCapture: this.captures.get(nestedStep.id) ?? null,
-          ...(nested && nested.length > 0 ? { children: nested } : {}),
-        };
-        onLogs(logs);
-      } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : 'Step failed';
-        const nested = this.nestedChildrenByTriggerId.get(nestedStep.id);
-        logs[index] = {
-          ...logs[index]!,
-          status: 'failed',
-          durationMs: Date.now() - stepStartedAt,
-          error: message,
-          lastRunCapture: this.captures.get(nestedStep.id) ?? null,
-          ...(nested && nested.length > 0 ? { children: nested } : {}),
-        };
-        for (let rest = index + 1; rest < logs.length; rest++) {
-          logs[rest] = { ...logs[rest]!, status: 'skipped' };
-        }
-        onLogs(logs);
-        throw new Error(`${flow.name} / ${nestedStep.name}: ${message}`);
-      }
+    const outcome = await this.runSteps(flow.nodes, flow, nestedCtx, graph);
+    nestedCtx.reportProgress();
+    if (outcome === 'fail' || graph.softFailed) {
+      throw new Error(graph.failMessage ?? `Flow "${flow.name}" failed.`);
     }
     return logs;
   }
@@ -884,6 +1421,7 @@ export class TestSuiteFlowExecutor {
       readonly environmentIdOverride?: string | null;
       readonly ancestorFolders: readonly TestSuiteAncestorFolderRef[];
       readonly environmentVariableKeys: import('@shared/http/collection-execution.schema').EnvironmentVariableKeyMode;
+      readonly checkpointDir?: string;
     },
   ): Promise<void> {
     await this.ensureBrowserSession();
@@ -949,6 +1487,10 @@ export class TestSuiteFlowExecutor {
     if (!result.success) {
       throw new Error(result.error || `E2E [${action}] failed`);
     }
+    if (action === 'SCREENSHOT' && config.checkpoint === true) {
+      await this.applyScreenshotCheckpoint(step, flow, ctx, result, payload.selector);
+      return;
+    }
     try {
       this.captures.set(
         step.id,
@@ -960,6 +1502,51 @@ export class TestSuiteFlowExecutor {
         '[FlowExecutor] E2E step succeeded but capture failed:',
         captureError instanceof Error ? captureError.message : captureError,
       );
+    }
+  }
+
+  private async applyScreenshotCheckpoint(
+    step: TestSuiteFlowStep,
+    flow: TestSuiteFlow,
+    ctx: { readonly showBrowser: boolean; readonly checkpointDir?: string },
+    result: E2eExecuteResult,
+    selector: string,
+  ): Promise<void> {
+    const checkpointDir = ctx.checkpointDir?.trim();
+    if (!checkpointDir) {
+      throw new Error('Checkpoint directory is not available.');
+    }
+    const savedPath =
+      result.data && typeof result.data === 'object' && 'savedPath' in result.data
+        ? String((result.data as { savedPath?: string }).savedPath ?? '')
+        : '';
+    if (!savedPath) {
+      throw new Error('Screenshot checkpoint did not return a saved path.');
+    }
+    const capturePng = await fs.readFile(savedPath);
+    const config = step.config as E2eStepConfig;
+    const compared = await compareE2eCheckpoint({
+      checkpointDir,
+      flowId: flow.id,
+      stepId: step.id,
+      capturePng,
+      thresholdPercent: config.diffThresholdPercent ?? 0.5,
+    });
+    this.captures.set(step.id, {
+      kind: 'e2e_element',
+      capturedAt: new Date().toISOString(),
+      action: 'SCREENSHOT',
+      selector,
+      pageUrl: '',
+      elementText: '',
+      elementHtml: '',
+      elementExists: true,
+      savedPath: compared.baselinePath,
+      actualPath: compared.actualPath,
+      diffPath: compared.diffPath,
+    });
+    if (!compared.ok) {
+      throw new Error(compared.message ?? 'Visual checkpoint failed.');
     }
   }
 

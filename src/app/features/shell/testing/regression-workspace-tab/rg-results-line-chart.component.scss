@@ -140,6 +140,17 @@
   vector-effect: non-scaling-stroke;
 }
 
+.rg-line-chart__point {
+  cursor: pointer;
+  stroke: var(--tx-surface-elevated);
+  stroke-width: 0.4;
+  vector-effect: non-scaling-stroke;
+
+  &.is-selected {
+    stroke: var(--tx-accent);
+  }
+}
+
 .rg-line-chart__x-axis {
   display: flex;
   justify-content: space-between;

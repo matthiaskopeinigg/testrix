@@ -298,7 +298,7 @@ export class CommandSeedsService {
           this.testingSession.setSubpanel('lookups');
         },
       },
-      ...(['collections', 'environments', 'testing', 'data', 'development', 'history'] as const).map(
+      ...(['collections', 'testing', 'data', 'environments', 'development', 'history'] as const).map(
         (panelId) => ({
           id: `sidebar.${panelId}`,
           label: `Open ${sidebarPanelLabel(panelId)} sidebar`,

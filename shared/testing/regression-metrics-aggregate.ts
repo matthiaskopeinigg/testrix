@@ -149,12 +149,19 @@ export function peakParallelismFromTimeline(
   return Math.max(...timeline.map((e) => e.workerSlot)) + 1;
 }
 
+/**
+ * Evaluates acceptance, duration, and optional critical-flow gates.
+ *
+ * @param criticalFailed Number of failed flows marked `isCritical`. Any value
+ *   greater than 0 fails the overall check even when pass rate meets acceptance.
+ */
 export function evaluateRegressionThresholds(
   passed: number,
   failed: number,
   totalDurationMs: number,
   p95FlowDurationMs: number,
   thresholds: RegressionThresholds,
+  criticalFailed = 0,
 ): { readonly pass: boolean; readonly results: readonly { label: string; pass: boolean; expected: string; actual: string }[] } {
   const passRate = computeRegressionPassRatePercent(passed, failed);
   const results: { label: string; pass: boolean; expected: string; actual: string }[] = [];
@@ -165,6 +172,15 @@ export function evaluateRegressionThresholds(
     expected: `≥ ${thresholds.acceptancePercent}%`,
     actual: `${passRate.toFixed(1)}% (${passed}/${passed + failed} passed)`,
   });
+
+  if (criticalFailed > 0) {
+    results.push({
+      label: 'Critical flows',
+      pass: false,
+      expected: '0 failed',
+      actual: `${criticalFailed} failed`,
+    });
+  }
 
   if (thresholds.maxFailedFlows !== undefined) {
     results.push({
@@ -211,7 +227,8 @@ export function buildRegressionRunSummary(
   const passRatePercent = computeRegressionPassRatePercent(passed, failed);
   const { p50, p95, avg } = computeFlowDurationPercentiles(flowResults);
   const steps = aggregateStepCounts(flowResults);
-  const meetsAcceptance = passRatePercent >= acceptancePercent;
+  const criticalFailed = flowResults.filter((r) => r.isCritical && r.status === 'failed').length;
+  const meetsAcceptance = passRatePercent >= acceptancePercent && criticalFailed === 0;
 
   return {
     totalDurationMs,

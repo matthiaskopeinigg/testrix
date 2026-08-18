@@ -1,0 +1,45 @@
+<app-testing-workspace-tab-shell
+  title="Call graph"
+  description="TRIGGER steps between flows. Click a node to open that flow. Disabled TRIGGERs are muted; cycles are highlighted."
+>
+  @if (layoutNodes().length === 0) {
+    <tx-banner variant="info" title="No TRIGGER steps">
+      Add a TRIGGER step in a flow to see which flows call which.
+    </tx-banner>
+  } @else {
+    <div class="ts-call-graph" role="img" aria-label="TRIGGER call graph">
+      <svg class="ts-call-graph__svg" [attr.viewBox]="viewBox()" preserveAspectRatio="xMinYMin meet">
+        @for (edge of layoutEdges(); track edge.fromFlowId + '->' + edge.toFlowId + (edge.muted ? ':m' : '')) {
+          <path
+            class="ts-call-graph__edge"
+            [class.is-muted]="edge.muted"
+            [class.is-cyclic]="edge.cyclic"
+            [attr.d]="edge.d"
+          />
+        }
+        @for (node of layoutNodes(); track node.flowId) {
+          <g
+            class="ts-call-graph__node"
+            [class.is-cyclic]="node.cyclic"
+            (click)="handleNodeClick(node.flowId)"
+          >
+            <rect
+              [attr.x]="node.x"
+              [attr.y]="node.y"
+              width="160"
+              height="40"
+              rx="8"
+            />
+            <text
+              [attr.x]="node.x + 80"
+              [attr.y]="node.y + 25"
+              text-anchor="middle"
+            >
+              {{ node.name }}
+            </text>
+          </g>
+        }
+      </svg>
+    </div>
+  }
+</app-testing-workspace-tab-shell>

@@ -300,7 +300,15 @@ export interface ElectronAPI {
       listener: (metrics: import('@shared/testing').RegressionRunMetrics) => void,
     ) => () => void;
     onRegressionRunProgress: (listener: (event: unknown) => void) => () => void;
-    e2eExecuteFlow: (flowId: string) => Promise<{
+    e2eExecuteFlow: (
+      flowId: string,
+      options?: {
+        readonly startAtStepId?: string;
+        readonly stopAfterStepId?: string;
+        readonly stopBeforeStepId?: string;
+        readonly initialVariables?: Readonly<Record<string, string>>;
+      },
+    ) => Promise<{
       readonly ok: boolean;
       readonly message: string;
       readonly stepStatuses: Readonly<Record<string, string>>;
@@ -320,6 +328,10 @@ export interface ElectronAPI {
     flowManualInputSubmit: (
       payload: import('@shared/testing').FlowManualInputSubmitPayload,
     ) => Promise<{ readonly ok: boolean; readonly error?: string }>;
+    e2eUpdateCheckpointBaseline: (payload: {
+      readonly flowId: string;
+      readonly stepId: string;
+    }) => Promise<{ readonly ok: boolean; readonly error?: string }>;
     e2eExecute: (payload: import('@shared/testing').E2eExecutePayload) => Promise<import('@shared/testing').E2eExecuteResult>;
     e2eSignalCancel: () => void;
     clearE2eRunnerSession: () => Promise<{ readonly ok: boolean }>;

@@ -34,6 +34,10 @@ export const regressionArtifactSchema = z.object({
   updatedAt: z.string(),
   docs: boundedText(32_000).default(''),
   flowIds: z.array(z.string()).default([]),
+  /** Test Suite folder whose descendant flows stay synced onto `flowIds`. */
+  linkedFolderId: z.string().nullable().optional(),
+  /** Pinned golden run id; cleared when the run ages out of the 30-run cap. */
+  goldenRunId: z.string().nullable().optional(),
   profile: regressionProfileSchema,
   thresholds: regressionThresholdsSchema,
   runs: z.array(regressionRunSchema).max(30).default([]),

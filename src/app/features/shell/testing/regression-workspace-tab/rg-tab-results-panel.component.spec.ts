@@ -26,6 +26,7 @@ function failedRun(): RegressionRun {
     passedCount: 0,
     failedCount: 1,
     skippedCount: 0,
+    flakedCount: 0,
     profileSnapshot: createDefaultRegressionProfile(),
     thresholdsSnapshot: { acceptancePercent: 100 },
     flowResults: [
@@ -105,6 +106,40 @@ describe('RgTabResultsPanelComponent', () => {
     fixture.componentRef.setInput('runState', 'completed');
     fixture.componentRef.setInput('runs', [failedRun()]);
     fixture.detectChanges();
+  });
+
+  it('shows recovered retries as flaked, not in the failed count', () => {
+    const flakedRun: RegressionRun = {
+      ...failedRun(),
+      status: 'passed',
+      passedCount: 1,
+      failedCount: 0,
+      flakedCount: 1,
+      flowResults: [
+        {
+          flowId: 'flow-1',
+          flowName: 'Login',
+          status: 'passed',
+          durationMs: 420,
+          attemptCount: 2,
+          flaked: true,
+          attempts: [
+            { status: 'failed', durationMs: 200, message: 'timeout' },
+            { status: 'passed', durationMs: 220 },
+          ],
+          passedStepCount: 1,
+          failedStepCount: 0,
+          skippedStepCount: 0,
+          validationFailures: [],
+        },
+      ],
+    };
+    fixture.componentRef.setInput('runs', [flakedRun]);
+    fixture.detectChanges();
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(text).toContain('passed on attempt 2');
+    expect(text).toMatch(/Failed\s*0/);
+    expect(text).toMatch(/Flaked\s*1/);
   });
 
   it('shows the flow run log after a completed flow row is selected', () => {

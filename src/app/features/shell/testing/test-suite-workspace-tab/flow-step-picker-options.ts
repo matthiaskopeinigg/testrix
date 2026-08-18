@@ -1,5 +1,5 @@
 import {
-  flattenEnabledFlowSteps,
+  flattenAllEnabledFlowSteps,
   isFlowValidationReferenceStepType,
   isTestSuiteFlow,
   isTestSuiteFolder,
@@ -20,7 +20,7 @@ export function buildValidationRefStepOptions(
   currentStepId: string,
 ): readonly TxDropdownOption[] {
   const options: TxDropdownOption[] = [];
-  for (const step of flattenEnabledFlowSteps(flow.nodes)) {
+  for (const step of flattenAllEnabledFlowSteps(flow.nodes)) {
     if (step.id === currentStepId) {
       break;
     }
@@ -38,7 +38,7 @@ export function buildValidationRefStepOptions(
 /** Prior steps in run order before the current step (for validation ref picker). */
 export function buildPriorStepOptions(flow: TestSuiteFlow, currentStepId: string): readonly TxDropdownOption[] {
   const options: TxDropdownOption[] = [];
-  for (const step of flattenEnabledFlowSteps(flow.nodes)) {
+  for (const step of flattenAllEnabledFlowSteps(flow.nodes)) {
     if (step.id === currentStepId) {
       break;
     }

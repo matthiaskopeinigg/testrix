@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 import { collectionRequestBodySchema } from '../config/collection-request-settings.schema';
 import { HTTP_METHOD_IDS } from '../config/http-settings.schema';
+import { flowConditionSchema } from './flow-condition';
 
 const boundedText = (max: number) => z.string().max(max);
 
@@ -16,6 +17,11 @@ export const TEST_SUITE_STEP_TYPES = [
   'WAIT',
   'MANUAL',
   'TRIGGER',
+  'IF',
+  'FOR_EACH',
+  'WHILE',
+  'PARALLEL',
+  'RETRY',
 ] as const;
 
 export const testSuiteStepTypeSchema = z.enum(TEST_SUITE_STEP_TYPES);
@@ -167,6 +173,8 @@ export type CacheStepConfig = z.infer<typeof cacheStepConfigSchema>;
 export const validationStepConfigSchema = z.object({
   refStepId: z.string().nullable().optional(),
   rules: z.array(validationRuleSchema).default([]),
+  /** When true, the flow keeps running after this step fails; the flow still fails at the end. */
+  continueOnFailure: z.boolean().default(false),
 });
 
 export type ValidationStepConfig = z.infer<typeof validationStepConfigSchema>;
@@ -204,6 +212,10 @@ export const e2eStepConfigSchema = z.object({
   timeout: z.union([z.number(), z.string()]).default(5000),
   screenshotPath: z.string().optional(),
   screenshotFileName: z.string().optional(),
+  /** Compare this capture against a per-profile baseline PNG. */
+  checkpoint: z.boolean().default(false),
+  /** Fail the checkpoint when changed pixels exceed this percent (0–5). */
+  diffThresholdPercent: z.number().min(0).max(5).default(0.5),
 });
 
 export type E2eStepConfig = z.infer<typeof e2eStepConfigSchema>;
@@ -253,6 +265,46 @@ export const triggerStepConfigSchema = z.object({
 
 export type TriggerStepConfig = z.infer<typeof triggerStepConfigSchema>;
 
+export const ifStepConfigSchema = z.object({
+  condition: flowConditionSchema.default({ clauses: [] }),
+});
+
+export type IfStepConfig = z.infer<typeof ifStepConfigSchema>;
+
+export const forEachStepConfigSchema = z.object({
+  source: z.string().default(''),
+  itemVariable: z.string().default('item'),
+  maxIterations: z.number().int().min(1).max(200).default(50),
+});
+
+export type ForEachStepConfig = z.infer<typeof forEachStepConfigSchema>;
+
+export const whileStepConfigSchema = z.object({
+  condition: flowConditionSchema.default({ clauses: [] }),
+  maxIterations: z.number().int().min(1).max(200).default(50),
+});
+
+export type WhileStepConfig = z.infer<typeof whileStepConfigSchema>;
+
+export const parallelStepConfigSchema = z.object({});
+
+export type ParallelStepConfig = z.infer<typeof parallelStepConfigSchema>;
+
+export const retryStepConfigSchema = z.object({
+  maxAttempts: z.number().int().min(1).max(10).default(3),
+  delayMs: z.number().int().min(0).max(30_000).default(0),
+});
+
+export type RetryStepConfig = z.infer<typeof retryStepConfigSchema>;
+
+export const FLOW_CONTROL_STEP_TYPES = ['IF', 'FOR_EACH', 'WHILE', 'PARALLEL', 'RETRY'] as const;
+
+export type FlowControlStepType = (typeof FLOW_CONTROL_STEP_TYPES)[number];
+
+export function isFlowControlStepType(stepType: string): stepType is FlowControlStepType {
+  return (FLOW_CONTROL_STEP_TYPES as readonly string[]).includes(stepType);
+}
+
 export const testSuiteStepConfigSchema = z.union([
   requestStepConfigSchema,
   validationStepConfigSchema,
@@ -264,6 +316,11 @@ export const testSuiteStepConfigSchema = z.union([
   waitStepConfigSchema,
   manualStepConfigSchema,
   triggerStepConfigSchema,
+  ifStepConfigSchema,
+  forEachStepConfigSchema,
+  whileStepConfigSchema,
+  parallelStepConfigSchema,
+  retryStepConfigSchema,
 ]);
 
 export type TestSuiteStepConfig = z.infer<typeof testSuiteStepConfigSchema>;
@@ -352,6 +409,29 @@ export function createDefaultTriggerStepConfig(): z.infer<typeof triggerStepConf
   return triggerStepConfigSchema.parse({ targetType: 'flow', targetId: '' });
 }
 
+export function createDefaultIfStepConfig(): IfStepConfig {
+  return ifStepConfigSchema.parse({ condition: { clauses: [{ left: '', operator: 'equals', right: '' }] } });
+}
+
+export function createDefaultForEachStepConfig(): ForEachStepConfig {
+  return forEachStepConfigSchema.parse({ source: '', itemVariable: 'item', maxIterations: 50 });
+}
+
+export function createDefaultWhileStepConfig(): WhileStepConfig {
+  return whileStepConfigSchema.parse({
+    condition: { clauses: [{ left: '', operator: 'equals', right: '' }] },
+    maxIterations: 50,
+  });
+}
+
+export function createDefaultParallelStepConfig(): ParallelStepConfig {
+  return parallelStepConfigSchema.parse({});
+}
+
+export function createDefaultRetryStepConfig(): RetryStepConfig {
+  return retryStepConfigSchema.parse({ maxAttempts: 3, delayMs: 0 });
+}
+
 /** Returns default config for a step type. */
 export function defaultConfigForStepType(stepType: TestSuiteStepType): TestSuiteStepConfig {
   switch (stepType) {
@@ -375,6 +455,16 @@ export function defaultConfigForStepType(stepType: TestSuiteStepType): TestSuite
       return createDefaultManualStepConfig();
     case 'TRIGGER':
       return createDefaultTriggerStepConfig();
+    case 'IF':
+      return createDefaultIfStepConfig();
+    case 'FOR_EACH':
+      return createDefaultForEachStepConfig();
+    case 'WHILE':
+      return createDefaultWhileStepConfig();
+    case 'PARALLEL':
+      return createDefaultParallelStepConfig();
+    case 'RETRY':
+      return createDefaultRetryStepConfig();
     default:
       return createDefaultRequestStepConfig();
   }

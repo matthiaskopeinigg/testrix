@@ -98,6 +98,7 @@ export class CapTabTrafficPanelComponent {
   readonly createCollectionRequest = output<CaptureLogEntry>();
   readonly createFlowFromCapture = output<CaptureLogEntry>();
   readonly generateCollection = output<readonly CaptureLogEntry[]>();
+  readonly generateFlow = output<readonly CaptureLogEntry[]>();
   readonly generateOpenApi = output<readonly CaptureLogEntry[]>();
   readonly generateMockEndpoints = output<readonly CaptureLogEntry[]>();
 
@@ -178,6 +179,10 @@ export class CapTabTrafficPanelComponent {
 
   protected handleGenerateCollection(): void {
     this.generateCollection.emit(this.generateEntries());
+  }
+
+  protected handleGenerateFlow(): void {
+    this.generateFlow.emit(this.generateEntries());
   }
 
   protected handleGenerateOpenApi(): void {

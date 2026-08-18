@@ -108,6 +108,54 @@
   background: color-mix(in srgb, var(--tx-danger) 12%, var(--tx-surface-1));
 }
 
+.ts-flow-step-editor__skip {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  padding: 0.55rem 1.25rem 0.75rem;
+  border-top: 1px solid color-mix(in srgb, var(--tx-border-0) 42%, transparent);
+  background: var(--tx-surface-elevated);
+}
+
+.ts-flow-step-editor__skip-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0.2rem 0;
+  border: none;
+  background: none;
+  color: var(--tx-text-1);
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  width: fit-content;
+  max-width: 100%;
+}
+
+.ts-flow-step-editor__skip-toggle:hover {
+  color: var(--tx-text-0);
+}
+
+.ts-flow-step-editor__skip-chevron {
+  flex-shrink: 0;
+  color: var(--tx-text-2);
+  transition: transform var(--tx-duration-fast, 120ms) ease;
+}
+
+.ts-flow-step-editor__skip-chevron--collapsed {
+  transform: rotate(-90deg);
+}
+
+.ts-flow-step-editor__skip-body {
+  max-width: 56rem;
+  max-height: 14rem;
+  overflow: auto;
+}
+
 .ts-flow-step-editor__body:has(> app-ts-flow-request-step-panel) {
   padding: 0;
   overflow: hidden;

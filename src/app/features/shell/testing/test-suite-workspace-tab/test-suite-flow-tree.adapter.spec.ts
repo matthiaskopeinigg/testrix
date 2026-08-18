@@ -8,15 +8,16 @@ import {
 } from './test-suite-flow-tree.adapter';
 
 describe('test-suite-flow-tree.adapter', () => {
-  it('flattens folder nodes when mapping to tree nodes', () => {
+  it('keeps folder nodes when mapping to tree nodes', () => {
     const step = createFlowStep('REQUEST', 'Request');
     step.id = 'step-1';
     const folder = { ...createFlowFolder('Group'), id: 'fld-1', children: [step] as const };
     const tree = toFlowStepTreeNodes([folder]);
 
     expect(tree).toHaveLength(1);
-    expect(tree[0]?.id).toBe('step-1');
-    expect(tree[0]?.data?.kind).toBe('step');
+    expect(tree[0]?.id).toBe('fld-1');
+    expect(tree[0]?.data?.kind).toBe('folder');
+    expect(tree[0]?.children?.[0]?.id).toBe('step-1');
   });
 
   it('round-trips flat steps and preserves configs', () => {

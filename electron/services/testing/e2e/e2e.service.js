@@ -2595,15 +2595,41 @@ class E2eService {
               await new Promise((r) => setTimeout(r, 80));
             }
             let image;
+            let captureRect;
+            const cropSelector = String(selector ?? '').trim();
+            if (cropSelector) {
+              try {
+                const rectScript = `
+                  (async function() {
+                    ${guestDeepSelectorHelperSource()}
+                    const compound = ${JSON.stringify(cropSelector)};
+                    const el = awResolveDeepSelector(document, compound);
+                    if (!el) return null;
+                    el.scrollIntoView({ behavior: 'auto', block: 'center', inline: 'nearest' });
+                    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+                    const r = el.getBoundingClientRect();
+                    if (!r.width || !r.height) return null;
+                    return { x: Math.max(0, Math.floor(r.x)), y: Math.max(0, Math.floor(r.y)), width: Math.ceil(r.width), height: Math.ceil(r.height) };
+                  })()
+                `;
+                captureRect = await this.window.webContents.executeJavaScript(rectScript, true);
+              } catch (_rectErr) {
+                captureRect = null;
+              }
+            }
             try {
-              image = await this.window.webContents.capturePage();
+              image = captureRect
+                ? await this.window.webContents.capturePage(captureRect)
+                : await this.window.webContents.capturePage();
             } catch (capErr) {
               const msg = capErr && capErr.message ? String(capErr.message) : String(capErr);
               if (/display surface/i.test(msg) && this.window && !this.window.isDestroyed()) {
                 try {
                   await this.ensureRunnerWindowSurface();
                   await new Promise((r) => setTimeout(r, 80));
-                  image = await this.window.webContents.capturePage();
+                  image = captureRect
+                    ? await this.window.webContents.capturePage(captureRect)
+                    : await this.window.webContents.capturePage();
                 } catch (retryErr) {
                   throw retryErr instanceof Error ? retryErr : new Error(String(retryErr));
                 }

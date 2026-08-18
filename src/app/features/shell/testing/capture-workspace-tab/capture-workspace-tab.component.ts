@@ -295,6 +295,10 @@ export class CaptureWorkspaceTabComponent {
     this.captureActions.generateCollectionFromCapture(entries);
   }
 
+  protected handleGenerateFlow(entries: readonly CaptureLogEntry[]): void {
+    this.captureActions.generateFlowFromCapture(entries);
+  }
+
   protected handleGenerateOpenApi(entries: readonly CaptureLogEntry[]): void {
     this.captureActions.generateOpenApiFromCapture(entries);
   }

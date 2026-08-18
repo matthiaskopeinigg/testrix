@@ -141,6 +141,10 @@
   gap: 0.65rem;
 }
 
+.rg-results-panel__history-trend {
+  margin: 0 0 0.75rem;
+}
+
 @media (max-width: 900px) {
   .rg-results-panel__chart-row {
     grid-template-columns: 1fr;
@@ -397,4 +401,14 @@
   display: flex;
   flex-direction: column;
   gap: 0.65rem;
+}
+
+.rg-results-panel__attempts {
+  margin: 0 0 0.75rem;
+  padding: 0.5rem 0.75rem;
+  list-style: none;
+  font-size: 0.8125rem;
+  color: var(--tx-text-1);
+  border: 1px solid color-mix(in srgb, var(--tx-border-0) 45%, transparent);
+  border-radius: var(--tx-radius-sm, 8px);
 }

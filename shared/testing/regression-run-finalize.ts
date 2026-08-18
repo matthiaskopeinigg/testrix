@@ -1,5 +1,6 @@
 import type { RegressionRun } from './regression-run.schema';
 import { evaluateRegressionThresholds, buildRegressionRunSummary } from './regression-metrics-aggregate';
+import { classifyRegressionFlowCounts } from './regression-flake';
 import { regressionRunSchema } from './regression-run.schema';
 import type {
   RegressionFlowResult,
@@ -24,9 +25,11 @@ export interface FinalizeRegressionRunInput {
  * Finalizes a regression run record with summary, threshold evaluation, and status.
  */
 export function finalizeRegressionRun(input: FinalizeRegressionRunInput): RegressionRun {
-  const passed = input.flowResults.filter((r) => r.status === 'passed').length;
-  const failed = input.flowResults.filter((r) => r.status === 'failed').length;
-  const skipped = input.flowResults.filter((r) => r.status === 'skipped').length;
+  const counts = classifyRegressionFlowCounts(input.flowResults);
+  const passed = counts.passed;
+  const failed = counts.failed;
+  const skipped = counts.skipped;
+  const flaked = counts.flaked;
   const totalDurationMs = Math.max(
     0,
     new Date(input.finishedAt).getTime() - new Date(input.startedAt).getTime(),
@@ -45,6 +48,7 @@ export function finalizeRegressionRun(input: FinalizeRegressionRunInput): Regres
     totalDurationMs,
     summary?.p95FlowDurationMs ?? 0,
     input.thresholds,
+    input.flowResults.filter((r) => r.isCritical && r.status === 'failed').length,
   );
 
   let status: RegressionRun['status'] = 'passed';
@@ -62,6 +66,7 @@ export function finalizeRegressionRun(input: FinalizeRegressionRunInput): Regres
     passedCount: passed,
     failedCount: failed,
     skippedCount: skipped,
+    flakedCount: flaked,
     profileSnapshot: input.profile,
     thresholdsSnapshot: input.thresholds,
     summary,

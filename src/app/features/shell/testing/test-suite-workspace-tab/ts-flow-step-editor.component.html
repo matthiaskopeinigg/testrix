@@ -136,6 +136,46 @@
             (environmentVariableClick)="handlePlaceholderClick($event)"
           />
         }
+        @case ('IF') {
+          <app-ts-flow-control-step-panel
+            [step]="s"
+            [variableCatalog]="variableCatalog()"
+            (configChange)="patchConfig($event)"
+            (addElseIf)="handleAddElseIf()"
+            (elseIfConditionChange)="handleElseIfCondition($event)"
+            (environmentVariableClick)="handlePlaceholderClick($event)"
+          />
+        }
+        @case ('FOR_EACH') {
+          <app-ts-flow-control-step-panel
+            [step]="s"
+            [variableCatalog]="variableCatalog()"
+            (configChange)="patchConfig($event)"
+            (environmentVariableClick)="handlePlaceholderClick($event)"
+          />
+        }
+        @case ('WHILE') {
+          <app-ts-flow-control-step-panel
+            [step]="s"
+            [variableCatalog]="variableCatalog()"
+            (configChange)="patchConfig($event)"
+            (environmentVariableClick)="handlePlaceholderClick($event)"
+          />
+        }
+        @case ('PARALLEL') {
+          <app-ts-flow-control-step-panel
+            [step]="s"
+            [variableCatalog]="variableCatalog()"
+            (configChange)="patchConfig($event)"
+          />
+        }
+        @case ('RETRY') {
+          <app-ts-flow-control-step-panel
+            [step]="s"
+            [variableCatalog]="variableCatalog()"
+            (configChange)="patchConfig($event)"
+          />
+        }
         @default {
           <section class="ts-flow-step-editor__section">
             <tx-banner variant="info" title="Limited editor">
@@ -153,5 +193,40 @@
         }
       }
     </div>
+
+    <section class="ts-flow-step-editor__skip" aria-label="Skip unless">
+      <button
+        type="button"
+        class="ts-flow-step-editor__skip-toggle"
+        [attr.aria-expanded]="skipUnlessOpen()"
+        [attr.aria-controls]="skipUnlessOpen() ? 'ts-skip-unless-body' : null"
+        (click)="handleSkipUnlessToggle()"
+      >
+        <tx-icon
+          class="ts-flow-step-editor__skip-chevron"
+          [class.ts-flow-step-editor__skip-chevron--collapsed]="!skipUnlessOpen()"
+          name="chevronDown"
+          [size]="12"
+          aria-hidden="true"
+        />
+        <span>Skip unless</span>
+        @if (skipUnlessConfigured()) {
+          <tx-tag variant="info" casing="normal">On</tx-tag>
+        }
+      </button>
+      @if (skipUnlessOpen()) {
+        <div class="ts-flow-step-editor__skip-body" id="ts-skip-unless-body">
+          <tx-form-field label="Condition" controlId="ts-skip-unless">
+            <app-ts-flow-condition-builder
+              controlIdPrefix="ts-skip"
+              [condition]="s.skipUnless"
+              [variableCatalog]="variableCatalog()"
+              (conditionChange)="patch({ skipUnless: $event })"
+              (environmentVariableClick)="handlePlaceholderClick($event)"
+            />
+          </tx-form-field>
+        </div>
+      }
+    </section>
   </div>
 }

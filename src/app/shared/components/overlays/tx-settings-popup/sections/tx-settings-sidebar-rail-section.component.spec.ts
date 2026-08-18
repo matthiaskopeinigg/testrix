@@ -32,7 +32,7 @@ describe('TxSettingsSidebarRailSectionComponent', () => {
     const labels = [...fixture.nativeElement.querySelectorAll('.tx-settings-sidebar-rail__label')].map(
       (el: HTMLElement) => el.textContent?.trim(),
     );
-    expect(labels).toEqual(['Collections', 'Environments', 'Testing', 'Database', 'Development', 'History']);
+    expect(labels).toEqual(['Collections', 'Testing', 'Database', 'Environments', 'Development', 'History']);
   });
 
   it('emits a moved order', () => {
@@ -40,10 +40,10 @@ describe('TxSettingsSidebarRailSectionComponent', () => {
     fixture.componentInstance.orderChange.subscribe(handler);
     fixture.componentInstance['handleMove']('collections', 1);
     expect(handler).toHaveBeenCalledWith([
-      'environments',
-      'collections',
       'testing',
+      'collections',
       'data',
+      'environments',
       'development',
       'history',
     ]);

@@ -1,4 +1,6 @@
-@if (parsed(); as tab) {
+@if (isCallGraphTab()) {
+  <app-ts-call-graph-workspace-tab />
+} @else if (parsed(); as tab) {
   @if (tab.kind === 'folder') {
     @if (folder(); as fld) {
       <app-testing-workspace-tab-shell
@@ -199,25 +201,34 @@
                 [class.tx-entrance-stagger--settled]="isSectionContentSettled('overview')"
               >
                 <div class="tx-entrance-stagger__block">
-                  <section class="ts-flow-tab__overview" aria-label="Flow overview">
-                    <tx-form-field label="Description" controlId="ts-flow-description">
-                      <tx-textarea
-                        controlId="ts-flow-description"
-                        placeholder="Describe this flow…"
-                        [rows]="3"
-                        [ngModel]="f.description"
-                        (ngModelChange)="handleFlowDescriptionChange($event)"
-                      />
-                    </tx-form-field>
-                    <app-ts-flow-settings-panel
-                      [flow]="f"
-                      [hasE2eSteps]="flowHasE2eSteps()"
-                      (criticalChange)="handleFlowCriticalChange($event)"
-                      (tagsChange)="handleFlowTagsChange($event)"
-                      (e2eShowWindowChange)="handleFlowE2eShowWindowChange($event)"
-                      (e2eKeepWindowOpenChange)="handleFlowE2eKeepWindowOpenChange($event)"
-                    />
-                  </section>
+                  <app-ts-flow-overview-panel
+                    [flow]="f"
+                    [environmentName]="resolvedFlowEnvironmentName() ?? 'No environment'"
+                    [hasE2eSteps]="flowHasE2eSteps()"
+                    [runSummary]="runSummary()"
+                    (descriptionChange)="handleFlowDescriptionChange($event)"
+                    (sectionSelect)="handleFlowSectionSelect($event)"
+                    (openSteps)="handleFlowSectionSelect('steps')"
+                  />
+                </div>
+              </div>
+            }
+            @case ('settings') {
+              <div
+                class="tx-workspace-tab__section-shell tx-entrance-stagger ts-flow-tab__overview-shell"
+                [class.tx-entrance-stagger--play]="isSectionContentAnimating('settings')"
+                [class.tx-entrance-stagger--settled]="isSectionContentSettled('settings')"
+              >
+                <div class="tx-entrance-stagger__block">
+                  <app-ts-flow-settings-panel
+                    [flow]="f"
+                    [hasE2eSteps]="flowHasE2eSteps()"
+                    (criticalChange)="handleFlowCriticalChange($event)"
+                    (tagsChange)="handleFlowTagsChange($event)"
+                    (e2eShowWindowChange)="handleFlowE2eShowWindowChange($event)"
+                    (e2eKeepWindowOpenChange)="handleFlowE2eKeepWindowOpenChange($event)"
+                    (datasetChange)="handleFlowDatasetChange($event)"
+                  />
                 </div>
               </div>
             }

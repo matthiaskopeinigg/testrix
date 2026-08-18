@@ -4,6 +4,7 @@
       <h2 class="request-panel__title">Linked flows</h2>
       <p class="request-panel__hint">
         Click flows or folders in the test-suite tree to link them. Folder clicks toggle all flows inside.
+        Optionally sync from a Test Suite folder so new descendant flows appear on the next run.
       </p>
     </div>
     <div class="rg-flows-panel__summary">
@@ -16,6 +17,28 @@
       </tx-button>
     </div>
   </header>
+
+  <div class="rg-flows-panel__folder-link">
+    <tx-form-field label="Sync from Test Suite folder" controlId="rg-linked-folder">
+      <tx-tree-select
+        id="rg-linked-folder"
+        placeholder="No folder linked"
+        emptyLabel="No folders"
+        ariaLabel="Test Suite folder to sync"
+        selectMode="folder"
+        [showAncestorPath]="true"
+        [nodes]="folderTree()"
+        [ngModel]="linkedFolderId() ?? ''"
+        (ngModelChange)="handleLinkedFolderChange($event)"
+      />
+    </tx-form-field>
+    @if (linkedFolderName(); as folderName) {
+      <tx-banner variant="info" title="Synced from folder">
+        Linked flows stay in sync with “{{ folderName }}”. Extra flows outside that folder stay linked.
+      </tx-banner>
+      <tx-button variant="secondary" (pressed)="handleUnlinkFolder()">Unlink folder</tx-button>
+    }
+  </div>
 
   <app-workspace-sidebar-panel-shell
     class="rg-flows-panel__shell"

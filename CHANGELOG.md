@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.2-beta.2]
+
+### Added
+
+- Regression results record retry attempts, show flaked vs failed counts, and treat recovered retries as passed unless Count flakes as failed is on
+- A failed critical flow fails regression acceptance even when the pass rate meets the threshold
+- Regression artifacts can sync linked flows from a Test Suite folder
+- Regression results can export a self-contained HTML report
+- A pinned golden run is stored on the regression artifact; Compare defaults to pinned vs latest
+- Regression history charts pass rate and p95 duration across stored runs
+- Test Suite Call graph shows TRIGGER edges between flows
+- Test Suite IF / Else if / Else, FOR_EACH, WHILE, PARALLEL, and RETRY steps with Then/Else/Body lanes
+- A Tree / Diagram view of flow steps (IF diamonds, wrapping rows, scroll zoom, live status)
+- VALIDATION can continue on failure and still fail the flow at the end
+- Run from this step / run to here on the step context menu
+- Flow-level CSV/JSON datasets re-run a flow per row (including in Regression)
+- Regression can reuse one E2E session sequentially and run a bootstrap flow first
+- E2E SCREENSHOT checkpoints compare against a per-profile baseline PNG
+- Capture can generate one Test Suite flow from selected traffic rows (REQUEST + VALIDATION pairs)
+
+### Changed
+
+- Add-step picker lists Common first (E2E, HTTP Request, Validation, Cache)
+- Flow tabs split Overview (summary) from Settings (tags, critical, E2E, dataset)
+- Skip unless sits under the step action and is collapsed by default
+- History is pinned to the left-rail footer above Help
+- Default left-rail order is Collections, Testing, Database, Environments, Development
+
 ## [1.1.2-beta.1]
 
 ### Added
@@ -597,7 +625,8 @@ Tagged in git. GitHub installers were not published (Authenticode secrets were m
 
 Initial public beta of Testrix: local-first desktop API client (HTTP, WebSocket, collections, environments, test suites, load tests, mocks, and capture).
 
-[Unreleased]: https://github.com/matthiaskopeinigg/testrix/compare/v1.1.2-beta.1...HEAD
+[Unreleased]: https://github.com/matthiaskopeinigg/testrix/compare/v1.1.2-beta.2...HEAD
+[1.1.2-beta.2]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.1.2-beta.2
 [1.1.2-beta.1]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.1.2-beta.1
 [1.1.1]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.1.1
 [1.1.0]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.1.0

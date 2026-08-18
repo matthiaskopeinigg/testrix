@@ -5,6 +5,7 @@ import {
   collectTestSuiteFlowIds,
   createDefaultTestSuitesFile,
   createFlowFolder,
+  createFlowLane,
   createFlowStep,
   isTestSuiteFlow,
   isTestSuiteFolder,
@@ -29,7 +30,10 @@ import {
 import {
   findFlowStepById,
   isFlowFolderNode,
+  isFlowLaneNode,
   isFlowStepNode,
+  createDefaultFlowCondition,
+  type TestSuiteFlowLane,
 } from '@shared/testing';
 
 import { ElectronService } from '@app/core/electron/electron.service';
@@ -223,6 +227,9 @@ export class TestSuiteService {
       const id = resourceId.slice('ts:fld:'.length);
       return this.findFolder(id)?.name ?? 'Folder';
     }
+    if (resourceId.startsWith('tsg:')) {
+      return 'Call graph';
+    }
     return 'Test suite';
   }
 
@@ -290,8 +297,7 @@ export class TestSuiteService {
     parentId: string | null,
     name?: string,
   ): TestSuiteFlowStep | null {
-    const step = createFlowStep(stepType, name ?? defaultStepName(stepType), parentId);
-    step.id = newTestingId();
+    const step = createFlowStep(stepType, name ?? defaultStepName(stepType), parentId, newTestingId());
     return this.insertFlowNode(flowId, parentId, step);
   }
 
@@ -311,8 +317,12 @@ export class TestSuiteService {
       if (!after) {
         return flow;
       }
-      const step = createFlowStep(stepType, name ?? defaultStepName(stepType), after.parentId);
-      step.id = newTestingId();
+      const step = createFlowStep(
+        stepType,
+        name ?? defaultStepName(stepType),
+        after.parentId,
+        newTestingId(),
+      );
       const nodes = insertFlowNodeAfter(flow.nodes, afterStepId, step);
       if (!nodes) {
         return flow;
@@ -327,6 +337,41 @@ export class TestSuiteService {
     const folder = createFlowFolder(name, parentId);
     const withId = { ...folder, id: newTestingId() };
     return this.insertFlowNode(flowId, parentId, withId);
+  }
+
+  /** Inserts an Else-if lane on an IF step (before Else when present). */
+  addElseIfLane(flowId: string, ifStepId: string): void {
+    this.updateFlow(flowId, (flow) => ({
+      ...flow,
+      nodes: patchFlowNode(flow.nodes, ifStepId, (node) => {
+        if (!isFlowStepNode(node) || node.stepType !== 'IF') {
+          return node;
+        }
+        const lane = { ...createFlowLane('elseIf', node.id, createDefaultFlowCondition()), id: newTestingId() };
+        const children = [...(node.children ?? [])];
+        const elseIndex = children.findIndex((child) => isFlowLaneNode(child) && child.laneKind === 'else');
+        const next =
+          elseIndex < 0
+            ? [...children, lane]
+            : [...children.slice(0, elseIndex), lane, ...children.slice(elseIndex)];
+        return { ...node, children: next };
+      }),
+      updatedAt: new Date().toISOString(),
+    }));
+  }
+
+  patchFlowLane(
+    flowId: string,
+    laneId: string,
+    patch: Partial<Pick<TestSuiteFlowLane, 'condition' | 'name'>>,
+  ): void {
+    this.updateFlow(flowId, (flow) => ({
+      ...flow,
+      nodes: patchFlowNode(flow.nodes, laneId, (node) =>
+        isFlowLaneNode(node) ? { ...node, ...patch, id: node.id } : node,
+      ),
+      updatedAt: new Date().toISOString(),
+    }));
   }
 
   updateFlowStep(flowId: string, stepId: string, patch: Partial<TestSuiteFlowStep>): void {
@@ -617,9 +662,29 @@ function defaultStepName(stepType: TestSuiteStepType): string {
       return 'Manual input';
     case 'TRIGGER':
       return 'Trigger';
+    case 'IF':
+      return 'If';
+    case 'FOR_EACH':
+      return 'For each';
+    case 'WHILE':
+      return 'While';
+    case 'PARALLEL':
+      return 'Parallel';
+    case 'RETRY':
+      return 'Retry';
     default:
       return 'Step';
   }
+}
+
+function flowNodeChildren(node: TestSuiteFlowNode): readonly TestSuiteFlowNode[] | null {
+  if (isFlowFolderNode(node) || isFlowLaneNode(node)) {
+    return node.children;
+  }
+  if (isFlowStepNode(node) && node.children) {
+    return node.children;
+  }
+  return null;
 }
 
 function insertFlowNodeAt(
@@ -631,11 +696,12 @@ function insertFlowNodeAt(
     return [...nodes, node];
   }
   return nodes.map((n) => {
-    if (isFlowFolderNode(n) && n.id === parentId) {
-      return { ...n, children: [...n.children, node] };
+    const children = flowNodeChildren(n);
+    if (n.id === parentId && children) {
+      return { ...n, children: [...children, node] } as TestSuiteFlowNode;
     }
-    if (isFlowFolderNode(n) && n.children.length) {
-      return { ...n, children: insertFlowNodeAt(n.children, parentId, node) };
+    if (children?.length) {
+      return { ...n, children: insertFlowNodeAt(children, parentId, node) } as TestSuiteFlowNode;
     }
     return n;
   });
@@ -650,8 +716,9 @@ function patchFlowNode(
     if (node.id === nodeId) {
       return fn(node);
     }
-    if (isFlowFolderNode(node)) {
-      return { ...node, children: patchFlowNode(node.children, nodeId, fn) };
+    const children = flowNodeChildren(node);
+    if (children) {
+      return { ...node, children: patchFlowNode(children, nodeId, fn) } as TestSuiteFlowNode;
     }
     return node;
   });
@@ -660,9 +727,12 @@ function patchFlowNode(
 function removeFlowNode(nodes: readonly TestSuiteFlowNode[], nodeId: string): TestSuiteFlowNode[] {
   return nodes
     .filter((n) => n.id !== nodeId)
-    .map((n) =>
-      isFlowFolderNode(n) ? { ...n, children: removeFlowNode(n.children, nodeId) } : n,
-    );
+    .map((n) => {
+      const children = flowNodeChildren(n);
+      return children
+        ? ({ ...n, children: removeFlowNode(children, nodeId) } as TestSuiteFlowNode)
+        : n;
+    });
 }
 
 function applyStepRunDataToNodes(
@@ -674,18 +744,19 @@ function applyStepRunDataToNodes(
   nestedChildren: FlowRunNestedChildren,
 ): TestSuiteFlowNode[] {
   return nodes.map((node) => {
-    if (isFlowFolderNode(node)) {
-      return {
-        ...node,
-        children: applyStepRunDataToNodes(
-          node.children,
+    const nested = flowNodeChildren(node);
+    const nextChildren = nested
+      ? applyStepRunDataToNodes(
+          nested,
           stepStatuses,
           stepCaptures,
           stepDurations,
           stepErrors,
           nestedChildren,
-        ),
-      };
+        )
+      : undefined;
+    if (!isFlowStepNode(node)) {
+      return nextChildren ? ({ ...node, children: nextChildren } as TestSuiteFlowNode) : node;
     }
     const status = stepStatuses[node.id];
     const capture = stepCaptures[node.id];
@@ -694,6 +765,7 @@ function applyStepRunDataToNodes(
     const children = nestedChildren[node.id];
     return {
       ...node,
+      ...(nextChildren ? { children: nextChildren } : {}),
       ...(status ? { lastRunStatus: status } : {}),
       ...(capture ? { lastRunCapture: capture } : {}),
       ...(duration != null && duration >= 0 ? { lastRunDurationMs: duration } : {}),

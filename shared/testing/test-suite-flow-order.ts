@@ -1,19 +1,24 @@
 import type { FlowRunNestedChildren } from './flow-run-child-log.schema';
 import type { TestSuiteFlow, TestSuiteFlowNode, TestSuiteFlowStep, TestSuiteTreeItem } from './test-suites.schema';
-import { isFlowFolderNode, isFlowStepNode } from './test-suites.schema';
+import { isFlowFolderNode, isFlowLaneNode, isFlowStepNode } from './test-suites.schema';
+import { isFlowControlStepType } from './test-suite-steps.schema';
 import type { E2eStepConfig, HttpInterceptorStepConfig, HttpListenerStepConfig, RequestStepConfig, TestSuiteStepStatus } from './test-suite-steps.schema';
 import { triggerStepConfigSchema } from './test-suite-steps.schema';
 import { resolveTriggerTargetFlows } from './collect-trigger-targets';
 import { resolveGlobalE2eScreenshotDirectory } from './e2e-screenshot-output';
 
 /**
- * Flatten flow nodes in execution order (DFS: node then folder children).
+ * Flatten flow nodes in DFS order (folders, lanes, and nested step children).
  */
 export function flattenFlowNodesInRunOrder(nodes: readonly TestSuiteFlowNode[]): TestSuiteFlowNode[] {
   const flat: TestSuiteFlowNode[] = [];
   for (const node of nodes) {
     flat.push(node);
-    if (isFlowFolderNode(node)) {
+    if (isFlowFolderNode(node) || isFlowLaneNode(node)) {
+      flat.push(...flattenFlowNodesInRunOrder(node.children));
+      continue;
+    }
+    if (isFlowStepNode(node) && node.children?.length) {
       flat.push(...flattenFlowNodesInRunOrder(node.children));
     }
   }
@@ -52,11 +57,70 @@ export function markRemainingFlowStepsSkipped(
   }
 }
 
-/** Returns enabled steps only, in run order. */
+/** Returns enabled steps only. Container children are not hoisted. */
 export function flattenEnabledFlowSteps(nodes: readonly TestSuiteFlowNode[]): TestSuiteFlowStep[] {
-  return flattenFlowNodesInRunOrder(nodes).filter(
-    (node): node is TestSuiteFlowStep => isFlowStepNode(node) && node.enabled,
-  );
+  const steps: TestSuiteFlowStep[] = [];
+  const walk = (items: readonly TestSuiteFlowNode[]): void => {
+    for (const node of items) {
+      if (isFlowFolderNode(node) || isFlowLaneNode(node)) {
+        walk(node.children);
+        continue;
+      }
+      if (!isFlowStepNode(node) || !node.enabled) {
+        continue;
+      }
+      steps.push(node);
+      if (!isFlowControlStepType(node.stepType) && node.children?.length) {
+        walk(node.children);
+      }
+    }
+  };
+  walk(nodes);
+  return steps;
+}
+
+/**
+ * Every enabled step, including those nested under IF / loops / PARALLEL / RETRY.
+ * Used for live statuses and browser-runner detection.
+ */
+export function flattenAllEnabledFlowSteps(nodes: readonly TestSuiteFlowNode[]): TestSuiteFlowStep[] {
+  const steps: TestSuiteFlowStep[] = [];
+  const walk = (items: readonly TestSuiteFlowNode[]): void => {
+    for (const node of items) {
+      if (isFlowFolderNode(node) || isFlowLaneNode(node)) {
+        walk(node.children);
+        continue;
+      }
+      if (!isFlowStepNode(node) || !node.enabled) {
+        continue;
+      }
+      steps.push(node);
+      if (node.children?.length) {
+        walk(node.children);
+      }
+    }
+  };
+  walk(nodes);
+  return steps;
+}
+
+/** Step ids under `root` (inclusive when `root` is a step). */
+export function collectDescendantStepIds(root: TestSuiteFlowNode): string[] {
+  const ids: string[] = [];
+  const walk = (node: TestSuiteFlowNode): void => {
+    if (isFlowStepNode(node)) {
+      ids.push(node.id);
+      for (const child of node.children ?? []) {
+        walk(child);
+      }
+      return;
+    }
+    for (const child of node.children) {
+      walk(child);
+    }
+  };
+  walk(root);
+  return ids;
 }
 
 /** Finds a step by id within a flow graph. */
@@ -83,7 +147,10 @@ export function normalizeFlowStepNodes(nodes: readonly TestSuiteFlowNode[]): Tes
     for (const node of items) {
       if (isFlowStepNode(node)) {
         steps.push({ ...node, parentId: null });
-      } else if (isFlowFolderNode(node)) {
+        if (node.children?.length) {
+          walk(node.children);
+        }
+      } else if (isFlowFolderNode(node) || isFlowLaneNode(node)) {
         walk(node.children);
       }
     }
@@ -143,7 +210,7 @@ export function getPrecedingEnabledE2eStepsForPick(
   const out: ResolvedE2ePickStep[] = [];
 
   for (const node of flat) {
-    if (isFlowFolderNode(node)) {
+    if (isFlowFolderNode(node) || isFlowLaneNode(node) || !isFlowStepNode(node)) {
       continue;
     }
     if (node.id === currentStepId) {
@@ -202,10 +269,10 @@ export function getFlowRunBlockingReason(
   let hasLoadedE2eUrl = false;
 
   for (const node of flat) {
-    if (isFlowFolderNode(node)) {
+    if (isFlowFolderNode(node) || isFlowLaneNode(node)) {
       continue;
     }
-    if (!node.enabled) {
+    if (!isFlowStepNode(node) || !node.enabled) {
       continue;
     }
     enabledStepCount++;
