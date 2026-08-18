@@ -60,6 +60,10 @@ const tabKindLoaders: Record<
       import('../../testing/interceptor-rule-workspace-tab/interceptor-rule-workspace-tab.component').then(
         (m) => ({ default: m.InterceptorRuleWorkspaceTabComponent }),
       ),
+  lookup: () =>
+    import('../../testing/lookup-workspace-tab/lookup-workspace-tab.component').then((m) => ({
+      default: m.LookupWorkspaceTabComponent,
+    })),
   database: () =>
     import('../../database/database-workspace-tab.component').then((m) => ({
       default: m.DatabaseWorkspaceTabComponent,

@@ -24,6 +24,7 @@ export const TESTING_SIDEBAR_TAB_KINDS: readonly WorkspaceTabKind[] = [
   'mock-server',
   'capture',
   'interceptor-rule',
+  'lookup',
 ];
 
 /**
@@ -95,6 +96,9 @@ export function testingSidebarSelectionIds(tab: WorkspaceTab | null): readonly s
   }
   if (tab.kind === 'interceptor-rule' && tab.resourceId.startsWith('int-rule:')) {
     return [tab.resourceId.slice('int-rule:'.length)];
+  }
+  if (tab.kind === 'lookup' && tab.resourceId.startsWith('lk:')) {
+    return [tab.resourceId.slice(3)];
   }
   return [];
 }

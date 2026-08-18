@@ -111,11 +111,11 @@ const E2E_PICK_BRIDGE_PRELOAD = path.join(__dirname, '..', '..', '..', 'preload'
 /** Isolated session so clearing cookies/storage for E2E never affects the main app window. */
 const E2E_RUNNER_PARTITION = 'persist:testrix-e2e-runner';
 
-/** One-time: TLS bypass hook for the runner partition only (desktop API testing). */
-let e2eRunnerPartitionHooksInstalled = false;
+/** TLS bypass hook installed once per Chromium session partition. */
+const e2eRunnerPartitionHooksInstalled = new Set();
 
-/** Returns whether the current E2E run should bypass TLS certificate errors. */
-let e2eShouldIgnoreInvalidSsl = () => false;
+/** Per-partition TLS ignore flags so parallel runners do not clobber each other. */
+const e2eIgnoreSslByPartition = new Map();
 
 function isCertRelatedNavigationFailure(errorCode, errorDescription) {
   const desc = String(errorDescription ?? '').toUpperCase();
@@ -131,20 +131,20 @@ function isCertRelatedNavigationError(err) {
   return message.includes('ERR_CERT') || message.includes('CERTIFICATE') || message.includes('SSL');
 }
 
-function ensureE2eRunnerPartitionHooks() {
+function ensureE2eRunnerPartitionHooks(partition = E2E_RUNNER_PARTITION) {
   const install = () => {
-    if (e2eRunnerPartitionHooksInstalled) return;
+    if (e2eRunnerPartitionHooksInstalled.has(partition)) return;
     try {
-      const ses = session.fromPartition(E2E_RUNNER_PARTITION);
+      const ses = session.fromPartition(partition);
       ses.on('certificate-error', (event, _url, _error, _certificate, callback) => {
-        if (e2eShouldIgnoreInvalidSsl()) {
+        if (e2eIgnoreSslByPartition.get(partition)) {
           event.preventDefault();
           callback(true);
           return;
         }
         callback(false);
       });
-      e2eRunnerPartitionHooksInstalled = true;
+      e2eRunnerPartitionHooksInstalled.add(partition);
     } catch (err) {
       console.warn('[E2E] certificate-error hook install failed:', err?.message || err);
     }
@@ -156,10 +156,11 @@ function ensureE2eRunnerPartitionHooks() {
   }
 }
 
-function syncE2eRunnerCertificatePolicy(ignoreInvalidSsl) {
-  ensureE2eRunnerPartitionHooks();
+function syncE2eRunnerCertificatePolicy(partition, ignoreInvalidSsl) {
+  ensureE2eRunnerPartitionHooks(partition);
+  e2eIgnoreSslByPartition.set(partition, !!ignoreInvalidSsl);
   try {
-    const ses = session.fromPartition(E2E_RUNNER_PARTITION);
+    const ses = session.fromPartition(partition);
     if (ignoreInvalidSsl) {
       ses.setCertificateVerifyProc((_request, callback) => callback(0));
       return;
@@ -1330,8 +1331,19 @@ function guestDeepSelectorHelperSource() {
 }
 
 class E2eService {
-  constructor() {
-    ensureE2eRunnerPartitionHooks();
+  /**
+   * @param {{ partition?: string; windowTitle?: string }} [options]
+   */
+  constructor(options = {}) {
+    this.partition =
+      typeof options.partition === 'string' && options.partition.trim()
+        ? options.partition.trim()
+        : E2E_RUNNER_PARTITION;
+    this.windowTitle =
+      typeof options.windowTitle === 'string' && options.windowTitle.trim()
+        ? options.windowTitle.trim()
+        : 'Testrix — E2E Runner';
+    ensureE2eRunnerPartitionHooks(this.partition);
     this.ignoreInvalidSsl = false;
     this.window = null;
     /** @type Map<string, { pattern: string; method: string; mutate: boolean; interceptAction?: 'modify'|'block'; amendHeaders: Record<string,string>; replacePostBody: string; settle: (cap: Record<string, unknown>) => void; settled: boolean; timeoutTimer: NodeJS.Timeout | null }>} */
@@ -1510,7 +1522,7 @@ class E2eService {
    */
   async clearRunnerSession() {
     this.teardownCaptureState();
-    const ses = session.fromPartition(E2E_RUNNER_PARTITION);
+    const ses = session.fromPartition(this.partition);
     try {
       await ses.clearStorageData({
         storages: [
@@ -1592,8 +1604,7 @@ class E2eService {
       console.log(`[E2E] Executing ${action} (show: ${show})`);
     }
     this.ignoreInvalidSsl = !!ignoreInvalidSsl;
-    e2eShouldIgnoreInvalidSsl = () => this.ignoreInvalidSsl;
-    syncE2eRunnerCertificatePolicy(this.ignoreInvalidSsl);
+    syncE2eRunnerCertificatePolicy(this.partition, this.ignoreInvalidSsl);
     this.executeCancelRequested = false;
 
     const showPreferenceChanged =
@@ -1625,11 +1636,11 @@ class E2eService {
         show: false,
         width: 1280,
         height: 800,
-        title: 'API Workbench - E2E Runner',
+        title: this.windowTitle,
         icon: resolveWindowIcon(),
         backgroundColor: '#ffffff',
         webPreferences: {
-          partition: E2E_RUNNER_PARTITION,
+          partition: this.partition,
           preload: E2E_PICK_BRIDGE_PRELOAD,
           nodeIntegration: false,
           contextIsolation: true,
@@ -3035,6 +3046,7 @@ class E2eService {
 }
 
 const e2eService = new E2eService();
+e2eService.E2eService = E2eService;
 /** @see scrollGuestReadPositionSnapshot — used by scroll picker to match SCROLL_TO probing. */
 e2eService.executeScrollGuestScript = executeScrollGuestScript;
 e2eService.scrollGuestReadPositionSnapshot = scrollGuestReadPositionSnapshot;

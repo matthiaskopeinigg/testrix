@@ -3,7 +3,9 @@ import { Injectable, effect, inject, untracked } from '@angular/core';
 import { type EnvironmentDefinition } from '@shared/config';
 import type { WorkspaceTabKind } from '@shared/config/workspace-editor.schema';
 import { databaseConnectionTabResourceId } from '@shared/database';
+import type { LookupDefinition } from '@shared/testing';
 import {
+  lookupTabResourceId,
   mockServerTabResourceId,
   testSuiteTabResourceId,
 } from '@shared/testing';
@@ -25,6 +27,7 @@ import { EnvironmentsService } from '@app/core/environments/environments.service
 import { HistoryService } from '@app/core/history/history.service';
 import { CaptureWorkbenchStore } from '@app/core/testing/capture-workbench.store';
 import { InterceptorWorkspaceStore } from '@app/core/testing/interceptor-workspace.store';
+import { LookupService } from '@app/core/testing/lookup.service';
 import { LoadTestService } from '@app/core/testing/load-test.service';
 import { MockServerService } from '@app/core/testing/mock-server.service';
 import { RegressionService } from '@app/core/testing/regression.service';
@@ -86,6 +89,7 @@ export class CommandSeedsService {
   private readonly mockServer = inject(MockServerService);
   private readonly capture = inject(CaptureWorkbenchStore);
   private readonly interceptor = inject(InterceptorWorkspaceStore);
+  private readonly lookups = inject(LookupService);
   private readonly sidebarSession = inject(WorkspaceSidebarSessionService);
   private readonly settingsPopup = inject(SettingsPopupService);
   private readonly helpPopup = inject(HelpPopupService);
@@ -283,6 +287,17 @@ export class CommandSeedsService {
           this.testingSession.setSubpanel('monitors');
         },
       },
+      {
+        id: 'testing.openLookups',
+        label: 'Open Lookups',
+        category: 'Testing',
+        hint: 'Ticket identifiers to database queries and a results card',
+        keywords: ['lookup', 'debug', 'ticket', 'email', 'uuid', 'msisdn'],
+        run: () => {
+          this.openSidebarPanel('testing');
+          this.testingSession.setSubpanel('lookups');
+        },
+      },
       ...(['collections', 'environments', 'testing', 'data', 'development', 'history'] as const).map(
         (panelId) => ({
           id: `sidebar.${panelId}`,
@@ -348,6 +363,11 @@ export class CommandSeedsService {
     effect(() => {
       const nodes = this.interceptor.nodes();
       untracked(() => this.syncInterceptorCommands(nodes));
+    });
+
+    effect(() => {
+      const lookups = this.lookups.lookups();
+      untracked(() => this.syncLookupCommands(lookups));
     });
   }
 
@@ -513,6 +533,23 @@ export class CommandSeedsService {
       resourceId: (id) => this.interceptor.tabResourceId(id),
       buildHint: (node, path) => interceptorPaletteHint(node as InterceptorTreeNode, path),
     });
+  }
+
+  private syncLookupCommands(lookups: readonly LookupDefinition[]): void {
+    this.registry.unregisterPrefix('lookup.open.');
+    this.registry.registerAll(
+      lookups.map((lookup) => ({
+        id: `lookup.open.${lookup.id}`,
+        label: lookup.name,
+        category: 'Lookups',
+        hint: lookup.description.trim() || 'Ticket identifiers → DB queries → results',
+        run: () =>
+          this.workspaceEditor.openResource({
+            resourceId: lookupTabResourceId(lookup.id),
+            kind: 'lookup',
+          }),
+      })),
+    );
   }
 
   private syncTreeArtifactCommands<TMeta>(options: {

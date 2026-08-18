@@ -26,6 +26,7 @@ export const workspaceTabKindSchema = z.enum([
   'mock-server',
   'capture',
   'interceptor-rule',
+  'lookup',
   'database',
 ]);
 

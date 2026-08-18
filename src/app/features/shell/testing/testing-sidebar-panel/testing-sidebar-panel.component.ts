@@ -148,6 +148,13 @@ export class TestingSidebarPanelComponent implements OnDestroy {
       hint: 'Local cron for request, flow, or load test',
       subpanel: 'monitors',
     },
+    {
+      id: 'lookups',
+      icon: 'search',
+      title: 'Lookups',
+      hint: 'Ticket identifiers → DB queries → results',
+      subpanel: 'lookups',
+    },
   ];
 
   constructor() {

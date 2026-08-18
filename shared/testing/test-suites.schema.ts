@@ -218,6 +218,26 @@ export function isTestSuiteFolder(
   return 'children' in item && !('nodes' in item);
 }
 
+/**
+ * Collects every flow id in a test-suite tree (folders are walked).
+ *
+ * @param items Suite tree items.
+ */
+export function collectTestSuiteFlowIds(items: readonly TestSuiteTreeItem[]): string[] {
+  const ids: string[] = [];
+  const walk = (nodes: readonly TestSuiteTreeItem[]): void => {
+    for (const item of nodes) {
+      if (isTestSuiteFlow(item)) {
+        ids.push(item.id);
+        continue;
+      }
+      walk(item.children);
+    }
+  };
+  walk(items);
+  return ids;
+}
+
 export function isFlowStepNode(node: TestSuiteFlowNode): node is TestSuiteFlowStep {
   return node.type === 'step';
 }

@@ -689,11 +689,13 @@ export class RegressionWorkspaceTabComponent {
     }
     this.runActionPending.set(true);
     this.runCancelled = true;
-    this.running.set(false);
     void api
       .regressionCancel()
       .then((snapshot) => this.applyMetricsSnapshot(snapshot))
-      .finally(() => this.runActionPending.set(false));
+      .finally(() => {
+        this.runActionPending.set(false);
+        this.running.set(false);
+      });
   }
 
   private showCompletionBanner(run: RegressionRun): void {

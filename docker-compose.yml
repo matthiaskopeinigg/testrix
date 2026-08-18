@@ -3,6 +3,8 @@
 # Redis Commander UI: http://localhost:8081
 # PostgreSQL: type PostgreSQL, host localhost, port 5432,
 #   user testrix, password testrix, database testrix.
+# MySQL: type MySQL, host localhost, port 3306,
+#   user testrix, password testrix, database testrix.
 # Oracle: type Oracle, host localhost, port 1521,
 #   user testrix, password testrix, service name FREEPDB1 (Use SID off).
 #   First start can take a few minutes (image is large).
@@ -55,6 +57,26 @@ services:
       timeout: 3s
       retries: 5
 
+  mysql:
+    image: mysql:8.4
+    container_name: testrix-mysql
+    hostname: mysql
+    ports:
+      - '3306:3306'
+    environment:
+      MYSQL_ROOT_PASSWORD: testrix
+      MYSQL_DATABASE: testrix
+      MYSQL_USER: testrix
+      MYSQL_PASSWORD: testrix
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ['CMD', 'mysqladmin', 'ping', '-h', '127.0.0.1', '-uroot', '-ptestrix']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 20s
+
   oracle:
     image: gvenzl/oracle-free:23-slim-faststart
     container_name: testrix-oracle
@@ -79,4 +101,5 @@ services:
 volumes:
   redis-data:
   postgres-data:
+  mysql-data:
   oracle-data:

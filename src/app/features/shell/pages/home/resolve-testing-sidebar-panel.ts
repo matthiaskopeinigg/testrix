@@ -28,6 +28,10 @@ const programmaticLoaders: Record<
     import('@app/features/shell/testing/monitors-sidebar-panel/monitors-sidebar-panel.component').then(
       (m) => ({ default: m.MonitorsSidebarPanelComponent }),
     ),
+  lookups: () =>
+    import('@app/features/shell/testing/lookups-sidebar-panel/lookups-sidebar-panel.component').then(
+      (m) => ({ default: m.LookupsSidebarPanelComponent }),
+    ),
 };
 
 const hubLoader = () =>
@@ -73,6 +77,7 @@ const PROGRAMMATIC_SUBPANELS: readonly Exclude<TestingSubpanelId, 'menu'>[] = [
   'capture',
   'interceptor',
   'monitors',
+  'lookups',
 ];
 
 /**

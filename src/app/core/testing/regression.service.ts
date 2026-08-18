@@ -234,6 +234,40 @@ export class RegressionService {
     this.patchArtifact(id, { flowIds: [...flowIds] });
   }
 
+  /**
+   * Drops deleted test-suite flow ids from every regression artifact.
+   *
+   * @param flowIds Flow ids that no longer exist in the test suite.
+   */
+  unlinkFlowIds(flowIds: readonly string[]): void {
+    const drop = new Set(flowIds);
+    if (drop.size === 0) {
+      return;
+    }
+    const file = this.fileState();
+    if (!file) {
+      return;
+    }
+    const ts = new Date().toISOString();
+    let changed = false;
+    const walk = (items: readonly RegressionTreeItem[]): RegressionTreeItem[] =>
+      items.map((item) => {
+        if (isRegressionArtifact(item)) {
+          const nextIds = item.flowIds.filter((id) => !drop.has(id));
+          if (nextIds.length === item.flowIds.length) {
+            return item;
+          }
+          changed = true;
+          return regressionArtifactSchema.parse({ ...item, flowIds: nextIds, updatedAt: ts });
+        }
+        return { ...item, children: walk(item.children) };
+      });
+    const items = walk(file.items);
+    if (changed) {
+      this.scheduleSave({ ...file, items });
+    }
+  }
+
   patchTags(id: string, tags: readonly string[]): void {
     this.patchArtifact(id, { tags: [...tags] });
   }

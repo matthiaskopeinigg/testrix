@@ -96,28 +96,30 @@ import { TxToggleComponent } from '@app/shared/components/forms/tx-toggle/tx-tog
       </tx-form-field>
 
       @if (profile().executionMode === 'parallel') {
-        <tx-toggle
-          label="All flows at once"
-          [ngModel]="profile().allFlowsAtOnce"
-          (ngModelChange)="handleProfileChange({ allFlowsAtOnce: $event })"
-        />
-        <p class="request-panel__hint">Run every linked flow concurrently (up to {{ maxParallelism }} workers).</p>
+        <div class="rg-settings-stack">
+          <tx-toggle
+            label="All flows at once"
+            [ngModel]="profile().allFlowsAtOnce"
+            (ngModelChange)="handleProfileChange({ allFlowsAtOnce: $event })"
+          />
+          <p class="request-panel__hint">Run every linked flow concurrently (up to {{ maxParallelism }} workers).</p>
 
-        @if (!profile().allFlowsAtOnce) {
-          <tx-form-field label="Max parallelism" controlId="rg-max-parallelism">
-            <tx-input
-              id="rg-max-parallelism"
-              type="number"
-              [attr.min]="1"
-              [attr.max]="maxParallelism"
-              [ngModel]="profile().maxParallelism"
-              (ngModelChange)="handleProfileChange({ maxParallelism: toParallelism($event, profile().maxParallelism) })"
-            />
-            <span class="request-panel__hint">
-              Up to {{ maxParallelism }} concurrent flow workers.
-            </span>
-          </tx-form-field>
-        }
+          @if (!profile().allFlowsAtOnce) {
+            <tx-form-field label="Max parallelism" controlId="rg-max-parallelism">
+              <tx-input
+                id="rg-max-parallelism"
+                type="number"
+                [attr.min]="1"
+                [attr.max]="maxParallelism"
+                [ngModel]="profile().maxParallelism"
+                (ngModelChange)="handleProfileChange({ maxParallelism: toParallelism($event, profile().maxParallelism) })"
+              />
+              <span class="request-panel__hint">
+                Up to {{ maxParallelism }} concurrent flow workers.
+              </span>
+            </tx-form-field>
+          }
+        </div>
       }
 
       <tx-form-field label="Retries per failed flow" controlId="rg-retries">

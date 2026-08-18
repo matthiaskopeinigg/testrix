@@ -103,7 +103,7 @@ export const HELP_WIKI_REFERENCE_SECTIONS: readonly HelpWikiSection[] = [
       {
         type: 'list',
         items: [
-          'Update banner appears when a newer release is available (packaged builds).',
+          'Update banner appears when a newer release is available on the selected channel (packaged builds). Stable ignores betas; Beta ignores stables.',
           'Settings → About → Check for updates shows checking, available, error, or disabled states.',
           'Dev and unpackaged builds show “Updates apply to the installed desktop app.” when the updater is unavailable.',
           'Splash screen shows during boot; disable with TESTRIX_NO_SPLASH=1 for local iteration.',

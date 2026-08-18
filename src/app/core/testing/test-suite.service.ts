@@ -2,6 +2,7 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 
 import {
   TEST_SUITE_ROOT_ID,
+  collectTestSuiteFlowIds,
   createDefaultTestSuitesFile,
   createFlowFolder,
   createFlowStep,
@@ -38,6 +39,7 @@ import {
   toTestSuiteTreeNodes,
 } from '@app/features/shell/testing/test-suite-sidebar-panel/test-suite-tree.adapter';
 
+import { RegressionService } from './regression.service';
 import { newTestingId } from './testing-id';
 import { runTestingHydrateOnce, type TestingHydrateOptions } from './testing-hydrate-once';
 
@@ -50,6 +52,7 @@ const BROWSER_STORAGE_KEY = 'testrix.test-suites.v1';
 export class TestSuiteService {
   private readonly electron = inject(ElectronService);
   private readonly notifier = inject(ErrorNotificationService);
+  private readonly regressions = inject(RegressionService);
 
   private readonly fileState = signal<TestSuitesFile | null>(null);
   private saveTimer: ReturnType<typeof setTimeout> | null = null;
@@ -421,12 +424,19 @@ export class TestSuiteService {
     if (!root) {
       return;
     }
+    const removed = this.findTreeItem(itemId);
     const ts = new Date().toISOString();
     this.patchRoot({
       ...root,
       flows: removeTreeItem(root.flows, itemId),
       updatedAt: ts,
     });
+    if (removed) {
+      const flowIds = isTestSuiteFlow(removed)
+        ? [removed.id]
+        : collectTestSuiteFlowIds(removed.children);
+      this.regressions.unlinkFlowIds(flowIds);
+    }
   }
 
   /** Duplicates a folder or flow as the next sibling in the suite tree. */

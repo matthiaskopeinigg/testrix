@@ -29,6 +29,7 @@ import {
   LOAD_TESTS_FILE_NAME,
   MOCK_SERVER_FILE_NAME,
   MONITORS_FILE_NAME,
+  LOOKUPS_FILE_NAME,
   PATHS_ANCHOR_FILE_NAME,
   QUERIES_FILE_NAME,
   REGRESSIONS_FILE_NAME,
@@ -307,6 +308,7 @@ export function registerConfigHandlers(ipc: IpcMainBinder, deps: ConfigHandlerDe
         [INTERCEPTOR_FILE_NAME]: path.join(configDir, INTERCEPTOR_FILE_NAME),
         [QUERIES_FILE_NAME]: path.join(configDir, QUERIES_FILE_NAME),
         [MONITORS_FILE_NAME]: path.join(configDir, MONITORS_FILE_NAME),
+        [LOOKUPS_FILE_NAME]: path.join(configDir, LOOKUPS_FILE_NAME),
       };
 
       const entries = await Promise.all(

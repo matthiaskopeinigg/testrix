@@ -18,4 +18,8 @@ describe('iconForWorkspaceTabKind', () => {
   it('maps design-system tabs to the grid icon', () => {
     expect(iconForWorkspaceTabKind('design-system')).toBe('grid');
   });
+
+  it('maps lookup tabs to the search icon', () => {
+    expect(iconForWorkspaceTabKind('lookup')).toBe('search');
+  });
 });

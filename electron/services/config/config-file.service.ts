@@ -13,6 +13,7 @@ import {
   QUERIES_FILE_NAME,
   DATABASES_FILE_NAME,
   MONITORS_FILE_NAME,
+  LOOKUPS_FILE_NAME,
   REGRESSIONS_FILE_NAME,
   SESSION_FILE_NAME,
   SETTINGS_FILE_NAME,
@@ -76,6 +77,12 @@ import {
   monitorsFileSchema,
   type MonitorsFile,
 } from '../../../shared/testing/monitors.schema';
+import {
+  createDefaultLookupsFile,
+  parseLookupsFile,
+  lookupsFileSchema,
+  type LookupsFile,
+} from '../../../shared/testing/lookups.schema';
 import {
   createDefaultSavedQueriesFile,
   createDefaultTeamDatabasesFile,
@@ -177,6 +184,10 @@ export class ConfigFileService {
     return path.join(this.getActiveProfileDir(), MONITORS_FILE_NAME);
   }
 
+  private lookupsPath(): string {
+    return path.join(this.getActiveProfileDir(), LOOKUPS_FILE_NAME);
+  }
+
   /** Ensures default workspace files exist in a profile directory (no-op if present). */
   async ensureProfileWorkspaceDefaults(profileDir: string): Promise<void> {
     await fs.mkdir(profileDir, { recursive: true });
@@ -194,6 +205,7 @@ export class ConfigFileService {
       { filePath: path.join(profileDir, QUERIES_FILE_NAME), create: createDefaultSavedQueriesFile },
       { filePath: path.join(profileDir, DATABASES_FILE_NAME), create: createDefaultTeamDatabasesFile },
       { filePath: path.join(profileDir, MONITORS_FILE_NAME), create: createDefaultMonitorsFile },
+      { filePath: path.join(profileDir, LOOKUPS_FILE_NAME), create: createDefaultLookupsFile },
     ];
     for (const { filePath, create } of probes) {
       try {
@@ -563,6 +575,27 @@ export class ConfigFileService {
   async saveMonitors(data: MonitorsFile): Promise<MonitorsFile> {
     const updated = monitorsFileSchema.parse(data);
     await this.atomicWriteJson(this.monitorsPath(), updated);
+    return updated;
+  }
+
+  async readLookups(): Promise<LookupsFile> {
+    let file: LookupsFile;
+    try {
+      const raw = await fs.readFile(this.lookupsPath(), 'utf8');
+      file = parseLookupsFile(JSON.parse(raw) as unknown);
+    } catch (err: unknown) {
+      if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
+        file = createDefaultLookupsFile();
+      } else {
+        throw err;
+      }
+    }
+    return file;
+  }
+
+  async saveLookups(data: LookupsFile): Promise<LookupsFile> {
+    const updated = lookupsFileSchema.parse(data);
+    await this.atomicWriteJson(this.lookupsPath(), updated);
     return updated;
   }
 

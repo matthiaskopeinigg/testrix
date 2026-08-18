@@ -249,6 +249,13 @@ export interface ElectronAPI {
     getMonitors: () => Promise<import('@shared/testing').MonitorsFile>;
     setMonitors: (data: import('@shared/testing').MonitorsFile) => Promise<import('@shared/testing').MonitorsFile>;
     monitorRunNow: (monitorId: string) => Promise<import('@shared/testing').MonitorResult | null>;
+    getLookups: () => Promise<import('@shared/testing').LookupsFile>;
+    setLookups: (data: import('@shared/testing').LookupsFile) => Promise<import('@shared/testing').LookupsFile>;
+    lookupRun: (payload: {
+      readonly lookupId: string;
+      readonly environmentId?: string | null;
+      readonly inputs?: Readonly<Record<string, string>>;
+    }) => Promise<import('@shared/testing').LookupRunResult>;
     onMonitorResult: (listener: (result: import('@shared/testing').MonitorResult) => void) => () => void;
     mockStatus: () => Promise<import('@shared/testing').MockServerRuntimeStatus>;
     mockStart: () => Promise<import('@shared/testing').MockServerRuntimeStatus>;

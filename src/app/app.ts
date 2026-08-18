@@ -11,6 +11,7 @@ import { HistoryService } from './core/history/history.service';
 import { CaptureWorkbenchStore } from './core/testing/capture-workbench.store';
 import { InterceptorWorkspaceStore } from './core/testing/interceptor-workspace.store';
 import { LoadTestService } from './core/testing/load-test.service';
+import { LookupService } from './core/testing/lookup.service';
 import { MockServerService } from './core/testing/mock-server.service';
 import { RegressionService } from './core/testing/regression.service';
 import { TestSuiteService } from './core/testing/test-suite.service';
@@ -42,6 +43,7 @@ export class App implements OnInit {
   private readonly teamsPanel = inject(TeamsPanelService);
   private readonly testSuite = inject(TestSuiteService);
   private readonly loadTest = inject(LoadTestService);
+  private readonly lookups = inject(LookupService);
   private readonly regression = inject(RegressionService);
   private readonly mockServer = inject(MockServerService);
   private readonly capture = inject(CaptureWorkbenchStore);
@@ -73,6 +75,7 @@ export class App implements OnInit {
     void Promise.all([
       this.testSuite.hydrate(),
       this.loadTest.hydrate(),
+      this.lookups.hydrate(),
       this.regression.hydrate(),
       this.mockServer.hydrate(),
       this.capture.hydrate(),

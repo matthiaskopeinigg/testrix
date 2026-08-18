@@ -17,6 +17,7 @@ import { InterceptorWorkspaceStore } from '../testing/interceptor-workspace.stor
 import { LoadTestService } from '../testing/load-test.service';
 import { MockServerService } from '../testing/mock-server.service';
 import { MonitorsService } from '../testing/monitors.service';
+import { LookupService } from '../testing/lookup.service';
 import { RegressionService } from '../testing/regression.service';
 import { TestSuiteService } from '../testing/test-suite.service';
 import { TestingSessionService } from '../testing/testing-session.service';
@@ -43,6 +44,7 @@ export class ProfileService {
   private readonly databaseQueries = inject(DatabaseQueriesService);
   private readonly databaseConnections = inject(DatabaseConnectionsService);
   private readonly monitors = inject(MonitorsService);
+  private readonly lookups = inject(LookupService);
 
   private readonly profilesState = signal<readonly ProfileEntry[]>([]);
   private readonly activeProfileIdState = signal<string | null>(null);
@@ -227,6 +229,7 @@ export class ProfileService {
       this.interceptor.hydrate(force),
       this.databaseQueries.hydrate(force),
       this.monitors.hydrate(force),
+      this.lookups.hydrate(force),
       this.configService.hydrate(),
     ]);
     await this.configService.hydrateSession();
@@ -251,6 +254,7 @@ export class ProfileService {
       this.interceptor.flushPending(),
       this.databaseQueries.flushPending(),
       this.monitors.flushPending(),
+      this.lookups.flushPending(),
     ]);
   }
 }

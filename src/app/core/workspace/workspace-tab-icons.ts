@@ -16,6 +16,7 @@ const WORKSPACE_TAB_KIND_ICONS: Record<WorkspaceTabKind, TxIconName> = {
   'mock-server': 'api',
   capture: 'globe',
   'interceptor-rule': 'interceptor',
+  lookup: 'search',
   database: 'database',
 };
 

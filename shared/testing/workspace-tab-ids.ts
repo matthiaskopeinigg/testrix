@@ -39,6 +39,9 @@ export function shouldStripWorkspaceTabOnRestore(kind: WorkspaceTabKind, resourc
   if (kind === 'interceptor-rule') {
     return !resourceId.startsWith('int-rule:');
   }
+  if (kind === 'lookup') {
+    return !resourceId.startsWith('lk:');
+  }
   if (kind === 'test-suite') {
     return !resourceId.startsWith('ts:');
   }
@@ -92,4 +95,18 @@ export function captureTabResourceId(id: string): string {
 
 export function interceptorRuleTabResourceId(id: string): string {
   return `int-rule:${id}`;
+}
+
+/** Builds a lookup playbook tab resource id. */
+export function lookupTabResourceId(id: string): string {
+  return `lk:${id}`;
+}
+
+/** Parses a lookup tab resource id (`lk:<id>`). */
+export function parseLookupTabResourceId(resourceId: string): string | null {
+  if (!resourceId.startsWith('lk:')) {
+    return null;
+  }
+  const id = resourceId.slice(3).trim();
+  return id || null;
 }

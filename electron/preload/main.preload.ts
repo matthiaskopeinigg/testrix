@@ -212,6 +212,9 @@ const api: ElectronAPI = {
     getMonitors: () => ipcRenderer.invoke(TestingChannels.getMonitors),
     setMonitors: (data) => ipcRenderer.invoke(TestingChannels.setMonitors, data),
     monitorRunNow: (monitorId) => ipcRenderer.invoke(TestingChannels.monitorRunNow, monitorId),
+    getLookups: () => ipcRenderer.invoke(TestingChannels.getLookups),
+    setLookups: (data) => ipcRenderer.invoke(TestingChannels.setLookups, data),
+    lookupRun: (payload) => ipcRenderer.invoke(TestingChannels.lookupRun, payload),
     onMonitorResult: (listener) => {
       const handler = (_event: IpcRendererEvent, payload: import('../../shared/testing').MonitorResult): void => {
         listener(payload);

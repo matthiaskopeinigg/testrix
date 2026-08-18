@@ -29,6 +29,7 @@ import {
 
 import { DatabaseConnectionsService } from '@app/core/database/database-connections.service';
 import { ElectronService } from '@app/core/electron/electron.service';
+import { TxNotificationService } from '@app/core/notifications/tx-notification.service';
 import { WorkspaceEditorService } from '@app/core/workspace/workspace-editor.service';
 import { TxBannerComponent } from '@app/shared/components/feedback/tx-banner/tx-banner.component';
 import { TxButtonComponent } from '@app/shared/components/forms/tx-button/tx-button.component';
@@ -78,6 +79,7 @@ type TestOutcome = { readonly kind: 'success' | 'error'; readonly message: strin
 export class DatabaseConnectionEditorComponent {
   private readonly connections = inject(DatabaseConnectionsService);
   private readonly electron = inject(ElectronService);
+  private readonly notifications = inject(TxNotificationService);
   private readonly workspaceEditor = inject(WorkspaceEditorService);
 
   readonly resourceId = input.required<string>();
@@ -325,14 +327,22 @@ export class DatabaseConnectionEditorComponent {
     if (!latest || !this.isDirty()) {
       return;
     }
-    if (this.connections.isDraft(latest.id)) {
-      await this.connections.commitDraft(latest);
-      return;
+    try {
+      if (this.connections.isDraft(latest.id)) {
+        await this.connections.commitDraft(latest);
+      } else {
+        await this.connections.patchConnection(
+          latest.id,
+          connectionPersistPatch(latest, this.storedConnection()),
+        );
+      }
+      this.notifications.showSuccess('Connection saved');
+    } catch (err: unknown) {
+      this.testOutcome.set({
+        kind: 'error',
+        message: formatDatabaseConnectionError(err),
+      });
     }
-    await this.connections.patchConnection(
-      latest.id,
-      connectionPersistPatch(latest, this.storedConnection()),
-    );
   }
 
   protected handleCancel(): void {

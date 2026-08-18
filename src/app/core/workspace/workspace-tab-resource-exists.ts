@@ -1,6 +1,7 @@
 import type { EnvironmentDefinition, WorkspaceTab, WorkspaceTabKind } from '@shared/config';
 import {
   MOCK_SERVER_HUB_TAB_ID,
+  parseLookupTabResourceId,
   parseTestSuiteTabResourceId,
   shouldStripWorkspaceTabOnRestore,
 } from '@shared/testing';
@@ -39,6 +40,7 @@ export interface WorkspaceTabResourceLookupContext {
   readonly mockServer: MockServerService;
   readonly capture: CaptureWorkbenchStore;
   readonly interceptor: InterceptorWorkspaceStore;
+  readonly lookups: { find(id: string): unknown | null };
   readonly databases: { find(id: string): unknown | null };
   readonly databaseQueries: { find(id: string): unknown | null };
 }
@@ -142,6 +144,10 @@ export function workspaceTabResourceExists(
         resourceId.startsWith('int-rule:') &&
         ctx.interceptor.findRule(resourceId.slice('int-rule:'.length)) !== null
       );
+    case 'lookup': {
+      const id = parseLookupTabResourceId(resourceId);
+      return id !== null && ctx.lookups.find(id) !== null;
+    }
     case 'database': {
       const queryId = parseDatabaseQueryTabResourceId(resourceId);
       if (queryId) {

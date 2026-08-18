@@ -5,13 +5,24 @@
 1. Update `version` in root [`package.json`](../package.json) and [`installer-shell/package.json`](../installer-shell/package.json).
 2. Refresh lockfiles (`npm install` in root; installer-shell as needed).
 3. Update [CHANGELOG.md](../CHANGELOG.md) (move Unreleased notes into the new version).
-4. Commit with a conventional message (for example `chore(release): v1.0.0-beta.2`).
-5. Create an annotated tag `v*` matching the version and push the branch + tag:
+4. Commit with a conventional message (for example `chore(release): v1.1.0-beta.1`).
+5. Create an annotated tag `v*` matching the version and push the **branch + tag**.
+   `main` stays on the latest **stable** version. Beta versions live on a feature
+   branch (for example `feature/1.1.0-beta.1`); do not merge a beta bump into
+   `main` until the stable release.
 
 ```bash
-git tag -a v1.0.0-beta.2 -m "v1.0.0-beta.2"
+# Beta (feature branch)
+git checkout -b feature/1.1.0-beta.1
+# …version bump, changelog, commit…
+git tag -a v1.1.0-beta.1 -m "v1.1.0-beta.1"
+git push origin feature/1.1.0-beta.1
+git push origin v1.1.0-beta.1
+
+# Stable (main)
+git tag -a v1.1.0 -m "v1.1.0"
 git push origin main
-git push origin v1.0.0-beta.2
+git push origin v1.1.0
 ```
 
 Pushing a `v*` tag runs [.github/workflows/release.yml](../.github/workflows/release.yml):

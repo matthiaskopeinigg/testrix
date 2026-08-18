@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  collectTestSuiteFlowIds,
   isTestSuiteFlow,
   isTestSuiteFolder,
   testSuitesFileSchema,
@@ -163,5 +164,40 @@ describe('test-suites.schema', () => {
       ],
     });
     expect(parsed.suites[0]?.flows[0]).toMatchObject({ name: 'Flow' });
+  });
+
+  it('collects flow ids from nested folders', () => {
+    const parsed = testSuitesFileSchema.parse({
+      schemaVersion: 1,
+      suites: [
+        {
+          id: 'root-suite',
+          name: 'Test Suite',
+          flows: [
+            {
+              id: 'folder',
+              name: 'Folder',
+              description: '',
+              tags: [],
+              children: [
+                {
+                  id: 'flow-a',
+                  name: 'A',
+                  description: '',
+                  tags: [],
+                  nodes: [],
+                  lastRunStatus: 'never',
+                  lastRunAt: null,
+                  updatedAt: '2026-01-01T00:00:00.000Z',
+                },
+              ],
+              updatedAt: '2026-01-01T00:00:00.000Z',
+            },
+          ],
+          updatedAt: '2026-01-01T00:00:00.000Z',
+        },
+      ],
+    });
+    expect(collectTestSuiteFlowIds(parsed.suites[0]?.flows ?? [])).toEqual(['flow-a']);
   });
 });

@@ -67,6 +67,7 @@ export * from './app-keyboard-settings.schema';
 export * from './apply-workspace-editor-layout';
 export * from './capture-tab-ui.schema';
 export * from './interceptor-tab-ui.schema';
+export * from './lookup-tab-ui.schema';
 export * from './workspace-tab-editor-settings.schema';
 export * from './http-method-display';
 export * from './http-settings.schema';

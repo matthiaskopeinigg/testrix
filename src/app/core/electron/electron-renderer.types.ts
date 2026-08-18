@@ -29,6 +29,8 @@ import type {
   MockServerRuntimeStatus,
   MonitorResult,
   MonitorsFile,
+  LookupRunResult,
+  LookupsFile,
   RegressionRun,
   RegressionRunMetrics,
   RegressionStartOptions,
@@ -276,6 +278,13 @@ export interface ElectronRendererBridge {
     setMonitors: (data: MonitorsFile) => Promise<MonitorsFile>;
     monitorRunNow: (monitorId: string) => Promise<MonitorResult | null>;
     onMonitorResult: (listener: (result: MonitorResult) => void) => () => void;
+    getLookups: () => Promise<LookupsFile>;
+    setLookups: (data: LookupsFile) => Promise<LookupsFile>;
+    lookupRun: (payload: {
+      readonly lookupId: string;
+      readonly environmentId?: string | null;
+      readonly inputs?: Readonly<Record<string, string>>;
+    }) => Promise<LookupRunResult>;
     mockStatus: () => Promise<MockServerRuntimeStatus>;
     mockStart: () => Promise<MockServerRuntimeStatus>;
     mockStop: () => Promise<MockServerRuntimeStatus>;

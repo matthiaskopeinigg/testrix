@@ -13,28 +13,35 @@ export function resolveRegressionFlowIds(
   options: {
     readonly flowIdsOverride?: readonly string[];
     readonly selectedFlowIds?: readonly string[];
+    readonly existingFlowIds?: readonly string[];
   } = {},
 ): readonly string[] {
+  let resolved: string[];
   if (options.flowIdsOverride?.length) {
-    return [...options.flowIdsOverride];
-  }
-
-  const scope = profile.runScope;
-  if (scope === 'selected') {
-    const selected = new Set(options.selectedFlowIds ?? []);
-    return artifact.flowIds.filter((id: string) => selected.has(id));
-  }
-
-  if (scope === 'failed-from-last') {
-    const lastRun = artifact.runs[0];
-    if (!lastRun) {
-      return [...artifact.flowIds];
+    resolved = [...options.flowIdsOverride];
+  } else {
+    const scope = profile.runScope;
+    if (scope === 'selected') {
+      const selected = new Set(options.selectedFlowIds ?? []);
+      resolved = artifact.flowIds.filter((id: string) => selected.has(id));
+    } else if (scope === 'failed-from-last') {
+      const lastRun = artifact.runs[0];
+      if (!lastRun) {
+        resolved = [...artifact.flowIds];
+      } else {
+        const failed = new Set(collectFailedFlowIdsFromRun(lastRun));
+        resolved = artifact.flowIds.filter((id: string) => failed.has(id));
+      }
+    } else {
+      resolved = [...artifact.flowIds];
     }
-    const failed = new Set(collectFailedFlowIdsFromRun(lastRun));
-    return artifact.flowIds.filter((id: string) => failed.has(id));
   }
 
-  return [...artifact.flowIds];
+  if (!options.existingFlowIds) {
+    return resolved;
+  }
+  const existing = new Set(options.existingFlowIds);
+  return resolved.filter((id) => existing.has(id));
 }
 
 /** Filters failed flow IDs to those still linked on the artifact. */

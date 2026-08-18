@@ -12,12 +12,12 @@ export interface GitHubReleaseChannelCandidate {
 /**
  * Returns true when a GitHub release belongs on the given update channel.
  *
- * Channel membership uses the version string (`-` means beta). The beta channel
- * also includes published stables so a beta install can graduate to a newer
- * stable. Drafts are never offered.
+ * Channel membership uses the version string (`-` means beta). Stable only
+ * includes non-prerelease tags; beta only includes prerelease tags. Drafts are
+ * never offered.
  *
  * @param release GitHub release payload.
- * @param channel Installed update channel.
+ * @param channel Selected update channel.
  */
 export function isReleaseOnUpdateChannel(
   release: GitHubReleaseChannelCandidate,
@@ -31,10 +31,7 @@ export function isReleaseOnUpdateChannel(
     return false;
   }
   const isBeta = isPrereleaseVersion(version);
-  if (channel === 'stable') {
-    return !isBeta;
-  }
-  return true;
+  return channel === 'beta' ? isBeta : !isBeta;
 }
 
 /**
