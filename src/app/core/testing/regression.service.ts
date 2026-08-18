@@ -7,6 +7,7 @@ import {
   migrateRegressionsFile,
   prependRegressionRun,
   regressionArtifactSchema,
+  regressionProfileSchema,
   regressionTabResourceId,
   regressionsFileSchema,
   serializeRegressionRunExport,
@@ -219,7 +220,12 @@ export class RegressionService {
     if (!artifact) {
       return;
     }
-    this.patchArtifact(id, { profile: { ...artifact.profile, ...patch } });
+    const parsed = regressionProfileSchema.safeParse({ ...artifact.profile, ...patch });
+    if (!parsed.success) {
+      this.notifier.reportUnknown(parsed.error);
+      return;
+    }
+    this.patchArtifact(id, { profile: parsed.data });
   }
 
   patchThresholds(id: string, patch: Partial<RegressionThresholds>): void {

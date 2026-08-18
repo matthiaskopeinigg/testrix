@@ -45,13 +45,31 @@ describe('RgTabSettingsPanelComponent', () => {
     const emit = vi.fn();
     fixture.componentInstance.profileChange.subscribe(emit);
 
-    fixture.componentInstance.profileChange.emit({
+    const label = Array.from(
+      fixture.nativeElement.querySelectorAll('.tx-toggle__label') as NodeListOf<HTMLElement>,
+    ).find((el) => el.textContent?.includes('All flows at once'));
+    const checkbox = label?.closest('label')?.querySelector('input[role="switch"]') as HTMLInputElement | null;
+    expect(checkbox).toBeTruthy();
+    checkbox!.click();
+    fixture.detectChanges();
+
+    expect(emit).toHaveBeenCalledWith({ allFlowsAtOnce: true });
+  });
+
+  it('keeps settings fields visible when allFlowsAtOnce is on', () => {
+    fixture.componentRef.setInput('profile', {
       ...createDefaultRegressionProfile(),
+      executionMode: 'parallel',
       allFlowsAtOnce: true,
     });
+    fixture.detectChanges();
 
-    expect(emit).toHaveBeenCalledWith(
-      expect.objectContaining({ allFlowsAtOnce: true }),
-    );
+    const text = String(fixture.nativeElement.textContent);
+    expect(text).toContain('General');
+    expect(text).toContain('All flows at once');
+    expect(text).toContain('Max parallelism');
+    expect(text).toContain('Shuffle order');
+    expect(text).toContain('Environment');
+    expect(text).toContain('Acceptance');
   });
 });

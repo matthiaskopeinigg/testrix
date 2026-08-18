@@ -1,4 +1,4 @@
-/** Options for workspace hydrate after a profile switch. */
+/** Options for workspace hydrate after a profile switch or import. */
 export interface TestingHydrateOptions {
   /** When true, reload from disk even if this service already hydrated. */
   readonly force?: boolean;

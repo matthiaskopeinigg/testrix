@@ -72,7 +72,7 @@ export const HELP_WIKI_TESTING_SECTIONS: readonly HelpWikiSection[] = [
           'VALIDATION — assert on a prior step (status, body, headers, cached value). Expected can include {{placeholders}} from the environment or earlier CACHE steps.',
           'CACHE — generate a value ($uuid, templates) or extract from a prior step into {{variables}} for later REQUEST, E2E, DATABASE, and other steps. Type the alias as email (not {{email}}). Each entry can encrypt or decrypt with RSA OAEP SHA-1 (PEM + private-key password, typically {{rsaPrivateKey}} and {{pemPassword}}) before storing.',
           'DATABASE — write SQL/Redis inline, or select a saved query from the Database sidebar.',
-          'E2E — browser automation screenshot/step (when configured). Pick on page runs preceding steps, then attaches a CSS selector overlay. If the overlay cannot attach, the E2E window closes instead of staying stuck. Cancel pick aborts prep or picking.',
+          'E2E — browser automation screenshot/step (when configured). Pick on page runs preceding steps, then attaches a CSS selector overlay. If the overlay cannot attach, the E2E window closes instead of staying stuck. Cancel pick aborts prep or picking. After login, use Wait for URL for the redirect (substring like /home); Navigate to URL is for opening a different page in the same session.',
           'HTTP_LISTENER — wait for an incoming HTTP callback.',
           'HTTP_INTERCEPTOR — apply intercept rules during the step.',
           'WAIT — pause for a duration.',

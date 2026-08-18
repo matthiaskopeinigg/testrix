@@ -8,6 +8,7 @@ import { z } from 'zod';
 
 import {
   legacyTestSuiteFlowNodeSchema,
+  testSuiteFlowNodeSchema,
   testSuiteFlowSchema,
   testSuiteFlowStepSchema,
   testSuiteFolderSchema,
@@ -16,12 +17,14 @@ import {
   type TestSuiteFlow,
   type TestSuiteFlowNode,
   type TestSuiteFlowStep,
+  isFlowFolderNode,
+  isFlowLaneNode,
+  isFlowStepNode,
   isTestSuiteFlow,
   parseTestSuiteTreeItem,
   type TestSuiteTreeItem,
   type TestSuitesFile,
 } from './test-suites.schema';
-import { normalizeFlowStepNodes } from './test-suite-flow-order';
 
 const testSuiteFlowLooseSchema = z.object({
   id: z.string().min(1),
@@ -95,6 +98,34 @@ function migrateLegacyNode(node: LegacyTestSuiteFlowNode): TestSuiteFlowStep {
   });
 }
 
+function flowNodeChildren(node: TestSuiteFlowNode): readonly TestSuiteFlowNode[] {
+  if (isFlowFolderNode(node) || isFlowLaneNode(node)) {
+    return node.children;
+  }
+  return isFlowStepNode(node) ? (node.children ?? []) : [];
+}
+
+/**
+ * Drops root copies of steps that also live under IF / RETRY / folder / lane
+ * children. Older migrate flattened nested steps onto the root and left the
+ * originals in place, so each save multiplied the copies.
+ */
+function stripHoistedDuplicateSteps(nodes: readonly TestSuiteFlowNode[]): TestSuiteFlowNode[] {
+  const nestedIds = new Set<string>();
+  const collectNested = (items: readonly TestSuiteFlowNode[]): void => {
+    for (const node of items) {
+      if (isFlowStepNode(node)) {
+        nestedIds.add(node.id);
+      }
+      collectNested(flowNodeChildren(node));
+    }
+  };
+  for (const node of nodes) {
+    collectNested(flowNodeChildren(node));
+  }
+  return nodes.filter((node) => !(isFlowStepNode(node) && nestedIds.has(node.id)));
+}
+
 function migrateFlowNodes(nodes: readonly unknown[]): TestSuiteFlowNode[] {
   if (nodes.length === 0) {
     return [];
@@ -102,7 +133,8 @@ function migrateFlowNodes(nodes: readonly unknown[]): TestSuiteFlowNode[] {
   if (nodes.every((n) => isLegacyNode(n))) {
     return nodes.map((n) => migrateLegacyNode(n as LegacyTestSuiteFlowNode));
   }
-  return normalizeFlowStepNodes(nodes as TestSuiteFlowNode[]);
+  const parsed = nodes.map((node) => testSuiteFlowNodeSchema.parse(node));
+  return stripHoistedDuplicateSteps(parsed);
 }
 
 function migrateFlow(flow: unknown): TestSuiteFlow {

@@ -122,26 +122,29 @@ import { TxToggleComponent } from '@app/shared/components/forms/tx-toggle/tx-tog
         <div class="rg-settings-stack">
           <tx-toggle
             label="All flows at once"
-            [ngModel]="profile().allFlowsAtOnce"
-            (ngModelChange)="handleProfileChange({ allFlowsAtOnce: $event })"
+            [hint]="'Run every linked flow concurrently (up to ' + maxParallelism + ' workers).'"
+            [ngModel]="profile().allFlowsAtOnce === true"
+            (ngModelChange)="handleAllFlowsAtOnce($event)"
           />
-          <p class="request-panel__hint">Run every linked flow concurrently (up to {{ maxParallelism }} workers).</p>
 
-          @if (!profile().allFlowsAtOnce) {
-            <tx-form-field label="Max parallelism" controlId="rg-max-parallelism">
-              <tx-input
-                id="rg-max-parallelism"
-                type="number"
-                [attr.min]="1"
-                [attr.max]="maxParallelism"
-                [ngModel]="profile().maxParallelism"
-                (ngModelChange)="handleProfileChange({ maxParallelism: toParallelism($event, profile().maxParallelism) })"
-              />
-              <span class="request-panel__hint">
+          <tx-form-field label="Max parallelism" controlId="rg-max-parallelism">
+            <tx-input
+              id="rg-max-parallelism"
+              type="number"
+              [attr.min]="1"
+              [attr.max]="maxParallelism"
+              [disabled]="profile().allFlowsAtOnce === true"
+              [ngModel]="profile().maxParallelism"
+              (ngModelChange)="handleProfileChange({ maxParallelism: toParallelism($event, profile().maxParallelism) })"
+            />
+            <span class="request-panel__hint">
+              @if (profile().allFlowsAtOnce) {
+                Parallelism is automatic while All flows at once is on (up to {{ maxParallelism }} workers).
+              } @else {
                 Up to {{ maxParallelism }} concurrent flow workers.
-              </span>
-            </tx-form-field>
-          }
+              }
+            </span>
+          </tx-form-field>
         </div>
       }
 
@@ -315,6 +318,11 @@ export class RgTabSettingsPanelComponent {
       reuseE2eSession: enabled,
       ...(enabled ? { executionMode: 'sequential' as const } : {}),
     });
+  }
+
+  /** Persists the all-at-once flag without tearing down sibling settings controls. */
+  protected handleAllFlowsAtOnce(enabled: boolean): void {
+    this.profileChange.emit({ allFlowsAtOnce: enabled === true });
   }
 
   protected handleProfileChange(patch: Partial<RegressionProfile>): void {

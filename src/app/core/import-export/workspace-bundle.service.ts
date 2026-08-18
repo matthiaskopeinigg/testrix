@@ -21,17 +21,10 @@ import {
   type ImportFormatKind,
 } from '@shared/import-export';
 
-import { CollectionsService } from '@app/core/collections/collections.service';
 import { ConfigService } from '@app/core/config/config.service';
 import { DatabaseQueriesService } from '@app/core/database/database-queries.service';
 import { ElectronService } from '@app/core/electron/electron.service';
-import { EnvironmentsService } from '@app/core/environments/environments.service';
-import { CaptureWorkbenchStore } from '@app/core/testing/capture-workbench.store';
-import { InterceptorWorkspaceStore } from '@app/core/testing/interceptor-workspace.store';
-import { LoadTestService } from '@app/core/testing/load-test.service';
-import { MockServerService } from '@app/core/testing/mock-server.service';
-import { RegressionService } from '@app/core/testing/regression.service';
-import { TestSuiteService } from '@app/core/testing/test-suite.service';
+import { ProfileService } from '@app/core/profile/profile.service';
 
 export interface ParseBundleResult {
   readonly bundle: TestrixBundleV1;
@@ -45,14 +38,7 @@ export interface ParseBundleResult {
 export class WorkspaceBundleService {
   private readonly electron = inject(ElectronService);
   private readonly config = inject(ConfigService);
-  private readonly collections = inject(CollectionsService);
-  private readonly environments = inject(EnvironmentsService);
-  private readonly testSuites = inject(TestSuiteService);
-  private readonly loadTests = inject(LoadTestService);
-  private readonly regressions = inject(RegressionService);
-  private readonly mockServer = inject(MockServerService);
-  private readonly capture = inject(CaptureWorkbenchStore);
-  private readonly interceptor = inject(InterceptorWorkspaceStore);
+  private readonly profiles = inject(ProfileService);
   private readonly databaseQueries = inject(DatabaseQueriesService);
 
   parseFileToBundle(raw: string, sourceLabel: string): ParseBundleResult {
@@ -126,7 +112,7 @@ export class WorkspaceBundleService {
     };
   }
 
-  /** Applies a filtered bundle to the workspace and rehydrates affected services. */
+  /** Writes a filtered bundle to disk, then reloads the workspace UI from those files. */
   async applyBundle(
     bundle: TestrixBundleV1,
     selection: BundleSelection,
@@ -136,6 +122,8 @@ export class WorkspaceBundleService {
     if (!bridge) {
       throw new Error('Import/export requires the desktop app.');
     }
+
+    await this.profiles.flushPendingWorkspaceWrites();
 
     const filtered = filterBundle(bundle, selection);
     const parts: string[] = [];
@@ -157,7 +145,6 @@ export class WorkspaceBundleService {
               },
             };
       await bridge.config.setCollections(next);
-      await this.collections.hydrate();
       parts.push(`${incoming.nodes.length} collection node(s)`);
     }
 
@@ -173,7 +160,6 @@ export class WorkspaceBundleService {
               meta: { ...incoming.meta, updatedAt: new Date().toISOString() },
             };
       await bridge.config.setEnvironments(next);
-      await this.environments.hydrate();
       parts.push(`${incoming.environments.length} environment(s)`);
     }
 
@@ -185,7 +171,6 @@ export class WorkspaceBundleService {
           ? incoming
           : { ...incoming, suites: mergeTestSuiteRoots(current.suites, incoming.suites) };
       await bridge.testing.setTestSuites(next);
-      await this.testSuites.hydrate();
       parts.push(`${incoming.suites.length} test suite(s)`);
     }
 
@@ -197,7 +182,6 @@ export class WorkspaceBundleService {
           ? incoming
           : { ...incoming, items: mergeLoadTestItems(current.items, incoming.items) };
       await bridge.testing.setLoadTests(next);
-      await this.loadTests.hydrate();
       parts.push(`${incoming.items.length} load test item(s)`);
     }
 
@@ -209,7 +193,6 @@ export class WorkspaceBundleService {
           ? incoming
           : { ...incoming, items: mergeRegressionItems(current.items, incoming.items) };
       await bridge.testing.setRegressions(next);
-      await this.regressions.hydrate();
       parts.push(`${incoming.items.length} regression item(s)`);
     }
 
@@ -221,19 +204,16 @@ export class WorkspaceBundleService {
           ? incoming
           : { ...incoming, items: mergeMockServerItems(current.items, incoming.items) };
       await bridge.testing.setMockServer(next);
-      await this.mockServer.hydrate();
       parts.push(`${incoming.items.length} mock item(s)`);
     }
 
     if (filtered.capture) {
       await bridge.testing.setCapture(filtered.capture);
-      await this.capture.hydrate();
       parts.push('capture config');
     }
 
     if (filtered.interceptor) {
       await bridge.testing.setInterceptor(filtered.interceptor);
-      await this.interceptor.hydrate();
       parts.push('interceptor config');
     }
 
@@ -258,7 +238,6 @@ export class WorkspaceBundleService {
           nodes: [...next.nodes],
         },
       });
-      await this.config.hydrate();
       parts.push(`${next.connections.length} database connection(s)`);
     }
 
@@ -279,7 +258,6 @@ export class WorkspaceBundleService {
     if (filtered.settings) {
       const patch = filtered.settings as SettingsPatch;
       await bridge.config.setSettings(patch);
-      await this.config.hydrate();
       parts.push('settings');
     }
 
@@ -289,6 +267,10 @@ export class WorkspaceBundleService {
       }
       await bridge.cookies.replaceFromSerialized(filtered.cookieJar);
       parts.push('cookie jar');
+    }
+
+    if (parts.length > 0) {
+      await this.profiles.rehydrateAfterExternalWrite();
     }
 
     const summary = parts.length > 0 ? `Imported ${parts.join(', ')}` : 'Nothing selected to import';

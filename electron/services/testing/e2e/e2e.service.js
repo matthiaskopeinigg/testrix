@@ -179,6 +179,66 @@ function isCertRelatedNavigationError(err) {
   return message.includes('ERR_CERT') || message.includes('CERTIFICATE') || message.includes('SSL');
 }
 
+/** Chromium ERR_ABORTED: a later navigation (HTTP 302 or SPA router) cancelled this load. */
+function isAbortedNavigationErrorCode(errorCode) {
+  return Number(errorCode) === -3;
+}
+
+function isAbortedNavigationError(err) {
+  if (err && typeof err === 'object' && 'errno' in err && Number(err.errno) === -3) {
+    return true;
+  }
+  const message = String(err?.message ?? err ?? '');
+  return /\bERR_ABORTED\b/.test(message) || /\(-3\)/.test(message);
+}
+
+function guestUrlLooksLoaded(wc) {
+  if (!wc || wc.isDestroyed()) {
+    return false;
+  }
+  const loadedUrl = String(wc.getURL() || '');
+  return Boolean(loadedUrl) && loadedUrl !== 'about:blank' && !loadedUrl.startsWith('chrome-error://');
+}
+
+function waitUntilGuestNavigationCommitted(wc) {
+  return new Promise((resolve, reject) => {
+    if (!wc || wc.isDestroyed()) {
+      reject(new Error('E2E runner web contents unavailable'));
+      return;
+    }
+    if (!webContentsIsLoadingMainFrame(wc) && guestUrlLooksLoaded(wc)) {
+      resolve();
+      return;
+    }
+    const onDone = () => {
+      cleanup();
+      if (guestUrlLooksLoaded(wc)) {
+        resolve();
+        return;
+      }
+      reject(
+        new Error(
+          `Open page did not load (address is "${wc.getURL() || ''}"). Check the URL and protocol — local dev servers usually need http://localhost, not https.`,
+        ),
+      );
+    };
+    const cleanup = () => {
+      try {
+        wc.removeListener('did-finish-load', onDone);
+      } catch (_) {}
+      try {
+        wc.removeListener('did-navigate', onDone);
+      } catch (_) {}
+      try {
+        wc.removeListener('did-stop-loading', onDone);
+      } catch (_) {}
+    };
+    wc.once('did-finish-load', onDone);
+    wc.once('did-navigate', onDone);
+    wc.once('did-stop-loading', onDone);
+  });
+}
+
 function ensureE2eRunnerPartitionHooks(partition = E2E_RUNNER_PARTITION) {
   const install = () => {
     if (e2eRunnerPartitionHooksInstalled.has(partition)) return;
@@ -265,6 +325,9 @@ function loadUrlReportingFailures(wc, url, ignoreInvalidSsl = false) {
       if (ignoreInvalidSsl && isCertRelatedNavigationFailure(errorCode, errorDescription)) {
         return;
       }
+      if (isAbortedNavigationErrorCode(errorCode)) {
+        return;
+      }
       cleanup();
       reject(
         new Error(
@@ -277,7 +340,7 @@ function loadUrlReportingFailures(wc, url, ignoreInvalidSsl = false) {
         wc.removeListener('did-fail-load', onFail);
       } catch (_) {}
     };
-    wc.once('did-fail-load', onFail);
+    wc.on('did-fail-load', onFail);
     wc.loadURL(url)
       .then(() => {
         cleanup();
@@ -293,6 +356,18 @@ function loadUrlReportingFailures(wc, url, ignoreInvalidSsl = false) {
             .catch((retryErr) => {
               cleanup();
               reject(retryErr instanceof Error ? retryErr : new Error(String(retryErr)));
+            });
+          return;
+        }
+        if (isAbortedNavigationError(err)) {
+          waitUntilGuestNavigationCommitted(wc)
+            .then(() => {
+              cleanup();
+              resolve();
+            })
+            .catch((waitErr) => {
+              cleanup();
+              reject(waitErr);
             });
           return;
         }
@@ -863,6 +938,9 @@ async function awaitMainFrameIdle(wc, timeoutMs) {
     const onDone = () => finish(true);
     const onFail = (_e, errorCode, errorDescription, validatedURL, isMainFrame) => {
       if (!isMainFrame) return;
+      if (isAbortedNavigationErrorCode(errorCode)) {
+        return;
+      }
       finish(
         false,
         new Error(
@@ -875,7 +953,7 @@ async function awaitMainFrameIdle(wc, timeoutMs) {
     }, budget);
     wc.once('did-finish-load', onDone);
     wc.once('did-stop-loading', onDone);
-    wc.once('did-fail-load', onFail);
+    wc.on('did-fail-load', onFail);
     if (!webContentsIsLoadingMainFrame(wc)) {
       finish(true);
     }

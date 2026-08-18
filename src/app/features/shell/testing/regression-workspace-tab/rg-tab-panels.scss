@@ -1,11 +1,27 @@
 @use '../../workspace/request-workspace-tab/request-tab-panels';
 
+// request-tab-panels :host is sized to fill a code editor pane; settings/docs must
+// grow with content so the workspace pane can scroll instead of clipping fields.
+:host {
+  display: block;
+  flex: 0 0 auto;
+  min-height: auto;
+  width: 100%;
+  overflow: visible;
+}
+
 :host ::ng-deep .rg-docs-editor textarea {
   min-height: 16rem;
 }
 
 .request-panel {
   padding-bottom: 2rem;
+}
+
+.request-panel tx-form-field,
+.request-panel tx-toggle,
+.request-panel tx-banner {
+  flex-shrink: 0;
 }
 
 .rg-flow-list {

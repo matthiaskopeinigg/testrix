@@ -140,6 +140,12 @@
   padding: 14px 18px 18px;
 }
 
+.rg-tab__pane > .tx-workspace-tab__section-shell:not(:has(.rg-tab__results-slot)) {
+  flex: 0 0 auto;
+  min-height: auto;
+  overflow: visible;
+}
+
 .rg-tab__archived-banner {
   margin-bottom: 0.5rem;
 }

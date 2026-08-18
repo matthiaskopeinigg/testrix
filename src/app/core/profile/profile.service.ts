@@ -192,6 +192,14 @@ export class ProfileService {
     await this.rehydrateWorkspace();
   }
 
+  /**
+   * Reloads profile-scoped UI after an external disk write (workspace import).
+   * Does not flush in-memory edits, which would overwrite the files just written.
+   */
+  async rehydrateAfterExternalWrite(): Promise<void> {
+    await this.rehydrateWorkspace();
+  }
+
   private applyProfilesState(state: ProfilesState): void {
     this.profilesState.set([...state.profiles]);
     this.activeProfileIdState.set(state.activeProfileId);
