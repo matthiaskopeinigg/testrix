@@ -1,14 +1,4 @@
-@use '../workspace/workspace-panel-chrome' as panel;
 @use '../workspace/workspace-sidebar-tree' as sidebar-tree;
-
-@mixin compact-database-tree {
-  --tx-tree-row-min-height: 22px;
-  --tx-tree-row-padding-block: 0.04rem;
-  --tx-tree-row-font-size: 0.75rem;
-  --tx-tree-row-line-height: 1.2;
-  --tx-tree-row-gap: 0.2rem;
-  --tx-tree-row-subtitle-font-size: 0.625rem;
-}
 
 :host {
   display: flex;
@@ -41,7 +31,7 @@
 .database-sidebar-panel__section--connections {
   flex: 1 1 50%;
   min-height: 6rem;
-  padding: 0.35rem 0 0.65rem;
+  padding: 0 0 0.35rem;
   border-bottom: 1px solid color-mix(in srgb, var(--tx-border-0) 55%, transparent);
 
   &.is-collapsed {
@@ -53,7 +43,7 @@
 .database-sidebar-panel__section--queries {
   flex: 1 1 50%;
   min-height: 6rem;
-  padding: 0.55rem 0 0;
+  padding: 0.35rem 0 0;
 
   &.is-collapsed {
     flex: 0 0 auto;
@@ -122,17 +112,7 @@
   color: color-mix(in srgb, var(--tx-text-1) 85%, transparent);
 }
 
-.database-sidebar-panel__connection-tree {
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow-x: hidden;
-  overflow-y: auto;
-  padding-top: 0.15rem;
-
-  @include panel.workspace-sidebar-tree-tokens;
-  @include compact-database-tree;
-}
-
+.database-sidebar-panel__connection-tree,
 .database-sidebar-panel__query-tree {
   @include sidebar-tree.workspace-sidebar-panel-body;
   overflow-x: hidden;
@@ -141,7 +121,6 @@
 
 .database-sidebar-panel__tree {
   @include sidebar-tree.workspace-sidebar-tree-host;
-  @include compact-database-tree;
 }
 
 :host ::ng-deep {
@@ -158,12 +137,6 @@
   .tx-tree-row-host--has-meta .tx-tree-row__handle,
   .tx-tree-row-host--has-meta .tx-tree-row__icon {
     margin-top: 0;
-  }
-
-  .tx-tree-row {
-    margin-inline: 0.12rem;
-    padding-inline-end: 0.28rem;
-    border-radius: var(--tx-radius-sm, 8px);
   }
 
   .tx-tree-row-host[data-kind='schemas'] .tx-tree-row {

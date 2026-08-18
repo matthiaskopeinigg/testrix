@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { environmentVariablesToCatalog } from '../config/environment-variables';
+import { catalogFromEnvironmentKeys, environmentVariablesToCatalog } from '../config/environment-variables';
 import { highlightDynamicVariableTemplate } from './dynamic-variable-highlight';
 import {
   formatDynamicVariablePlaceholderHint,
@@ -103,6 +103,14 @@ describe('dynamicVariableTooltip', () => {
     expect(tip).toContain('production');
     expect(tip).not.toContain('super-secret');
     expect(tip).toContain('Click to open in environment');
+  });
+
+  it('folder and session keys highlighted as env tokens still show catalog detail', () => {
+    const catalog = catalogFromEnvironmentKeys(['test'], 'Folder variable');
+    const tip = formatDynamicVariableTooltip('env:test', catalog);
+    expect(tip).toContain('{{test}}');
+    expect(tip).toContain('Folder variable');
+    expect(tip).not.toContain('not in active environment');
   });
 
   it('formats empty-field placeholder hint', () => {

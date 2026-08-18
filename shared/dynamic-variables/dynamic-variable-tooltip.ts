@@ -11,8 +11,13 @@ export function formatDynamicVariableTooltip(
   const item = catalog.find((entry) => entry.id === varId);
   if (varId.startsWith('env:')) {
     const key = varId.slice(4);
-    if (item) {
-      return `${item.label} — ${item.detail}. Click to open in environment.`;
+    const matched =
+      item ?? catalog.find((entry) => entry.insert === `{{${key}}}`);
+    if (matched) {
+      if (matched.id.startsWith('env:')) {
+        return `${matched.label} — ${matched.detail}. Click to open in environment.`;
+      }
+      return `${matched.label} — ${matched.detail}`;
     }
     return `{{${key}}} — not in active environment. Click to search profiles.`;
   }

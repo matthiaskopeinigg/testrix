@@ -239,13 +239,27 @@ export class WebsocketWorkspaceTabComponent {
       this.configService.settings()?.environments.useFolderPathInKeys ?? false,
   }));
 
-  protected readonly variableCatalog = computed(() =>
-    this.httpRequest.buildVariableCatalog(
+  protected readonly variableCatalog = computed(() => {
+    const ancestors = collectAncestorFolders(this.collectionsService.nodes(), this.resourceId());
+    const folderKeys: string[] = [];
+    for (const folder of ancestors) {
+      if (folder.data?.kind !== 'folder' || !folder.data.settings) {
+        continue;
+      }
+      for (const row of folder.data.settings.variables) {
+        const key = row.key.trim();
+        if (key) {
+          folderKeys.push(key);
+        }
+      }
+    }
+    return this.httpRequest.buildVariableCatalog(
       this.activeEnvironment(),
       this.environmentKeyOptions(),
       this.websocketEnvironmentId(),
-    ),
-  );
+      folderKeys,
+    );
+  });
 
   protected readonly connectButtonLabel = computed(() =>
     this.connectionState() === 'connected' ? 'Disconnect' : 'Connect',

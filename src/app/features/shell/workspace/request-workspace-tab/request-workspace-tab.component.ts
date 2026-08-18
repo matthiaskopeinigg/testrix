@@ -344,6 +344,7 @@ export class RequestWorkspaceTabComponent {
       this.activeEnvironment(),
       this.environmentKeyOptions(),
       this.effectiveEnvironmentId(),
+      this.folderVariables().map((row) => row.key),
     ),
   );
 

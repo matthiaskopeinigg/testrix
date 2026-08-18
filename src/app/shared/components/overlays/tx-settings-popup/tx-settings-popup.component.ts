@@ -971,7 +971,16 @@ export class TxSettingsPopupComponent {
     }
   }
 
+  /** True when a displayed path can be copied to the clipboard. */
+  protected canCopyPath(pathValue: string | null | undefined): boolean {
+    const value = pathValue?.trim() ?? '';
+    return value.length > 0 && value !== '(not set)';
+  }
+
   protected async handleCopyPath(pathValue: string): Promise<void> {
+    if (!this.canCopyPath(pathValue)) {
+      return;
+    }
     try {
       await navigator.clipboard.writeText(pathValue);
       this.notifications.showSuccess('Path copied');

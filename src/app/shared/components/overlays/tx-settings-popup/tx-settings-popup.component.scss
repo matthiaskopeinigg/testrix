@@ -485,6 +485,26 @@
   font-family: var(--tx-font-mono);
   font-size: 0.8rem;
   word-break: break-all;
+  cursor: text;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.tx-settings__path-field {
+  display: flex;
+  align-items: stretch;
+  gap: 0.5rem;
+  min-width: 0;
+
+  .tx-settings__path {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  tx-button {
+    flex: 0 0 auto;
+    align-self: stretch;
+  }
 }
 
 .tx-settings__action-row {

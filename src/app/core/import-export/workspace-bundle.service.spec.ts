@@ -51,7 +51,7 @@ describe('WorkspaceBundleService.applyBundle', () => {
     const bundle: TestrixBundleV1 = {
       schema: TESTRIX_BUNDLE_SCHEMA_V1,
       exportedAt: new Date().toISOString(),
-      appVersion: '1.1.2-beta.3',
+      appVersion: '1.1.2-beta.4',
       testSuites,
     };
     const selection: BundleSelection = {

@@ -87,17 +87,18 @@ export class HttpRequestService {
   }
 
   /**
-   * Variable catalog for workspace inputs: `$` dynamics, environment `{{keys}}`, and script session cache.
+   * Variable catalog for workspace inputs: `$` dynamics, environment `{{keys}}`,
+   * collection folder variables, and script session cache.
    */
   buildVariableCatalog(
     environment: EnvironmentDefinition | null | undefined,
     keyOptions: EnvironmentVariableKeyOptions,
     environmentId: string | null = null,
-    extraKeys: readonly string[] = [],
+    folderKeys: readonly string[] = [],
   ): readonly DynamicVariableCatalogItem[] {
     const scopedKeys = environmentId ? this.sessionVariableKeys(environmentId) : [];
-    const sessionKeys = [...new Set([...scopedKeys, ...this.allSessionVariableKeys(), ...extraKeys])];
-    return buildCollectionVariableCatalog(environment, keyOptions, sessionKeys);
+    const sessionKeys = [...new Set([...scopedKeys, ...this.allSessionVariableKeys()])];
+    return buildCollectionVariableCatalog(environment, keyOptions, sessionKeys, folderKeys);
   }
 
   private sessionVariableOverrides(environmentId: string | null): Readonly<Record<string, string>> {

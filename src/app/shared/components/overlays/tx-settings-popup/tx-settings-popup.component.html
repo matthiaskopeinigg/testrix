@@ -912,16 +912,16 @@
                     <h3 class="tx-settings__section-heading">Files</h3>
                     @if (logPaths(); as paths) {
                       <tx-form-field label="Log directory" controlId="tx-settings-log-dir">
-                        <code id="tx-settings-log-dir" class="tx-settings__path">{{ paths.logDir }}</code>
+                        <div class="tx-settings__path-field">
+                          <code id="tx-settings-log-dir" class="tx-settings__path">{{ paths.logDir }}</code>
+                          <tx-button variant="secondary" (pressed)="handleCopyPath(paths.logDir)">Copy</tx-button>
+                        </div>
                       </tx-form-field>
                     }
                     <div class="tx-settings__action-row">
                       <tx-button variant="secondary" [disabled]="!hasElectronBridge()" (pressed)="handleOpenLogDir()">
                         Open logs folder
                       </tx-button>
-                      @if (logPaths(); as paths) {
-                        <tx-button variant="secondary" (pressed)="handleCopyPath(paths.logDir)">Copy path</tx-button>
-                      }
                       <tx-button variant="secondary" [disabled]="!hasElectronBridge()" (pressed)="handleRefreshLogTail()">
                         Refresh preview
                       </tx-button>
@@ -967,7 +967,16 @@
                       <span id="tx-settings-active-profile">{{ activeProfileName() }}</span>
                     </tx-form-field>
                     <tx-form-field label="Profile workspace folder" controlId="tx-settings-config-dir">
-                      <code id="tx-settings-config-dir" class="tx-settings__path">{{ configDir() }}</code>
+                      <div class="tx-settings__path-field">
+                        <code id="tx-settings-config-dir" class="tx-settings__path">{{ configDir() }}</code>
+                        <tx-button
+                          variant="secondary"
+                          [disabled]="!canCopyPath(configDir())"
+                          (pressed)="handleCopyPath(configDir())"
+                        >
+                          Copy
+                        </tx-button>
+                      </div>
                     </tx-form-field>
                     <div class="tx-settings__action-row">
                       <tx-button variant="secondary" [disabled]="!hasElectronBridge()" (pressed)="handleOpenConfigDir()">
@@ -1004,7 +1013,16 @@
                     <h3 class="tx-settings__section-heading">Global settings</h3>
                     @if (configFilePaths(); as paths) {
                       <tx-form-field label="Global settings folder" controlId="tx-settings-shared-config-dir">
-                        <code id="tx-settings-shared-config-dir" class="tx-settings__path">{{ paths.sharedConfigDir }}</code>
+                        <div class="tx-settings__path-field">
+                          <code id="tx-settings-shared-config-dir" class="tx-settings__path">{{ paths.sharedConfigDir }}</code>
+                          <tx-button
+                            variant="secondary"
+                            [disabled]="!canCopyPath(paths.sharedConfigDir)"
+                            (pressed)="handleCopyPath(paths.sharedConfigDir)"
+                          >
+                            Copy
+                          </tx-button>
+                        </div>
                       </tx-form-field>
                     }
                     <div class="tx-settings__action-row">
@@ -1013,27 +1031,22 @@
                       </tx-button>
                     </div>
                     <tx-form-field label="Workspace data folder" controlId="tx-settings-workspace-dir">
-                      <code id="tx-settings-workspace-dir" class="tx-settings__path">{{
-                        s.general.configFolderPath ?? '(not set)'
-                      }}</code>
+                      <div class="tx-settings__path-field">
+                        <code id="tx-settings-workspace-dir" class="tx-settings__path">{{
+                          s.general.configFolderPath ?? '(not set)'
+                        }}</code>
+                        <tx-button
+                          variant="secondary"
+                          [disabled]="!canCopyPath(s.general.configFolderPath)"
+                          (pressed)="handleCopyPath(s.general.configFolderPath ?? '')"
+                        >
+                          Copy
+                        </tx-button>
+                      </div>
                     </tx-form-field>
                     <tx-button variant="secondary" [disabled]="!hasElectronBridge()" (pressed)="handleChooseWorkspaceFolder()">
-                      Choose workspace folderâ€¦
+                      Choose workspace folder…
                     </tx-button>
-                    @if (configFilePaths(); as paths) {
-                      <tx-form-field label="settings.json (global)" controlId="tx-settings-settings-path">
-                        <code id="tx-settings-settings-path" class="tx-settings__path">{{ paths.settingsPath }}</code>
-                      </tx-form-field>
-                      <tx-form-field label="session.json (profile)" controlId="tx-settings-session-path">
-                        <code id="tx-settings-session-path" class="tx-settings__path">{{ paths.sessionPath }}</code>
-                      </tx-form-field>
-                      <tx-form-field label="collections.json (profile)" controlId="tx-settings-collections-path">
-                        <code id="tx-settings-collections-path" class="tx-settings__path">{{ paths.collectionsPath }}</code>
-                      </tx-form-field>
-                      <tx-form-field label="history.json (profile)" controlId="tx-settings-history-path">
-                        <code id="tx-settings-history-path" class="tx-settings__path">{{ paths.historyPath }}</code>
-                      </tx-form-field>
-                    }
                   </div>
 
                   <div class="tx-entrance-stagger__block">

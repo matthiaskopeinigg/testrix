@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.2-beta.4]
+
+### Changed
+
+- Data & Config shows folder paths only (no per-file session.json / collections.json rows), with selectable text and a Copy button
+
+### Fixed
+
+- Request URL preview recognizes collection folder variables (`{{name}}` in a child request)
+- Database sidebar tree rows match Collections and Environments size
+- Data & Config “Choose workspace folder…” no longer shows a garbled ellipsis
+
 ## [1.1.2-beta.3]
 
 ### Fixed
@@ -634,7 +646,8 @@ Tagged in git. GitHub installers were not published (Authenticode secrets were m
 
 Initial public beta of Testrix: local-first desktop API client (HTTP, WebSocket, collections, environments, test suites, load tests, mocks, and capture).
 
-[Unreleased]: https://github.com/matthiaskopeinigg/testrix/compare/v1.1.2-beta.3...HEAD
+[Unreleased]: https://github.com/matthiaskopeinigg/testrix/compare/v1.1.2-beta.4...HEAD
+[1.1.2-beta.4]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.1.2-beta.4
 [1.1.2-beta.3]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.1.2-beta.3
 [1.1.2-beta.2]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.1.2-beta.2
 [1.1.2-beta.1]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.1.2-beta.1
