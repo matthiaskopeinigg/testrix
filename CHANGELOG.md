@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.1]
+
+### Changed
+
+- Visible E2E windows can be moved during a run
+- Test Suite Flow has a single Cancel control that stays clickable while a run is in progress
+
+### Fixed
+
+- E2E steps wait for the page to finish loading before they run, and retry guest scripts when Chromium navigates mid-evaluate
+- A crashed E2E renderer no longer leaves the runner stuck; the next step opens a fresh window
+- Regression E2E worker failures no longer abort the rest of the run or take down Testrix
+- E2E HUD and macOS installer help use the Testrix name
+
 ## [1.1.0]
 
 Stable channel build of the 1.1.0 beta series.
@@ -558,7 +572,8 @@ Tagged in git. GitHub installers were not published (Authenticode secrets were m
 
 Initial public beta of Testrix: local-first desktop API client (HTTP, WebSocket, collections, environments, test suites, load tests, mocks, and capture).
 
-[Unreleased]: https://github.com/matthiaskopeinigg/testrix/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/matthiaskopeinigg/testrix/compare/v1.1.1...HEAD
+[1.1.1]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.1.1
 [1.1.0]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.1.0
 [1.1.0-beta.2]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.1.0-beta.2
 [1.1.0-beta.1]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.1.0-beta.1

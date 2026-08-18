@@ -25,7 +25,7 @@ const HELP_COPY = {
       ['Everyone on this Mac', 'installs into <em>/Applications</em>. Will prompt for administrator rights.'],
     ],
     uninstall:
-      'Open <em>Finder → Applications</em>, drag <strong>Testrix</strong> to the Trash, then empty the Trash. If macOS reports the app is quarantined, run <code>xattr -dr com.apple.quarantine /Applications/API\\ Workbench.app</code> for machine installs or the same command against <code>~/Applications/API\\ Workbench.app</code> for user installs.',
+      'Open <em>Finder → Applications</em>, drag <strong>Testrix</strong> to the Trash, then empty the Trash. If macOS reports the app is quarantined, run <code>xattr -dr com.apple.quarantine /Applications/Testrix.app</code> for machine installs or the same command against <code>~/Applications/Testrix.app</code> for user installs.',
   },
   linux: {
     intro:

@@ -79,6 +79,8 @@ interface E2eServiceInstance {
   releaseVisibleRunnerInputLock(): void;
   resetVisibleRunnerInputLock(): void;
   prepareRunnerForElementPick(): void;
+  /** Closes a crashed runner window so the next execute() can recreate it. */
+  resetAfterFailure(): Promise<void>;
 }
 
 interface E2ePickElementModule {
@@ -168,6 +170,28 @@ export class E2eRunnerService {
   /** Shows the runner and clears stealth/input-lock before attaching the CSS picker. */
   prepareRunnerForElementPick(): void {
     this.getService().prepareRunnerForElementPick();
+  }
+
+  /**
+   * Closes a dead runner window and CDP session so the next execute() opens a fresh window.
+   */
+  async resetAfterFailure(): Promise<void> {
+    const service = this.getService();
+    try {
+      service.signalExecuteCancel();
+    } catch {
+      /* ignore */
+    }
+    try {
+      service.teardownHttpCaptures();
+    } catch {
+      /* ignore */
+    }
+    if (typeof service.resetAfterFailure === 'function') {
+      await service.resetAfterFailure();
+      return;
+    }
+    await this.closeRunner().catch(() => undefined);
   }
 
   /** Cancels an in-flight Pick on page session if one is active. */

@@ -59,6 +59,23 @@ function createFlowWorker(): FlowWorker {
   return { executor, e2eRunner };
 }
 
+/**
+ * Maps an unexpected worker throw into a failed flow result so parallel
+ * regression does not reject Promise.all and abort the rest of the run.
+ */
+function failedFlowRunFromThrow(error: unknown): TestSuiteFlowRunResult {
+  return {
+    ok: false,
+    message: error instanceof Error ? error.message : 'Flow failed unexpectedly.',
+    stepStatuses: {},
+    stepCaptures: {},
+    stepDurations: {},
+    stepErrors: {},
+    nestedChildren: {},
+    durationMs: 0,
+  };
+}
+
 function buildFlowResult(
   flowId: string,
   flowName: string,
@@ -240,6 +257,12 @@ export class RegressionRunner {
         await this.runSequential(scheduled, files, sender, executeOptions);
       }
       await this.recordRemainingAsSkipped(scheduled, files, sender);
+    } catch (error: unknown) {
+      console.warn(
+        '[Regression] Run aborted unexpectedly:',
+        error instanceof Error ? error.message : error,
+      );
+      await this.recordRemainingAsSkipped(scheduled, files, sender).catch(() => undefined);
     } finally {
       this.stopMetricsTick();
       this.running = false;
@@ -395,22 +418,30 @@ export class RegressionRunner {
 
       while (attempt < maxAttempts && !this.cancelled) {
         attempt += 1;
-        result = await worker.executor.executeFlow(
-          flowId,
-          files,
-          (event) => {
-            sender?.send(TestingChannels.regressionRunProgress, {
-              regressionId: this.regressionId,
-              runId: this.runId,
-              flowId: event.flowId,
-              stepStatuses: event.stepStatuses,
-              flowTimeline: [...this.flowTimeline],
-            });
-          },
-          executeOptions,
-        );
+        try {
+          result = await worker.executor.executeFlow(
+            flowId,
+            files,
+            (event) => {
+              sender?.send(TestingChannels.regressionRunProgress, {
+                regressionId: this.regressionId,
+                runId: this.runId,
+                flowId: event.flowId,
+                stepStatuses: event.stepStatuses,
+                flowTimeline: [...this.flowTimeline],
+              });
+            },
+            executeOptions,
+          );
+        } catch (error: unknown) {
+          await worker.e2eRunner.resetAfterFailure().catch(() => undefined);
+          result = failedFlowRunFromThrow(error);
+        }
         if (result.ok) {
           break;
+        }
+        if (attempt < maxAttempts && !this.cancelled) {
+          await worker.e2eRunner.resetAfterFailure().catch(() => undefined);
         }
       }
 

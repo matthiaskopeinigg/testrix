@@ -2,6 +2,7 @@ const { BrowserWindow, ipcMain, session, app, screen } = require('electron');
 const path = require('path');
 const fsp = require('fs').promises;
 const { resolveWindowIcon } = require('./window-icon');
+const { isGuestNavigationRaceError } = require('./e2e-guest-script-errors');
 const {
   INTERCEPT_REPLACE_BODY_TYPES,
   applyInterceptQueryMutations,
@@ -439,9 +440,28 @@ async function evaluateScopedGuestScript(webContents, selector, script) {
   const sub = parseSubframeTerminalSelector(selector);
   if (sub) {
     const frame = await resolveWebFrameForSubframe(webContents, sub);
-    return frame.executeJavaScript(script, true);
+    const budget = 15000;
+    const deadline = Date.now() + budget;
+    let lastErr = null;
+    while (Date.now() < deadline) {
+      try {
+        return await frame.executeJavaScript(script, true);
+      } catch (err) {
+        lastErr = err;
+        const msg = err instanceof Error ? err.message : String(err);
+        if (!isGuestNavigationRaceError(msg)) {
+          throw err;
+        }
+        const wait = Math.min(250, Math.max(0, deadline - Date.now()));
+        if (wait <= 0) {
+          break;
+        }
+        await new Promise((r) => setTimeout(r, wait));
+      }
+    }
+    throw lastErr instanceof Error ? lastErr : new Error(String(lastErr || 'Guest script failed.'));
   }
-  return webContents.executeJavaScript(script, true);
+  return executeJavaScriptWithNavRetry(webContents, script, 15000);
 }
 
 async function runScopedGuestScript(webContents, selector, script) {
@@ -569,7 +589,7 @@ async function applyGuestWindowCloseShield(wc) {
           window.__AW_E2E_ORIGINAL_CLOSE__ = window.close.bind(window);
           window.close = function awApiWorkbenchE2eGuardedClose() {
             try {
-              console.warn('[API Workbench E2E] Ignoring page window.close() so the runner stays open for the flow.');
+              console.warn('[Testrix E2E] Ignoring page window.close() so the runner stays open for the flow.');
             } catch (_w) {}
           };
           return true;
@@ -588,7 +608,8 @@ async function applyGuestWindowCloseShield(wc) {
 async function awaitGuestPaintSettled(wc) {
   if (!wc || wc.isDestroyed()) return;
   try {
-    await wc.executeJavaScript(
+    await executeJavaScriptWithNavRetry(
+      wc,
       `
       (function () {
         return new Promise(function (resolve) {
@@ -604,10 +625,18 @@ async function awaitGuestPaintSettled(wc) {
         });
       })()
     `,
-      true,
+      8000,
     );
-  } catch (_) {
-    /* navigation race */
+  } catch (err) {
+    if (!wc || wc.isDestroyed()) {
+      throw new Error('E2E runner window was closed.');
+    }
+    const msg = err instanceof Error ? err.message : String(err);
+    if (isGuestNavigationRaceError(msg)) {
+      await awaitMainFrameIdle(wc, 8000);
+      return;
+    }
+    throw err;
   }
 }
 
@@ -621,7 +650,8 @@ async function awaitSpaLateRenderSettled(wc, maxMs = 3000) {
   if (!wc || wc.isDestroyed()) return;
   const budget = Math.max(Number(maxMs) || 3000, 400);
   try {
-    await wc.executeJavaScript(
+    await executeJavaScriptWithNavRetry(
+      wc,
       `
       new Promise(function (resolve) {
         var deadline = Date.now() + ${budget};
@@ -638,11 +668,191 @@ async function awaitSpaLateRenderSettled(wc, maxMs = 3000) {
         }
       })
     `,
-      true,
+      budget,
     );
   } catch (_) {
     /* navigation race */
   }
+}
+
+/**
+ * True when Chromium is still committing a main-frame navigation.
+ *
+ * @param {Electron.WebContents} wc
+ */
+function webContentsIsLoadingMainFrame(wc) {
+  if (!wc || wc.isDestroyed()) return false;
+  try {
+    if (typeof wc.isLoadingMainFrame === 'function') {
+      return wc.isLoadingMainFrame();
+    }
+    return typeof wc.isLoading === 'function' ? wc.isLoading() : false;
+  } catch (_) {
+    return false;
+  }
+}
+
+/**
+ * Waits until the main frame is idle or the timeout elapses.
+ *
+ * @param {Electron.WebContents} wc
+ * @param {number} timeoutMs
+ */
+async function awaitMainFrameIdle(wc, timeoutMs) {
+  if (!wc || wc.isDestroyed()) {
+    throw new Error('E2E runner window was closed.');
+  }
+  if (!webContentsIsLoadingMainFrame(wc)) {
+    return;
+  }
+  const budget = Math.max(Number(timeoutMs) || 15000, 500);
+  await new Promise((resolve, reject) => {
+    let settled = false;
+    const finish = (ok, err) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      try {
+        wc.removeListener('did-finish-load', onDone);
+      } catch (_) {}
+      try {
+        wc.removeListener('did-stop-loading', onDone);
+      } catch (_) {}
+      try {
+        wc.removeListener('did-fail-load', onFail);
+      } catch (_) {}
+      if (ok) resolve();
+      else reject(err instanceof Error ? err : new Error(String(err || 'E2E page did not finish loading.')));
+    };
+    const onDone = () => finish(true);
+    const onFail = (_e, errorCode, errorDescription, validatedURL, isMainFrame) => {
+      if (!isMainFrame) return;
+      finish(
+        false,
+        new Error(
+          `Navigation failed (${errorCode}): ${errorDescription || 'unknown'} — ${validatedURL || ''}`,
+        ),
+      );
+    };
+    const timer = setTimeout(() => {
+      finish(false, new Error(`Timed out waiting for the page to finish loading after ${budget} ms.`));
+    }, budget);
+    wc.once('did-finish-load', onDone);
+    wc.once('did-stop-loading', onDone);
+    wc.once('did-fail-load', onFail);
+    if (!webContentsIsLoadingMainFrame(wc)) {
+      finish(true);
+    }
+  });
+}
+
+/**
+ * Retries guest scripts that fail because Chromium navigated mid-evaluate.
+ *
+ * @param {Electron.WebContents} wc
+ * @param {string} script
+ * @param {number} timeoutMs
+ * @param {boolean} [userGesture]
+ */
+async function executeJavaScriptWithNavRetry(wc, script, timeoutMs, userGesture = true) {
+  if (!wc || wc.isDestroyed()) {
+    throw new Error('E2E runner window was closed.');
+  }
+  const budget = Math.max(Number(timeoutMs) || 15000, 500);
+  const deadline = Date.now() + budget;
+  let lastErr = null;
+  while (Date.now() < deadline) {
+    if (wc.isDestroyed()) {
+      throw new Error('E2E runner window was closed.');
+    }
+    try {
+      if (webContentsIsLoadingMainFrame(wc)) {
+        await awaitMainFrameIdle(wc, Math.max(0, deadline - Date.now()));
+      }
+      return await wc.executeJavaScript(script, userGesture);
+    } catch (err) {
+      lastErr = err;
+      const msg = err instanceof Error ? err.message : String(err);
+      if (!isGuestNavigationRaceError(msg)) {
+        throw err;
+      }
+      const wait = Math.min(250, Math.max(0, deadline - Date.now()));
+      if (wait <= 0) {
+        break;
+      }
+      await new Promise((r) => setTimeout(r, wait));
+    }
+  }
+  throw lastErr instanceof Error ? lastErr : new Error(String(lastErr || 'Guest script failed.'));
+}
+
+/**
+ * Waits for load, document complete, and a short SPA settle before an action.
+ *
+ * @param {Electron.WebContents} wc
+ * @param {number} timeoutMs
+ */
+async function awaitGuestReadyForAction(wc, timeoutMs) {
+  if (!wc || wc.isDestroyed()) {
+    throw new Error('E2E runner window was closed.');
+  }
+  const budget = Math.max(Number(timeoutMs) || 15000, 500);
+  const startedAt = Date.now();
+  await awaitMainFrameIdle(wc, budget);
+  const remaining = Math.max(400, budget - (Date.now() - startedAt));
+  await executeJavaScriptWithNavRetry(
+    wc,
+    `
+      (function () {
+        return new Promise(function (resolve) {
+          function done() { resolve(document.readyState || 'complete'); }
+          if (document.readyState === 'complete') done();
+          else window.addEventListener('load', done, { once: true });
+          setTimeout(done, ${Math.min(remaining, 8000)});
+        });
+      })()
+    `,
+    remaining,
+  );
+  await awaitSpaLateRenderSettled(wc, Math.min(remaining, 4000));
+}
+
+const GUEST_INPUT_LOCK_OVERLAY_ID = 'tx-e2e-input-lock';
+
+/**
+ * Injects or removes a full-page overlay that swallows user clicks without blocking the OS title bar.
+ *
+ * @param {boolean} enable
+ * @param {boolean} [interactive]
+ */
+function guestInputLockOverlayScript(enable, interactive = true) {
+  return `
+    (function() {
+      var id = ${JSON.stringify(GUEST_INPUT_LOCK_OVERLAY_ID)};
+      var existing = document.getElementById(id);
+      if (!${enable ? 'true' : 'false'}) {
+        if (existing && existing.parentNode) existing.parentNode.removeChild(existing);
+        return true;
+      }
+      if (!document.body) return false;
+      if (!existing) {
+        existing = document.createElement('div');
+        existing.id = id;
+        existing.setAttribute('aria-hidden', 'true');
+        existing.style.cssText = 'position:fixed;inset:0;z-index:2147483646;background:transparent;pointer-events:auto;cursor:default;';
+        var swallow = function (e) { e.stopPropagation(); e.preventDefault(); };
+        existing.addEventListener('mousedown', swallow, true);
+        existing.addEventListener('mouseup', swallow, true);
+        existing.addEventListener('click', swallow, true);
+        existing.addEventListener('auxclick', swallow, true);
+        existing.addEventListener('wheel', swallow, true);
+        existing.addEventListener('touchstart', swallow, true);
+        document.body.appendChild(existing);
+      }
+      existing.style.pointerEvents = ${interactive ? "'auto'" : "'none'"};
+      return true;
+    })()
+  `;
 }
 
 /** True when the selector pierces shadow DOM or iframes — DOM events click more reliably than native OS input. */
@@ -1402,25 +1612,23 @@ class E2eService {
     }
   }
 
-  /** Applies mouse passthrough when a visible flow holds the lock and the runner window exists. */
+  /**
+   * Applies guest click overlay when a visible flow holds the lock. The native title bar stays draggable.
+   */
   syncVisibleRunnerInputLockWithWindow() {
     if (this.visibleRunnerInputLockCount <= 0) return;
     const win = this.window;
     if (!win || win.isDestroyed()) return;
     if (this.lastRunnerShowPreference === false) return;
-    try {
-      win.setIgnoreMouseEvents(true);
-    } catch (_) {}
+    void this.syncGuestInputLockOverlay(true, true);
   }
 
-  /** Restores mouse hits when the lock refcount reaches zero (visible runner only). */
+  /** Restores user interaction when the lock refcount reaches zero (visible runner only). */
   clearVisibleRunnerInputLock() {
     const win = this.window;
     if (!win || win.isDestroyed()) return;
     if (this.lastRunnerShowPreference === false) return;
-    try {
-      win.setIgnoreMouseEvents(false);
-    } catch (_) {}
+    void this.syncGuestInputLockOverlay(false, false);
   }
 
   /** Drops any leftover input lock so Pick on page can receive clicks. */
@@ -1447,7 +1655,23 @@ class E2eService {
   }
 
   /**
-   * CSS `:hover` and mega-menus need real pointer delivery; stealth / input-lock modes block it.
+   * Injects or updates the guest click-swallow overlay for visible runs.
+   *
+   * @param {boolean} enable
+   * @param {boolean} interactive
+   */
+  async syncGuestInputLockOverlay(enable, interactive) {
+    const win = this.window;
+    if (!win || win.isDestroyed()) return;
+    const wc = win.webContents;
+    if (!wc || wc.isDestroyed()) return;
+    try {
+      await executeJavaScriptWithNavRetry(wc, guestInputLockOverlayScript(enable, interactive), 4000);
+    } catch (_) {}
+  }
+
+  /**
+   * CSS `:hover` and mega-menus need real pointer delivery; stealth / overlay modes block it.
    * @returns {() => void} call in `finally` to restore prior runner chrome
    */
   prepareRunnerForPointerHover() {
@@ -1459,15 +1683,13 @@ class E2eService {
     if (preferHidden) {
       clearE2eRunnerStealth(win);
     } else if (restoreInputLock) {
-      try {
-        win.setIgnoreMouseEvents(false);
-      } catch (_) {}
+      void this.syncGuestInputLockOverlay(true, false);
     }
     return () => {
       if (preferHidden) {
         applyE2eRunnerStealth(win);
       } else if (restoreInputLock) {
-        this.syncVisibleRunnerInputLockWithWindow();
+        void this.syncGuestInputLockOverlay(true, true);
       }
     };
   }
@@ -1592,7 +1814,7 @@ class E2eService {
     action,
     selector,
     value,
-    timeout = 5000,
+    timeout = 15000,
     show = true,
     ipcSender = null,
     screenshotPath,
@@ -1682,6 +1904,22 @@ class E2eService {
 
       win.webContents.on('did-finish-load', () => {
         void applyGuestWindowCloseShield(win.webContents);
+        if (this.visibleRunnerInputLockCount > 0 && this.lastRunnerShowPreference !== false) {
+          void this.syncGuestInputLockOverlay(true, true);
+        }
+      });
+      win.webContents.on('render-process-gone', (_event, details) => {
+        console.warn('[E2E] Runner renderer gone:', details?.reason, details?.exitCode);
+        if (this.window === win) {
+          this.isDebugging = false;
+          this.window = null;
+        }
+      });
+      win.on('closed', () => {
+        if (this.window === win) {
+          this.window = null;
+          this.isDebugging = false;
+        }
       });
       void applyGuestWindowCloseShield(win.webContents);
     }
@@ -1715,7 +1953,7 @@ class E2eService {
           if (!navUrl || !String(navUrl).trim()) {
             throw new Error('NAVIGATE_TO requires a URL in Selector / URL');
           }
-          const navTimeoutMs = Math.max(Number(timeout) || 5000, 500);
+          const navTimeoutMs = Math.max(Number(timeout) || 15000, 500);
           // Same as CLICK / SCREENSHOT: hidden runs must `show()` (stealth) before navigation so load commits reliably.
           await this.raceWithExecuteCancel(
             Promise.race([
@@ -1764,7 +2002,7 @@ class E2eService {
           this.lastExplicitScroll = null;
           const subCf = parseSubframeTerminalSelector(selector);
           const compoundJson = JSON.stringify(subCf ? subCf.inner : String(selector ?? ''));
-          const clickWaitMs = Math.max(Number(timeout) || 5000, 500);
+          const clickWaitMs = Math.max(Number(timeout) || 15000, 500);
           const shadowBoost =
             !subCf && e2eSelectorPrefersDomClick(selector) ? Math.min(4000, clickWaitMs) : 0;
           const effectiveClickWaitMs = clickWaitMs + shadowBoost;
@@ -1890,7 +2128,10 @@ class E2eService {
             (async () => {
               const wc = this.window.webContents;
               await this.ensureRunnerWindowSurface();
+              await awaitGuestReadyForAction(wc, clickWaitMs);
+              const restorePointerDelivery = this.prepareRunnerForPointerHover();
 
+              try {
               if (!subCf) {
                 const preferDomClick = e2eSelectorPrefersDomClick(selector);
                 if (preferDomClick) {
@@ -1929,8 +2170,10 @@ class E2eService {
                 await runScopedGuestScript(wc, selector, domFallbackClickScript);
               }
 
-              await awaitGuestPaintSettled(wc);
-              await new Promise((r) => setTimeout(r, 480));
+              await awaitGuestReadyForAction(wc, clickWaitMs);
+              } finally {
+                restorePointerDelivery();
+              }
             })(),
           );
           result = { success: true };
@@ -1943,7 +2186,7 @@ class E2eService {
           /** MOVE_TO kept as legacy alias — same behavior as HOVER. */
           const subH = parseSubframeTerminalSelector(selector);
           const compoundJsonH = JSON.stringify(subH ? subH.inner : String(selector ?? ''));
-          const hoverWaitMs = Math.max(Number(timeout) || 5000, 500);
+          const hoverWaitMs = Math.max(Number(timeout) || 15000, 500);
           const hoverPollMs = 250;
           const hoverMaxAttempts = Math.max(1, Math.ceil(hoverWaitMs / hoverPollMs));
           const hoverScript = `
@@ -2001,6 +2244,7 @@ class E2eService {
             (async () => {
               const wc = this.window.webContents;
               await this.ensureRunnerWindowSurface();
+              await awaitGuestReadyForAction(wc, hoverWaitMs);
               const restorePointerDelivery = this.prepareRunnerForPointerHover();
 
               try {
@@ -2036,8 +2280,7 @@ class E2eService {
                 }
 
                 await runScopedGuestScript(wc, selector, hoverScript);
-                await awaitGuestPaintSettled(wc);
-                await new Promise((r) => setTimeout(r, 180));
+                await awaitGuestReadyForAction(wc, hoverWaitMs);
               } finally {
                 restorePointerDelivery();
               }
@@ -2077,8 +2320,10 @@ class E2eService {
           `;
           await this.raceWithExecuteCancel(
             (async () => {
+              await this.ensureRunnerWindowSurface();
+              await awaitGuestReadyForAction(this.window.webContents, Math.max(Number(timeout) || 15000, 500));
               await runScopedGuestScript(this.window.webContents, selector, typeScript);
-              await awaitGuestPaintSettled(this.window.webContents);
+              await awaitGuestReadyForAction(this.window.webContents, Math.max(Number(timeout) || 15000, 500));
             })(),
           );
           result = { success: true };
@@ -2111,6 +2356,7 @@ class E2eService {
           await this.raceWithExecuteCancel(
             (async () => {
               await this.ensureRunnerWindowSurface();
+              await awaitGuestReadyForAction(this.window.webContents, Math.max(Number(timeout) || 15000, 500));
               await awaitGuestPaintSettled(this.window.webContents);
               await new Promise((r) => setTimeout(r, 80));
               let scrollOutcome = { ok: false };
@@ -2146,6 +2392,7 @@ class E2eService {
 
         case 'SCREENSHOT': {
           await this.ensureRunnerWindowSurface();
+          await awaitGuestReadyForAction(this.window.webContents, Math.max(Number(timeout) || 15000, 500));
           try {
             result = await this.raceWithExecuteCancel(
               (async () => {
@@ -2254,7 +2501,8 @@ class E2eService {
         case 'ASSERT_ELEMENT': {
           const subA = parseSubframeTerminalSelector(selector);
           const compoundJsonA = JSON.stringify(subA ? subA.inner : String(selector ?? ''));
-          const waitMs = Math.max(Number(timeout) || 5000, 500);
+          const waitMs = Math.max(Number(timeout) || 15000, 500);
+          await awaitGuestReadyForAction(this.window.webContents, waitMs);
           const pollMs = 250;
           const maxAttempts = Math.max(1, Math.ceil(waitMs / pollMs));
           const expectedText = String(value ?? '');
@@ -2311,6 +2559,10 @@ class E2eService {
         }
 
         case 'GET_CURRENT_URL':
+          await awaitGuestReadyForAction(
+            this.window.webContents,
+            Math.max(Number(timeout) || 15000, 500),
+          );
           result = {
             success: true,
             data: { url: String(this.window.webContents.getURL() || '') },
@@ -2322,6 +2574,10 @@ class E2eService {
           if (!expectedUrl) {
             throw new Error('Assert URL requires an expected URL');
           }
+          await awaitGuestReadyForAction(
+            this.window.webContents,
+            Math.max(Number(timeout) || 15000, 500),
+          );
           const currentUrl = String(this.window.webContents.getURL() || '');
           if (!e2eUrlMatchesExpectation(currentUrl, expectedUrl)) {
             throw new Error(`Assertion failed: URL "${currentUrl}" does not match "${expectedUrl}"`);
@@ -2395,6 +2651,10 @@ class E2eService {
         }
 
         case 'ELEMENT_EXISTS': {
+          await awaitGuestReadyForAction(
+            this.window.webContents,
+            Math.max(Number(timeout) || 15000, 500),
+          );
           const subE = parseSubframeTerminalSelector(selector);
           const compoundJsonE = JSON.stringify(subE ? subE.inner : String(selector ?? ''));
           const existsScript = `
@@ -2513,10 +2773,14 @@ class E2eService {
 
         case 'CLOSE':
           this.teardownCaptureState();
-          if (this.window) {
-            this.window.close();
-            this.window = null;
+          this.visibleRunnerInputLockCount = 0;
+          this.isDebugging = false;
+          if (this.window && !this.window.isDestroyed()) {
+            try {
+              this.window.close();
+            } catch (_) {}
           }
+          this.window = null;
           this.lastRunnerShowPreference = null;
           this.lastExplicitScroll = null;
           result = { success: true };
@@ -2536,9 +2800,11 @@ class E2eService {
   }
 
   async injectHUD() {
-    if (!this.window) return;
+    if (!this.window || this.window.isDestroyed()) return;
+    const wc = this.window.webContents;
+    if (!wc || wc.isDestroyed()) return;
     const hudCss = `
-      #aw-e2e-hud {
+      #tx-e2e-hud {
         position: fixed;
         bottom: 20px;
         left: 20px;
@@ -2575,22 +2841,22 @@ class E2eService {
       }
     `;
 
-    await this.window.webContents.executeJavaScript(`
+    await executeJavaScriptWithNavRetry(wc, `
       (function() {
-        if (document.getElementById('aw-e2e-hud')) return;
+        if (document.getElementById('tx-e2e-hud')) return;
         const style = document.createElement('style');
         style.textContent = \`${hudCss}\`;
         document.head.appendChild(style);
 
         const hud = document.createElement('div');
-        hud.id = 'aw-e2e-hud';
+        hud.id = 'tx-e2e-hud';
         hud.innerHTML = \`
           <div class="hud-header">
             <div class="hud-dot"></div>
-            <div class="hud-title">API Workbench E2E</div>
+            <div class="hud-title">Testrix E2E</div>
           </div>
-          <div class="hud-step" id="aw-hud-step">Waiting...</div>
-          <div class="hud-status" id="aw-hud-status">Initializing Engine</div>
+          <div class="hud-step" id="tx-hud-step">Waiting...</div>
+          <div class="hud-status" id="tx-hud-status">Initializing Engine</div>
         \`;
         document.body.appendChild(hud);
       })()
@@ -2598,7 +2864,9 @@ class E2eService {
   }
 
   async updateHUD(state, action, details = '') {
-    if (!this.window) return;
+    if (!this.window || this.window.isDestroyed()) return;
+    const wc = this.window.webContents;
+    if (!wc || wc.isDestroyed()) return;
     const statusText = state === 'running' ? 'Executing Operation...' : state === 'success' ? 'Step Completed' : 'Step Failed';
     const statusColor = state === 'running' ? '#3b82f6' : state === 'success' ? '#10b981' : '#ef4444';
 
@@ -2607,10 +2875,11 @@ class E2eService {
     const statusColorJ = JSON.stringify(statusColor);
     const detailsJ = JSON.stringify(String(details ?? ''));
 
-    await this.window.webContents.executeJavaScript(`
+    try {
+      await executeJavaScriptWithNavRetry(wc, `
       (function() {
-        const stepEl = document.getElementById('aw-hud-step');
-        const statusEl = document.getElementById('aw-hud-status');
+        const stepEl = document.getElementById('tx-hud-step');
+        const statusEl = document.getElementById('tx-hud-status');
         const dotEl = document.querySelector('.hud-dot');
         if (!stepEl) return;
 
@@ -2637,7 +2906,10 @@ class E2eService {
           if (targetHud) targetHud.classList.add('aw-highlight');
         } catch (_) {}
       })()
-    `);
+    `, 4000);
+    } catch (err) {
+      console.warn('[E2E] updateHUD:', err instanceof Error ? err.message : err);
+    }
   }
 
   /**
@@ -2685,20 +2957,36 @@ class E2eService {
 
   async ensureCdpNetworkAttached() {
     if (!this.window || this.window.isDestroyed()) return;
-    const dbg = this.window.webContents.debugger;
-    if (this.isDebugging) return;
+    const wc = this.window.webContents;
+    if (!wc || wc.isDestroyed()) return;
+    const dbg = wc.debugger;
+    if (this.isDebugging && typeof dbg.isAttached === 'function' && dbg.isAttached()) {
+      return;
+    }
 
-    dbg.attach('1.3');
-    await dbg.sendCommand('Network.enable');
-    this.isDebugging = true;
+    try {
+      if (typeof dbg.isAttached !== 'function' || !dbg.isAttached()) {
+        dbg.attach('1.3');
+      }
+      await dbg.sendCommand('Network.enable');
+      this.isDebugging = true;
+    } catch (err) {
+      this.isDebugging = typeof dbg.isAttached === 'function' && dbg.isAttached();
+      console.warn('[E2E] CDP attach failed:', err instanceof Error ? err.message : err);
+      return;
+    }
 
+    dbg.removeAllListeners('detach');
+    dbg.removeAllListeners('message');
     dbg.on('detach', () => {
       this.isDebugging = false;
       this.teardownCaptureState();
     });
 
-    dbg.on('message', async (_e, method, params) => {
-      await this.handleCdpMessage(method, params);
+    dbg.on('message', (_event, method, params) => {
+      void this.handleCdpMessage(method, params).catch((err) => {
+        console.warn('[E2E] CDP message handler:', err instanceof Error ? err.message : err);
+      });
     });
   }
 
@@ -3039,6 +3327,23 @@ class E2eService {
     }
   }
 
+  /** Drops a dead runner window and CDP state so the next execute() can open a fresh window. */
+  async resetAfterFailure() {
+    this.executeCancelRequested = false;
+    this.visibleRunnerInputLockCount = 0;
+    this.lastRunnerShowPreference = null;
+    this.lastExplicitScroll = null;
+    this.teardownCaptureState();
+    this.isDebugging = false;
+    const win = this.window;
+    this.window = null;
+    if (win && !win.isDestroyed()) {
+      try {
+        win.close();
+      } catch (_) {}
+    }
+  }
+
   /** Stops active HTTP listeners/interceptors without closing the runner window. */
   teardownHttpCaptures() {
     this.teardownCaptureState();
@@ -3078,7 +3383,7 @@ ipcMain.handle(
       action,
       selector,
       value,
-      timeout ?? 5000,
+      timeout ?? 15000,
       show !== false,
       event.sender,
       screenshotPath,

@@ -111,13 +111,10 @@
                 (ngModelChange)="handleFlowEnvironmentChange($event)"
               />
             </tx-form-field>
-            @if (running()) {
-              <tx-button variant="secondary" (pressed)="handleRun()">Cancel</tx-button>
-            }
             <tx-button
               [variant]="runButtonVariant()"
-              [loading]="running()"
-              loadingLabel="Running"
+              [loading]="runActionPending()"
+              loadingLabel="Working"
               [disabled]="!running() && !canRun()"
               [hint]="runBlockReason() ?? 'Run all enabled steps in order'"
               (pressed)="handleRun()"

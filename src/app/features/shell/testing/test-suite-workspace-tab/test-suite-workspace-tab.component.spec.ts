@@ -146,6 +146,22 @@ describe('TestSuiteWorkspaceTabComponent', () => {
     expect(fixture.nativeElement.querySelector('tx-horizontal-split-pane')).toBeTruthy();
   });
 
+  it('shows a single clickable Cancel control while a run is in progress', () => {
+    fixture.componentInstance['running'].set(true);
+    fixture.detectChanges();
+
+    const buttons = Array.from(
+      fixture.nativeElement.querySelectorAll('.ts-flow-tab__bar-group--actions tx-button') as NodeListOf<HTMLElement>,
+    );
+    const labels = buttons.map((el) => (el.textContent ?? '').replace(/\s+/g, ' ').trim());
+    expect(labels.filter((label) => /cancel/i.test(label))).toEqual(['Cancel run']);
+
+    const cancelHost = buttons.find((el) => /cancel/i.test(el.textContent ?? ''));
+    const nativeButton = cancelHost?.querySelector('button');
+    expect(nativeButton?.classList.contains('is-loading')).toBe(false);
+    expect(nativeButton?.disabled).toBe(false);
+  });
+
   it('selects step from run panel', () => {
     fixture.componentInstance['handleRunPanelStepSelect'](REQUEST_STEP.id);
     expect(fixture.componentInstance['selectedStepId']()).toBe(REQUEST_STEP.id);

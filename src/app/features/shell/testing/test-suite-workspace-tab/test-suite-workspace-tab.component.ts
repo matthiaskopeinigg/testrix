@@ -165,6 +165,8 @@ export class TestSuiteWorkspaceTabComponent {
   /** When set, the add-step modal inserts the new step after this id. */
   protected readonly addStepAfterId = signal<string | null>(null);
   protected readonly running = signal(false);
+  /** True only while start/cancel IPC is in flight, not for the whole run. */
+  protected readonly runActionPending = signal(false);
   protected readonly liveStepStatuses = signal<Record<string, TestSuiteStepStatus>>({});
   protected readonly liveStepErrors = signal<Record<string, string>>({});
   protected readonly liveNestedChildren = signal<FlowRunNestedChildren>({});
@@ -713,8 +715,12 @@ export class TestSuiteWorkspaceTabComponent {
     }
 
     if (this.running()) {
-      this.running.set(false);
-      await this.electron.bridge()?.testing.e2eCancel();
+      this.runActionPending.set(true);
+      try {
+        await this.electron.bridge()?.testing.e2eCancel();
+      } finally {
+        this.runActionPending.set(false);
+      }
       return;
     }
 

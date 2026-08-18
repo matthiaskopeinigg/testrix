@@ -20,6 +20,7 @@ export * from './test-suite-tree-clone';
 export * from './test-suite-flow-order';
 export * from './e2e-screenshot-output';
 export * from './e2e-url-match';
+export * from './e2e-guest-script-errors';
 export * from './e2e-runner.schema';
 export * from './test-suites.schema';
 export * from './load-test-target.schema';

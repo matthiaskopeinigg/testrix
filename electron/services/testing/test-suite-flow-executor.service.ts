@@ -84,7 +84,7 @@ export interface TestSuiteFlowRunResult {
   readonly durationMs: number;
 }
 
-const DEFAULT_E2E_TIMEOUT_MS = 5000;
+const DEFAULT_E2E_TIMEOUT_MS = 15_000;
 const DEFAULT_HTTP_CAPTURE_TIMEOUT_MS = 30_000;
 const PAGE_URL_VALIDATION_TIMEOUT_MS = 30_000;
 
