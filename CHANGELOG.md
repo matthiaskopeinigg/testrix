@@ -7,6 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0]
+
+Stable channel build of the 1.1.0 beta series.
+
+### Added
+
+- Lookups in the Testing hub: ticket identifiers, skip-unless database queries, and a labeled results card
+- Lookup result fields that contain JSON arrays or objects render as a table or list (for example a `products` array of `{ name, uuid }`)
+- README feature map covering workspace, collections, environments, Database, testing tools, developer tools, Teams, settings, and desktop updates
+
+### Changed
+
+- Lookup skip-unless uses a JavaScript regex against a source value instead of a fixed kind dropdown
+- Lookup playbooks use the full editor width and the same tab-open stagger as other workspace tabs
+- Update checks only offer releases on the selected channel (Beta no longer offers a newer stable)
+- Regression Cancel stays clickable while a run is in progress
+- Parallel regression E2E flows each use their own browser window
+- Regression dashboard lists in-flight flows, not only completed ones
+- Deleted test-suite flows are unlinked from regressions and are not run
+- Saving a Database connection shows a success toast
+
+### Fixed
+
+- Lookup tabs restore Run/Edit, inputs, and the last results card from the workspace session
+- Enabling Required on a lookup step no longer breaks the editor
+- Lookup results are selectable and have copy buttons
+- Shared text fields keep the caret when Angular writes back the same value
+- Duplicating a flow keeps original step names
+
+### Removed
+
+- Auto-seeded Customer ticket lookup playbook and Compose lookup demo tables
+
 ## [1.1.0-beta.2]
 
 ### Changed
@@ -525,7 +558,8 @@ Tagged in git. GitHub installers were not published (Authenticode secrets were m
 
 Initial public beta of Testrix: local-first desktop API client (HTTP, WebSocket, collections, environments, test suites, load tests, mocks, and capture).
 
-[Unreleased]: https://github.com/matthiaskopeinigg/testrix/compare/v1.1.0-beta.2...HEAD
+[Unreleased]: https://github.com/matthiaskopeinigg/testrix/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.1.0
 [1.1.0-beta.2]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.1.0-beta.2
 [1.1.0-beta.1]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.1.0-beta.1
 [1.0.9]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.0.9
