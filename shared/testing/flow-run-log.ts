@@ -1,6 +1,7 @@
 import type { ValidationRule, ValidationStepConfig, TestSuiteStepStatus } from './test-suite-steps.schema';
 import type { TestSuiteFlow, TestSuiteFlowStep } from './test-suites.schema';
 import { findFlowStepById } from './test-suite-flow-order';
+import type { CaptureHeaderPair } from './capture-log-entry.schema';
 import type { FlowStepRunCapture } from './flow-step-capture';
 import {
   evaluateValidationRule,
@@ -188,6 +189,8 @@ export interface FlowStepRunLogDetails {
   readonly error: string | null;
   readonly validationChecks: readonly FlowValidationCheckResult[];
   readonly captureLines: readonly FlowStepCaptureSummaryLine[];
+  /** HTTP response headers for the selected step, empty when the capture has none. */
+  readonly captureHeaders: readonly CaptureHeaderPair[];
   readonly capturePreview: FlowStepCapturePreview | null;
   readonly hasContent: boolean;
 }
@@ -214,10 +217,6 @@ function buildCaptureSummaryLines(capture: FlowStepRunCapture): FlowStepCaptureS
       label: 'Status',
       value: `${capture.statusCode}${capture.statusText ? ` ${capture.statusText}` : ''}`,
     });
-    const headerCount = Object.keys(capture.headers).length;
-    if (headerCount > 0) {
-      lines.push({ label: 'Headers', value: `${headerCount} header${headerCount === 1 ? '' : 's'}` });
-    }
     if (capture.bodyText.trim()) {
       lines.push({ label: 'Body size', value: `${capture.bodyText.length} characters` });
     }
@@ -251,6 +250,16 @@ function buildCaptureSummaryLines(capture: FlowStepRunCapture): FlowStepCaptureS
     lines.push({ label: 'Text length', value: `${e2eCapture.elementText.length} characters` });
   }
   return lines;
+}
+
+/** Returns sorted HTTP response header pairs from a step capture. */
+function buildCaptureHeaders(capture: FlowStepRunCapture | null): readonly CaptureHeaderPair[] {
+  if (!capture || capture.kind !== 'http_response') {
+    return [];
+  }
+  return Object.entries(capture.headers)
+    .map(([key, value]) => ({ key, value }))
+    .sort((a, b) => a.key.localeCompare(b.key, undefined, { sensitivity: 'base' }));
 }
 
 function buildCapturePreview(
@@ -333,6 +342,8 @@ export function buildFlowStepRunLogDetails(
 
   const captureLines =
     step.stepType !== 'VALIDATION' && capture ? buildCaptureSummaryLines(capture) : [];
+  const captureHeaders =
+    step.stepType !== 'VALIDATION' && capture ? buildCaptureHeaders(capture) : [];
   const capturePreview =
     step.stepType !== 'VALIDATION' && capture
       ? buildCapturePreview(capture, step.stepType)
@@ -347,6 +358,7 @@ export function buildFlowStepRunLogDetails(
     Boolean(error) ||
     validationChecks.length > 0 ||
     captureLines.length > 0 ||
+    captureHeaders.length > 0 ||
     capturePreview != null ||
     durationLabel != null;
 
@@ -357,6 +369,7 @@ export function buildFlowStepRunLogDetails(
     error,
     validationChecks,
     captureLines,
+    captureHeaders,
     capturePreview,
     hasContent,
   };

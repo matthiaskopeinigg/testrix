@@ -22,6 +22,7 @@ import { createDefaultWorkspaceTesting } from './testing-session.schema';
 import type { SessionFile } from './session.schema';
 import type { SettingsFile } from './settings.schema';
 import { createDefaultWorkspaceEditor } from './workspace-editor.schema';
+import { DEFAULT_WORKSPACE_SIDEBAR_ITEM_ORDER } from './workspace-sidebar-rail';
 
 function nowIso(): string {
   return new Date().toISOString();
@@ -67,6 +68,8 @@ export function createDefaultSettings(): SettingsFile {
       showIconTooltips: true,
       useTranslucentChrome: true,
       restoreLastSidebarPanel: false,
+      sidebarItemOrder: [...DEFAULT_WORKSPACE_SIDEBAR_ITEM_ORDER],
+      hiddenSidebarItems: [],
     },
     logging: {
       enabled: true,

@@ -59,7 +59,7 @@ export class EnvironmentsService {
   readonly nodes = computed(() => this.environmentsState());
 
   async hydrate(): Promise<void> {
-    const api = this.electron.bridge();
+    const api = this.electron.bridge() ?? (await this.electron.whenBridgeReady());
 
     if (!api || typeof api.config.getEnvironments !== 'function') {
       this.loadBrowserFallback();

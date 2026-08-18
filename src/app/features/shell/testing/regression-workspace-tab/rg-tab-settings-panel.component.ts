@@ -244,16 +244,6 @@ import { TxToggleComponent } from '@app/shared/components/forms/tx-toggle/tx-tog
             [ngModel]="profile().includeStepErrors"
             (ngModelChange)="handleProfileChange({ includeStepErrors: $event })"
           />
-          <tx-toggle
-            label="E2E show browser window"
-            [ngModel]="profile().e2eShowWindowOverride ?? false"
-            (ngModelChange)="handleProfileChange({ e2eShowWindowOverride: $event })"
-          />
-          <tx-toggle
-            label="E2E keep window open"
-            [ngModel]="profile().e2eKeepWindowOpenOverride ?? false"
-            (ngModelChange)="handleProfileChange({ e2eKeepWindowOpenOverride: $event })"
-          />
         </div>
       }
     </div>

@@ -464,7 +464,16 @@
                   </thead>
                   <tbody>
                     @for (flow of dashboardFlowRows(); track flow.flowId) {
-                      <tr>
+                      <tr
+                        class="rg-results-panel__flow-row"
+                        [class.is-selected]="isFlowRowSelected(flow.flowId)"
+                        tabindex="0"
+                        [attr.aria-selected]="isFlowRowSelected(flow.flowId)"
+                        [attr.aria-label]="'View steps for ' + flow.flowName"
+                        (click)="handleFlowRowClick(flow.flowId)"
+                        (keydown.enter)="handleFlowRowClick(flow.flowId)"
+                        (keydown.space)="$event.preventDefault(); handleFlowRowClick(flow.flowId)"
+                      >
                         <td>{{ flow.flowName }}</td>
                         <td>
                           <tx-tag [variant]="flowStatusVariant(flow.status)" casing="normal">
@@ -480,6 +489,34 @@
                   </tbody>
                 </table>
               </div>
+
+              @if (resultsView() !== 'compare' && selectedFlowDiffId()) {
+                @if (selectedInspectFlow(); as runFlow) {
+                  <div class="rg-results-panel__flow-log" [attr.aria-label]="'Run log for ' + runFlow.name">
+                    <header class="rg-results-panel__flow-log-head">
+                      <h4 class="rg-results-panel__flow-log-title">{{ runFlow.name }}</h4>
+                      <tx-button
+                        variant="secondary"
+                        size="icon"
+                        ariaLabel="Close flow run log"
+                        (pressed)="handleClearFlowInspection()"
+                      >
+                        <tx-icon name="close" [size]="14" />
+                      </tx-button>
+                    </header>
+                    <div class="rg-results-panel__flow-log-body">
+                      <app-ts-flow-run-panel
+                        [flow]="runFlow"
+                        [lastRunMessage]="selectedInspectFlowResult()?.message ?? null"
+                      />
+                    </div>
+                  </div>
+                } @else {
+                  <tx-banner variant="info" title="Flow still running">
+                    Step logs appear here when {{ selectedFlowName() || 'this flow' }} finishes.
+                  </tx-banner>
+                }
+              }
             </div>
           }
         </section>

@@ -36,15 +36,74 @@ function applyE2eRunnerStealth(win) {
   try {
     win.setSkipTaskbar(true);
   } catch (_) {}
+  try {
+    win.setFocusable(false);
+  } catch (_) {}
   /**
    * Opacity 0 still leaves a normal hit-target: the parked runner overlaps much of the monitor bottom-right,
    * so the main window’s modals (e.g. manual input) appear “dead” until the user moves the app away.
    * `sendInputEvent` / guest automation keep working; only OS pointer routing passes through.
    */
   try {
-    win.setIgnoreMouseEvents(true);
-  } catch (_) {}
+    win.setIgnoreMouseEvents(true, { forward: true });
+  } catch (_) {
+    try {
+      win.setIgnoreMouseEvents(true);
+    } catch (_2) {}
+  }
   parkE2eRunnerOffScreen(win);
+}
+
+function clearE2eRunnerStealth(win) {
+  try {
+    win.setOpacity(1);
+  } catch (_) {}
+  try {
+    win.setSkipTaskbar(false);
+  } catch (_) {}
+  try {
+    win.setFocusable(true);
+  } catch (_) {}
+  try {
+    win.setIgnoreMouseEvents(false);
+  } catch (_) {}
+}
+
+/**
+ * Shows or hides the runner chrome. `show()` on Windows can reset opacity, so stealth
+ * is applied again after presenting a hidden window.
+ *
+ * @param {Electron.BrowserWindow} win
+ * @param {boolean} visible
+ */
+function syncRunnerVisibility(win, visible) {
+  if (!win || win.isDestroyed()) {
+    return;
+  }
+  if (visible) {
+    clearE2eRunnerStealth(win);
+    if (!win.isVisible()) {
+      win.show();
+    }
+    try {
+      win.focus();
+    } catch (_) {}
+    return;
+  }
+  applyE2eRunnerStealth(win);
+  if (!win.isVisible()) {
+    try {
+      win.showInactive();
+    } catch (_) {
+      try {
+        win.show();
+      } catch (_2) {}
+    }
+  }
+  applyE2eRunnerStealth(win);
+  try {
+    win.blur();
+  } catch (_) {}
 }
 
 /** Loose page URL compare: strips scheme, optional `www.`, query/hash, trailing slashes. */
@@ -92,18 +151,6 @@ function e2eUrlMatchesExpectation(currentUrl, expected) {
     return false;
   }
   return currentNorm.includes(expectedNorm);
-}
-
-function clearE2eRunnerStealth(win) {
-  try {
-    win.setOpacity(1);
-  } catch (_) {}
-  try {
-    win.setSkipTaskbar(false);
-  } catch (_) {}
-  try {
-    win.setIgnoreMouseEvents(false);
-  } catch (_) {}
 }
 
 /** Enables element-picker IPC bridge on the runner window (`e2e-pick-element.service.js`). */
@@ -432,20 +479,32 @@ async function executeJsInOwningFrame(webContents, processId, routingId, code, u
       'Target browser frame no longer exists (reload the page or capture the selector again).',
     );
   }
-  await frame.executeJavaScript(code, userGesture);
+  await raceWithHardTimeout(
+    frame.executeJavaScript(code, userGesture),
+    15000,
+    'E2E frame script timed out after 15000 ms.',
+  );
 }
 
 /** Evaluates JS in main document or the OOPIF targeted by picker `__AW_SUBFRAME__::…`; returns promise result. */
-async function evaluateScopedGuestScript(webContents, selector, script) {
+async function evaluateScopedGuestScript(webContents, selector, script, timeoutMs = 15000) {
+  const budget = e2eTimeoutMs(timeoutMs);
   const sub = parseSubframeTerminalSelector(selector);
   if (sub) {
     const frame = await resolveWebFrameForSubframe(webContents, sub);
-    const budget = 15000;
     const deadline = Date.now() + budget;
     let lastErr = null;
     while (Date.now() < deadline) {
       try {
-        return await frame.executeJavaScript(script, true);
+        const slice = Math.max(0, deadline - Date.now());
+        if (slice <= 0) {
+          break;
+        }
+        return await raceWithHardTimeout(
+          frame.executeJavaScript(script, true),
+          slice,
+          `E2E guest script timed out after ${budget} ms.`,
+        );
       } catch (err) {
         lastErr = err;
         const msg = err instanceof Error ? err.message : String(err);
@@ -461,11 +520,11 @@ async function evaluateScopedGuestScript(webContents, selector, script) {
     }
     throw lastErr instanceof Error ? lastErr : new Error(String(lastErr || 'Guest script failed.'));
   }
-  return executeJavaScriptWithNavRetry(webContents, script, 15000);
+  return executeJavaScriptWithNavRetry(webContents, script, budget);
 }
 
-async function runScopedGuestScript(webContents, selector, script) {
-  await evaluateScopedGuestScript(webContents, selector, script);
+async function runScopedGuestScript(webContents, selector, script, timeoutMs = 15000) {
+  await evaluateScopedGuestScript(webContents, selector, script, timeoutMs);
 }
 
 /**
@@ -572,8 +631,8 @@ async function deliverNativeHoverAtContentCoordinates(wc, ix, iy, keepDebuggerAt
 /**
  * Many sites call `window.close()` after a button click (OAuth popups, “Done”, etc.). In Electron that
  * tears down the whole runner {@link BrowserWindow}, so the next flow step creates a new window and it
- * looks like the browser “closed then reopened”. Block script-driven close; main-process `CLOSE` still
- * destroys the window normally.
+ * looks like the browser “closed then reopened”. Block script-driven close; main-process teardown
+ * uses {@link forceDestroyRunnerWindow} so `beforeunload` cannot leave a stuck runner.
  *
  * @param {Electron.WebContents} wc
  */
@@ -603,6 +662,83 @@ async function applyGuestWindowCloseShield(wc) {
   } catch (_) {
     /* navigation / detached guest race */
   }
+}
+
+/**
+ * Tears down the E2E BrowserWindow even when the guest page cancels `beforeunload`.
+ * `BrowserWindow#close()` is a no-op if the site prevents unload (common on account portals).
+ *
+ * @param {Electron.BrowserWindow | null | undefined} win
+ */
+function forceDestroyRunnerWindow(win) {
+  if (!win || win.isDestroyed()) {
+    return;
+  }
+  try {
+    win.webContents.removeAllListeners('will-prevent-unload');
+    win.webContents.on('will-prevent-unload', (event) => {
+      event.preventDefault();
+    });
+  } catch (_) {}
+  try {
+    win.destroy();
+  } catch (_) {
+    try {
+      win.close();
+    } catch (_2) {}
+  }
+}
+
+/**
+ * Step/script budget in ms. `0` is not treated as “use 15s default” (`Number(0) || 15000`).
+ *
+ * @param {unknown} timeoutMs
+ * @param {number} [fallbackMs]
+ */
+function e2eTimeoutMs(timeoutMs, fallbackMs = 15000) {
+  const n = Number(timeoutMs);
+  if (!Number.isFinite(n) || n <= 0) {
+    return Math.max(Number(fallbackMs) || 15000, 200);
+  }
+  return Math.max(n, 200);
+}
+
+/**
+ * Caps a promise so a guest `executeJavaScript` that never settles (SPA navigation)
+ * cannot hang the flow until the user kills Testrix.
+ *
+ * @template T
+ * @param {Promise<T>} promise
+ * @param {number} timeoutMs
+ * @param {string} message
+ * @returns {Promise<T>}
+ */
+function raceWithHardTimeout(promise, timeoutMs, message) {
+  const budget = e2eTimeoutMs(timeoutMs);
+  let timer = null;
+  return new Promise((resolve, reject) => {
+    timer = setTimeout(() => {
+      reject(new Error(message));
+    }, budget);
+    Promise.resolve(promise).then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (err) => {
+        clearTimeout(timer);
+        reject(err);
+      },
+    );
+  });
+}
+
+/** @param {string} action */
+function requireE2eSelector(action, selector) {
+  if (String(selector ?? '').trim()) {
+    return;
+  }
+  throw new Error(`${action} requires a CSS selector.`);
 }
 
 async function awaitGuestPaintSettled(wc) {
@@ -705,7 +841,7 @@ async function awaitMainFrameIdle(wc, timeoutMs) {
   if (!webContentsIsLoadingMainFrame(wc)) {
     return;
   }
-  const budget = Math.max(Number(timeoutMs) || 15000, 500);
+  const budget = e2eTimeoutMs(timeoutMs);
   await new Promise((resolve, reject) => {
     let settled = false;
     const finish = (ok, err) => {
@@ -758,7 +894,7 @@ async function executeJavaScriptWithNavRetry(wc, script, timeoutMs, userGesture 
   if (!wc || wc.isDestroyed()) {
     throw new Error('E2E runner window was closed.');
   }
-  const budget = Math.max(Number(timeoutMs) || 15000, 500);
+  const budget = e2eTimeoutMs(timeoutMs);
   const deadline = Date.now() + budget;
   let lastErr = null;
   while (Date.now() < deadline) {
@@ -767,9 +903,21 @@ async function executeJavaScriptWithNavRetry(wc, script, timeoutMs, userGesture 
     }
     try {
       if (webContentsIsLoadingMainFrame(wc)) {
-        await awaitMainFrameIdle(wc, Math.max(0, deadline - Date.now()));
+        const idleMs = Math.max(0, deadline - Date.now());
+        if (idleMs <= 0) {
+          break;
+        }
+        await awaitMainFrameIdle(wc, idleMs);
       }
-      return await wc.executeJavaScript(script, userGesture);
+      const slice = Math.max(0, deadline - Date.now());
+      if (slice <= 0) {
+        break;
+      }
+      return await raceWithHardTimeout(
+        wc.executeJavaScript(script, userGesture),
+        slice,
+        `E2E guest script timed out after ${budget} ms.`,
+      );
     } catch (err) {
       lastErr = err;
       const msg = err instanceof Error ? err.message : String(err);
@@ -796,7 +944,7 @@ async function awaitGuestReadyForAction(wc, timeoutMs) {
   if (!wc || wc.isDestroyed()) {
     throw new Error('E2E runner window was closed.');
   }
-  const budget = Math.max(Number(timeoutMs) || 15000, 500);
+  const budget = e2eTimeoutMs(timeoutMs);
   const startedAt = Date.now();
   await awaitMainFrameIdle(wc, budget);
   const remaining = Math.max(400, budget - (Date.now() - startedAt));
@@ -1671,7 +1819,8 @@ class E2eService {
   }
 
   /**
-   * CSS `:hover` and mega-menus need real pointer delivery; stealth / overlay modes block it.
+   * Visible runs drop the click overlay so CSS `:hover` and mega-menus see pointer motion.
+   * Hidden runs keep stealth; `sendInputEvent` still reaches the guest.
    * @returns {() => void} call in `finally` to restore prior runner chrome
    */
   prepareRunnerForPointerHover() {
@@ -1680,9 +1829,7 @@ class E2eService {
     const preferHidden = this.lastRunnerShowPreference === false;
     const restoreInputLock =
       this.visibleRunnerInputLockCount > 0 && !preferHidden;
-    if (preferHidden) {
-      clearE2eRunnerStealth(win);
-    } else if (restoreInputLock) {
+    if (!preferHidden && restoreInputLock) {
       void this.syncGuestInputLockOverlay(true, false);
     }
     return () => {
@@ -1775,16 +1922,7 @@ class E2eService {
     if (!win || win.isDestroyed()) return;
     const preferHidden = this.lastRunnerShowPreference === false;
     try {
-      if (!preferHidden) {
-        clearE2eRunnerStealth(win);
-      }
-      if (!win.isVisible()) {
-        if (preferHidden) applyE2eRunnerStealth(win);
-        win.show();
-      } else if (preferHidden) {
-        applyE2eRunnerStealth(win);
-      }
-      if (!preferHidden) win.focus();
+      syncRunnerVisibility(win, !preferHidden);
       /** Before the first `loadURL`, the guest is often `about:blank` with no reliable `load` event — paint settle would hang until step timeout (see debug H3: no preLoad, then CLOSE ~10s later). */
       let url = '';
       try {
@@ -1822,6 +1960,17 @@ class E2eService {
     ignoreInvalidSsl = false,
   ) {
     if (action === 'OPEN_PAGE') action = 'NAVIGATE_TO';
+    if (action === 'CLOSE') {
+      this.teardownCaptureState();
+      this.visibleRunnerInputLockCount = 0;
+      this.isDebugging = false;
+      this.executeCancelRequested = false;
+      forceDestroyRunnerWindow(this.window);
+      this.window = null;
+      this.lastRunnerShowPreference = null;
+      this.lastExplicitScroll = null;
+      return { success: true };
+    }
     if (action !== 'GET_CURRENT_URL') {
       console.log(`[E2E] Executing ${action} (show: ${show})`);
     }
@@ -1840,13 +1989,7 @@ class E2eService {
         `[E2E] Runner show preference changed (${this.lastRunnerShowPreference} → ${show}); keeping the same window.`,
       );
       try {
-        if (show) {
-          clearE2eRunnerStealth(this.window);
-          if (!this.window.isVisible()) this.window.show();
-          this.window.focus();
-        } else {
-          applyE2eRunnerStealth(this.window);
-        }
+        syncRunnerVisibility(this.window, !!show);
       } catch (_) {}
     }
 
@@ -1883,24 +2026,22 @@ class E2eService {
       const win = this.window;
       win.once('ready-to-show', () => {
         try {
-          if (wantInitialChrome && win && !win.isDestroyed()) win.show();
+          if (!win || win.isDestroyed()) return;
+          syncRunnerVisibility(win, wantInitialChrome);
         } catch (_) {}
       });
       setTimeout(() => {
         try {
-          if (
-            wantInitialChrome &&
-            win &&
-            !win.isDestroyed() &&
-            !win.isVisible()
-          ) {
-            win.show();
-          }
+          if (!win || win.isDestroyed()) return;
+          syncRunnerVisibility(win, wantInitialChrome);
         } catch (_) {}
       }, 2500);
 
       applyE2eRunnerChromeLikeUserAgent(this.window.webContents);
       this.installRunnerWebContentsInputGate(this.window.webContents);
+      win.webContents.on('will-prevent-unload', (event) => {
+        event.preventDefault();
+      });
 
       win.webContents.on('did-finish-load', () => {
         void applyGuestWindowCloseShield(win.webContents);
@@ -1926,14 +2067,13 @@ class E2eService {
 
     this.lastRunnerShowPreference = show;
 
-    if (show && this.window && !this.window.isDestroyed()) {
+    if (this.window && !this.window.isDestroyed()) {
       try {
-        /** Picker sessions call `hide()`; flow steps need a real surface again for HUD + capturePage. */
-        clearE2eRunnerStealth(this.window);
-        if (!this.window.isVisible()) this.window.show();
-        this.window.focus();
+        syncRunnerVisibility(this.window, !!show);
       } catch (_) {}
-      this.syncVisibleRunnerInputLockWithWindow();
+      if (show) {
+        this.syncVisibleRunnerInputLockWithWindow();
+      }
     }
 
     this.currentStep = action;
@@ -1999,10 +2139,11 @@ class E2eService {
         }
 
         case 'CLICK': {
+          requireE2eSelector('CLICK', selector);
           this.lastExplicitScroll = null;
           const subCf = parseSubframeTerminalSelector(selector);
           const compoundJson = JSON.stringify(subCf ? subCf.inner : String(selector ?? ''));
-          const clickWaitMs = Math.max(Number(timeout) || 15000, 500);
+          const clickWaitMs = e2eTimeoutMs(timeout);
           const shadowBoost =
             !subCf && e2eSelectorPrefersDomClick(selector) ? Math.min(4000, clickWaitMs) : 0;
           const effectiveClickWaitMs = clickWaitMs + shadowBoost;
@@ -2125,6 +2266,7 @@ class E2eService {
           `;
 
           await this.raceWithExecuteCancel(
+            raceWithHardTimeout(
             (async () => {
               const wc = this.window.webContents;
               await this.ensureRunnerWindowSurface();
@@ -2135,11 +2277,16 @@ class E2eService {
               if (!subCf) {
                 const preferDomClick = e2eSelectorPrefersDomClick(selector);
                 if (preferDomClick) {
-                  await runScopedGuestScript(wc, selector, domFallbackClickScript);
+                  await runScopedGuestScript(wc, selector, domFallbackClickScript, effectiveClickWaitMs);
                 } else {
                   let nativeClicked = false;
                   try {
-                    const pos = await evaluateScopedGuestScript(wc, selector, prepareCenterScript);
+                    const pos = await evaluateScopedGuestScript(
+                      wc,
+                      selector,
+                      prepareCenterScript,
+                      effectiveClickWaitMs,
+                    );
                     if (
                       pos &&
                       pos.ok === true &&
@@ -2163,11 +2310,21 @@ class E2eService {
                     );
                   }
                   if (!nativeClicked) {
-                    await runScopedGuestScript(wc, selector, domFallbackClickScript);
+                    await runScopedGuestScript(
+                      wc,
+                      selector,
+                      domFallbackClickScript,
+                      effectiveClickWaitMs,
+                    );
                   }
                 }
               } else {
-                await runScopedGuestScript(wc, selector, domFallbackClickScript);
+                await runScopedGuestScript(
+                  wc,
+                  selector,
+                  domFallbackClickScript,
+                  effectiveClickWaitMs,
+                );
               }
 
               await awaitGuestReadyForAction(wc, clickWaitMs);
@@ -2175,6 +2332,9 @@ class E2eService {
                 restorePointerDelivery();
               }
             })(),
+              effectiveClickWaitMs * 3 + 2000,
+              `CLICK timed out after ${effectiveClickWaitMs * 3 + 2000} ms.`,
+            ),
           );
           result = { success: true };
           break;
@@ -2182,11 +2342,12 @@ class E2eService {
 
         case 'HOVER':
         case 'MOVE_TO': {
+          requireE2eSelector('HOVER', selector);
           this.lastExplicitScroll = null;
           /** MOVE_TO kept as legacy alias — same behavior as HOVER. */
           const subH = parseSubframeTerminalSelector(selector);
           const compoundJsonH = JSON.stringify(subH ? subH.inner : String(selector ?? ''));
-          const hoverWaitMs = Math.max(Number(timeout) || 15000, 500);
+          const hoverWaitMs = e2eTimeoutMs(timeout);
           const hoverPollMs = 250;
           const hoverMaxAttempts = Math.max(1, Math.ceil(hoverWaitMs / hoverPollMs));
           const hoverScript = `
@@ -2241,6 +2402,7 @@ class E2eService {
             })()
           `;
           await this.raceWithExecuteCancel(
+            raceWithHardTimeout(
             (async () => {
               const wc = this.window.webContents;
               await this.ensureRunnerWindowSurface();
@@ -2250,7 +2412,12 @@ class E2eService {
               try {
                 if (!subH) {
                   try {
-                    const pos = await evaluateScopedGuestScript(wc, selector, prepareHoverCenterScript);
+                    const pos = await evaluateScopedGuestScript(
+                      wc,
+                      selector,
+                      prepareHoverCenterScript,
+                      hoverWaitMs,
+                    );
                     if (
                       pos &&
                       pos.ok === true &&
@@ -2279,21 +2446,26 @@ class E2eService {
                   }
                 }
 
-                await runScopedGuestScript(wc, selector, hoverScript);
+                await runScopedGuestScript(wc, selector, hoverScript, hoverWaitMs);
                 await awaitGuestReadyForAction(wc, hoverWaitMs);
               } finally {
                 restorePointerDelivery();
               }
             })(),
+              hoverWaitMs * 3 + 2000,
+              `HOVER timed out after ${hoverWaitMs * 3 + 2000} ms.`,
+            ),
           );
           result = { success: true };
           break;
         }
 
         case 'TYPE_TEXT': {
+          requireE2eSelector('TYPE_TEXT', selector);
           this.lastExplicitScroll = null;
           const subT = parseSubframeTerminalSelector(selector);
           const compoundJsonT = JSON.stringify(subT ? subT.inner : String(selector ?? ''));
+          const typeWaitMs = e2eTimeoutMs(timeout);
           const typeScript = `
             (async function() {
               ${guestDeepSelectorHelperSource()}
@@ -2319,12 +2491,16 @@ class E2eService {
             })()
           `;
           await this.raceWithExecuteCancel(
+            raceWithHardTimeout(
             (async () => {
               await this.ensureRunnerWindowSurface();
-              await awaitGuestReadyForAction(this.window.webContents, Math.max(Number(timeout) || 15000, 500));
-              await runScopedGuestScript(this.window.webContents, selector, typeScript);
-              await awaitGuestReadyForAction(this.window.webContents, Math.max(Number(timeout) || 15000, 500));
+              await awaitGuestReadyForAction(this.window.webContents, typeWaitMs);
+              await runScopedGuestScript(this.window.webContents, selector, typeScript, typeWaitMs);
+              await awaitGuestReadyForAction(this.window.webContents, typeWaitMs);
             })(),
+              typeWaitMs * 3 + 2000,
+              `TYPE_TEXT timed out after ${typeWaitMs * 3 + 2000} ms.`,
+            ),
           );
           result = { success: true };
           break;
@@ -2499,9 +2675,10 @@ class E2eService {
           break;
 
         case 'ASSERT_ELEMENT': {
+          requireE2eSelector('ASSERT_ELEMENT', selector);
           const subA = parseSubframeTerminalSelector(selector);
           const compoundJsonA = JSON.stringify(subA ? subA.inner : String(selector ?? ''));
-          const waitMs = Math.max(Number(timeout) || 15000, 500);
+          const waitMs = e2eTimeoutMs(timeout);
           await awaitGuestReadyForAction(this.window.webContents, waitMs);
           const pollMs = 250;
           const maxAttempts = Math.max(1, Math.ceil(waitMs / pollMs));
@@ -2540,7 +2717,11 @@ class E2eService {
             })()
           `;
           const rawAssert = await this.raceWithExecuteCancel(
-            evaluateScopedGuestScript(this.window.webContents, selector, assertScript),
+            raceWithHardTimeout(
+              evaluateScopedGuestScript(this.window.webContents, selector, assertScript, waitMs),
+              waitMs + 2000,
+              `ASSERT_ELEMENT timed out after ${waitMs + 2000} ms.`,
+            ),
           );
           let parsedAssert;
           try {
@@ -2775,11 +2956,7 @@ class E2eService {
           this.teardownCaptureState();
           this.visibleRunnerInputLockCount = 0;
           this.isDebugging = false;
-          if (this.window && !this.window.isDestroyed()) {
-            try {
-              this.window.close();
-            } catch (_) {}
-          }
+          forceDestroyRunnerWindow(this.window);
           this.window = null;
           this.lastRunnerShowPreference = null;
           this.lastExplicitScroll = null;
@@ -2794,7 +2971,13 @@ class E2eService {
       return result;
 
     } catch (err) {
-      if (show) await this.updateHUD('failed', action, selector);
+      if (show) {
+        await raceWithHardTimeout(
+          this.updateHUD('failed', action, selector),
+          800,
+          'HUD update timed out.',
+        ).catch(() => undefined);
+      }
       throw err;
     }
   }
@@ -3337,11 +3520,7 @@ class E2eService {
     this.isDebugging = false;
     const win = this.window;
     this.window = null;
-    if (win && !win.isDestroyed()) {
-      try {
-        win.close();
-      } catch (_) {}
-    }
+    forceDestroyRunnerWindow(win);
   }
 
   /** Stops active HTTP listeners/interceptors without closing the runner window. */

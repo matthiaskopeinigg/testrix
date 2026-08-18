@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /**
- * Starts Electron and restarts it when the main/preload bundles change during dev.
+ * Starts Electron and restarts it when the main/preload bundles or E2E runner
+ * scripts change during dev.
  */
 
 import { spawn, spawnSync } from 'node:child_process';
@@ -18,12 +19,17 @@ const repoRoot = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 process.chdir(repoRoot);
 
 process.env.TESTRIX_SERVE_RENDERER = '1';
+if (!process.env.TESTRIX_CONFIG_DIR?.trim()) {
+  process.env.TESTRIX_CONFIG_DIR = path.join(repoRoot, '.config');
+}
 delete process.env.TESTRIX_NO_SPLASH;
 delete process.env.TESTRIX_SPLASH_ONLY;
 
 const restartTargets = [
   path.join(repoRoot, 'dist/electron/main.js'),
   path.join(repoRoot, 'dist/electron/preload/main.preload.js'),
+  path.join(repoRoot, 'dist/electron/preload/e2e-pick.preload.js'),
+  path.join(repoRoot, 'dist/electron/services/testing/e2e'),
 ];
 
 const extraArgs = process.argv.slice(2);
@@ -63,17 +69,22 @@ function startElectron() {
   });
 }
 
-function killProcessTree(pid) {
+/** Stops the Electron process tree. `force` uses SIGKILL / taskkill /F. */
+function killProcessTree(pid, force) {
   if (process.platform === 'win32') {
-    spawnSync('taskkill', ['/PID', String(pid), '/T', '/F'], { stdio: 'ignore' });
+    const args = ['/PID', String(pid), '/T'];
+    if (force) {
+      args.push('/F');
+    }
+    spawnSync('taskkill', args, { stdio: 'ignore' });
     return;
   }
 
   try {
-    process.kill(-pid, 'SIGTERM');
+    process.kill(-pid, force ? 'SIGKILL' : 'SIGTERM');
   } catch {
     try {
-      process.kill(pid, 'SIGTERM');
+      process.kill(pid, force ? 'SIGKILL' : 'SIGTERM');
     } catch {
       /* already exited */
     }
@@ -112,11 +123,11 @@ async function stopElectron() {
 
   const pid = child.pid;
   child.removeAllListeners('exit');
-  killProcessTree(pid);
+  killProcessTree(pid, false);
 
   const exited = await waitForChildExit(STOP_TIMEOUT_MS);
   if (!exited && child?.pid) {
-    killProcessTree(child.pid);
+    killProcessTree(child.pid, true);
     await waitForChildExit(1_000);
   }
 
@@ -160,7 +171,7 @@ function scheduleRestart(reason) {
 }
 
 for (const target of restartTargets) {
-  watch(target, () => scheduleRestart(path.basename(target)));
+  watch(target, { recursive: true }, () => scheduleRestart(path.basename(target)));
 }
 
 startElectron();

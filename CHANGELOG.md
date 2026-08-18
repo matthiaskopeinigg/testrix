@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.2-beta.1]
+
+### Added
+
+- Flow run Step details can expand HTTP response headers
+- Regression results open a flow’s step run log after the flow passes or fails
+- `npm start` / `npm run dev` store profiles and settings in the repo `.config` directory
+- Settings can reorder and hide left-rail sidebar items (Collections, Environments, Testing, Database, Development, History)
+
+### Changed
+
+- Run log step details open under the clicked step
+- Regression runs keep E2E browsers hidden and close them after each flow (per-flow Show E2E is ignored)
+
+### Fixed
+
+- A REQUEST step in a later TRIGGER child substitutes `{{email}}` (and other CACHE aliases) in the URL instead of sending the template
+- `npm start` / `npm run dev` keep workspace data across renderer reloads and Electron restarts
+- A failed E2E step (missing selector, cancelled run) closes the runner window instead of leaving it stuck
+- Turning off Show E2E keeps the runner window hidden while the flow runs
+- An E2E click/type/hover cannot hang forever when Magenta (or another SPA) navigates mid-script; empty selectors fail immediately
+- `npm start` / `npm run dev` restart Electron when E2E runner scripts change
+- Disabled flow steps can be selected again so Enabled can be turned back on
+- Run Flow stays available when a TRIGGER child already opened the E2E page
+
 ## [1.1.1]
 
 ### Changed
@@ -572,7 +597,8 @@ Tagged in git. GitHub installers were not published (Authenticode secrets were m
 
 Initial public beta of Testrix: local-first desktop API client (HTTP, WebSocket, collections, environments, test suites, load tests, mocks, and capture).
 
-[Unreleased]: https://github.com/matthiaskopeinigg/testrix/compare/v1.1.1...HEAD
+[Unreleased]: https://github.com/matthiaskopeinigg/testrix/compare/v1.1.2-beta.1...HEAD
+[1.1.2-beta.1]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.1.2-beta.1
 [1.1.1]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.1.1
 [1.1.0]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.1.0
 [1.1.0-beta.2]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.1.0-beta.2

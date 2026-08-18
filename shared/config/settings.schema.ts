@@ -18,6 +18,7 @@ import { httpMethodDisplaySchema } from './http-method-display';
 import { workspaceEditorLayoutSchema } from './workspace-editor-layout.schema';
 import { workspaceTabEditorSettingsSchema } from './workspace-tab-editor-settings.schema';
 import { databaseSettingsPatchSchema, databaseSettingsSchema } from './database-settings.schema';
+import { WORKSPACE_SIDEBAR_USER_ITEM_IDS } from './workspace-sidebar-rail';
 
 const metaSettingsSchema = z.object({
   createdAt: z.string(),
@@ -62,6 +63,10 @@ const uiSchema = z.object({
   useTranslucentChrome: z.boolean(),
   /** When true, reopen the last sidebar panel on launch (reserved for future shell restore). */
   restoreLastSidebarPanel: z.boolean(),
+  /** Left-rail icon order for user-configurable sidebar items. */
+  sidebarItemOrder: z.array(z.enum(WORKSPACE_SIDEBAR_USER_ITEM_IDS)),
+  /** User-configurable sidebar items omitted from the icon rail. */
+  hiddenSidebarItems: z.array(z.enum(WORKSPACE_SIDEBAR_USER_ITEM_IDS)),
 });
 
 const loggingSchema = z.object({

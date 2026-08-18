@@ -36,7 +36,9 @@ export const regressionProfileSchema = z.object({
   delayBetweenFlowsMs: z.number().int().min(0).default(0),
   environmentId: z.string().nullable().optional(),
   updateFlowLastRunStatus: z.boolean().default(true),
+  /** Ignored at run time: regression E2E always stays hidden. Kept so older artifacts still parse. */
   e2eShowWindowOverride: z.boolean().optional(),
+  /** Ignored at run time: regression E2E always closes after each flow. Kept so older artifacts still parse. */
   e2eKeepWindowOpenOverride: z.boolean().optional(),
   runScope: regressionRunScopeSchema.default('all'),
   shuffleOrder: z.boolean().default(false),

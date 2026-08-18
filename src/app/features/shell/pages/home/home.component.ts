@@ -12,12 +12,14 @@ import {
 import { ActivatedRoute, RouterLink } from '@angular/router';
 
 import { CollectionsService } from '@app/core/collections/collections.service';
+import { ConfigService } from '@app/core/config/config.service';
 import { ImportExportFlowService } from '@app/core/import-export/import-export-flow.service';
 import { HelpPopupService } from '@app/core/ui/help-popup.service';
 import { looksLikeCurl } from '@shared/http/parse-curl';
 import { formatDisplayVersion } from '@shared/updater/release-version';
 import {
   createHttpKeyValueRow,
+  isWorkspaceSidebarUserItemId,
   WELCOME_COLLECTION_TEMPLATES,
   type WelcomeCollectionTemplate,
 } from '@shared/config';
@@ -27,10 +29,7 @@ import { FileDialogService } from '@app/core/platform/file-dialog.service';
 import { TxBrandLogoComponent } from '@app/shared/components/chrome/tx-brand-logo/tx-brand-logo.component';
 import { TxIconComponent } from '@app/shared/components/forms/tx-icon/tx-icon.component';
 import { TxSidebarComponent } from '@app/shared/components/chrome/tx-sidebar/tx-sidebar.component';
-import {
-  WORKSPACE_SIDEBAR_MAIN_ITEMS,
-  workspaceSidebarFooterItems,
-} from '@app/features/shell/workspace/workspace-sidebar.constants';
+import { buildWorkspaceSidebarRailItems } from '@app/features/shell/workspace/workspace-sidebar.constants';
 import { WorkspaceEditorService } from '@app/core/workspace/workspace-editor.service';
 import {
   WorkspaceSidebarSessionService,
@@ -74,6 +73,7 @@ export class HomeComponent {
   protected readonly workspaceEditor = inject(WorkspaceEditorService);
 
   private readonly collections = inject(CollectionsService);
+  private readonly config = inject(ConfigService);
   private readonly importExportFlow = inject(ImportExportFlowService);
   private readonly fileDialog = inject(FileDialogService);
   private readonly helpPopup = inject(HelpPopupService);
@@ -90,15 +90,22 @@ export class HomeComponent {
 
   protected readonly sidebarPanelOpen = this.sidebarSession.sidebarPanelOpen;
 
-  protected readonly sidebarMainItems = WORKSPACE_SIDEBAR_MAIN_ITEMS;
-
-  protected readonly sidebarFooterItems = computed(() =>
-    workspaceSidebarFooterItems(this.showDevToolkit() ?? false),
-  );
-
   protected readonly showDevToolkit = computed(
     () => typeof ngDevMode !== 'undefined' && ngDevMode && this.electron.isDevToolkit(),
   );
+
+  protected readonly sidebarRailItems = computed(() => {
+    const ui = this.config.settings()?.ui;
+    return buildWorkspaceSidebarRailItems(
+      ui?.sidebarItemOrder ?? [],
+      ui?.hiddenSidebarItems ?? [],
+      this.showDevToolkit() ?? false,
+    );
+  });
+
+  protected readonly sidebarMainItems = computed(() => this.sidebarRailItems().main);
+
+  protected readonly sidebarFooterItems = computed(() => this.sidebarRailItems().footer);
 
   protected readonly closeSidebarPanelOnOutsideClick = this.uiPreferences.closeSidebarPanelOnOutsideClick;
 
@@ -112,6 +119,12 @@ export class HomeComponent {
     afterNextRender(() => {
       this.sanitizeSidebarSessionForRuntime();
       this.applyDebugPanelFromRoute();
+    });
+
+    effect(() => {
+      this.config.settings()?.ui.hiddenSidebarItems;
+      this.showDevToolkit();
+      untracked(() => this.sanitizeSidebarSessionForRuntime());
     });
 
     effect(() => {
@@ -172,11 +185,20 @@ export class HomeComponent {
   }
 
   private sanitizeSidebarSessionForRuntime(): void {
-    if (this.sidebarSession.activeSidebarPanelId() !== 'debug' || this.showDevToolkit()) {
+    const active = this.sidebarSession.activeSidebarPanelId();
+    if (!active) {
       return;
     }
-    this.sidebarSession.setActiveSidebarPanelId(null);
-    this.sidebarSession.setSidebarPanelOpen(false);
+    if (active === 'debug' && !this.showDevToolkit()) {
+      this.sidebarSession.setActiveSidebarPanelId(null);
+      this.sidebarSession.setSidebarPanelOpen(false);
+      return;
+    }
+    const hidden = this.config.settings()?.ui.hiddenSidebarItems ?? [];
+    if (isWorkspaceSidebarUserItemId(active) && hidden.includes(active)) {
+      this.sidebarSession.setActiveSidebarPanelId(null);
+      this.sidebarSession.setSidebarPanelOpen(false);
+    }
   }
 
   protected readonly appVersion = computed(() => {

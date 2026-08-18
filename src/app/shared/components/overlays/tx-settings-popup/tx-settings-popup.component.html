@@ -803,6 +803,13 @@
                       [ngModel]="s.ui.closeSidebarPanelOnOutsideClick"
                       (ngModelChange)="patchUiToggle('closeSidebarPanelOnOutsideClick', $event)"
                     />
+                    <h3 class="tx-settings__section-heading">Sidebar items</h3>
+                    <tx-settings-sidebar-rail-section
+                      [order]="s.ui.sidebarItemOrder"
+                      [hidden]="s.ui.hiddenSidebarItems"
+                      (orderChange)="patchUiSidebarItemOrder($event)"
+                      (hiddenChange)="patchUiHiddenSidebarItems($event)"
+                    />
                   </div>
                   </div>
                 </section>

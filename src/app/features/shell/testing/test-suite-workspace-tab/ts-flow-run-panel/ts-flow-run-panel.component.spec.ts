@@ -205,4 +205,79 @@ describe('TsFlowRunPanelComponent', () => {
     const subtitle = fixture.nativeElement.querySelector('.ts-flow-run-panel__row-sub.is-error');
     expect(subtitle?.textContent).toContain('HTTP 404 Not Found');
   });
+
+  it('collapses HTTP response headers until the Headers toggle is clicked', () => {
+    const step = createFlowStep('REQUEST', 'Get users');
+    step.id = 'step-req';
+    step.lastRunStatus = 'passed';
+    step.lastRunCapture = {
+      kind: 'http_response',
+      capturedAt: '2026-01-01T00:00:00.000Z',
+      statusCode: 200,
+      statusText: 'OK',
+      bodyText: '{"ok":true}',
+      headers: {
+        'content-type': 'application/json',
+        'x-request-id': 'req-1',
+      },
+    };
+
+    fixture.componentRef.setInput('flow', {
+      id: 'flow-1',
+      name: 'Demo flow',
+      nodes: [step],
+      lastRunAt: '2026-01-01T00:00:00.000Z',
+      lastRunStatus: 'passed' as const,
+    });
+    fixture.componentRef.setInput('selectedStepId', 'step-req');
+    fixture.detectChanges();
+
+    const toggle = fixture.nativeElement.querySelector('.ts-flow-run-panel__headers-toggle') as HTMLButtonElement;
+    expect(toggle).toBeTruthy();
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+    expect(fixture.nativeElement.textContent).not.toContain('application/json');
+    expect(fixture.nativeElement.textContent).not.toContain('req-1');
+
+    toggle.click();
+    fixture.detectChanges();
+
+    expect(toggle.getAttribute('aria-expanded')).toBe('true');
+    expect(fixture.nativeElement.textContent).toContain('content-type');
+    expect(fixture.nativeElement.textContent).toContain('application/json');
+    expect(fixture.nativeElement.textContent).toContain('x-request-id');
+    expect(fixture.nativeElement.textContent).toContain('req-1');
+  });
+
+  it('renders step details under the selected run-log row', () => {
+    const first = createFlowStep('WAIT', 'Wait');
+    first.id = 'step-wait';
+    first.lastRunStatus = 'passed';
+    const second = createFlowStep('REQUEST', 'Get users');
+    second.id = 'step-req';
+    second.lastRunStatus = 'passed';
+    second.lastRunCapture = {
+      kind: 'http_response',
+      capturedAt: '2026-01-01T00:00:00.000Z',
+      statusCode: 200,
+      statusText: 'OK',
+      bodyText: '{"ok":true}',
+      headers: {},
+    };
+
+    fixture.componentRef.setInput('flow', {
+      id: 'flow-1',
+      name: 'Demo flow',
+      nodes: [first, second],
+      lastRunAt: '2026-01-01T00:00:00.000Z',
+      lastRunStatus: 'passed' as const,
+    });
+    fixture.componentRef.setInput('selectedStepId', 'step-req');
+    fixture.detectChanges();
+
+    const items = fixture.nativeElement.querySelectorAll('.ts-flow-run-panel__item');
+    expect(items.length).toBe(2);
+    expect(items[0].querySelector('.ts-flow-run-panel__details')).toBeNull();
+    expect(items[1].querySelector('.ts-flow-run-panel__details')).toBeTruthy();
+    expect(fixture.nativeElement.querySelector('.ts-flow-run-panel__timeline + .ts-flow-run-panel__details')).toBeNull();
+  });
 });

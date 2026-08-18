@@ -200,13 +200,7 @@ export class E2eRunnerService {
   }
 
   async closeRunner(): Promise<void> {
-    await this.execute({
-      action: 'CLOSE',
-      selector: '',
-      value: '',
-      timeout: 5000,
-      show: false,
-    });
+    await this.resetAfterFailure();
   }
 
   async pickElement(payload: E2ePickElementPayload): Promise<E2ePickElementResult> {

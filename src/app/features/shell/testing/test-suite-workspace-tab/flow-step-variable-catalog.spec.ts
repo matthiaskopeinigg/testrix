@@ -592,6 +592,38 @@ describe('collectPriorFlowPlaceholderKeys', () => {
     expect(catalog.some((item) => item.label === '{{laterVar}}')).toBe(false);
   });
 
+  it('catalogs a CACHE alias that was saved with wrapping braces as {{email}}', () => {
+    const flow = baseFlow([
+      {
+        id: 'cache-email',
+        type: 'step',
+        parentId: null,
+        stepType: 'CACHE',
+        name: 'Cache email',
+        enabled: true,
+        config: {
+          refStepId: null,
+          entries: [
+            { variableName: '{{email}}', source: 'generated', expression: '', value: 'a@b.c' },
+          ],
+        },
+      },
+      {
+        id: 'request-1',
+        type: 'step',
+        parentId: null,
+        stepType: 'REQUEST',
+        name: 'Use email',
+        enabled: true,
+        config: {},
+      },
+    ]);
+
+    const catalog = collectPriorFlowPlaceholderKeys(flow, 'request-1', null);
+    expect(catalog.some((item) => item.insert === '{{email}}')).toBe(true);
+    expect(catalog.some((item) => item.insert === '{{{{email}}}}')).toBe(false);
+  });
+
   it('excludes placeholders from a sibling TRIGGER that runs after this flow', () => {
     const flow1 = baseFlow(
       [

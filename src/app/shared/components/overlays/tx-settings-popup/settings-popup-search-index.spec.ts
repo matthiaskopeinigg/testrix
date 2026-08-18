@@ -21,6 +21,11 @@ describe('settingsSectionMatchesQuery', () => {
     expect(settingsSectionMatchesQuery('capture', 'sidebar')).toBe(true);
   });
 
+  it('matches workbench sidebar item terms', () => {
+    expect(settingsSectionMatchesQuery('general', 'sidebar items')).toBe(true);
+    expect(settingsSectionMatchesQuery('general', 'development')).toBe(true);
+  });
+
   it('treats an empty query as matching every section', () => {
     expect(settingsSectionMatchesQuery('httpRequest', '')).toBe(true);
     expect(settingsSectionMatchesQuery('httpRequest', '   ')).toBe(true);

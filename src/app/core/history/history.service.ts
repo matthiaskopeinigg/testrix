@@ -35,7 +35,7 @@ export class HistoryService {
   private historyUpdatedUnsub: (() => void) | null = null;
 
   async hydrate(): Promise<void> {
-    const api = this.electron.bridge();
+    const api = this.electron.bridge() ?? (await this.electron.whenBridgeReady());
 
     if (!api) {
       this.loadBrowserFallback();

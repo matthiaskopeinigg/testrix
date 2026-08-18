@@ -45,7 +45,7 @@ function iconForStepType(stepType: TestSuiteStepType): TxIconName {
   }
 }
 
-/** Maps flow steps to a flat tx-tree list (folders are hoisted away). */
+/** Maps flow steps to a flat tx-tree list (folders are hoisted away). Skipped steps stay selectable. */
 export function toFlowStepTreeNodes(nodes: readonly TestSuiteFlowNode[]): FlowStepTreeNode[] {
   const steps = normalizeFlowStepNodes(nodes);
   const stepById = new Map(steps.map((step) => [step.id, step]));
@@ -67,7 +67,7 @@ function toFlowStepTreeNode(
     subtitle,
     kind: 'step',
     icon: iconForStepType(step.stepType),
-    disabled: !step.enabled,
+    disabled: false,
     data: {
       kind: 'step',
       stepType: step.stepType,

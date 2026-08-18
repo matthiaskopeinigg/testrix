@@ -52,6 +52,9 @@ Thumbs.db
 .env.*
 !.env.example
 
+# Local Electron workspace used by `npm start` / `npm run dev`
+.config/
+
 # Release + generated branding outputs
 /release/
 

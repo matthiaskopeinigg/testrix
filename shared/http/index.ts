@@ -4,6 +4,7 @@ export * from './common-http-query-param-names';
 export * from './http-completion-limits';
 export * from './key-value-suggest-key-input';
 export * from './build-outgoing-request';
+export * from './apply-shared-variables-to-outgoing-request';
 export * from './parse-curl';
 export * from './oauth-pkce';
 export * from './normalize-capture-start-url';

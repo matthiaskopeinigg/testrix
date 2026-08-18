@@ -64,6 +64,21 @@ export const requestStepConfigSchema = z.object({
 
 export type RequestStepConfig = z.infer<typeof requestStepConfigSchema>;
 
+export type FlowRequestStepSource = 'manual' | 'collection';
+
+/**
+ * Resolves whether a REQUEST step sends inline fields or a collection request.
+ * An explicit `requestSource` wins so a leftover collection id cannot hijack a manual URL.
+ */
+export function resolveFlowRequestStepSource(
+  cfg: Pick<RequestStepConfig, 'requestSource' | 'collectionRequestId'>,
+): FlowRequestStepSource {
+  if (cfg.requestSource === 'manual' || cfg.requestSource === 'collection') {
+    return cfg.requestSource;
+  }
+  return cfg.collectionRequestId ? 'collection' : 'manual';
+}
+
 export const validationRuleSchema = z.object({
   label: z.string().optional(),
   source: z.enum([

@@ -1,4 +1,5 @@
-import { buildOutgoingRequest } from '../../../shared/http/build-outgoing-request';
+import { applySharedVariablesToOutgoingRequest } from '../../../shared/http/apply-shared-variables-to-outgoing-request';
+import { buildOutgoingRequest, type BuildOutgoingRequestResult } from '../../../shared/http/build-outgoing-request';
 import { buildManualOutgoingRequest } from '../../../shared/http/build-manual-outgoing-request';
 import { sendHttpRequestPayloadSchema } from '../../../shared/http/outgoing-request.schema';
 import { resolveTemplateVariables } from '../../../shared/dynamic-variables/template-variables';
@@ -30,7 +31,9 @@ import {
   resolveCacheEntryValue,
   isGeneratedCacheEntry,
   generatedCacheEntryTemplate,
+  normalizeFlowVariableKey,
   resolveDatabaseStepQueryBinding,
+  resolveFlowRequestStepSource,
   cacheEntryExtractFailureMessage,
   validationFailureMessage,
   flowNeedsBrowserRunnerDeep,
@@ -258,12 +261,14 @@ export class TestSuiteFlowExecutor {
       files.readSavedQueries(),
     ]);
 
+    let keepBrowserAfterRun = false;
     try {
       for (let index = 0; index < steps.length; index++) {
         const step = steps[index]!;
         if (options.stopBeforeStepId && step.id === options.stopBeforeStepId) {
           markRemainingFlowStepsSkipped(stepStatuses, steps, index);
           emitProgress();
+          keepBrowserAfterRun = true;
           return finish(true, `Prepared flow through step before "${step.name}".`);
         }
         if (this.cancelled) {
@@ -320,6 +325,7 @@ export class TestSuiteFlowExecutor {
         }
       }
 
+      keepBrowserAfterRun = keepBrowserOpen;
       return finish(true, `Flow "${flow.name}" completed.`);
     } finally {
       if (lockVisibleRunnerInput && this.e2eRunner) {
@@ -328,9 +334,8 @@ export class TestSuiteFlowExecutor {
       if (this.e2eRunner && this.browserSessionReady && !options.stopBeforeStepId) {
         this.e2eRunner.teardownHttpCaptures();
       }
-      const keepOpen = keepBrowserOpen || Boolean(options.stopBeforeStepId);
-      if (this.e2eRunner && this.browserSessionReady && !keepOpen) {
-        await this.e2eRunner.closeRunner().catch(() => undefined);
+      if (this.e2eRunner && this.browserSessionReady && !keepBrowserAfterRun) {
+        await this.e2eRunner.resetAfterFailure().catch(() => undefined);
       }
       if (!options.stopBeforeStepId) {
         this.browserSessionReady = false;
@@ -595,7 +600,24 @@ export class TestSuiteFlowExecutor {
 
   /** Copies CACHE / MANUAL / DATABASE aliases for template resolution. */
   private snapshotFlowVariables(): Record<string, string> {
-    return Object.fromEntries(this.flowVariables);
+    const out: Record<string, string> = {};
+    for (const [raw, value] of this.flowVariables) {
+      const key = normalizeFlowVariableKey(raw);
+      if (key) {
+        out[key] = value;
+      }
+    }
+    return out;
+  }
+
+  /** Stores a flow alias so `{{email}}` and `email` resolve the same placeholder. */
+  private setFlowVariable(variableName: string, value: string): string | null {
+    const key = normalizeFlowVariableKey(variableName);
+    if (!key) {
+      return null;
+    }
+    this.flowVariables.set(key, value);
+    return key;
   }
 
   private resolveFlowTemplate(
@@ -665,10 +687,8 @@ export class TestSuiteFlowExecutor {
       ctx.environmentIdOverride,
       ctx.ancestorFolders,
       ctx.environmentVariableKeys,
-    ).trim();
-    if (alias) {
-      this.flowVariables.set(alias, textOut);
-    }
+    );
+    this.setFlowVariable(alias, textOut);
 
     this.captures.set(step.id, buildDatabaseStepCapture(textOut));
   }
@@ -1175,6 +1195,9 @@ export class TestSuiteFlowExecutor {
     };
   }
 
+  /**
+   * Sends a manual or collection REQUEST, substituting CACHE aliases such as `{{email}}`.
+   */
   private async executeRequest(
     step: TestSuiteFlowStep,
     flow: TestSuiteFlow,
@@ -1189,9 +1212,15 @@ export class TestSuiteFlowExecutor {
     },
   ): Promise<void> {
     const cfg = step.config as RequestStepConfig;
+    const sharedVariables = this.snapshotFlowVariables();
+    const source = resolveFlowRequestStepSource(cfg);
 
-    if (cfg.collectionRequestId) {
-      const built = buildOutgoingRequest({
+    let built: BuildOutgoingRequestResult | null;
+    if (source === 'collection') {
+      if (!cfg.collectionRequestId) {
+        throw new Error('REQUEST step needs a collection request.');
+      }
+      built = buildOutgoingRequest({
         requestId: cfg.collectionRequestId,
         nodes: [...ctx.collections],
         http: ctx.http,
@@ -1199,7 +1228,7 @@ export class TestSuiteFlowExecutor {
         appVersion: ctx.appVersion,
         runScope: {
           runId: `flow-${step.id}`,
-          sharedVariables: this.snapshotFlowVariables(),
+          sharedVariables,
         },
         environmentVariableKeys: ctx.environmentVariableKeys,
         environmentIdOverride: ctx.environmentIdOverride ?? '',
@@ -1207,38 +1236,30 @@ export class TestSuiteFlowExecutor {
       if (!built) {
         throw new Error('Collection request not found.');
       }
-      const payload = sendHttpRequestPayloadSchema.parse({
-        ...built.outgoing,
-        runScope: { runId: `flow-${step.id}` },
+    } else {
+      const variableContext = this.buildVariableContext(
+        flow,
+        ctx.environments,
+        ctx.environmentIdOverride,
+        ctx.ancestorFolders,
+        ctx.environmentVariableKeys,
+      );
+      built = buildManualOutgoingRequest({
+        loadTestId: `flow-${step.id}`,
+        manual: cfg,
+        http: ctx.http,
+        variableContext,
       });
-      const { snapshot } = await executeHttpRequest(payload);
-      this.captures.set(step.id, buildHttpResponseStepCapture(snapshot));
-      return;
+      if (!built) {
+        throw new Error('REQUEST step needs a URL or collection request.');
+      }
     }
 
-    const variableContext = this.buildVariableContext(
-      flow,
-      ctx.environments,
-      ctx.environmentIdOverride,
-      ctx.ancestorFolders,
-      ctx.environmentVariableKeys,
-    );
-
-    const built = buildManualOutgoingRequest({
-      loadTestId: `flow-${step.id}`,
-      manual: cfg,
-      http: ctx.http,
-      variableContext,
-    });
-    if (!built) {
-      throw new Error('REQUEST step needs a URL or collection request.');
-    }
-
+    const outgoing = applySharedVariablesToOutgoingRequest(built.outgoing, sharedVariables);
     const payload = sendHttpRequestPayloadSchema.parse({
-      ...built.outgoing,
+      ...outgoing,
       runScope: { runId: `flow-${step.id}` },
     });
-
     const { snapshot } = await executeHttpRequest(payload);
     this.captures.set(step.id, buildHttpResponseStepCapture(snapshot));
   }
@@ -1286,7 +1307,7 @@ export class TestSuiteFlowExecutor {
       throw new Error(result.error ?? 'Manual input failed.');
     }
 
-    this.flowVariables.set(variableName, result.value ?? '');
+    this.setFlowVariable(variableName, result.value ?? '');
   }
 
   private async executeValidation(
@@ -1476,9 +1497,13 @@ export class TestSuiteFlowExecutor {
     const written: Record<string, string> = {};
 
     const store = (variableName: string, value: string, entry: CacheStepEntry): void => {
-      const next = this.applyCacheEntryCipher(entry, value, variableName, flow, ctx);
-      this.flowVariables.set(variableName, next);
-      written[variableName] = next;
+      const key = normalizeFlowVariableKey(variableName);
+      if (!key) {
+        return;
+      }
+      const next = this.applyCacheEntryCipher(entry, value, key, flow, ctx);
+      this.flowVariables.set(key, next);
+      written[key] = next;
     };
 
     if (!refId) {

@@ -2,6 +2,10 @@ import { z } from 'zod';
 
 import { ANIMATION_SPEED_IDS, type AnimationSpeed } from './animation-speed';
 import {
+  normalizeHiddenSidebarItems,
+  normalizeSidebarItemOrder,
+} from './workspace-sidebar-rail';
+import {
   COLLECTION_LIST_SIDEBAR_FILTER_IDS,
   COLLECTION_LIST_SIDEBAR_SORT_BY_IDS,
   type CollectionListSidebarFilter,
@@ -297,6 +301,10 @@ function migrateUi(
     ...defaults,
     ...legacy,
     animationSpeed,
+    sidebarItemOrder: normalizeSidebarItemOrder(legacy['sidebarItemOrder'] ?? defaults.sidebarItemOrder),
+    hiddenSidebarItems: normalizeHiddenSidebarItems(
+      legacy['hiddenSidebarItems'] ?? defaults.hiddenSidebarItems,
+    ),
   };
 }
 

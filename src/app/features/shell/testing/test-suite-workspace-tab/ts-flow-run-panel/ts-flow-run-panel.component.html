@@ -47,7 +47,7 @@
     } @else {
       <ul class="ts-flow-run-panel__timeline" role="tree" aria-label="Flow run steps">
         @for (row of timelineRows(); track row.id) {
-          <li role="none">
+          <li class="ts-flow-run-panel__item" role="none">
             <div
               class="ts-flow-run-panel__row"
               role="treeitem"
@@ -119,94 +119,131 @@
                 </tx-tag>
               }
             </div>
+            @if (isRowSelected(row.id)) {
+              @if (selectedStepDetails(); as details) {
+                <section class="ts-flow-run-panel__details" aria-label="Step run details">
+                  <header class="ts-flow-run-panel__details-head">
+                    <span class="ts-flow-run-panel__details-title">Step details</span>
+                    @if (details.durationLabel) {
+                      <span class="ts-flow-run-panel__meta">{{ details.durationLabel }}</span>
+                    }
+                  </header>
+
+                  @if (details.error) {
+                    <tx-banner variant="error" title="Step error">{{ details.error }}</tx-banner>
+                  } @else if (details.status === 'failed') {
+                    <tx-banner variant="error" title="Step error">This step failed.</tx-banner>
+                  }
+
+                  @if (details.validationChecks.length > 0) {
+                    <div class="ts-flow-run-panel__section">
+                      <h3 class="ts-flow-run-panel__section-title">Validation checks</h3>
+                      <table class="ts-flow-run-panel__diff-table">
+                        <thead>
+                          <tr>
+                            <th scope="col">Check</th>
+                            <th scope="col">Expected</th>
+                            <th scope="col">Actual</th>
+                            <th scope="col">Result</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          @for (check of details.validationChecks; track check.label + check.expected) {
+                            <tr [class.is-failed]="!check.passed">
+                              <th scope="row">
+                                <span class="ts-flow-run-panel__diff-label">{{ check.label }}</span>
+                                <span class="ts-flow-run-panel__diff-operator">{{ check.operatorLabel }}</span>
+                              </th>
+                              <td>
+                                <code class="ts-flow-run-panel__diff-value">{{ check.expected || '—' }}</code>
+                              </td>
+                              <td>
+                                <code class="ts-flow-run-panel__diff-value">{{ check.actual || '—' }}</code>
+                              </td>
+                              <td>
+                                <tx-tag [variant]="check.passed ? 'success' : 'error'" casing="normal">
+                                  {{ check.passed ? 'Pass' : 'Fail' }}
+                                </tx-tag>
+                              </td>
+                            </tr>
+                          }
+                        </tbody>
+                      </table>
+                    </div>
+                  }
+
+                  @if (details.captureLines.length > 0) {
+                    <div class="ts-flow-run-panel__section">
+                      <h3 class="ts-flow-run-panel__section-title">Capture</h3>
+                      <dl class="ts-flow-run-panel__kv">
+                        @for (line of details.captureLines; track line.label) {
+                          <div class="ts-flow-run-panel__kv-row">
+                            <dt>{{ line.label }}</dt>
+                            <dd>{{ line.value }}</dd>
+                          </div>
+                        }
+                      </dl>
+                    </div>
+                  }
+
+                  @if (details.captureHeaders.length > 0) {
+                    <div class="ts-flow-run-panel__section">
+                      <button
+                        type="button"
+                        class="ts-flow-run-panel__headers-toggle"
+                        [attr.aria-expanded]="headersExpanded()"
+                        [attr.aria-label]="
+                          headersExpanded()
+                            ? 'Hide response headers'
+                            : 'Show response headers'
+                        "
+                        (click)="handleToggleHeaders()"
+                      >
+                        <tx-icon
+                          class="ts-flow-run-panel__headers-chevron"
+                          [class.ts-flow-run-panel__headers-chevron--expanded]="headersExpanded()"
+                          name="chevronRight"
+                          [size]="12"
+                          aria-hidden="true"
+                        />
+                        <h3 class="ts-flow-run-panel__section-title">Headers</h3>
+                        <span class="ts-flow-run-panel__headers-count">{{ details.captureHeaders.length }}</span>
+                      </button>
+                      @if (headersExpanded()) {
+                        <dl class="ts-flow-run-panel__kv">
+                          @for (header of details.captureHeaders; track header.key) {
+                            <div class="ts-flow-run-panel__kv-row ts-flow-run-panel__kv-row--header">
+                              <dt>{{ header.key }}</dt>
+                              <dd>{{ header.value }}</dd>
+                            </div>
+                          }
+                        </dl>
+                      }
+                    </div>
+                  }
+
+                  @if (details.capturePreview; as preview) {
+                    <div class="ts-flow-run-panel__section">
+                      <tx-code-editor
+                        [title]="preview.title"
+                        [content]="preview.content"
+                        [language]="preview.language"
+                        [readOnly]="true"
+                        [hideToolbar]="false"
+                        [hideToolbarActions]="true"
+                        [framed]="true"
+                        [overlaySyntaxHighlight]="true"
+                      />
+                    </div>
+                  }
+                </section>
+              } @else {
+                <p class="ts-flow-run-panel__details-hint">No run output for this step yet.</p>
+              }
+            }
           </li>
         }
       </ul>
-
-      @if (selectedStepDetails(); as details) {
-        <section class="ts-flow-run-panel__details" aria-label="Step run details">
-          <header class="ts-flow-run-panel__details-head">
-            <span class="ts-flow-run-panel__details-title">Step details</span>
-            @if (details.durationLabel) {
-              <span class="ts-flow-run-panel__meta">{{ details.durationLabel }}</span>
-            }
-          </header>
-
-          @if (details.error) {
-            <tx-banner variant="error" title="Step error">{{ details.error }}</tx-banner>
-          } @else if (details.status === 'failed') {
-            <tx-banner variant="error" title="Step error">This step failed.</tx-banner>
-          }
-
-          @if (details.validationChecks.length > 0) {
-            <div class="ts-flow-run-panel__section">
-              <h3 class="ts-flow-run-panel__section-title">Validation checks</h3>
-              <table class="ts-flow-run-panel__diff-table">
-                <thead>
-                  <tr>
-                    <th scope="col">Check</th>
-                    <th scope="col">Expected</th>
-                    <th scope="col">Actual</th>
-                    <th scope="col">Result</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  @for (check of details.validationChecks; track check.label + check.expected) {
-                    <tr [class.is-failed]="!check.passed">
-                      <th scope="row">
-                        <span class="ts-flow-run-panel__diff-label">{{ check.label }}</span>
-                        <span class="ts-flow-run-panel__diff-operator">{{ check.operatorLabel }}</span>
-                      </th>
-                      <td>
-                        <code class="ts-flow-run-panel__diff-value">{{ check.expected || '—' }}</code>
-                      </td>
-                      <td>
-                        <code class="ts-flow-run-panel__diff-value">{{ check.actual || '—' }}</code>
-                      </td>
-                      <td>
-                        <tx-tag [variant]="check.passed ? 'success' : 'error'" casing="normal">
-                          {{ check.passed ? 'Pass' : 'Fail' }}
-                        </tx-tag>
-                      </td>
-                    </tr>
-                  }
-                </tbody>
-              </table>
-            </div>
-          }
-
-          @if (details.captureLines.length > 0) {
-            <div class="ts-flow-run-panel__section">
-              <h3 class="ts-flow-run-panel__section-title">Capture</h3>
-              <dl class="ts-flow-run-panel__kv">
-                @for (line of details.captureLines; track line.label) {
-                  <div class="ts-flow-run-panel__kv-row">
-                    <dt>{{ line.label }}</dt>
-                    <dd>{{ line.value }}</dd>
-                  </div>
-                }
-              </dl>
-            </div>
-          }
-
-          @if (details.capturePreview; as preview) {
-            <div class="ts-flow-run-panel__section">
-              <tx-code-editor
-                [title]="preview.title"
-                [content]="preview.content"
-                [language]="preview.language"
-                [readOnly]="true"
-                [hideToolbar]="false"
-                [hideToolbarActions]="true"
-                [framed]="true"
-                [overlaySyntaxHighlight]="true"
-              />
-            </div>
-          }
-        </section>
-      } @else if (detailsLogId() || selectedStepId()) {
-        <p class="ts-flow-run-panel__details-hint">No run output for this step yet.</p>
-      }
     }
   </div>
 </section>

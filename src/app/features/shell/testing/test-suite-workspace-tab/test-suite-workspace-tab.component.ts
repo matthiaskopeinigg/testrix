@@ -237,7 +237,9 @@ export class TestSuiteWorkspaceTabComponent {
     );
   });
 
-  protected readonly runBlockReason = computed(() => getFlowRunBlockingReason(this.flow()));
+  protected readonly runBlockReason = computed(() =>
+    getFlowRunBlockingReason(this.flow(), this.suiteItems()),
+  );
 
   protected readonly canRun = computed(() => !this.runBlockReason() && !this.running());
 

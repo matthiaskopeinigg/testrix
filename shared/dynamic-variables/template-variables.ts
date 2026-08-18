@@ -81,7 +81,7 @@ export function resolveTemplateVariables(
 ): string {
   const env = ctx.environment ?? {};
   const withEnv = template.replace(BRACE_TOKEN_PATTERN, (match, key: string) => {
-    const value = env[key];
+    const value = env[key] ?? env[`{{${key}}}`];
     return value !== undefined ? value : match;
   });
   return resolveDynamicVariables(withEnv, ctx);

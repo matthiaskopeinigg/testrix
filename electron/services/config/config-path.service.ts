@@ -13,20 +13,26 @@ import {
 } from '../../../shared/config';
 
 import { defaultConfigDir } from '../../config/environment';
+import { resolveTestrixConfigHome } from '../../config/local-dev-config-dir';
 
 export class ConfigPathService {
   constructor(private readonly getPath: App['getPath']) {}
 
+  /** Directory for `paths.json`, `profiles.json`, settings, and profile workspaces. */
+  configHome(): string {
+    return resolveTestrixConfigHome(this.getPath('userData'));
+  }
+
   anchorFilePath(): string {
-    return path.join(this.getPath('userData'), PATHS_ANCHOR_FILE_NAME);
+    return path.join(this.configHome(), PATHS_ANCHOR_FILE_NAME);
   }
 
   resolveUserDataDisplay(): string {
-    return this.getPath('userData');
+    return this.configHome();
   }
 
   profilesManifestPath(): string {
-    return path.join(this.getPath('userData'), PROFILES_FILE_NAME);
+    return path.join(this.configHome(), PROFILES_FILE_NAME);
   }
 
   async readAnchorRaw(): Promise<unknown | undefined> {

@@ -1,0 +1,41 @@
+<p class="tx-settings-sidebar-rail__hint">
+  Choose which icons appear on the left rail and in which order. Help stays at the bottom.
+</p>
+<ul class="tx-settings-sidebar-rail__list" aria-label="Sidebar items">
+  @for (row of rows(); track row.id) {
+    <li class="tx-settings-sidebar-rail__row">
+      <span class="tx-settings-sidebar-rail__identity">
+        <span class="tx-settings-sidebar-rail__icon" aria-hidden="true">
+          <tx-icon [name]="row.icon" [size]="16" />
+        </span>
+        <span class="tx-settings-sidebar-rail__label">{{ row.label }}</span>
+      </span>
+      <tx-toggle
+        class="tx-settings-sidebar-rail__visible"
+        label="Visible"
+        [ngModel]="row.visible"
+        (ngModelChange)="handleVisibleChange(row.id, $event)"
+      />
+      <span class="tx-settings-sidebar-rail__moves">
+        <tx-button
+          variant="secondary"
+          size="icon"
+          [disabled]="!row.canMoveUp"
+          [ariaLabel]="'Move ' + row.label + ' up'"
+          (pressed)="handleMove(row.id, -1)"
+        >
+          <tx-icon name="chevronUp" [size]="14" aria-hidden="true" />
+        </tx-button>
+        <tx-button
+          variant="secondary"
+          size="icon"
+          [disabled]="!row.canMoveDown"
+          [ariaLabel]="'Move ' + row.label + ' down'"
+          (pressed)="handleMove(row.id, 1)"
+        >
+          <tx-icon name="chevronDown" [size]="14" aria-hidden="true" />
+        </tx-button>
+      </span>
+    </li>
+  }
+</ul>

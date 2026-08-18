@@ -246,8 +246,9 @@ export class RegressionRunner {
 
     const executeOptions: TestSuiteFlowExecuteOptions = {
       environmentIdOverride: this.profile.environmentId ?? undefined,
-      e2eShowWindowOverride: this.profile.e2eShowWindowOverride ?? false,
-      e2eKeepWindowOpenOverride: this.profile.e2eKeepWindowOpenOverride,
+      /** Many linked flows can each open a runner; never present E2E chrome during a regression. */
+      e2eShowWindowOverride: false,
+      e2eKeepWindowOpenOverride: false,
     };
 
     try {

@@ -25,14 +25,14 @@
         <tx-toggle
           class="ts-flow-settings__toggle ts-flow-settings__toggle--e2e"
           label="Show E2E"
-          hint="This flow’s Show E2E setting applies to every triggered child"
+          hint="When off, the browser stays hidden (no taskbar window) while the flow runs"
           [ngModel]="e2eShowWindow()"
           (ngModelChange)="e2eShowWindowChange.emit($event)"
         />
         <tx-toggle
           class="ts-flow-settings__toggle ts-flow-settings__toggle--e2e"
           label="Keep E2E"
-          hint="This flow’s Keep E2E setting applies to every triggered child"
+          hint="Leave the browser open after a successful run. Failed steps always close it."
           [ngModel]="e2eKeepWindowOpen()"
           (ngModelChange)="e2eKeepWindowOpenChange.emit($event)"
         />

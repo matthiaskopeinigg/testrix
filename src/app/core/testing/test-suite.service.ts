@@ -91,7 +91,7 @@ export class TestSuiteService {
       () => this.fileState() !== null,
       this.hydrateInflight,
       async () => {
-        const api = this.electron.bridge()?.testing;
+        const api = (this.electron.bridge() ?? (await this.electron.whenBridgeReady()))?.testing;
         if (!api) {
           this.loadBrowserFallback();
           return;

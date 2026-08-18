@@ -2,6 +2,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   DestroyRef,
+  ElementRef,
   computed,
   effect,
   inject,
@@ -71,6 +72,7 @@ export interface FlowRunTimelineRow {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TsFlowRunPanelComponent {
+  private readonly host = inject(ElementRef<HTMLElement>);
   readonly flow = input<TestSuiteFlow | null>(null);
   readonly running = input(false);
   readonly liveStepStatuses = input<Readonly<Record<string, TestSuiteStepStatus>>>({});
@@ -84,6 +86,8 @@ export class TsFlowRunPanelComponent {
   private readonly liveStepDurations = signal<Readonly<Record<string, number>>>({});
   private readonly stepRunStartedAt = new Map<string, number>();
   protected readonly detailsLogId = signal<string | null>(null);
+  /** Whether the Step details Headers list is expanded. */
+  protected readonly headersExpanded = signal(false);
   private readonly expandedLogIds = signal<ReadonlySet<string>>(new Set());
   private readonly collapsedLogIds = signal<ReadonlySet<string>>(new Set());
 
@@ -236,6 +240,14 @@ export class TsFlowRunPanelComponent {
     });
 
     effect(() => {
+      this.detailsLogId();
+      this.selectedStepId();
+      untracked(() => {
+        this.headersExpanded.set(false);
+      });
+    });
+
+    effect(() => {
       const selected = this.selectedStepId();
       const running = this.running();
       untracked(() => {
@@ -267,11 +279,27 @@ export class TsFlowRunPanelComponent {
     return (this.detailsLogId() ?? this.selectedStepId()) === rowId;
   }
 
+  /**
+   * Selects a run-log row and shows its details directly under that row.
+   */
   protected handleRowClick(row: FlowRunTimelineRow): void {
     this.detailsLogId.set(row.id);
     if (row.isRootStep) {
       this.stepSelect.emit(row.id);
     }
+    requestAnimationFrame(() => {
+      const detail = this.host.nativeElement.querySelector(
+        '.ts-flow-run-panel__details, .ts-flow-run-panel__details-hint',
+      );
+      if (detail && typeof detail.scrollIntoView === 'function') {
+        detail.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+      }
+    });
+  }
+
+  /** Toggles HTTP response headers in Step details. */
+  protected handleToggleHeaders(): void {
+    this.headersExpanded.update((open) => !open);
   }
 
   protected handleToggleExpand(row: FlowRunTimelineRow, event: Event): void {

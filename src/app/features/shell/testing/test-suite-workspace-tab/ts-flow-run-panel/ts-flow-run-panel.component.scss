@@ -123,6 +123,12 @@
   list-style: none;
 }
 
+.ts-flow-run-panel__item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
 .ts-flow-run-panel__row {
   display: grid;
   grid-template-columns: 1.1rem 1rem 1.35rem minmax(0, 1fr) auto auto;
@@ -278,7 +284,6 @@
   display: flex;
   flex-direction: column;
   gap: 0.65rem;
-  margin-top: 0.35rem;
   padding: 0.65rem 0.7rem;
   border: 1px solid color-mix(in srgb, var(--tx-border-0) 48%, transparent);
   border-radius: var(--tx-radius-sm, 8px);
@@ -301,7 +306,7 @@
 }
 
 .ts-flow-run-panel__details-hint {
-  margin: 0.35rem 0 0;
+  margin: 0;
   font-size: 0.75rem;
   color: var(--tx-text-2);
 }
@@ -377,6 +382,45 @@
   margin: 0;
 }
 
+.ts-flow-run-panel__headers-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  width: 100%;
+  padding: 0.15rem 0.15rem 0.15rem 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+  border-radius: var(--tx-radius-sm, 8px);
+
+  &:hover {
+    background: color-mix(in srgb, var(--tx-text-0) 4%, transparent);
+  }
+}
+
+.ts-flow-run-panel__headers-chevron {
+  flex: 0 0 auto;
+  color: var(--tx-text-2);
+  transition: transform var(--tx-duration-fast, 120ms) var(--tx-ease-standard, ease);
+
+  &--expanded {
+    transform: rotate(90deg);
+  }
+}
+
+.ts-flow-run-panel__headers-count {
+  margin-left: auto;
+  font-size: 0.625rem;
+  font-weight: 700;
+  padding: 0.1rem 0.4rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--tx-text-0) 8%, transparent);
+  color: var(--tx-text-2);
+  font-variant-numeric: tabular-nums;
+}
+
 .ts-flow-run-panel__kv-row {
   display: grid;
   grid-template-columns: 5.5rem minmax(0, 1fr);
@@ -394,5 +438,19 @@
     text-overflow: ellipsis;
     color: var(--tx-text-0);
     word-break: break-word;
+  }
+
+  &--header {
+    grid-template-columns: minmax(6.5rem, 38%) minmax(0, 1fr);
+
+    dt,
+    dd {
+      font-family: var(--tx-font-mono, ui-monospace, monospace);
+      font-size: 0.6875rem;
+    }
+
+    dt {
+      word-break: break-all;
+    }
   }
 }

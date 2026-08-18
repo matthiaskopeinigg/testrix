@@ -8,6 +8,7 @@ import { DYNAMIC_VARIABLES, type DynamicVariableCatalogItem } from '@shared/dyna
 import {
   collectFlowsInTree,
   flattenEnabledFlowSteps,
+  normalizeFlowVariableKey,
   resolveTriggerTargetFlows,
   type TestSuiteFlow,
   type TestSuiteFlowLocation,
@@ -242,7 +243,7 @@ function pushNamedPlaceholder(
   idSuffix: string,
   detailVerb: string,
 ): void {
-  const key = rawName?.trim();
+  const key = normalizeFlowVariableKey(rawName);
   if (!key) {
     return;
   }

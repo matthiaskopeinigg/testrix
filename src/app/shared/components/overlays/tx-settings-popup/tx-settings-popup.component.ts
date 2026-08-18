@@ -88,6 +88,7 @@ import { TxSettingsHttpRequestSectionComponent } from './sections/tx-settings-ht
 import { TxSettingsHttpRetriesSectionComponent } from './sections/tx-settings-http-retries-section.component';
 import { TxSettingsHttpTestingSectionComponent } from './sections/tx-settings-http-testing-section.component';
 import { TxSettingsDatabasesSectionComponent } from './sections/tx-settings-databases-section.component';
+import { TxSettingsSidebarRailSectionComponent } from './sections/tx-settings-sidebar-rail-section.component';
 import { settingsSectionMatchesQuery } from './settings-popup-search-index';
 import { SettingsPopupService } from '@app/core/ui/settings-popup.service';
 
@@ -172,6 +173,7 @@ export interface SettingsSidebarSection {
     TxSettingsHttpDnsSectionComponent,
     TxSettingsHttpProxySectionComponent,
     TxSettingsDatabasesSectionComponent,
+    TxSettingsSidebarRailSectionComponent,
   ],
   templateUrl: './tx-settings-popup.component.html',
   styleUrl: './tx-settings-popup.component.scss',
@@ -597,6 +599,24 @@ export class TxSettingsPopupComponent {
     value: boolean,
   ): Promise<void> {
     await this.patch({ ui: { [key]: value } });
+  }
+
+  /**
+   * Persists left-rail sidebar item order.
+   */
+  protected async patchUiSidebarItemOrder(
+    sidebarItemOrder: SettingsFile['ui']['sidebarItemOrder'],
+  ): Promise<void> {
+    await this.patch({ ui: { sidebarItemOrder } });
+  }
+
+  /**
+   * Persists which left-rail sidebar items are hidden.
+   */
+  protected async patchUiHiddenSidebarItems(
+    hiddenSidebarItems: SettingsFile['ui']['hiddenSidebarItems'],
+  ): Promise<void> {
+    await this.patch({ ui: { hiddenSidebarItems } });
   }
 
   protected async patchEditorKeyboard(

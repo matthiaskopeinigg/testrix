@@ -59,4 +59,14 @@ describe('test-suite-flow-tree.adapter', () => {
     expect(tree[1]?.subtitle).toBe('Check expected result · Validates → Get health');
     expect(tree[1]?.data?.refStepId).toBe('step-req');
   });
+
+  it('keeps skipped steps selectable so Enabled can be turned back on', () => {
+    const step = createFlowStep('E2E', 'Skipped click');
+    step.id = 'step-off';
+    step.enabled = false;
+
+    const tree = toFlowStepTreeNodes([step]);
+    expect(tree[0]?.disabled).toBeFalsy();
+    expect(tree[0]?.data?.enabled).toBe(false);
+  });
 });

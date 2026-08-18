@@ -1,6 +1,6 @@
 import { Injectable, effect, inject, untracked } from '@angular/core';
 
-import { type EnvironmentDefinition } from '@shared/config';
+import { type EnvironmentDefinition, WORKSPACE_SIDEBAR_FOOTER_LABELS, WORKSPACE_SIDEBAR_USER_ITEM_LABELS } from '@shared/config';
 import type { WorkspaceTabKind } from '@shared/config/workspace-editor.schema';
 import { databaseConnectionTabResourceId } from '@shared/database';
 import type { LookupDefinition } from '@shared/testing';
@@ -669,22 +669,10 @@ export class CommandSeedsService {
 }
 
 function sidebarPanelLabel(panelId: WorkspaceSidebarPanelId): string {
-  switch (panelId) {
-    case 'collections':
-      return 'Collections';
-    case 'environments':
-      return 'Environments';
-    case 'testing':
-      return 'Testing';
-    case 'data':
-      return 'Database';
-    case 'development':
-      return 'Development';
-    case 'history':
-      return 'History';
-    default:
-      return panelId;
+  if (panelId === 'debug') {
+    return WORKSPACE_SIDEBAR_FOOTER_LABELS.debug;
   }
+  return WORKSPACE_SIDEBAR_USER_ITEM_LABELS[panelId];
 }
 
 function collectionTabKind(kind: CollectionTreeKind): WorkspaceTabKind | null {

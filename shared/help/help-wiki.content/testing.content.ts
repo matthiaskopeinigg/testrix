@@ -64,9 +64,9 @@ export const HELP_WIKI_TESTING_SECTIONS: readonly HelpWikiSection[] = [
       {
         type: 'list',
         items: [
-          'REQUEST — send an HTTP request from the step config.',
+          'REQUEST — send an HTTP request from the step config. URLs, headers, and bodies can include {{placeholders}} cached earlier in this run, including from a sibling flow a parent TRIGGER already ran.',
           'VALIDATION — assert on a prior step (status, body, headers, cached value). Expected can include {{placeholders}} from the environment or earlier CACHE steps.',
-          'CACHE — generate a value ($uuid, templates) or extract from a prior step into {{variables}} for later E2E and DATABASE steps. Each entry can encrypt or decrypt with RSA OAEP SHA-1 (PEM + private-key password, typically {{rsaPrivateKey}} and {{pemPassword}}) before storing.',
+          'CACHE — generate a value ($uuid, templates) or extract from a prior step into {{variables}} for later REQUEST, E2E, DATABASE, and other steps. Type the alias as email (not {{email}}). Each entry can encrypt or decrypt with RSA OAEP SHA-1 (PEM + private-key password, typically {{rsaPrivateKey}} and {{pemPassword}}) before storing.',
           'DATABASE — write SQL/Redis inline, or select a saved query from the Database sidebar.',
           'E2E — browser automation screenshot/step (when configured). Pick on page runs preceding steps, then attaches a CSS selector overlay. If the overlay cannot attach, the E2E window closes instead of staying stuck. Cancel pick aborts prep or picking.',
           'HTTP_LISTENER — wait for an incoming HTTP callback.',
@@ -116,7 +116,7 @@ export const HELP_WIKI_TESTING_SECTIONS: readonly HelpWikiSection[] = [
     blocks: [
       {
         type: 'paragraph',
-        text: 'Regression artifacts capture expected behavior across flows or captures. Re-run to compare results and review step-level diffs. Workspace tabs use section navigation; layout is under Settings → Regression.',
+        text: 'Regression artifacts capture expected behavior across flows or captures. Re-run to compare results and review step-level diffs. Workspace tabs use section navigation; layout is under Settings → Regression. Linked E2E flows always run with the browser hidden so a large suite does not open one window per flow.',
       },
     ],
   }),

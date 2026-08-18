@@ -65,4 +65,18 @@ describe('buildManualOutgoingRequest', () => {
       contentType: 'application/json',
     });
   });
+
+  it('substitutes flow CACHE aliases in the manual URL', () => {
+    const result = buildManualOutgoingRequest({
+      loadTestId: 'flow-3',
+      manual: {
+        ...createDefaultLoadTestManualTarget(),
+        url: 'https://api.example.com/redis/{{email}}',
+      },
+      http,
+      variableContext: { email: 'cached@example.com' },
+    });
+    expect(result).not.toBeNull();
+    expect(result!.outgoing.url).toBe('https://api.example.com/redis/cached@example.com');
+  });
 });

@@ -544,4 +544,31 @@ describe('buildOutgoingRequest', () => {
     expect(result?.outgoing.url).toBe('https://api.example.com/users/cached@example.com');
     expect(result?.outgoing.variableContext['email']).toBe('cached@example.com');
   });
+
+  it('resolves a relative collection path from shared CACHE variables', () => {
+    const requestNodes: CollectionNode[] = [
+      {
+        id: 'req-redis',
+        label: 'Redis',
+        kind: 'request',
+        method: 'GET',
+        url: '/redis/{{email}}',
+        settings: createDefaultCollectionRequestSettings(),
+      },
+    ];
+
+    const result = buildOutgoingRequest({
+      requestId: 'req-redis',
+      nodes: requestNodes,
+      http: createDefaultHttpSettings(),
+      environments: createDefaultEnvironments(),
+      appVersion: '1.0.0',
+      runScope: {
+        runId: 'flow-step-3',
+        sharedVariables: { email: 'cached@example.com' },
+      },
+    });
+
+    expect(result?.outgoing.url).toBe('/redis/cached@example.com');
+  });
 });

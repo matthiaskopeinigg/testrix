@@ -100,7 +100,7 @@ export class ProfileService {
   });
 
   async hydrate(): Promise<void> {
-    const api = this.electron.bridge();
+    const api = this.electron.bridge() ?? (await this.electron.whenBridgeReady());
     if (!api) {
       return;
     }
@@ -238,6 +238,12 @@ export class ProfileService {
     await this.workspaceEditor.pruneTabsForMissingProfileResources();
   }
 
+  /** Flushes debounced workspace JSON writes before a profile switch or renderer unload. */
+  async flushPendingWorkspaceWrites(): Promise<void> {
+    await this.flushWorkspaceWrites();
+  }
+
+  /** Writes queued collection, session, and testing files to disk. */
   private async flushWorkspaceWrites(): Promise<void> {
     await Promise.all([
       this.collectionsService.flushPending(),

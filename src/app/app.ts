@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 
 import { RouterOutlet } from '@angular/router';
 
@@ -33,7 +33,7 @@ import { UiPreferencesService } from './core/ui/ui-preferences.service';
   styleUrl: './app.scss',
 })
 
-export class App implements OnInit {
+export class App implements OnInit, OnDestroy {
   private readonly config = inject(ConfigService);
   private readonly collections = inject(CollectionsService);
   private readonly environments = inject(EnvironmentsService);
@@ -59,11 +59,18 @@ export class App implements OnInit {
   /** Adds `html.tx-electron-app` for frameless window chrome styles. */
   private readonly _windowChromeDocument = inject(WindowChromeDocumentService);
 
+  /**
+   * Flushes debounced JSON writes so Angular live-reload does not drop the last edits.
+   */
+  private readonly flushWorkspaceOnUnload = (): void => {
+    void this.profiles.flushPendingWorkspaceWrites();
+  };
 
-
+  /** Hydrates workspace files, then registers a persist-on-unload hook. */
   async ngOnInit(): Promise<void> {
+    window.addEventListener('pagehide', this.flushWorkspaceOnUnload);
+    await this.config.hydrate();
     await Promise.all([
-      this.config.hydrate(),
       this.profiles.hydrate(),
       this.collections.hydrate(),
       this.environments.hydrate(),
@@ -82,5 +89,11 @@ export class App implements OnInit {
       this.interceptor.hydrate(),
       this.teamSync.hydrate(),
     ]);
+  }
+
+  /** Removes the unload hook and flushes any remaining debounced writes. */
+  ngOnDestroy(): void {
+    window.removeEventListener('pagehide', this.flushWorkspaceOnUnload);
+    void this.profiles.flushPendingWorkspaceWrites();
   }
 }

@@ -47,7 +47,7 @@ export class CollectionsService {
   readonly nodes = computed(() => this.nodesState());
 
   async hydrate(): Promise<void> {
-    const api = this.electron.bridge();
+    const api = this.electron.bridge() ?? (await this.electron.whenBridgeReady());
 
     if (!api) {
       this.loadBrowserFallback();

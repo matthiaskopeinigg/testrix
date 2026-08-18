@@ -1,13 +1,4 @@
-import {
-  ChangeDetectionStrategy,
-  Component,
-  computed,
-  effect,
-  input,
-  output,
-  signal,
-  untracked,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, input, output, signal, untracked } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
 import type {
@@ -16,6 +7,7 @@ import type {
   RegressionRun,
   RegressionRunMetrics,
   RegressionThresholds,
+  TestSuiteFlow,
 } from '@shared/testing';
 import type { RegressionTabUi } from '@shared/config';
 import {
@@ -24,9 +16,11 @@ import {
   compareRegressionRuns,
   createIdleRegressionRunMetrics,
   createDefaultRegressionProfile,
+  overlayRegressionResultOnFlow,
   regressionHealthTagVariant,
 } from '@shared/testing';
 
+import { TestSuiteService } from '@app/core/testing/test-suite.service';
 import { TxBannerComponent } from '@app/shared/components/feedback/tx-banner/tx-banner.component';
 import { TxButtonComponent } from '@app/shared/components/forms/tx-button/tx-button.component';
 import { TxConfirmDialogComponent } from '@app/shared/components/overlays/tx-confirm-dialog/tx-confirm-dialog.component';
@@ -36,6 +30,8 @@ import { TxFormFieldComponent } from '@app/shared/components/forms/tx-form-field
 import { TxIconComponent } from '@app/shared/components/forms/tx-icon/tx-icon.component';
 import { TxTooltipDirective } from '@app/shared/components/overlays/tx-tooltip/tx-tooltip.directive';
 import { TxTagComponent } from '@app/shared/components/forms/tx-tag/tx-tag.component';
+
+import { TsFlowRunPanelComponent } from '../test-suite-workspace-tab/ts-flow-run-panel/ts-flow-run-panel.component';
 
 import { RgResultsExportToolbarComponent } from './rg-results-export-toolbar.component';
 import { RgResultsFlowDurationBarsComponent } from './rg-results-flow-duration-bars.component';
@@ -92,6 +88,7 @@ type RgResultsSectionId =
     RgResultsFlowDiffTableComponent,
     RgFlowStepDiffPanelComponent,
     RgStepCaptureDiffPanelComponent,
+    TsFlowRunPanelComponent,
   ],
   templateUrl: './rg-tab-results-panel.component.html',
   styleUrl: './rg-tab-results-panel.component.scss',
@@ -99,6 +96,7 @@ type RgResultsSectionId =
 })
 export class RgTabResultsPanelComponent {
   protected readonly Math = Math;
+  private readonly testSuite = inject(TestSuiteService);
 
   readonly runState = input<RgRunState>('idle');
   readonly metrics = input<RegressionRunMetrics | null>(null);
@@ -309,6 +307,31 @@ export class RgTabResultsPanelComponent {
       return '';
     }
     return this.flowResults().find((flow) => flow.flowId === flowId)?.flowName ?? flowId;
+  });
+
+  /** Completed flow result for the selected live/history row, if any. */
+  protected readonly selectedInspectFlowResult = computed((): RegressionFlowResult | null => {
+    if (this.resultsView() === 'compare') {
+      return null;
+    }
+    const flowId = this.selectedFlowDiffId();
+    if (!flowId) {
+      return null;
+    }
+    return this.flowResults().find((flow) => flow.flowId === flowId) ?? null;
+  });
+
+  /** Flow snapshot used by the embedded run log for the selected regression flow. */
+  protected readonly selectedInspectFlow = computed((): TestSuiteFlow | null => {
+    const result = this.selectedInspectFlowResult();
+    if (!result) {
+      return null;
+    }
+    return overlayRegressionResultOnFlow(
+      this.testSuite.findFlow(result.flowId),
+      result,
+      this.displayRun()?.startedAt ?? null,
+    );
   });
 
   protected readonly avgDurationSeries = computed(() => {
@@ -585,6 +608,31 @@ export class RgTabResultsPanelComponent {
 
   protected handleFlowSelected(flowId: string): void {
     this.selectedFlowDiffIdChange.emit(flowId);
+    this.selectedStepDiffIdChange.emit(null);
+  }
+
+  /** Toggles the flow run log for a live/history results row. */
+  protected handleFlowRowClick(flowId: string): void {
+    if (this.resultsView() === 'compare') {
+      this.handleFlowSelected(flowId);
+      return;
+    }
+    if (this.selectedFlowDiffId() === flowId) {
+      this.selectedFlowDiffIdChange.emit(null);
+      this.selectedStepDiffIdChange.emit(null);
+      return;
+    }
+    this.handleFlowSelected(flowId);
+  }
+
+  /** Closes the inspected flow run log. */
+  protected handleClearFlowInspection(): void {
+    this.selectedFlowDiffIdChange.emit(null);
+    this.selectedStepDiffIdChange.emit(null);
+  }
+
+  protected isFlowRowSelected(flowId: string): boolean {
+    return this.selectedFlowDiffId() === flowId;
   }
 
   protected handleClearRunsCancel(): void {

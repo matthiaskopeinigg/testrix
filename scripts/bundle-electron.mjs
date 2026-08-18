@@ -1,8 +1,9 @@
 import * as esbuild from 'esbuild';
-import { cpSync, mkdirSync } from 'node:fs';
 import { mkdir } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+
+import { copyElectronStaticAssets } from './copy-electron-static-assets.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const entryMain = path.join(root, 'electron/main.ts');
@@ -50,17 +51,4 @@ await Promise.all([
   }),
 ]);
 
-const distElectron = path.join(root, 'dist/electron');
-const e2eSrc = path.join(root, 'electron/services/testing/e2e');
-const e2eDest = path.join(distElectron, 'services/testing/e2e');
-mkdirSync(e2eDest, { recursive: true });
-cpSync(e2eSrc, e2eDest, { recursive: true });
-cpSync(
-  path.join(root, 'electron/preload/e2e-pick.preload.js'),
-  path.join(distElectron, 'preload/e2e-pick.preload.js'),
-);
-
-const uninstallerSrc = path.join(root, 'electron/uninstaller');
-const uninstallerDest = path.join(distElectron, 'uninstaller');
-mkdirSync(uninstallerDest, { recursive: true });
-cpSync(uninstallerSrc, uninstallerDest, { recursive: true });
+copyElectronStaticAssets(root);

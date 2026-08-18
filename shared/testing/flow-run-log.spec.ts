@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { createFlowStep } from '@shared/testing';
-import type { FlowStepHttpResponseCapture } from '@shared/testing';
+import type { FlowStepHttpResponseCapture } from './flow-step-capture';
 import {
   buildFlowStepRunLogDetails,
   buildFlowValidationCheckResults,
@@ -9,7 +8,8 @@ import {
   formatFlowRunTimestamp,
   parseFlowRunStepError,
   resolveFlowStepRunError,
-} from '@shared/testing';
+} from './flow-run-log';
+import { createFlowStep } from './test-suites.schema';
 
 describe('formatFlowRunDuration', () => {
   it('formats sub-second durations in milliseconds', () => {
@@ -83,7 +83,10 @@ describe('buildFlowStepRunLogDetails', () => {
         statusCode: 200,
         statusText: 'OK',
         bodyText: '{"ok":true}',
-        headers: { 'content-type': 'application/json' },
+        headers: {
+          'x-request-id': 'req-1',
+          'content-type': 'application/json',
+        },
         requestMethod: 'GET',
         requestUrl: 'https://example.com/users',
       },
@@ -107,6 +110,11 @@ describe('buildFlowStepRunLogDetails', () => {
 
     expect(details.durationLabel).toBe('320 ms');
     expect(details.captureLines.some((line) => line.label === 'Status')).toBe(true);
+    expect(details.captureLines.some((line) => line.label === 'Headers')).toBe(false);
+    expect(details.captureHeaders).toEqual([
+      { key: 'content-type', value: 'application/json' },
+      { key: 'x-request-id', value: 'req-1' },
+    ]);
     expect(details.capturePreview?.language).toBe('json');
     expect(details.capturePreview?.content).toBe('{\n  "ok": true\n}');
     expect(formatFlowRunTimestamp('2026-01-01T12:30:00.000Z')).toMatch(/\d/);

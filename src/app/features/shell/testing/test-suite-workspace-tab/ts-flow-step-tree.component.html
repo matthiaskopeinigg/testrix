@@ -34,7 +34,7 @@
         <ng-template txTreeNode let-row>
           <span
             class="ts-flow-step-tree__row"
-            [class.is-disabled]="row.node.disabled"
+            [class.is-disabled]="row.node.data?.enabled === false"
             [class.is-validation-ref]="hasValidationReference(row)"
             [class.is-validation-target]="isValidationRefTarget(row)"
             [class.is-validation-link-highlight]="isValidationLinkHighlighted(row)"

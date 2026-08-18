@@ -1,7 +1,9 @@
 import type { FlowRunNestedChildren } from './flow-run-child-log.schema';
-import type { TestSuiteFlow, TestSuiteFlowNode, TestSuiteFlowStep } from './test-suites.schema';
+import type { TestSuiteFlow, TestSuiteFlowNode, TestSuiteFlowStep, TestSuiteTreeItem } from './test-suites.schema';
 import { isFlowFolderNode, isFlowStepNode } from './test-suites.schema';
 import type { E2eStepConfig, HttpInterceptorStepConfig, HttpListenerStepConfig, RequestStepConfig, TestSuiteStepStatus } from './test-suite-steps.schema';
+import { triggerStepConfigSchema } from './test-suite-steps.schema';
+import { resolveTriggerTargetFlows } from './collect-trigger-targets';
 import { resolveGlobalE2eScreenshotDirectory } from './e2e-screenshot-output';
 
 /**
@@ -187,7 +189,10 @@ export function getPrecedingEnabledE2eStepsForPick(
 }
 
 /** When non-null, Run Flow should stay disabled and the string is suitable for a tooltip. */
-export function getFlowRunBlockingReason(flow: TestSuiteFlow | null | undefined): string | null {
+export function getFlowRunBlockingReason(
+  flow: TestSuiteFlow | null | undefined,
+  suiteItems: readonly TestSuiteTreeItem[] = [],
+): string | null {
   if (!flow?.nodes?.length) {
     return 'Add at least one step to run this flow.';
   }
@@ -236,6 +241,13 @@ export function getFlowRunBlockingReason(flow: TestSuiteFlow | null | undefined)
       continue;
     }
 
+    if (node.stepType === 'TRIGGER') {
+      if (triggerLeavesBrowserOnALoadedUrl(node, suiteItems, new Set([flow.id]))) {
+        hasLoadedE2eUrl = true;
+      }
+      continue;
+    }
+
     if (node.stepType !== 'E2E') {
       continue;
     }
@@ -261,4 +273,53 @@ export function getFlowRunBlockingReason(flow: TestSuiteFlow | null | undefined)
     return 'Enable at least one step to run this flow.';
   }
   return null;
+}
+
+function e2eNavigateUrl(config: E2eStepConfig): string {
+  return String(config.value ?? '').trim() || String(config.selector ?? '').trim();
+}
+
+/** True when an enabled NAVIGATE_TO (including nested TRIGGER targets) will load a page URL. */
+function flowHasEnabledNavigateTo(
+  flow: TestSuiteFlow,
+  suiteItems: readonly TestSuiteTreeItem[],
+  visiting: Set<string>,
+): boolean {
+  if (visiting.has(flow.id)) {
+    return false;
+  }
+  visiting.add(flow.id);
+  for (const step of flattenEnabledFlowSteps(flow.nodes)) {
+    if (step.stepType === 'E2E') {
+      const action = normalizeE2eAction(String((step.config as E2eStepConfig).action ?? ''));
+      if (action === 'NAVIGATE_TO' && e2eNavigateUrl(step.config as E2eStepConfig)) {
+        return true;
+      }
+    }
+    if (step.stepType === 'TRIGGER' && triggerLeavesBrowserOnALoadedUrl(step, suiteItems, visiting)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function triggerLeavesBrowserOnALoadedUrl(
+  step: TestSuiteFlowStep,
+  suiteItems: readonly TestSuiteTreeItem[],
+  visiting: Set<string>,
+): boolean {
+  const parsed = triggerStepConfigSchema.safeParse(step.config ?? {});
+  if (!parsed.success || !parsed.data.targetId) {
+    return false;
+  }
+  const resolved = resolveTriggerTargetFlows(suiteItems, {
+    targetType: parsed.data.targetType,
+    targetId: parsed.data.targetId,
+  });
+  if (!resolved.ok) {
+    return false;
+  }
+  return resolved.locations.some((location) =>
+    flowHasEnabledNavigateTo(location.flow, suiteItems, visiting),
+  );
 }

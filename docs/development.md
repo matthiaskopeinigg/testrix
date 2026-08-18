@@ -34,6 +34,9 @@ Pack/release internals (`electron:build:*:payload|setup`, signing helpers) stay 
 | `TESTRIX_DEV=1` | Set by `npm run dev` — detach DevTools, verbose main logs |
 | `TESTRIX_SERVE_RENDERER=1` | Load renderer from `ng serve` |
 | `TESTRIX_NO_SPLASH=1` | Skip splash window during boot |
+| `TESTRIX_CONFIG_DIR` | Override the workspace JSON root. `npm start` / `npm run dev` default to `<repo>/.config` |
+
+Workspace JSON for `npm start` / `npm run dev` lives in the repo **`.config/`** folder (`paths.json`, `profiles.json`, `settings.json`, and `profiles/<id>/…`). Chromium session files go under `.config/electron`. Packaged builds still use Electron userData (`%APPDATA%\testrix` on Windows). `.config/` is gitignored.
 
 ## Testing
 

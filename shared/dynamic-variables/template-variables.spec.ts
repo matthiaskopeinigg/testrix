@@ -35,4 +35,12 @@ describe('template-variables', () => {
     });
     expect(out).toBe('https://api.example.com/ids/fixed-uuid');
   });
+
+  it('resolves a placeholder when the map key still has catalog braces', () => {
+    expect(
+      resolveTemplateVariables('/redis/{{email}}', {
+        environment: { '{{email}}': 'cached@example.com' },
+      }),
+    ).toBe('/redis/cached@example.com');
+  });
 });
