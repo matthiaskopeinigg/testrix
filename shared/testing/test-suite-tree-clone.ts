@@ -49,7 +49,6 @@ export function cloneTestSuiteFlowStepTree(nodes: readonly TestSuiteFlowNode[]):
       return {
         ...structuredClone(step),
         id,
-        name: copyLabel(step.name),
         parentId: step.parentId ? remapId(step.parentId) : null,
         lastRunStatus: 'never' as const,
         lastRunDurationMs: undefined,
