@@ -6,6 +6,7 @@ import {
   flowStepPrimaryLabel,
   flowStepSecondaryLabel,
   flowStepTreeSubtitle,
+  FLOW_STEP_ADD_HINTS,
   FLOW_STEP_GUIDED_TITLES,
 } from './flow-step-labels';
 
@@ -52,5 +53,10 @@ describe('flow-step-labels', () => {
     };
 
     expect(flowStepTreeSubtitle(step)).toBe('Save values for later · Sets {{email}}');
+  });
+
+  it('describes listener and interceptor as background steps', () => {
+    expect(FLOW_STEP_ADD_HINTS.HTTP_LISTENER).toContain('background');
+    expect(FLOW_STEP_ADD_HINTS.HTTP_INTERCEPTOR).toContain('background');
   });
 });

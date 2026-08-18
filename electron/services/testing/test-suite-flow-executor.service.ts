@@ -186,7 +186,7 @@ export class TestSuiteFlowExecutor {
   private readonly captures = new Map<string, FlowStepRunCapture>();
   private readonly flowVariables = new Map<string, string>();
   private readonly nestedChildrenByTriggerId = new Map<string, FlowRunChildLog[]>();
-  private readonly activeInterceptorStepIds = new Set<string>();
+  private readonly activeHttpCaptureStepIds = new Set<string>();
   private browserSessionReady = false;
 
   setE2eRunner(runner: E2eRunnerService): void {
@@ -216,7 +216,7 @@ export class TestSuiteFlowExecutor {
       }
     }
     this.nestedChildrenByTriggerId.clear();
-    this.activeInterceptorStepIds.clear();
+    this.activeHttpCaptureStepIds.clear();
     this.browserSessionReady = false;
 
     const suiteItems = await this.loadSuiteItems(files);
@@ -870,7 +870,7 @@ export class TestSuiteFlowExecutor {
     const startedAt = Date.now();
     try {
       await this.executeStep(step, flow, ctx);
-      await this.refreshPendingInterceptorCaptures(ctx.showBrowser);
+      await this.refreshPendingHttpCaptures(ctx.showBrowser);
       graph.stepDurations[step.id] = Date.now() - startedAt;
       graph.stepStatuses[step.id] = 'passed';
       ctx.reportProgress();
@@ -1302,48 +1302,38 @@ export class TestSuiteFlowExecutor {
     return waitResult.data;
   }
 
+  /**
+   * Registers CDP capture and continues. Later VALIDATION / CACHE steps wait
+   * for the first matching browser request.
+   */
   private async executeHttpListener(
     step: TestSuiteFlowStep,
     flow: TestSuiteFlow,
-    ctx: {
-      readonly environments: import('@shared/config').EnvironmentsFile;
-      readonly showBrowser: boolean;
-      readonly environmentIdOverride?: string | null;
-      readonly ancestorFolders: readonly TestSuiteAncestorFolderRef[];
-      readonly environmentVariableKeys: import('@shared/http/collection-execution.schema').EnvironmentVariableKeyMode;
-    },
+    ctx: FlowStepContext,
   ): Promise<void> {
-    const variableContext = this.buildVariableContext(
-      flow,
-      ctx.environments,
-      ctx.environmentIdOverride,
-      ctx.ancestorFolders,
-      ctx.environmentVariableKeys,
-    );
-    const cfg = resolveHttpListenerStepConfig(step.config as HttpListenerStepConfig, variableContext);
-    const urlPattern = String(cfg.urlPattern ?? '').trim();
-    if (!urlPattern) {
-      throw new Error('HTTP Listener needs a URL pattern.');
-    }
-
-    const timeoutMs = resolveTimeoutMs(cfg.timeout, DEFAULT_HTTP_CAPTURE_TIMEOUT_MS);
-    const registerSpec = buildHttpCaptureRegisterSpec(step.id, cfg, false);
-
-    await this.startHttpCapture(registerSpec, ctx.showBrowser, timeoutMs);
-    const captureData = await this.waitForHttpCapture(step.id, ctx.showBrowser, timeoutMs);
-    this.captures.set(step.id, buildHttpCaptureFromE2eData(captureData));
+    await this.armBackgroundHttpCapture(step, flow, ctx, false);
   }
 
+  /**
+   * Registers CDP intercept rules and continues. Matching later E2E traffic is
+   * rewritten; VALIDATION / CACHE wait for the first match when they need it.
+   */
   private async executeHttpInterceptor(
     step: TestSuiteFlowStep,
     flow: TestSuiteFlow,
-    ctx: {
-      readonly environments: import('@shared/config').EnvironmentsFile;
-      readonly showBrowser: boolean;
-      readonly environmentIdOverride?: string | null;
-      readonly ancestorFolders: readonly TestSuiteAncestorFolderRef[];
-      readonly environmentVariableKeys: import('@shared/http/collection-execution.schema').EnvironmentVariableKeyMode;
-    },
+    ctx: FlowStepContext,
+  ): Promise<void> {
+    await this.armBackgroundHttpCapture(step, flow, ctx, true);
+  }
+
+  /**
+   * Arms listener or interceptor capture without blocking later flow steps.
+   */
+  private async armBackgroundHttpCapture(
+    step: TestSuiteFlowStep,
+    flow: TestSuiteFlow,
+    ctx: FlowStepContext,
+    mutate: boolean,
   ): Promise<void> {
     const variableContext = this.buildVariableContext(
       flow,
@@ -1352,29 +1342,37 @@ export class TestSuiteFlowExecutor {
       ctx.ancestorFolders,
       ctx.environmentVariableKeys,
     );
-    const cfg = resolveHttpInterceptorStepConfig(
-      step.config as HttpInterceptorStepConfig,
-      variableContext,
-    );
+    const cfg = mutate
+      ? resolveHttpInterceptorStepConfig(step.config as HttpInterceptorStepConfig, variableContext)
+      : resolveHttpListenerStepConfig(step.config as HttpListenerStepConfig, variableContext);
     const urlPattern = String(cfg.urlPattern ?? '').trim();
     if (!urlPattern) {
-      throw new Error('HTTP Interceptor needs a URL pattern.');
+      throw new Error(
+        mutate ? 'HTTP Interceptor needs a URL pattern.' : 'HTTP Listener needs a URL pattern.',
+      );
     }
 
     const timeoutMs = resolveTimeoutMs(cfg.timeout, DEFAULT_HTTP_CAPTURE_TIMEOUT_MS);
-    const registerSpec = buildHttpCaptureRegisterSpec(step.id, cfg, true);
+    const registerSpec = buildHttpCaptureRegisterSpec(step.id, cfg, mutate);
     await this.startHttpCapture(registerSpec, ctx.showBrowser, timeoutMs);
-    this.activeInterceptorStepIds.add(step.id);
+    this.activeHttpCaptureStepIds.add(step.id);
   }
 
-  private async refreshPendingInterceptorCaptures(showBrowser: boolean): Promise<void> {
-    if (!this.browserSessionReady || !this.e2eRunner || this.activeInterceptorStepIds.size === 0) {
+  /** True when a listener/interceptor capture has a status or request URL. */
+  private hasUsableHttpCapture(capture: FlowStepRunCapture | undefined): boolean {
+    return (
+      capture?.kind === 'http_response' && (capture.statusCode > 0 || Boolean(capture.requestUrl))
+    );
+  }
+
+  /** Copies any already-matched listener/interceptor traffic into step captures. */
+  private async refreshPendingHttpCaptures(showBrowser: boolean): Promise<void> {
+    if (!this.browserSessionReady || !this.e2eRunner || this.activeHttpCaptureStepIds.size === 0) {
       return;
     }
 
-    for (const stepId of this.activeInterceptorStepIds) {
-      const existing = this.captures.get(stepId);
-      if (existing?.kind === 'http_response' && existing.statusCode > 0) {
+    for (const stepId of this.activeHttpCaptureStepIds) {
+      if (this.hasUsableHttpCapture(this.captures.get(stepId))) {
         continue;
       }
 
@@ -1391,22 +1389,26 @@ export class TestSuiteFlowExecutor {
     }
   }
 
-  private async resolveInterceptorReferenceCapture(
+  /**
+   * Waits for the first matching capture when a later VALIDATION or CACHE step
+   * references a listener or interceptor.
+   */
+  private async resolveHttpCaptureReferenceCapture(
     refStep: TestSuiteFlowStep,
     refId: string,
     showBrowser: boolean,
     existing: FlowStepRunCapture | undefined,
   ): Promise<FlowStepRunCapture> {
-    if (existing?.kind === 'http_response' && existing.statusCode > 0) {
+    if (this.hasUsableHttpCapture(existing) && existing) {
       return existing;
     }
 
-    const cfg = refStep.config as HttpInterceptorStepConfig;
+    const cfg = refStep.config as HttpListenerStepConfig | HttpInterceptorStepConfig;
     const timeoutMs = resolveTimeoutMs(cfg.timeout, DEFAULT_HTTP_CAPTURE_TIMEOUT_MS);
     const captureData = await this.waitForHttpCapture(refId, showBrowser, timeoutMs);
     const capture = buildHttpCaptureFromE2eData(captureData);
     this.captures.set(refId, capture);
-    this.activeInterceptorStepIds.delete(refId);
+    this.activeHttpCaptureStepIds.delete(refId);
     return capture;
   }
 
@@ -1675,8 +1677,8 @@ export class TestSuiteFlowExecutor {
   ): Promise<FlowStepRunCapture> {
     let capture = this.captures.get(refId);
 
-    if (refStep.stepType === 'HTTP_INTERCEPTOR') {
-      capture = await this.resolveInterceptorReferenceCapture(refStep, refId, showBrowser, capture);
+    if (refStep.stepType === 'HTTP_INTERCEPTOR' || refStep.stepType === 'HTTP_LISTENER') {
+      capture = await this.resolveHttpCaptureReferenceCapture(refStep, refId, showBrowser, capture);
     }
 
     if (!capture) {

@@ -3,7 +3,9 @@
 
   <section class="ts-flow-interceptor-panel__section" aria-labelledby="ts-interceptor-match-heading">
     <h3 class="ts-flow-interceptor-panel__section-title" id="ts-interceptor-match-heading">Match criteria</h3>
-    <p class="ts-flow-interceptor-panel__section-hint">Requests must match this pattern before the interceptor runs.</p>
+    <p class="ts-flow-interceptor-panel__section-hint">
+      Armed in the background when this step runs. Matching later E2E traffic is modified or blocked.
+    </p>
 
     <div class="ts-flow-step-panel__row-2">
       <tx-form-field label="Method" controlId="ts-interceptor-method">
@@ -132,6 +134,15 @@
 
   <section class="ts-flow-interceptor-panel__section ts-flow-interceptor-panel__section--meta" aria-labelledby="ts-interceptor-meta-heading">
     <h3 class="ts-flow-interceptor-panel__section-title" id="ts-interceptor-meta-heading">Output</h3>
+    <tx-form-field label="Wait timeout (ms)" controlId="ts-interceptor-timeout">
+      <tx-input
+        controlId="ts-interceptor-timeout"
+        type="number"
+        [ngModel]="cfg().timeout ?? ''"
+        (ngModelChange)="patch({ timeout: $event || undefined })"
+        placeholder="30000"
+      />
+    </tx-form-field>
     <tx-form-field label="Cache as variable" controlId="ts-interceptor-var">
       <tx-input
         controlId="ts-interceptor-var"

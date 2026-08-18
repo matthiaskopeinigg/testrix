@@ -1,5 +1,8 @@
 <div class="request-panel ts-flow-step-panel">
-  <p class="ts-flow-step-panel__hint">Wait for a matching request or response and optionally cache it.</p>
+  <p class="ts-flow-step-panel__hint">
+    Starts listening in the background when this step runs. Later steps keep going; Validation or Cache wait
+    for the first matching request.
+  </p>
 
   <section class="ts-flow-step-panel__section">
     <div class="ts-flow-step-panel__row-2">
@@ -32,7 +35,7 @@
       />
     </tx-form-field>
 
-    <tx-form-field label="Timeout (ms)" controlId="ts-http-timeout">
+    <tx-form-field label="Wait timeout (ms)" controlId="ts-http-timeout">
       <tx-input
         controlId="ts-http-timeout"
         type="number"

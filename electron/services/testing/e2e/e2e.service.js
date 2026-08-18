@@ -3324,7 +3324,31 @@ class E2eService {
               errorReason: 'BlockedByClient',
             })
             .catch(() => {});
-          this.sweepCaptureReg(reg, listenerIdTrim);
+          const blockedHeaders = {};
+          const pausedHeaders = req.headers || {};
+          if (typeof pausedHeaders === 'object' && !Array.isArray(pausedHeaders)) {
+            for (const key of Object.keys(pausedHeaders)) {
+              blockedHeaders[key] = String(pausedHeaders[key] ?? '');
+            }
+          }
+          const blockedCapture = this.normalizeCapture({
+            url,
+            method: methodName,
+            requestHeaders: blockedHeaders,
+            requestBody: typeof req.postData === 'string' ? req.postData : undefined,
+            responseStatus: 0,
+            responseHeaders: {},
+            responseBody: '',
+          });
+          if (typeof reg.resolveWait === 'function') {
+            const done = reg.resolveWait;
+            this.sweepCaptureReg(reg, listenerIdTrim);
+            try {
+              done(blockedCapture);
+            } catch (_) {}
+          } else {
+            reg.pendingCapture = blockedCapture;
+          }
           break;
         }
         const hdrs = [];
@@ -3487,16 +3511,16 @@ class E2eService {
         try {
           done(capture);
         } catch (_) {}
-      } else if (reg.mutate) {
-        reg.pendingCapture = capture;
       } else {
-        const sender = reg.notifySender;
-        if (sender && !sender.isDestroyed()) {
-          try {
-            sender.send('e2e:http-capture', { listenerId: listenerTrim, data: capture });
-          } catch (_) {}
+        reg.pendingCapture = capture;
+        if (!reg.mutate) {
+          const sender = reg.notifySender;
+          if (sender && !sender.isDestroyed()) {
+            try {
+              sender.send('e2e:http-capture', { listenerId: listenerTrim, data: capture });
+            } catch (_) {}
+          }
         }
-        this.sweepCaptureReg(reg, listenerTrim);
       }
       return;
     }

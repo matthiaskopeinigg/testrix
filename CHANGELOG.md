@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.2-beta.5]
+
+### Changed
+
+- HTTP Listener and HTTP Interceptor arm in the background and let later steps run; Validation or Cache wait for the first matching capture
+
 ## [1.1.2-beta.4]
 
 ### Changed
@@ -646,7 +652,8 @@ Tagged in git. GitHub installers were not published (Authenticode secrets were m
 
 Initial public beta of Testrix: local-first desktop API client (HTTP, WebSocket, collections, environments, test suites, load tests, mocks, and capture).
 
-[Unreleased]: https://github.com/matthiaskopeinigg/testrix/compare/v1.1.2-beta.4...HEAD
+[Unreleased]: https://github.com/matthiaskopeinigg/testrix/compare/v1.1.2-beta.5...HEAD
+[1.1.2-beta.5]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.1.2-beta.5
 [1.1.2-beta.4]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.1.2-beta.4
 [1.1.2-beta.3]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.1.2-beta.3
 [1.1.2-beta.2]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.1.2-beta.2
