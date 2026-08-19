@@ -7,6 +7,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.2]
+
+Stable channel build of the 1.1.2 beta series.
+
+### Added
+
+- Test Suite IF / Else if / Else, FOR_EACH, WHILE, PARALLEL, and RETRY steps with Then/Else/Body lanes
+- A Tree / Diagram view of flow steps (IF diamonds, wrapping rows, scroll zoom, live status)
+- Test Suite Call graph of TRIGGER edges between flows
+- Flow-level CSV/JSON datasets that re-run a flow per row (including in Regression)
+- Run from this step / run to here on the step context menu
+- VALIDATION can continue on failure and still fail the flow at the end
+- Capture can generate one Test Suite flow from selected traffic rows
+- E2E SCREENSHOT checkpoints against a per-profile baseline PNG
+- Regression flakes, critical-flow gating, linked-folder sync, HTML export, pinned golden compare, and history charts
+- Settings can reorder and hide left-rail sidebar items
+- `npm start` / `npm run dev` store profiles and settings in the repo `.config` directory
+
+### Changed
+
+- HTTP Listener and HTTP Interceptor arm in the background; Validation or Cache wait for the first matching capture
+- Add-step picker lists Common first (E2E, HTTP Request, Validation, Cache)
+- Flow tabs split Overview from Settings; Skip unless is collapsed under the step action
+- History is pinned to the left-rail footer; default rail order is Collections, Testing, Database, Environments, Development
+- Data & Config shows folder paths only, with selectable text and a Copy button
+- Regression runs keep E2E browsers hidden and close them after each flow
+
+### Fixed
+
+- TRIGGER children resolve CACHE aliases such as `{{email}}` in later REQUEST URLs
+- Importing a workspace bundle updates the sidebar and editors immediately
+- E2E Navigate to URL follows redirects; click/type/hover no longer hang forever on SPA navigations
+- Adding a step under Retry / If / loops no longer duplicates it on save
+- Request URL preview recognizes collection folder variables
+- Database sidebar tree rows match Collections and Environments size
+- Disabled flow steps can be selected again so Enabled can be turned back on
+
 ## [1.1.2-beta.5]
 
 ### Changed
@@ -652,7 +689,8 @@ Tagged in git. GitHub installers were not published (Authenticode secrets were m
 
 Initial public beta of Testrix: local-first desktop API client (HTTP, WebSocket, collections, environments, test suites, load tests, mocks, and capture).
 
-[Unreleased]: https://github.com/matthiaskopeinigg/testrix/compare/v1.1.2-beta.5...HEAD
+[Unreleased]: https://github.com/matthiaskopeinigg/testrix/compare/v1.1.2...HEAD
+[1.1.2]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.1.2
 [1.1.2-beta.5]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.1.2-beta.5
 [1.1.2-beta.4]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.1.2-beta.4
 [1.1.2-beta.3]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.1.2-beta.3
