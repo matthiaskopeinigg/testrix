@@ -21,6 +21,10 @@ const platform = require(`./platforms/${process.platform === 'darwin' ? 'mac' : 
  */
 app.commandLine.appendSwitch('disable-features', 'Translate,OptimizationGuideModelDownloading');
 
+if (process.platform === 'win32') {
+  app.setAppUserModelId('dev.testrix.app.setup');
+}
+
 const APP_ID = 'dev.testrix.app';
 const REG_SUBKEY = `Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\${APP_ID}`;
 const MAIN_EXE = 'Testrix.exe';
@@ -582,137 +586,10 @@ async function copyDirWithProgress(from, to, onProgress) {
   onProgress({ percent: 1, current: '' });
 }
 
-function psQuote(s) {
-  return String(s).replace(/'/g, "''");
-}
-
 function cmdQuote(s) {
   return String(s).replace(/"/g, '""');
 }
 
-/**
- * Creates a Windows .lnk shortcut. The WScript.Shell COM object handles the
- * basics (TargetPath, IconLocation) cleanly; the AppUserModelID property is
- * NOT exposed via WScript.Shell, so we set it through `IPropertyStore` using
- * inline C# / P-Invoke. Matching the running process's `app.setAppUserModelId`
- * value (`dev.testrix.app`) means a pinned shortcut and the running app
- * share the same taskbar slot instead of stacking as two entries.
- *
- * The script is written to a temp `.ps1` file rather than passed via
- * `-Command` because the inline C# uses a here-string (`@"…"@`) and PowerShell
- * rejects here-strings whose header isn't on its own line.
- *
- * Failures in the AUMID block are caught inside the script so a property-store
- * problem (older PowerShell, locked-down host) doesn't abort the install — the
- * shortcut and icon still get applied either way.
- *
- * @param {string} lnkPath  Destination .lnk path.
- * @param {string} targetExe  Shortcut target (must be the main app's .exe).
- * @param {string} iconLocation  File whose icon is shown for the shortcut.
- *   Pass the standalone `.ico` (not the .exe) — see `resolveShortcutIcon`.
- * @param {string=} appUserModelId  Optional AUMID to attach to the shortcut.
- */
-function createShortcut(lnkPath, targetExe, iconLocation, appUserModelId) {
-  const dir = path.dirname(lnkPath);
-  fs.mkdirSync(dir, { recursive: true });
-  const lines = [
-    '$ErrorActionPreference = "Stop"',
-    '$w = New-Object -ComObject WScript.Shell',
-    `$s = $w.CreateShortcut('${psQuote(lnkPath)}')`,
-    `$s.TargetPath = '${psQuote(targetExe)}'`,
-    `$s.WorkingDirectory = '${psQuote(path.dirname(targetExe))}'`,
-    `$s.IconLocation = '${psQuote(iconLocation)}' + ',0'`,
-    '$s.Save()',
-  ];
-  if (appUserModelId) {
-    lines.push(
-      'try {',
-      '$src = @"',
-      'using System;',
-      'using System.Runtime.InteropServices;',
-      '[StructLayout(LayoutKind.Sequential)] public struct PROPERTYKEY { public Guid fmtid; public uint pid; }',
-      '[StructLayout(LayoutKind.Sequential)] public struct PROPVARIANT { public ushort vt; public ushort r1; public ushort r2; public ushort r3; public IntPtr p1; public IntPtr p2; }',
-      '[ComImport, Guid("886D8EEB-8CF2-4446-8D02-CDBA1DBDCF99"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)] public interface IPropertyStore {',
-      '  [PreserveSig] int GetCount(out uint count);',
-      '  [PreserveSig] int GetAt(uint idx, out PROPERTYKEY pkey);',
-      '  [PreserveSig] int GetValue(ref PROPERTYKEY pkey, out PROPVARIANT pv);',
-      '  [PreserveSig] int SetValue(ref PROPERTYKEY pkey, ref PROPVARIANT pv);',
-      '  [PreserveSig] int Commit(); }',
-      '[ComImport, Guid("0000010B-0000-0000-C000-000000000046"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)] public interface IPersistFile {',
-      '  void GetClassID(out Guid pClassID);',
-      '  [PreserveSig] int IsDirty();',
-      '  void Load([MarshalAs(UnmanagedType.LPWStr)] string pszFileName, uint dwMode);',
-      '  void Save([MarshalAs(UnmanagedType.LPWStr)] string pszFileName, [MarshalAs(UnmanagedType.Bool)] bool fRemember);',
-      '  void SaveCompleted([MarshalAs(UnmanagedType.LPWStr)] string pszFileName);',
-      '  void GetCurFile([MarshalAs(UnmanagedType.LPWStr)] out string ppszFileName); }',
-      '[ComImport, Guid("00021401-0000-0000-C000-000000000046")] public class CShellLink {}',
-      'public static class AwAumid {',
-      '  [DllImport("ole32.dll")] public static extern int PropVariantClear(ref PROPVARIANT pvar);',
-      '  public static void Set(string lnk, string aumid) {',
-      '    var link = (IPersistFile)new CShellLink();',
-      // STGM_READWRITE = 0x2 — IPropertyStore.Commit fails with STG_E_ACCESSDENIED if the
-      // shell link was loaded read-only (the default mode for IPersistFile::Load).
-      '    link.Load(lnk, 2);',
-      '    var store = (IPropertyStore)link;',
-      '    var key = new PROPERTYKEY { fmtid = new Guid("9F4C2855-9F79-4B39-A8D0-E1D42DE1D5F3"), pid = 5 };',
-      '    var pv = new PROPVARIANT { vt = 31, p1 = Marshal.StringToCoTaskMemUni(aumid) };',
-      '    try {',
-      '      Marshal.ThrowExceptionForHR(store.SetValue(ref key, ref pv));',
-      '      Marshal.ThrowExceptionForHR(store.Commit());',
-      '      link.Save(lnk, true);',
-      '    } finally {',
-      '      PropVariantClear(ref pv);',
-      '      Marshal.ReleaseComObject(store);',
-      '      Marshal.ReleaseComObject(link);',
-      '    } } }',
-      '"@',
-      'if (-not ([System.Management.Automation.PSTypeName]"AwAumid").Type) {',
-      '  Add-Type -Language CSharp -TypeDefinition $src -ErrorAction Stop | Out-Null',
-      '}',
-      `[AwAumid]::Set('${psQuote(lnkPath)}', '${psQuote(appUserModelId)}')`,
-      '} catch {',
-      '  Write-Host "AUMID set skipped: $($_.Exception.Message)"',
-      '}',
-    );
-  }
-  const ps1 = path.join(
-    app.getPath('temp'),
-    `aw-lnk-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.ps1`,
-  );
-  // BOM + CRLF so PowerShell parses Unicode paths correctly on every locale.
-  fs.writeFileSync(ps1, '\uFEFF' + lines.join('\r\n'), 'utf8');
-  const result = spawnSync(
-    'powershell',
-    ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', ps1],
-    { encoding: 'utf8', windowsHide: true },
-  );
-  try {
-    fs.unlinkSync(ps1);
-  } catch (_) {}
-  if (result.status !== 0) {
-    const err = new Error(
-      `Shortcut creation failed for ${path.basename(lnkPath)}: ${
-        (result.stderr || result.stdout || '').trim() || `exit ${result.status}`
-      }`,
-    );
-    err.code = 'SHORTCUT_FAILED';
-    throw err;
-  }
-}
-
-/**
- * Resolves the standalone .ico file that ships inside `app.asar.unpacked`. We
- * prefer this over the .exe path because electron-builder runs with
- * `signAndEditExecutable: false`, so `Testrix.exe` still has the default
- * Electron icon embedded as its win32 resource — pointing shortcuts and
- * "Apps & Features" at this .ico is what gives users the Testrix logo.
- *
- * Falls back to the .exe if the .ico is missing for any reason (e.g. older
- * build layout) so shortcuts always have *some* icon source.
- *
- * @param {string} installDir
- * @returns {string}
- */
 function resolveShortcutIcon(installDir) {
   const candidates = [
     path.join(installDir, 'resources', 'icon.ico'),
@@ -1075,6 +952,8 @@ async function performInstall(opts) {
     };
     if (!skipRegistration) {
       registration = platform.registerApp({ installDir: dest, scope });
+    } else if (typeof platform.unblockInstalledFiles === 'function') {
+      platform.unblockInstalledFiles(dest);
     }
 
     const previousMeta = readInstallMeta(dest);

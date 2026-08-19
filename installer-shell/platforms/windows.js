@@ -10,7 +10,6 @@ const {
   cmdQuote,
   copyDirWithProgress,
   pkgVersion,
-  psQuote,
   readInstallMeta,
   writeInstallMeta: writeCommonInstallMeta,
 } = require('./common');
@@ -140,84 +139,59 @@ async function installApp({ src, dest, scope, onProgress }) {
   });
 }
 
-function createShortcut(lnkPath, targetExe, iconLocation, appUserModelId) {
-  fs.mkdirSync(path.dirname(lnkPath), { recursive: true });
-  const lines = [
-    '$ErrorActionPreference = "Stop"',
-    '$w = New-Object -ComObject WScript.Shell',
-    `$s = $w.CreateShortcut('${psQuote(lnkPath)}')`,
-    `$s.TargetPath = '${psQuote(targetExe)}'`,
-    `$s.WorkingDirectory = '${psQuote(path.dirname(targetExe))}'`,
-    `$s.IconLocation = '${psQuote(iconLocation)}' + ',0'`,
-    '$s.Save()',
-  ];
-  if (appUserModelId) {
-    lines.push(
-      'try {',
-      '$src = @"',
-      'using System;',
-      'using System.Runtime.InteropServices;',
-      '[StructLayout(LayoutKind.Sequential)] public struct PROPERTYKEY { public Guid fmtid; public uint pid; }',
-      '[StructLayout(LayoutKind.Sequential)] public struct PROPVARIANT { public ushort vt; public ushort r1; public ushort r2; public ushort r3; public IntPtr p1; public IntPtr p2; }',
-      '[ComImport, Guid("886D8EEB-8CF2-4446-8D02-CDBA1DBDCF99"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)] public interface IPropertyStore {',
-      '  [PreserveSig] int GetCount(out uint count);',
-      '  [PreserveSig] int GetAt(uint idx, out PROPERTYKEY pkey);',
-      '  [PreserveSig] int GetValue(ref PROPERTYKEY pkey, out PROPVARIANT pv);',
-      '  [PreserveSig] int SetValue(ref PROPERTYKEY pkey, ref PROPVARIANT pv);',
-      '  [PreserveSig] int Commit(); }',
-      '[ComImport, Guid("0000010B-0000-0000-C000-000000000046"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)] public interface IPersistFile {',
-      '  void GetClassID(out Guid pClassID);',
-      '  [PreserveSig] int IsDirty();',
-      '  void Load([MarshalAs(UnmanagedType.LPWStr)] string pszFileName, uint dwMode);',
-      '  void Save([MarshalAs(UnmanagedType.LPWStr)] string pszFileName, [MarshalAs(UnmanagedType.Bool)] bool fRemember);',
-      '  void SaveCompleted([MarshalAs(UnmanagedType.LPWStr)] string pszFileName);',
-      '  void GetCurFile([MarshalAs(UnmanagedType.LPWStr)] out string ppszFileName); }',
-      '[ComImport, Guid("00021401-0000-0000-C000-000000000046")] public class CShellLink {}',
-      'public static class AwAumid {',
-      '  [DllImport("ole32.dll")] public static extern int PropVariantClear(ref PROPVARIANT pvar);',
-      '  public static void Set(string lnk, string aumid) {',
-      '    var link = (IPersistFile)new CShellLink();',
-      '    link.Load(lnk, 2);',
-      '    var store = (IPropertyStore)link;',
-      '    var key = new PROPERTYKEY { fmtid = new Guid("9F4C2855-9F79-4B39-A8D0-E1D42DE1D5F3"), pid = 5 };',
-      '    var pv = new PROPVARIANT { vt = 31, p1 = Marshal.StringToCoTaskMemUni(aumid) };',
-      '    try {',
-      '      Marshal.ThrowExceptionForHR(store.SetValue(ref key, ref pv));',
-      '      Marshal.ThrowExceptionForHR(store.Commit());',
-      '      link.Save(lnk, true);',
-      '    } finally {',
-      '      PropVariantClear(ref pv);',
-      '      Marshal.ReleaseComObject(store);',
-      '      Marshal.ReleaseComObject(link);',
-      '    } } }',
-      '"@',
-      'if (-not ([System.Management.Automation.PSTypeName]"AwAumid").Type) {',
-      '  Add-Type -Language CSharp -TypeDefinition $src -ErrorAction Stop | Out-Null',
-      '}',
-      `[AwAumid]::Set('${psQuote(lnkPath)}', '${psQuote(appUserModelId)}')`,
-      '} catch {',
-      '  Write-Host "AUMID set skipped: $($_.Exception.Message)"',
-      '}',
-    );
-  }
-
-  const ps1 = path.join(app.getPath('temp'), `aw-lnk-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.ps1`);
-  fs.writeFileSync(ps1, '\uFEFF' + lines.join('\r\n'), 'utf8');
-  const result = spawnSync('powershell', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', ps1], {
-    encoding: 'utf8',
-    windowsHide: true,
-  });
+/**
+ * Creates a Start menu / desktop .lnk via Electron (no PowerShell).
+ * Exploit Guard / ASR often blocks powershell -ExecutionPolicy Bypass + Add-Type.
+ * Shortcut failures must not abort the install on locked-down work PCs.
+ *
+ * @param {string} lnkPath
+ * @param {string} targetExe
+ * @param {string} iconLocation
+ * @param {string=} appUserModelId
+ * @returns {boolean}
+ */
+function tryCreateShortcut(lnkPath, targetExe, iconLocation, appUserModelId) {
   try {
-    fs.unlinkSync(ps1);
-  } catch {}
-  if (result.status !== 0) {
-    const err = new Error(
-      `Shortcut creation failed for ${path.basename(lnkPath)}: ${
-        (result.stderr || result.stdout || '').trim() || `exit ${result.status}`
-      }`,
+    fs.mkdirSync(path.dirname(lnkPath), { recursive: true });
+    const { shell } = require('electron');
+    return Boolean(
+      shell.writeShortcutLink(lnkPath, 'replace', {
+        target: targetExe,
+        cwd: path.dirname(targetExe),
+        icon: iconLocation,
+        iconIndex: 0,
+        description: APP_NAME,
+        ...(appUserModelId ? { appUserModelId } : {}),
+      }),
     );
-    err.code = 'SHORTCUT_FAILED';
-    throw err;
+  } catch {
+    return false;
+  }
+}
+
+/** Drops the Mark of the Web ADS so Defender does not treat copied binaries as internet downloads. */
+function removeMarkOfTheWeb(filePath) {
+  try {
+    fs.unlinkSync(`${filePath}:Zone.Identifier`);
+  } catch {
+    /* no stream, or policy blocked the delete */
+  }
+}
+
+/**
+ * Clears MOTW on installed executables and DLLs.
+ * @param {string} installDir
+ */
+function unblockInstalledFiles(installDir) {
+  try {
+    for (const name of fs.readdirSync(installDir)) {
+      const lower = name.toLowerCase();
+      if (lower.endsWith('.exe') || lower.endsWith('.dll')) {
+        removeMarkOfTheWeb(path.join(installDir, name));
+      }
+    }
+  } catch {
+    /* ignore */
   }
 }
 
@@ -302,16 +276,17 @@ function registerApp({ installDir, scope }) {
       : path.join(process.env.APPDATA || '', 'Microsoft', 'Windows', 'Start Menu', 'Programs');
   const shortcutDir = path.join(startMenuParent, APP_NAME);
   const startShortcut = path.join(shortcutDir, `${APP_NAME}.lnk`);
-  createShortcut(startShortcut, mainExePath, iconLocation, APP_ID);
+  tryCreateShortcut(startShortcut, mainExePath, iconLocation, APP_ID);
 
   const desktopBase =
     scope === 'machine'
       ? path.join(process.env.PUBLIC || 'C:\\Users\\Public', 'Desktop')
       : path.join(process.env.USERPROFILE || os.homedir(), 'Desktop');
   const desktopShortcut = path.join(desktopBase, `${APP_NAME}.lnk`);
-  createShortcut(desktopShortcut, mainExePath, iconLocation, APP_ID);
+  tryCreateShortcut(desktopShortcut, mainExePath, iconLocation, APP_ID);
 
-  const shortcuts = [startShortcut, desktopShortcut];
+  const shortcuts = [startShortcut, desktopShortcut].filter((lnk) => fs.existsSync(lnk));
+  unblockInstalledFiles(installDir);
   const uninstallScript = writeUninstaller({ installDir, scope, shortcuts });
   const root = scope === 'machine' ? 'HKLM' : 'HKCU';
   const elevated = scope === 'machine';
@@ -469,6 +444,7 @@ module.exports = {
   registerApp,
   resolveExistingInstall,
   runUninstall,
+  unblockInstalledFiles,
   writeInstallMeta,
   writeUninstaller,
 };

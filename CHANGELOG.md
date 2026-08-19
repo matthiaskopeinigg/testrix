@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.3]
+
+### Fixed
+
+- Windows Setup creates shortcuts through Electron instead of PowerShell (Exploit Guard / ASR often blocked `ExecutionPolicy Bypass` and inline C#)
+- Installed `Testrix.exe` drops the Mark of the Web so Defender does not treat a local copy as a download
+
 ## [1.1.2]
 
 Stable channel build of the 1.1.2 beta series.
@@ -689,7 +696,8 @@ Tagged in git. GitHub installers were not published (Authenticode secrets were m
 
 Initial public beta of Testrix: local-first desktop API client (HTTP, WebSocket, collections, environments, test suites, load tests, mocks, and capture).
 
-[Unreleased]: https://github.com/matthiaskopeinigg/testrix/compare/v1.1.2...HEAD
+[Unreleased]: https://github.com/matthiaskopeinigg/testrix/compare/v1.1.3...HEAD
+[1.1.3]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.1.3
 [1.1.2]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.1.2
 [1.1.2-beta.5]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.1.2-beta.5
 [1.1.2-beta.4]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.1.2-beta.4
