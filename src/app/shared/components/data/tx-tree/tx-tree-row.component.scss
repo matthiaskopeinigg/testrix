@@ -32,21 +32,20 @@
   }
 }
 
+/*
+ * The dragged row keeps its box so every row below it stays put. Collapsing it would
+ * reflow the list under a stationary cursor and invalidate the measured drop slots.
+ */
 :host.tx-tree-row-host--dragging {
   pointer-events: none;
-  height: 0;
-  min-height: 0;
-  overflow: hidden;
-  margin: 0;
-  opacity: 0;
+  opacity: 0.4;
 }
 
-:host.tx-tree-row-host--dragging .tx-tree-row {
-  visibility: hidden;
-}
-
-:host.tx-tree-row-host--dragging .tx-tree-row__insert-line {
-  display: none;
+:host.tx-tree-row-host--dragging .tx-tree-row:not(.tx-tree-row--debug-hit) {
+  background: color-mix(in srgb, var(--tx-surface-2) 60%, transparent);
+  border-style: dashed;
+  border-color: color-mix(in srgb, var(--tx-border-0) 80%, var(--tx-primary) 15%);
+  box-shadow: none;
 }
 
 :host.tx-tree-row-host--moving {
@@ -142,15 +141,6 @@
   .tx-tree-row {
     cursor: not-allowed;
   }
-}
-
-:host.tx-tree-row-host--dragging .tx-tree-row--debug-hit {
-  visibility: visible;
-}
-
-:host.tx-tree-row-host--drop-deny .tx-tree-row:not(.tx-tree-row--debug-hit) {
-  outline: 1px dashed color-mix(in srgb, var(--tx-danger) 65%, transparent);
-  outline-offset: -1px;
 }
 
 :host.tx-tree-row-host--drop-inside .tx-tree-row:not(.tx-tree-row--debug-hit) {
@@ -387,76 +377,6 @@
   margin-top: 0.1rem;
 }
 
-.tx-tree-row__insert-line {
-  position: absolute;
-  left: calc(
-    var(--tx-tree-indent, 16px) * var(--row-indicator-depth, var(--row-depth, 0)) + 0.5rem
-  );
-  right: 0.5rem;
-  height: var(--tx-dnd-insert-line-size, 3px);
-  border-radius: var(--tx-dnd-insert-line-radius, 2px);
-  background: var(--tx-primary);
-  pointer-events: none;
-  z-index: 3;
-  opacity: 0;
-  transform: scaleX(0.92);
-  transition:
-    opacity var(--tx-duration-fast) var(--tx-ease-standard),
-    transform var(--tx-duration-fast) var(--tx-ease-standard);
-
-  &--visible {
-    opacity: 1;
-    transform: scaleX(1);
-  }
-
-  &--before {
-    top: 0;
-    transform: translateY(-50%) scaleX(0.92);
-
-    &.tx-tree-row__insert-line--visible {
-      transform: translateY(-50%) scaleX(1);
-    }
-  }
-
-  &--after {
-    bottom: 0;
-    transform: translateY(50%) scaleX(0.92);
-
-    &.tx-tree-row__insert-line--visible {
-      transform: translateY(50%) scaleX(1);
-    }
-  }
-}
-
-:host-context(.tx-tree-host--dragging) .tx-tree-row__insert-line {
-  transition: none;
-}
-
-:host-context(.tx-tree-host--dragging) .tx-tree-row__insert-line--visible {
-  animation: tx-dnd-insert-line-glow 1.35s var(--tx-ease-standard) infinite;
-}
-
-:host-context(.tx-tree-host--dragging) .tx-tree-row__insert-line--visible.tx-tree-row__insert-line--before {
-  animation:
-    tx-dnd-insert-line-before-in var(--tx-duration-reorder, 260ms) var(--tx-ease-standard) both,
-    tx-dnd-insert-line-glow 1.35s var(--tx-ease-standard) calc(var(--tx-duration-reorder, 260ms) + 40ms)
-      infinite;
-}
-
-:host-context(.tx-tree-host--dragging) .tx-tree-row__insert-line--visible.tx-tree-row__insert-line--after {
-  animation:
-    tx-dnd-insert-line-after-in var(--tx-duration-reorder, 260ms) var(--tx-ease-standard) both,
-    tx-dnd-insert-line-glow 1.35s var(--tx-ease-standard) calc(var(--tx-duration-reorder, 260ms) + 40ms)
-      infinite;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  :host-context(.tx-tree-host--dragging) .tx-tree-row__insert-line--visible {
-    animation: none !important;
-    box-shadow: 0 0 0 1px color-mix(in srgb, var(--tx-primary) 35%, transparent);
-  }
-}
-
 /* Debug layout: hitbox bands only (no row label/icon chrome) */
 :host.tx-tree-row-host--debug {
   --tx-tree-debug-row-min-h: 8.5rem;
@@ -587,15 +507,10 @@
   border: 0;
 }
 
-:host.tx-tree-row-host--debug.tx-tree-row-host--drop-before .tx-tree-row__debug-band--top,
-:host.tx-tree-row-host--debug.tx-tree-row-host--drop-inside .tx-tree-row__debug-band--center,
-:host.tx-tree-row-host--debug.tx-tree-row-host--drop-after .tx-tree-row__debug-band--bottom {
+:host.tx-tree-row-host--debug.tx-tree-row-host--drop-inside .tx-tree-row__debug-band--center {
   border-width: 3px;
   box-shadow:
     inset 0 0 0 1px color-mix(in srgb, var(--tx-surface-0) 40%, transparent),
     0 0 0 2px color-mix(in srgb, var(--tx-primary) 35%, transparent);
 }
 
-:host.tx-tree-row-host--debug.tx-tree-row-host--drop-deny .tx-tree-row__debug-bands {
-  opacity: 0.5;
-}

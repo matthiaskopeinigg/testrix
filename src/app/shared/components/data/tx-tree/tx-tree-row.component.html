@@ -151,14 +151,3 @@
     </span>
   </div>
 }
-
-<span
-  class="tx-tree-row__insert-line"
-  [style.--row-indicator-depth]="insertLineDepth()"
-  [class.tx-tree-row__insert-line--visible]="
-    !isDragging() && (dropPosition() === 'before' || dropPosition() === 'after')
-  "
-  [class.tx-tree-row__insert-line--before]="dropPosition() === 'before'"
-  [class.tx-tree-row__insert-line--after]="dropPosition() === 'after'"
-  aria-hidden="true"
-></span>

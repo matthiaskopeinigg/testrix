@@ -1,20 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
 import { mergeTxTreeConfig } from './tx-tree.config';
-import {
-  canonicalizeDropIndicator,
-  isPointerInRowSeamZone,
-  isSharedSiblingGapDrop,
-  resolveDropIndicatorDisplay,
-  resolveDropPositionWithHysteresis,
-  resolveFolderExitIndicator,
-  remapFolderExitToAfterBlockSeam,
-  remapIndicatorOffDraggingRow,
-  resolveTailRootRowId,
-  sortSiblings,
-  TxTreeModel,
-} from './tx-tree.model';
-import type { TxTreeNode } from './tx-tree.types';
+import { sortSiblings, TxTreeModel } from './tx-tree.model';
+import type { TxTreeDropIntent, TxTreeNode } from './tx-tree.types';
 
 const SAMPLE: TxTreeNode[] = [
   {
@@ -35,6 +23,14 @@ const SAMPLE: TxTreeNode[] = [
     ],
   },
 ];
+
+function reorder(
+  parentId: string | null,
+  index: number,
+  depth: number,
+): TxTreeDropIntent {
+  return { kind: 'reorder', parentId, index, depth };
+}
 
 describe('TxTreeModel', () => {
   it('flattens visible rows respecting expansion', () => {
@@ -63,40 +59,219 @@ describe('TxTreeModel', () => {
     expect(model.getVisibleRows()[0]?.hasChildren).toBe(false);
   });
 
-  it('reorders siblings within the same parent', () => {
+  it('lists display children for a parent and for the root', () => {
+    const model = new TxTreeModel(mergeTxTreeConfig());
+    model.setNodes(SAMPLE);
+    expect(model.getDisplayChildren(null).map((node) => node.id)).toEqual(['root']);
+    expect(model.getDisplayChildren('root').map((node) => node.id)).toEqual([
+      'a',
+      'b',
+      'folder',
+    ]);
+    expect(model.getDisplayChildren('a')).toEqual([]);
+  });
+});
+
+describe('TxTreeModel intents', () => {
+  it('applies a reorder intent by splicing at the post-extraction index', () => {
     const model = new TxTreeModel(mergeTxTreeConfig());
     model.setNodes(SAMPLE);
     model.expand('root');
-    const result = model.moveNode('b', 'a', 'before');
+
+    const result = model.applyIntent('b', reorder('root', 0, 1));
     expect(result).not.toBeNull();
-    const childIds = result!.nodes[0].children!.map((n) => n.id);
-    expect(childIds).toEqual(['b', 'a', 'folder']);
+    expect(result!.nodes[0].children!.map((n) => n.id)).toEqual(['b', 'a', 'folder']);
   });
 
-  it('moves the first sibling down when dropping before the next row', () => {
+  it('moves a node to the end of its sibling list', () => {
     const model = new TxTreeModel(mergeTxTreeConfig());
     model.setNodes(SAMPLE);
     model.expand('root');
-    const logical = model.resolveLogicalDrop('a', 'b', 'before');
-    expect(logical).toEqual({ targetId: 'b', position: 'after' });
-    const result = model.moveNode('a', logical.targetId, logical.position);
-    expect(result).not.toBeNull();
-    const childIds = result!.nodes[0].children!.map((n) => n.id);
-    expect(childIds).toEqual(['b', 'a', 'folder']);
+
+    const result = model.applyIntent('a', reorder('root', 2, 1));
+    expect(result!.nodes[0].children!.map((n) => n.id)).toEqual(['b', 'folder', 'a']);
   });
 
-  it('reparents into a folder', () => {
+  it('renumbers order fields from the resulting sequence', () => {
+    const model = new TxTreeModel(mergeTxTreeConfig({ sort: { siblingSort: 'order' } }));
+    model.setNodes(SAMPLE);
+    model.expand('root');
+
+    const result = model.applyIntent('folder', reorder('root', 0, 1));
+    expect(result!.nodes[0].children!.map((n) => [n.id, n.order])).toEqual([
+      ['folder', 0],
+      ['a', 10],
+      ['b', 20],
+    ]);
+  });
+
+  it('keeps the identity slot legal but treats applying it as a no-op', () => {
+    const model = new TxTreeModel(mergeTxTreeConfig());
+    model.setNodes(SAMPLE);
+    model.expand('root');
+
+    // `a` is already at index 0 of `root`, so the indicator may rest there.
+    expect(model.isNoOpIntent('a', reorder('root', 0, 1))).toBe(true);
+    expect(model.canDropIntent('a', reorder('root', 0, 1))).toBe(true);
+    expect(model.applyIntent('a', reorder('root', 0, 1))).toBeNull();
+    expect(model.canDrop('a', 'a', 'before')).toBe(false);
+
+    expect(model.isNoOpIntent('a', reorder('root', 1, 1))).toBe(false);
+    expect(model.applyIntent('a', reorder('root', 1, 1))).not.toBeNull();
+  });
+
+  it('denies dropping into its own subtree', () => {
+    const model = new TxTreeModel(mergeTxTreeConfig());
+    model.setNodes(SAMPLE);
+    model.expand('root');
+    model.expand('folder');
+
+    expect(model.canDropIntent('folder', reorder('folder', 0, 2))).toBe(false);
+    expect(model.canDropIntent('root', reorder('folder', 0, 2))).toBe(false);
+  });
+
+  it('reparents into a folder with an inside intent', () => {
     const model = new TxTreeModel(mergeTxTreeConfig({ drop: { reparentAllowed: true } }));
     model.setNodes(SAMPLE);
     model.expand('root');
     model.expand('folder');
-    const result = model.moveNode('a', 'folder', 'inside');
+
+    const result = model.applyIntent('a', { kind: 'inside', parentId: 'folder' });
     expect(result).not.toBeNull();
     const folder = result!.nodes[0].children!.find((n) => n.id === 'folder');
-    expect(folder?.children?.map((n) => n.id)).toContain('a');
+    expect(folder?.children?.map((n) => n.id)).toEqual(['c', 'a']);
   });
 
-  it('applies remapDropTarget before canDrop', () => {
+  it('treats re-appending the last child inside its own parent as a no-op', () => {
+    const model = new TxTreeModel(mergeTxTreeConfig());
+    model.setNodes(SAMPLE);
+    model.expand('root');
+
+    // `folder` is already the last child of `root`; `a` is not, so appending it is a move.
+    expect(model.applyIntent('folder', { kind: 'inside', parentId: 'root' })).toBeNull();
+    expect(model.applyIntent('a', { kind: 'inside', parentId: 'root' })).not.toBeNull();
+  });
+
+  it('moves the last folder child out to the tree root', () => {
+    const model = new TxTreeModel(mergeTxTreeConfig());
+    model.setNodes([
+      { id: 'other', label: 'Other', kind: 'folder', order: 0, children: [] },
+      {
+        id: 'new-folder',
+        label: 'New folder',
+        kind: 'folder',
+        order: 10,
+        children: [
+          { id: 'ws-events', label: 'WS /events', kind: 'websocket', order: 0 },
+          { id: 'ws-notifications', label: 'WS /notifications', kind: 'websocket', order: 10 },
+        ],
+      },
+    ]);
+    model.expand('new-folder');
+
+    const intent = reorder(null, 2, 0);
+    expect(model.canDropIntent('ws-notifications', intent)).toBe(true);
+
+    const moved = model.applyIntent('ws-notifications', intent);
+    expect(moved!.nodes.map((node) => node.id)).toEqual([
+      'other',
+      'new-folder',
+      'ws-notifications',
+    ]);
+    expect(moved!.nodes[1].children?.map((node) => node.id)).toEqual(['ws-events']);
+  });
+
+  it('denies an intent when maxDepth is exceeded', () => {
+    const model = new TxTreeModel(mergeTxTreeConfig({ drop: { maxDepth: 1 } }));
+    model.setNodes(SAMPLE);
+    model.expand('root');
+
+    expect(model.canDropIntent('a', { kind: 'inside', parentId: 'folder' })).toBe(false);
+    expect(model.canDropIntent('a', reorder('folder', 0, 2))).toBe(false);
+    expect(model.canDropIntent('a', reorder(null, 0, 0))).toBe(true);
+  });
+
+  it('restricts intents to the source parent when scope is sameParent', () => {
+    const model = new TxTreeModel(
+      mergeTxTreeConfig({
+        drag: { scope: 'sameParent' },
+        drop: { positions: ['before', 'after'] },
+      }),
+    );
+    model.setNodes(SAMPLE);
+    model.expand('root');
+
+    expect(model.canDropIntent('a', reorder('root', 2, 1))).toBe(true);
+    expect(model.canDropIntent('a', reorder('folder', 0, 2))).toBe(false);
+    expect(model.canDropIntent('a', { kind: 'inside', parentId: 'folder' })).toBe(false);
+  });
+
+  it('denies reparenting when reparentAllowed is false', () => {
+    const model = new TxTreeModel(mergeTxTreeConfig({ drop: { reparentAllowed: false } }));
+    model.setNodes(SAMPLE);
+    model.expand('root');
+    model.expand('folder');
+
+    expect(model.canDropIntent('a', reorder('root', 2, 1))).toBe(true);
+    expect(model.canDropIntent('a', reorder('folder', 0, 2))).toBe(false);
+  });
+
+  it('keeps sibling seams when the consumer blocks inside entirely', () => {
+    // Flat step lists (flow steps) reject `inside` but must stay fully reorderable.
+    const model = new TxTreeModel(
+      mergeTxTreeConfig({
+        drop: { canDrop: (ctx) => ctx.position !== 'inside' },
+      }),
+    );
+    model.setNodes([
+      { id: 's1', label: 'Step 1', kind: 'step', order: 0 },
+      { id: 's2', label: 'Step 2', kind: 'step', order: 10 },
+      { id: 's3', label: 'Step 3', kind: 'step', order: 20 },
+    ]);
+
+    expect(model.canDropIntent('s3', reorder(null, 0, 0))).toBe(true);
+    expect(model.canDropIntent('s3', reorder(null, 1, 0))).toBe(true);
+    expect(model.canDropIntent('s1', { kind: 'inside', parentId: 's2' })).toBe(false);
+  });
+
+  it('describes a reorder into an empty parent as inside it', () => {
+    const model = new TxTreeModel(mergeTxTreeConfig());
+    model.setNodes([
+      { id: 'empty', label: 'Empty', kind: 'folder', order: 0, children: [] },
+      { id: 'leaf', label: 'Leaf', kind: 'leaf', order: 10 },
+    ]);
+    model.expand('empty');
+
+    // The seam inside an empty folder has no occupant to sit before, so the compat pair
+    // has to be `inside`, and a consumer blocking `inside` blocks that seam too.
+    expect(model.describeIntent('leaf', reorder('empty', 0, 1))).toEqual({
+      targetId: 'empty',
+      position: 'inside',
+    });
+
+    const blocked = new TxTreeModel(
+      mergeTxTreeConfig({ drop: { canDrop: (ctx) => ctx.position !== 'inside' } }),
+    );
+    blocked.setNodes(model.getNodes());
+    blocked.expand('empty');
+    expect(blocked.canDropIntent('leaf', reorder('empty', 0, 1))).toBe(false);
+  });
+
+  it('denies intents the consumer canDrop rejects', () => {
+    const model = new TxTreeModel(
+      mergeTxTreeConfig({
+        drop: { canDrop: (ctx) => ctx.position !== 'inside' },
+      }),
+    );
+    model.setNodes(SAMPLE);
+    model.expand('root');
+    model.expand('folder');
+
+    expect(model.canDropIntent('a', { kind: 'inside', parentId: 'folder' })).toBe(false);
+    expect(model.canDropIntent('a', reorder('folder', 0, 2))).toBe(true);
+  });
+
+  it('rejects slots that remapDropTarget redirects elsewhere', () => {
     const model = new TxTreeModel(
       mergeTxTreeConfig({
         sort: { siblingSort: 'manual' },
@@ -116,300 +291,72 @@ describe('TxTreeModel', () => {
       },
     ]);
     model.expand('b');
-    expect(model.resolveLogicalDrop('a', 'schema', 'before')).toEqual({
-      targetId: 'b',
-      position: 'after',
-    });
-    expect(model.moveNode('a', 'b', 'after')?.nodes.map((node) => node.id)).toEqual(['b', 'a']);
+
+    // The slot inside `b` is described by `before schema`, which the consumer redirects,
+    // so it is not offered; the root-level slot after `b` is.
+    expect(model.canDropIntent('a', reorder('b', 0, 1))).toBe(false);
+    expect(model.canDropIntent('a', reorder(null, 2, 0))).toBe(true);
+    expect(model.applyIntent('a', reorder(null, 2, 0))?.nodes.map((node) => node.id)).toEqual([
+      'b',
+      'a',
+    ]);
   });
 
-  it('denies drop when maxDepth exceeded', () => {
-    const model = new TxTreeModel(mergeTxTreeConfig({ drop: { maxDepth: 1 } }));
+  it('describes reorder intents as before the occupant or after the last sibling', () => {
+    const model = new TxTreeModel(mergeTxTreeConfig());
     model.setNodes(SAMPLE);
     model.expand('root');
-    expect(model.canDrop('a', 'folder', 'inside')).toBe(false);
-  });
 
-  it('denies cross-parent drag when scope is sameParent', () => {
-    const model = new TxTreeModel(
-      mergeTxTreeConfig({
-        drag: { scope: 'sameParent' },
-        drop: { reparentAllowed: false, positions: ['before', 'after'] },
-      }),
-    );
-    model.setNodes(SAMPLE);
-    model.expand('root');
-    expect(model.canDrop('a', 'folder', 'inside')).toBe(false);
-    expect(model.canDrop('a', 'b', 'after')).toBe(true);
-  });
-
-  it('treats after on upper row and before on lower row as the same sibling gap', () => {
-    const rows = [
-      { id: 'a', parentId: 'root' },
-      { id: 'b', parentId: 'root' },
-      { id: 'c', parentId: 'root' },
-    ];
-    expect(isSharedSiblingGapDrop(rows, 'a', 'after', 'b', 'before')).toBe(true);
-    expect(isSharedSiblingGapDrop(rows, 'a', 'after', 'c', 'before')).toBe(false);
-    expect(isSharedSiblingGapDrop(rows, 'a', 'before', 'b', 'after')).toBe(false);
-  });
-
-  it('canonicalizes after on a row to before on the next sibling', () => {
-    const rows = [
-      { id: 'a', parentId: 'root' },
-      { id: 'b', parentId: 'root' },
-      { id: 'c', parentId: 'root' },
-    ];
-    expect(canonicalizeDropIndicator(rows, 'a', 'after')).toEqual({
-      targetId: 'b',
-      position: 'before',
-    });
-    expect(canonicalizeDropIndicator(rows, 'c', 'after')).toEqual({
-      targetId: 'c',
-      position: 'after',
-    });
-    expect(canonicalizeDropIndicator(rows, 'b', 'before')).toEqual({
-      targetId: 'b',
-      position: 'before',
-    });
-  });
-
-  it('maps after on an expanded folder to after its last visible descendant', () => {
-    const rows = [
-      { id: 'folder', parentId: null, depth: 0, hasChildren: true, expanded: true },
-      { id: 'a', parentId: 'folder', depth: 1, hasChildren: false, expanded: false },
-      { id: 'b', parentId: 'folder', depth: 1, hasChildren: false, expanded: false },
-      { id: 'next', parentId: null, depth: 0, hasChildren: false, expanded: false },
-    ];
-
-    expect(resolveFolderExitIndicator(rows, 'folder', 'after')).toEqual({
-      targetId: 'b',
-      position: 'after',
-    });
-    expect(resolveDropIndicatorDisplay(rows, 'folder', 'after')).toEqual({
-      targetId: 'b',
-      position: 'after',
-      indentDepth: 0,
-    });
-  });
-
-  it('keeps folder-exit indicator after the last child when that child is being dragged', () => {
-    const rows = [
-      { id: 'folder', parentId: null, depth: 0, hasChildren: true, expanded: true },
-      { id: 'a', parentId: 'folder', depth: 1, hasChildren: false, expanded: false },
-      { id: 'b', parentId: 'folder', depth: 1, hasChildren: false, expanded: false },
-      { id: 'next', parentId: null, depth: 0, hasChildren: false, expanded: false },
-    ];
-
-    expect(resolveDropIndicatorDisplay(rows, 'folder', 'after')).toEqual({
-      targetId: 'b',
-      position: 'after',
-      indentDepth: 0,
-    });
-
-    const rowsWithoutDraggedLast = rows.filter((row) => row.id !== 'b');
-    expect(resolveDropIndicatorDisplay(rowsWithoutDraggedLast, 'folder', 'after')).toEqual({
+    expect(model.describeIntent('folder', reorder('root', 0, 1))).toEqual({
       targetId: 'a',
-      position: 'after',
-      indentDepth: 0,
+      position: 'before',
     });
-  });
-
-  it('detects pointer in the seam between two row rects', () => {
-    const upper = new DOMRect(0, 0, 100, 40);
-    const lower = new DOMRect(0, 40, 100, 40);
-    expect(isPointerInRowSeamZone(40, upper, lower)).toBe(true);
-    expect(isPointerInRowSeamZone(10, upper, lower)).toBe(false);
-  });
-
-  it('keeps drop band stable near zone edges (hysteresis)', () => {
-    const rect = new DOMRect(0, 100, 200, 40);
-    const allowed = ['before', 'after', 'inside'] as const;
-
-    const first = resolveDropPositionWithHysteresis(108, rect, allowed, true, null);
-    expect(first).toBe('before');
-
-    const jitter = resolveDropPositionWithHysteresis(111, rect, allowed, true, 'before');
-    expect(jitter).toBe('before');
-  });
-
-  it('denies drop that would leave the source in the same place', () => {
-    const model = new TxTreeModel(mergeTxTreeConfig());
-    model.setNodes(SAMPLE);
-    model.expand('root');
-    expect(model.canDrop('b', 'a', 'after')).toBe(false);
-    expect(model.canDrop('a', 'b', 'before')).toBe(false);
-  });
-
-  it('remaps inside on parent folder to folder exit when source is the last child', () => {
-    const model = new TxTreeModel(mergeTxTreeConfig({ sort: { foldersFirst: true } }));
-    model.setNodes([
-      {
-        id: 'folder-realtime',
-        label: 'Realtime',
-        kind: 'folder',
-        children: [
-          {
-            id: 'new-folder',
-            label: 'New folder',
-            kind: 'folder',
-            order: 0,
-            children: [],
-          },
-          { id: 'ws-events', label: 'WS /events', kind: 'websocket', order: 10 },
-        ],
-      },
-      { id: 'req-users', label: 'GET /users', kind: 'request', order: 0 },
-    ]);
-    model.expand('folder-realtime');
-
-    expect(model.canDrop('ws-events', 'folder-realtime', 'inside')).toBe(false);
-    expect(model.resolveLogicalDrop('ws-events', 'folder-realtime', 'inside')).toEqual({
-      targetId: 'folder-realtime',
-      position: 'after',
-    });
-    expect(model.canDrop('ws-events', 'folder-realtime', 'after')).toBe(true);
-
-    const moved = model.moveNode('ws-events', 'folder-realtime', 'after');
-    expect(moved).not.toBeNull();
-    expect(moved!.nodes.map((node) => node.id)).toEqual(['folder-realtime', 'ws-events', 'req-users']);
-  });
-
-  it('keeps self-hit after on last child as a no-op on the source row', () => {
-    const model = new TxTreeModel(mergeTxTreeConfig());
-    model.setNodes([
-      {
-        id: 'folder',
-        label: 'Folder',
-        kind: 'folder',
-        children: [{ id: 'leaf', label: 'Leaf', kind: 'leaf', order: 0 }],
-      },
-    ]);
-    model.expand('folder');
-
-    expect(model.resolveLogicalDrop('leaf', 'leaf', 'after')).toEqual({
-      targetId: 'leaf',
-      position: 'after',
-    });
-    expect(model.canDrop('leaf', 'leaf', 'after')).toBe(false);
-  });
-
-  it('denies after on the previous sibling when source is already there', () => {
-    const model = new TxTreeModel(mergeTxTreeConfig());
-    model.setNodes([
-      {
-        id: 'folder',
-        label: 'Folder',
-        kind: 'folder',
-        children: [
-          { id: 'a', label: 'A', kind: 'leaf', order: 0 },
-          { id: 'b', label: 'B', kind: 'leaf', order: 10 },
-        ],
-      },
-    ]);
-    model.expand('folder');
-
-    expect(model.canDrop('b', 'a', 'after')).toBe(false);
-    expect(model.resolveLogicalDrop('b', 'b', 'after')).toEqual({
+    expect(model.describeIntent('folder', reorder('root', 2, 1))).toEqual({
       targetId: 'b',
       position: 'after',
     });
+    expect(model.describeIntent('a', { kind: 'inside', parentId: 'folder' })).toEqual({
+      targetId: 'folder',
+      position: 'inside',
+    });
   });
 
-  it('remaps folder-exit indicator off the dragging row onto the previous sibling', () => {
-    const rows = [
-      { id: 'folder', parentId: null, depth: 0, hasChildren: true, expanded: true },
-      { id: 'a', parentId: 'folder', depth: 1, hasChildren: false, expanded: false },
-      { id: 'b', parentId: 'folder', depth: 1, hasChildren: false, expanded: false },
-    ];
-    expect(
-      remapIndicatorOffDraggingRow(rows, 'b', 'b', 'after', null),
-    ).toEqual({ targetId: 'a', position: 'after', indentDepth: null });
-    expect(
-      remapIndicatorOffDraggingRow(rows, 'b', 'b', 'before', null),
-    ).toEqual({ targetId: 'a', position: 'after', indentDepth: null });
-    expect(
-      remapIndicatorOffDraggingRow(rows, 'a', 'a', 'after', null),
-    ).toEqual({ targetId: null, position: null, indentDepth: null });
-    expect(
-      remapIndicatorOffDraggingRow(rows, 'a', 'a', 'before', null),
-    ).toEqual({ targetId: null, position: null, indentDepth: null });
+  it('reports the drop event target and parents from the committed intent', () => {
+    const model = new TxTreeModel(mergeTxTreeConfig({ drop: { reparentAllowed: true } }));
+    model.setNodes(SAMPLE);
+    model.expand('root');
+    model.expand('folder');
+
+    const result = model.applyIntent('a', reorder('folder', 0, 2));
+    expect(result!.event).toEqual({
+      sourceId: 'a',
+      targetId: 'c',
+      position: 'before',
+      previousParentId: 'root',
+      nextParentId: 'folder',
+    });
   });
 
-  it('remaps folder-exit on the dragging row to the seam after the folder block', () => {
-    const rows = [
-      { id: 'folder', parentId: null, depth: 0, hasChildren: true, expanded: true },
-      { id: 'a', parentId: 'folder', depth: 1, hasChildren: false, expanded: false },
-      { id: 'b', parentId: 'folder', depth: 1, hasChildren: false, expanded: false },
-      { id: 'next', parentId: null, depth: 0, hasChildren: false, expanded: false },
-    ];
-    expect(
-      remapFolderExitToAfterBlockSeam(rows, 'b', 'folder', 0),
-    ).toEqual({ targetId: 'next', position: 'before', indentDepth: 0 });
-
-    const tailRows = rows.filter((row) => row.id !== 'next');
-    expect(
-      remapFolderExitToAfterBlockSeam(tailRows, 'b', 'folder', 0),
-    ).toEqual({ targetId: 'b', position: 'after', indentDepth: 0 });
-
-    const onlyChildRows = [
-      { id: 'folder', parentId: null, depth: 0, hasChildren: true, expanded: true },
-      { id: 'only', parentId: 'folder', depth: 1, hasChildren: false, expanded: false },
-    ];
-    expect(
-      remapFolderExitToAfterBlockSeam(onlyChildRows, 'only', 'folder', 0),
-    ).toEqual({ targetId: 'only', position: 'after', indentDepth: 0 });
-
-    const midDragRows = [
-      { id: 'folder', parentId: null, depth: 0, hasChildren: true, expanded: true },
-      { id: 'a', parentId: 'folder', depth: 1, hasChildren: false, expanded: false },
-      { id: 'b', parentId: 'folder', depth: 1, hasChildren: false, expanded: false },
-      { id: 'c', parentId: 'folder', depth: 1, hasChildren: false, expanded: false },
-      { id: 'next', parentId: null, depth: 0, hasChildren: false, expanded: false },
-    ];
-    expect(
-      remapFolderExitToAfterBlockSeam(midDragRows, 'b', 'folder', 0),
-    ).toEqual({ targetId: 'next', position: 'before', indentDepth: 0 });
-  });
-
-  it('resolves the trailing root row for empty-space below-tree drops', () => {
-    const rows = [
-      { id: 'auth', parentId: null },
-      { id: 'users', parentId: null },
-      { id: 'new-folder', parentId: null },
-      { id: 'ws-events', parentId: 'new-folder' },
-      { id: 'get-users', parentId: 'new-folder' },
-      { id: 'ws-notifications', parentId: 'new-folder' },
-    ];
-
-    expect(resolveTailRootRowId(rows)).toBe('new-folder');
-    expect(resolveTailRootRowId(rows, 'ws-notifications')).toBe('new-folder');
-    expect(resolveTailRootRowId(rows, 'new-folder')).toBe('users');
-  });
-
-  it('allows moving the last folder child to root via after on the parent folder', () => {
+  it('converts a target/position pair into the equivalent intent', () => {
     const model = new TxTreeModel(mergeTxTreeConfig());
-    model.setNodes([
-      { id: 'other', label: 'Other', kind: 'folder', order: 0, children: [] },
-      {
-        id: 'new-folder',
-        label: 'New folder',
-        kind: 'folder',
-        order: 10,
-        children: [
-          { id: 'ws-events', label: 'WS /events', kind: 'websocket', order: 0 },
-          { id: 'ws-notifications', label: 'WS /notifications', kind: 'websocket', order: 10 },
-        ],
-      },
-    ]);
-    model.expand('new-folder');
+    model.setNodes(SAMPLE);
+    model.expand('root');
 
-    expect(model.canDrop('ws-notifications', 'new-folder', 'after')).toBe(true);
+    expect(model.intentFromDropTarget('folder', 'a', 'before')).toEqual(reorder('root', 0, 1));
+    expect(model.intentFromDropTarget('folder', 'a', 'after')).toEqual(reorder('root', 1, 1));
+    expect(model.intentFromDropTarget('a', 'folder', 'inside')).toEqual({
+      kind: 'inside',
+      parentId: 'folder',
+    });
+  });
 
-    const moved = model.moveNode('ws-notifications', 'new-folder', 'after');
-    expect(moved).not.toBeNull();
-    expect(moved!.nodes.map((node) => node.id)).toEqual(['other', 'new-folder', 'ws-notifications']);
-    expect(moved!.nodes[1].children?.map((node) => node.id)).toEqual(['ws-events']);
+  it('reorders siblings through the moveNode pair API', () => {
+    const model = new TxTreeModel(mergeTxTreeConfig());
+    model.setNodes(SAMPLE);
+    model.expand('root');
+
+    const result = model.moveNode('b', 'a', 'before');
+    expect(result!.nodes[0].children!.map((n) => n.id)).toEqual(['b', 'a', 'folder']);
   });
 
   it('denies dragging disabled nodes', () => {
@@ -424,7 +371,9 @@ describe('TxTreeModel', () => {
     ]);
     expect(model.canDrag('x')).toBe(false);
   });
+});
 
+describe('TxTreeModel foldersFirst', () => {
   it('sorts folders before requests when foldersFirst is enabled', () => {
     const nodes: TxTreeNode[] = [
       { id: 'req', label: 'Request', kind: 'request', order: 0 },
@@ -434,7 +383,7 @@ describe('TxTreeModel', () => {
     expect(sorted.map((n) => n.id)).toEqual(['folder', 'req']);
   });
 
-  it('denies dropping the last root folder below a root item when foldersFirst is enabled', () => {
+  it('never offers a slot that would put a folder after a leaf', () => {
     const model = new TxTreeModel(mergeTxTreeConfig({ sort: { foldersFirst: true } }));
     model.setNodes([
       { id: 'folder-auth', label: 'Auth', kind: 'folder', order: 0, children: [] },
@@ -442,22 +391,22 @@ describe('TxTreeModel', () => {
       { id: 'req-path', label: 'GET /path', kind: 'request', order: 20 },
     ]);
 
-    expect(model.canDrop('folder-users', 'req-path', 'after')).toBe(false);
-    expect(model.moveNode('folder-users', 'req-path', 'after')).toBeNull();
-    expect(model.canDrop('folder-users', 'folder-auth', 'before')).toBe(true);
+    expect(model.canDropIntent('folder-users', reorder(null, 2, 0))).toBe(false);
+    expect(model.applyIntent('folder-users', reorder(null, 2, 0))).toBeNull();
+    expect(model.canDropIntent('folder-users', reorder(null, 0, 0))).toBe(true);
   });
 
-  it('allows dropping a root folder below an item when foldersFirst is disabled', () => {
+  it('allows a folder after a leaf when foldersFirst is disabled', () => {
     const model = new TxTreeModel(mergeTxTreeConfig({ sort: { foldersFirst: false } }));
     model.setNodes([
       { id: 'folder-users', label: 'Users', kind: 'folder', order: 0, children: [] },
       { id: 'req-path', label: 'GET /path', kind: 'request', order: 10 },
     ]);
 
-    expect(model.canDrop('folder-users', 'req-path', 'after')).toBe(true);
+    expect(model.canDropIntent('folder-users', reorder(null, 1, 0))).toBe(true);
   });
 
-  it('allows nesting a folder inside a folder that already has requests when foldersFirst is enabled', () => {
+  it('nests a folder ahead of existing requests when foldersFirst is enabled', () => {
     const model = new TxTreeModel(mergeTxTreeConfig({ sort: { foldersFirst: true } }));
     model.setNodes([
       {
@@ -471,13 +420,42 @@ describe('TxTreeModel', () => {
     ]);
     model.expand('parent');
 
-    expect(model.canDrop('nested', 'parent', 'inside')).toBe(true);
-    const result = model.moveNode('nested', 'parent', 'inside');
-    expect(result).not.toBeNull();
+    const intent: TxTreeDropIntent = { kind: 'inside', parentId: 'parent' };
+    expect(model.canDropIntent('nested', intent)).toBe(true);
+    const result = model.applyIntent('nested', intent);
     const parent = result!.nodes.find((n) => n.id === 'parent');
     expect(parent?.children?.map((n) => n.id)).toEqual(['nested', 'req']);
   });
 
+  it('moves the last folder child to root ahead of an existing request', () => {
+    const model = new TxTreeModel(mergeTxTreeConfig({ sort: { foldersFirst: true } }));
+    model.setNodes([
+      {
+        id: 'folder-realtime',
+        label: 'Realtime',
+        kind: 'folder',
+        children: [
+          { id: 'new-folder', label: 'New folder', kind: 'folder', order: 0, children: [] },
+          { id: 'ws-events', label: 'WS /events', kind: 'websocket', order: 10 },
+        ],
+      },
+      { id: 'req-users', label: 'GET /users', kind: 'request', order: 0 },
+    ]);
+    model.expand('folder-realtime');
+
+    const intent = reorder(null, 1, 0);
+    expect(model.canDropIntent('ws-events', intent)).toBe(true);
+
+    const moved = model.applyIntent('ws-events', intent);
+    expect(moved!.nodes.map((node) => node.id)).toEqual([
+      'folder-realtime',
+      'ws-events',
+      'req-users',
+    ]);
+  });
+});
+
+describe('TxTreeModel node identity', () => {
   it('skips cloning when setNodes receives the same root reference', () => {
     const model = new TxTreeModel(mergeTxTreeConfig());
     expect(model.setNodes(SAMPLE)).toBe(true);
@@ -494,7 +472,9 @@ describe('TxTreeModel', () => {
     const first: TxTreeNode[] = [{ id: 'root', label: 'Root', kind: 'folder', children: [child] }];
     model.setNodes(first);
     const clonedChild = model.getNodes()[0]?.children?.[0];
-    const second: TxTreeNode[] = [{ id: 'root', label: 'Root 2', kind: 'folder', children: [child] }];
+    const second: TxTreeNode[] = [
+      { id: 'root', label: 'Root 2', kind: 'folder', children: [child] },
+    ];
     expect(model.setNodes(second)).toBe(true);
     expect(model.getNodes()[0]?.label).toBe('Root 2');
     expect(model.getNodes()[0]?.children?.[0]).toBe(clonedChild);

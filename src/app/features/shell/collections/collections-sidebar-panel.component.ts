@@ -188,7 +188,6 @@ export class CollectionsSidebarPanelComponent {
       ariaLabel: 'Collections',
       expansion: {
         expandFolderOnDrag: collections?.expandFolderOnDrag ?? false,
-        expandFolderOnDrop: false,
         expandOnClick: false,
       },
       visual: {

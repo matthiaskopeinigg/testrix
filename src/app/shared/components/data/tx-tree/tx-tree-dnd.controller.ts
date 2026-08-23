@@ -1,21 +1,32 @@
+import type { TxTreeModel } from './tx-tree.model';
 import {
-  remapIndicatorOffDraggingRow,
-  remapFolderExitToAfterBlockSeam,
-  resolveDropIndicatorDisplay,
-  resolveDropPositionWithHysteresis,
-  resolveTailRootRowId,
-  type TxTreeModel,
-} from './tx-tree.model';
+  applyTxTreeAutoScroll,
+  findTxTreeScrollParent,
+  resolveTxTreeAutoScrollDelta,
+  resolveTxTreeDropReachPx,
+  resolveTxTreeRowSpan,
+  TxTreeDragGeometry,
+} from './tx-tree-drag-geometry';
+import {
+  buildTxTreeDropSlots,
+  dropIndicatorsEqual,
+  dropIntentsEqual,
+  filterTxTreeDropSlots,
+  resolveTxTreeDropIntent,
+  resolveTxTreePointerDepth,
+  TX_TREE_EMPTY_DROP_SLOT_TABLE,
+  type TxTreeDropSlotTable,
+} from './tx-tree-drop-slots';
 import type {
   TxTreeConfig,
   TxTreeDnDState,
+  TxTreeDropIntent,
   TxTreeDropPosition,
   TxTreeNodeDropEvent,
 } from './tx-tree.types';
 import {
   TX_TREE_DRAG_ACTIVATION_DISTANCE_PX,
   TX_TREE_INITIAL_DND_STATE,
-  TX_TREE_ROW_HIT_SLOP_PX,
 } from './tx-tree.types';
 
 export interface TxTreeDragEndContext {
@@ -104,16 +115,9 @@ export interface TxTreeDnDCallbacks {
   readonly onDragStart?: () => void;
   readonly onDragEnd?: (context: TxTreeDragEndContext) => void;
   readonly onDrop: (event: TxTreeNodeDropEvent, nodes: ReturnType<TxTreeModel['getNodes']>) => void;
-  readonly onDeny: (targetId: string) => void;
   readonly onExpandNode: (nodeId: string) => void;
-  /** Called after the tree expands mid-drag so row geometry can be re-measured. */
-  readonly onLayoutChangeDuringDrag?: () => void;
-  /** Tree container element for folder-exit seam positioning. */
+  /** Tree content element (`.tx-tree`) that row geometry is measured against. */
   readonly getTreeHost?: () => HTMLElement | null;
-}
-
-interface RowTargetMeta {
-  readonly hasChildren: boolean;
 }
 
 interface PendingDrag {
@@ -123,20 +127,31 @@ interface PendingDrag {
   readonly startY: number;
   readonly pointerId: number;
   readonly captureTarget: HTMLElement | null;
+  /** Row box at pointer-down, so the ghost keeps the grab offset it was picked up with. */
+  readonly rowRect: DOMRect | null;
 }
 
 /**
  * Pointer-driven drag-and-drop for {@link TxTreeComponent}.
- * Attaches document listeners while a drag is active.
+ *
+ * Each frame resolves the pointer to a single {@link TxTreeDropIntent} through the drop-slot
+ * table, and that one value feeds both the insert indicator and the committed move.
  */
 export class TxTreeDnDController<TMeta = unknown> {
   private readonly rowElements = new Map<string, HTMLElement>();
-  private readonly rowMeta = new Map<string, RowTargetMeta>();
+  private readonly geometry = new TxTreeDragGeometry(
+    () => this.callbacks.getTreeHost?.() ?? null,
+    () => this.rowElements,
+  );
+
   private state: TxTreeDnDState = { ...TX_TREE_INITIAL_DND_STATE };
+  private slotTable: TxTreeDropSlotTable = TX_TREE_EMPTY_DROP_SLOT_TABLE;
+  private slotTableStale = true;
+
   private ghostEl: HTMLElement | null = null;
   private pointerId: number | null = null;
   private autoExpandTimer: ReturnType<typeof setTimeout> | null = null;
-  private lastHoverTargetId: string | null = null;
+  private autoExpandHoverId: string | null = null;
   private ghostOffsetX = 0;
   private ghostOffsetY = 0;
   private rafId: number | null = null;
@@ -147,12 +162,15 @@ export class TxTreeDnDController<TMeta = unknown> {
   private suppressClick = false;
   private captureTarget: HTMLElement | null = null;
   private endingDrag = false;
+  private scrollParent: HTMLElement | null = null;
+  private autoScrollRafId: number | null = null;
 
   private readonly boundMove = (event: PointerEvent) => this.schedulePointerMove(event);
   private readonly boundUp = (event: PointerEvent) => this.handleDocumentPointerUp(event);
   private readonly boundCancel = (event: PointerEvent) => this.handleDocumentPointerUp(event);
   private readonly boundKeyDown = (event: KeyboardEvent) => this.handleDocumentKeyDown(event);
   private readonly boundWindowBlur = () => this.endDrag(false);
+  private readonly boundResize = () => this.invalidateGeometry();
   private readonly boundVisibilityChange = () => {
     if (document.visibilityState !== 'visible') {
       this.endDrag(false);
@@ -202,37 +220,31 @@ export class TxTreeDnDController<TMeta = unknown> {
     return true;
   }
 
-  registerRow(nodeId: string, element: HTMLElement, meta?: RowTargetMeta): void {
+  registerRow(nodeId: string, element: HTMLElement): void {
     this.rowElements.set(nodeId, element);
-    if (meta) {
-      this.rowMeta.set(nodeId, meta);
-    }
+    this.invalidateGeometry();
   }
 
   unregisterRow(nodeId: string): void {
-    const aborting =
-      this.state.draggingId === nodeId || this.pendingDrag?.nodeId === nodeId;
+    const aborting = this.state.draggingId === nodeId || this.pendingDrag?.nodeId === nodeId;
     this.rowElements.delete(nodeId);
-    this.rowMeta.delete(nodeId);
+    this.invalidateGeometry();
     if (aborting) {
       this.endDrag(false);
     }
   }
 
-  /** Refreshes cached row metadata (call after visible rows change during drag). */
-  syncRowMetaFromModel(): void {
-    for (const row of this.model.getVisibleRows()) {
-      const hasChildren =
-        row.hasChildren || row.node.kind === 'folder' || row.node.kind === 'collection';
-      this.rowMeta.set(row.id, { hasChildren });
-    }
+  /** Discards cached row geometry and drop slots (call after rows change mid-drag). */
+  invalidateGeometry(): void {
+    this.geometry.invalidate();
+    this.slotTableStale = true;
   }
 
   destroy(): void {
     liveDnDControllers.delete(this.liveHandle);
     this.endDrag(false);
     this.rowElements.clear();
-    this.rowMeta.clear();
+    this.geometry.reset();
     clearTxTreeDnDDocumentChrome();
   }
 
@@ -253,6 +265,7 @@ export class TxTreeDnDController<TMeta = unknown> {
     } else {
       this.cancelPendingDrag();
     }
+
     this.pendingDrag = {
       nodeId,
       fromHandle,
@@ -260,6 +273,7 @@ export class TxTreeDnDController<TMeta = unknown> {
       startY: event.clientY,
       pointerId: event.pointerId,
       captureTarget: (event.currentTarget as HTMLElement | null) ?? null,
+      rowRect: this.rowElements.get(nodeId)?.getBoundingClientRect() ?? null,
     };
     this.dragActivated = false;
     this.pendingClientX = event.clientX;
@@ -274,6 +288,7 @@ export class TxTreeDnDController<TMeta = unknown> {
     document.addEventListener('pointercancel', this.boundCancel);
     document.addEventListener('keydown', this.boundKeyDown);
     window.addEventListener('blur', this.boundWindowBlur);
+    window.addEventListener('resize', this.boundResize);
     document.addEventListener('visibilitychange', this.boundVisibilityChange);
   }
 
@@ -305,7 +320,7 @@ export class TxTreeDnDController<TMeta = unknown> {
         this.tryActivateDrag(this.pendingClientX, this.pendingClientY);
       }
       if (this.dragActivated) {
-        this.handlePointerMove(this.pendingClientX, this.pendingClientY);
+        this.updateDrag(this.pendingClientX, this.pendingClientY);
       }
     });
   }
@@ -337,33 +352,34 @@ export class TxTreeDnDController<TMeta = unknown> {
     this.captureTarget = pending.captureTarget;
     this.trySetPointerCapture(pending.captureTarget, pending.pointerId);
 
-    this.syncRowMetaFromModel();
-    this.setState({
-      draggingId: pending.nodeId,
-      dropTargetId: null,
-      dropPosition: null,
-      denyTargetId: null,
-      indicatorTargetId: null,
-      indicatorPosition: null,
-      indicatorIndentDepth: null,
-      indicatorFolderSeamTopPx: null,
-    });
-
-    const rowEl = this.rowElements.get(pending.nodeId);
-    if (rowEl) {
-      const rect = rowEl.getBoundingClientRect();
-      this.ghostOffsetX = clientX - rect.left;
-      this.ghostOffsetY = clientY - rect.top;
+    // The grab offset comes from where the row sat at pointer-down, before drag styling
+    // changes the layout, so the ghost does not jump when it appears.
+    const rect = pending.rowRect;
+    if (rect) {
+      this.ghostOffsetX = pending.startX - rect.left;
+      this.ghostOffsetY = pending.startY - rect.top;
     }
 
-    this.createGhost(pending.nodeId);
+    this.scrollParent = findTxTreeScrollParent(this.callbacks.getTreeHost?.() ?? null);
+    this.invalidateGeometry();
+    this.setState({
+      draggingId: pending.nodeId,
+      intent: null,
+      indicator: null,
+      denyTargetId: null,
+    });
+
+    this.createGhost(pending.nodeId, rect);
     this.moveGhost(clientX, clientY);
     document.body.classList.add('tx-tree-dnd-active');
     this.callbacks.onDragStart?.();
+    this.startAutoScrollLoop();
+    this.updateDrag(clientX, clientY);
     this.emitDebugTrace(clientX, clientY);
   }
 
-  private handlePointerMove(clientX: number, clientY: number): void {
+  /** Recomputes the resolved drop for the current pointer position. */
+  private updateDrag(clientX: number, clientY: number): void {
     const draggingId = this.state.draggingId;
     if (!draggingId) {
       return;
@@ -371,152 +387,81 @@ export class TxTreeDnDController<TMeta = unknown> {
 
     this.moveGhost(clientX, clientY);
 
-    const hit = this.hitTest(clientX, clientY);
-    if (!hit) {
-      this.clearHoverExpand();
-      this.setState({
-        draggingId,
-        dropTargetId: null,
-        dropPosition: null,
-        denyTargetId: null,
-        indicatorTargetId: null,
-        indicatorPosition: null,
-        indicatorIndentDepth: null,
-        indicatorFolderSeamTopPx: null,
-      });
-      this.emitDebugTrace(clientX, clientY);
-      return;
-    }
+    const table = this.ensureSlotTable(draggingId);
+    const frame = this.geometry.toFrame(clientX, clientY);
+    const boxes = this.geometry.getBoxes();
 
-    const config = this.getConfig();
-    const allowed = config.drop.positions;
-    const meta = this.rowMeta.get(hit.nodeId);
-    const targetHasChildren = meta?.hasChildren ?? false;
+    // Past either end of the list the pointer belongs to the nearest end seam, so clamp
+    // before scoring; inside the list the reach keeps the indicator on the hovered row.
+    const span = resolveTxTreeRowSpan(boxes);
+    const pointerYPx = span
+      ? Math.min(Math.max(frame.pointerYPx, span.topPx), span.bottomPx)
+      : frame.pointerYPx;
 
-    const stickyPosition =
-      this.state.dropTargetId === hit.nodeId ? this.state.dropPosition : null;
+    const resolved = resolveTxTreeDropIntent({
+      table,
+      pointerYPx,
+      pointerDepth: resolveTxTreePointerDepth(
+        frame.pointerXPx,
+        frame.contentLeftPx,
+        this.getConfig().visual.indentPx,
+      ),
+      previous: this.state.intent,
+      reachPx: resolveTxTreeDropReachPx(boxes, pointerYPx) ?? undefined,
+    });
 
-    let dropTargetId = hit.nodeId;
-    let position = this.resolveDropPosition(
-      clientY,
-      hit.rect,
-      allowed,
-      targetHasChildren,
-      stickyPosition,
-    );
+    const hoveredId =
+      resolved?.intent.kind === 'inside'
+        ? resolved.intent.parentId
+        : this.resolveRowAt(frame.pointerYPx);
+    this.scheduleAutoExpand(hoveredId);
 
-    if (!position) {
-      this.clearHoverExpand();
-      this.setState({
-        draggingId,
-        dropTargetId,
-        dropPosition: null,
-        denyTargetId: null,
-        indicatorTargetId: null,
-        indicatorPosition: null,
-        indicatorIndentDepth: null,
-        indicatorFolderSeamTopPx: null,
-      });
-      this.emitDebugTrace(clientX, clientY);
-      return;
-    }
-
-    const logical = this.model.resolveLogicalDrop(draggingId, dropTargetId, position);
-    const logicalTargetId = logical.targetId;
-    const logicalPosition = logical.position;
-
-    if (!logicalPosition || !this.model.canDrop(draggingId, logicalTargetId, logicalPosition)) {
-      this.clearHoverExpand();
-      this.setState({
-        draggingId,
-        dropTargetId: logicalTargetId,
-        dropPosition: logicalPosition,
-        denyTargetId: logicalTargetId,
-        indicatorTargetId: null,
-        indicatorPosition: null,
-        indicatorIndentDepth: null,
-        indicatorFolderSeamTopPx: null,
-      });
-      this.emitDebugTrace(clientX, clientY);
-      return;
-    }
-
-    const allVisibleRows = this.model.getVisibleRows();
-    const indicator = resolveDropIndicatorDisplay(
-      allVisibleRows,
-      logicalTargetId,
-      logicalPosition,
-    );
-    let indicatorTargetId: string | null = indicator.targetId;
-    let indicatorPosition: TxTreeDropPosition | null = indicator.position;
-    let indicatorIndentDepth: number | null = indicator.indentDepth;
-
-    if (indicatorIndentDepth !== null && logicalPosition === 'after') {
-      const seam = remapFolderExitToAfterBlockSeam(
-        allVisibleRows,
-        draggingId,
-        logicalTargetId,
-        indicatorIndentDepth,
-      );
-      indicatorTargetId = seam.targetId;
-      indicatorPosition = seam.position;
-      indicatorIndentDepth = seam.indentDepth;
-    } else {
-      const remapped = remapIndicatorOffDraggingRow(
-        allVisibleRows,
-        draggingId,
-        indicatorTargetId,
-        indicatorPosition,
-        indicatorIndentDepth,
-      );
-      indicatorTargetId = remapped.targetId;
-      indicatorPosition = remapped.position;
-      indicatorIndentDepth = remapped.indentDepth;
-    }
-
-    let indicatorFolderSeamTopPx: number | null = null;
-    if (
-      indicatorTargetId === draggingId &&
-      indicatorIndentDepth !== null &&
-      indicatorPosition === 'after'
-    ) {
-      const seamFolderId = this.resolveFolderExitSeamFolderId(logicalTargetId, logicalPosition);
-      const seamTop = seamFolderId
-        ? this.resolveFolderSeamTopPx(seamFolderId, draggingId)
-        : null;
-      if (seamTop !== null) {
-        indicatorFolderSeamTopPx = seamTop;
-        indicatorTargetId = null;
-        indicatorPosition = null;
-      }
-    }
-
-    if (indicatorTargetId === draggingId) {
-      indicatorTargetId = null;
-      indicatorPosition = null;
-      if (indicatorFolderSeamTopPx === null && logicalPosition === 'after') {
-        const seamFolderId = this.resolveFolderExitSeamFolderId(logicalTargetId, logicalPosition);
-        const seamTop = seamFolderId
-          ? this.resolveFolderSeamTopPx(seamFolderId, draggingId)
-          : null;
-        if (seamTop !== null) {
-          indicatorFolderSeamTopPx = seamTop;
-        }
-      }
-    }
-
-    this.scheduleAutoExpand(logicalTargetId, config.expansion.autoExpandOnDropHoverMs);
     this.setState({
       draggingId,
-      dropTargetId: logicalTargetId,
-      dropPosition: logicalPosition,
-      denyTargetId: null,
-      indicatorTargetId,
-      indicatorPosition,
-      indicatorIndentDepth,
-      indicatorFolderSeamTopPx,
+      intent: resolved?.intent ?? null,
+      indicator: resolved?.indicator ?? null,
+      denyTargetId: resolved ? null : hoveredId,
     });
     this.emitDebugTrace(clientX, clientY);
+  }
+
+  /**
+   * Builds the legal drop slots for the current tree, reusing them until rows or geometry
+   * change. Policy checks depend on the tree rather than the pointer, so they run here
+   * instead of on every pointer frame.
+   */
+  private ensureSlotTable(draggingId: string): TxTreeDropSlotTable {
+    if (!this.slotTableStale) {
+      return this.slotTable;
+    }
+
+    const rows = this.model.getVisibleRows();
+    const source = rows.find((row) => row.id === draggingId);
+
+    const table = buildTxTreeDropSlots({
+      rows,
+      boxes: this.geometry.getBoxes(),
+      source: source
+        ? { id: source.id, parentId: source.parentId, index: source.indexAmongSiblings }
+        : null,
+      indentPx: this.getConfig().visual.indentPx,
+    });
+
+    this.slotTable = filterTxTreeDropSlots(table, (intent) =>
+      this.model.canDropIntent(draggingId, intent),
+    );
+    this.slotTableStale = false;
+    return this.slotTable;
+  }
+
+  /** Node id of the row under a content-relative Y position. */
+  private resolveRowAt(pointerYPx: number): string | null {
+    for (const [nodeId, box] of this.geometry.getBoxes()) {
+      if (pointerYPx >= box.topPx && pointerYPx < box.bottomPx) {
+        return nodeId;
+      }
+    }
+    return null;
   }
 
   private handleDocumentPointerUp(event: PointerEvent): void {
@@ -536,16 +481,14 @@ export class TxTreeDnDController<TMeta = unknown> {
     if (this.rafId !== null) {
       cancelAnimationFrame(this.rafId);
       this.rafId = null;
-      this.handlePointerMove(this.pendingClientX, this.pendingClientY);
+      this.updateDrag(this.pendingClientX, this.pendingClientY);
     }
 
     const draggingId = this.state.draggingId;
-    const targetId = this.state.dropTargetId;
-    const position = this.state.dropPosition;
-    const denied = this.state.denyTargetId;
+    const intent = this.state.intent;
 
-    if (draggingId && targetId && position && !denied) {
-      const result = this.model.moveNode(draggingId, targetId, position);
+    if (draggingId && intent) {
+      const result = this.model.applyIntent(draggingId, intent);
       if (result) {
         try {
           this.callbacks.onDrop(result.event, result.nodes);
@@ -556,11 +499,8 @@ export class TxTreeDnDController<TMeta = unknown> {
       }
     }
 
+    // No reachable drop, or one that changes nothing: end silently.
     this.endDrag(false);
-
-    if (denied && this.getConfig().visual.animateDeny) {
-      this.callbacks.onDeny(denied);
-    }
   }
 
   private cancelPendingDrag(): void {
@@ -569,6 +509,7 @@ export class TxTreeDnDController<TMeta = unknown> {
     document.removeEventListener('pointercancel', this.boundCancel);
     document.removeEventListener('keydown', this.boundKeyDown);
     window.removeEventListener('blur', this.boundWindowBlur);
+    window.removeEventListener('resize', this.boundResize);
     document.removeEventListener('visibilitychange', this.boundVisibilityChange);
     this.pendingDrag = null;
     this.dragActivated = false;
@@ -583,6 +524,7 @@ export class TxTreeDnDController<TMeta = unknown> {
     try {
       this.releasePointerCapture();
       this.cancelPendingDrag();
+      this.stopAutoScrollLoop();
       this.clearHoverExpand();
       if (this.rafId !== null) {
         cancelAnimationFrame(this.rafId);
@@ -590,6 +532,9 @@ export class TxTreeDnDController<TMeta = unknown> {
       }
       clearTxTreeDnDDocumentChrome();
       this.pointerId = null;
+      this.scrollParent = null;
+      this.slotTable = TX_TREE_EMPTY_DROP_SLOT_TABLE;
+      this.slotTableStale = true;
       this.removeGhost();
       this.setState({ ...TX_TREE_INITIAL_DND_STATE });
       this.emitDebugTrace(null, null);
@@ -599,6 +544,43 @@ export class TxTreeDnDController<TMeta = unknown> {
       }
     } finally {
       this.endingDrag = false;
+    }
+  }
+
+  /**
+   * Scrolls the nearest scrollable ancestor while the pointer rests near its edge, then
+   * re-resolves the drop so the indicator tracks the rows moving under the cursor.
+   */
+  private startAutoScrollLoop(): void {
+    if (this.autoScrollRafId !== null || !this.scrollParent) {
+      return;
+    }
+
+    const step = (): void => {
+      this.autoScrollRafId = null;
+      const container = this.scrollParent;
+      if (!container || !this.dragActivated) {
+        return;
+      }
+
+      const delta = resolveTxTreeAutoScrollDelta(
+        this.pendingClientY,
+        container.getBoundingClientRect(),
+      );
+      if (applyTxTreeAutoScroll(container, delta) !== 0) {
+        this.updateDrag(this.pendingClientX, this.pendingClientY);
+      }
+
+      this.autoScrollRafId = requestAnimationFrame(step);
+    };
+
+    this.autoScrollRafId = requestAnimationFrame(step);
+  }
+
+  private stopAutoScrollLoop(): void {
+    if (this.autoScrollRafId !== null) {
+      cancelAnimationFrame(this.autoScrollRafId);
+      this.autoScrollRafId = null;
     }
   }
 
@@ -639,173 +621,11 @@ export class TxTreeDnDController<TMeta = unknown> {
       return;
     }
 
-    const pointer =
-      clientX !== null && clientY !== null ? { x: clientX, y: clientY } : null;
+    const pointer = clientX !== null && clientY !== null ? { x: clientX, y: clientY } : null;
     this.callbacks.onDebugTrace?.(this.state, pointer);
   }
 
-  private hitTest(clientX: number, clientY: number): { nodeId: string; rect: DOMRect } | null {
-    const draggingId = this.state.draggingId;
-
-    if (draggingId) {
-      const dragEl = this.rowElements.get(draggingId);
-      if (dragEl) {
-        const dragRect = dragEl.getBoundingClientRect();
-        if (this.isPointerInRowBand(clientY, dragRect)) {
-          return { nodeId: draggingId, rect: dragRect };
-        }
-      }
-    }
-
-    const nearest = this.hitTestNearestRow(clientY, draggingId);
-
-    if (typeof document.elementsFromPoint !== 'function') {
-      return nearest;
-    }
-
-    const stack = document.elementsFromPoint(clientX, clientY);
-
-    for (const element of stack) {
-      const host = element.closest('.tx-tree-row-host') as HTMLElement | null;
-      if (!host) {
-        continue;
-      }
-
-      const nodeId = host.dataset['txTreeNodeId'];
-      if (!nodeId || nodeId === draggingId) {
-        continue;
-      }
-
-      const rect = host.getBoundingClientRect();
-      if (this.isPointerInRowBand(clientY, rect)) {
-        return { nodeId, rect };
-      }
-    }
-
-    return nearest;
-  }
-
-  /** Bottom edge of every registered row host (includes the row being dragged). */
-  private getMaxRegisteredRowBottom(): number {
-    let maxBottom = Number.NEGATIVE_INFINITY;
-    for (const element of this.rowElements.values()) {
-      maxBottom = Math.max(maxBottom, element.getBoundingClientRect().bottom);
-    }
-    return maxBottom;
-  }
-
-  /**
-   * Maps pointer Y to a row, including gaps between items (midpoint splits).
-   */
-  private hitTestNearestRow(
-    clientY: number,
-    draggingId: string | null,
-  ): { nodeId: string; rect: DOMRect } | null {
-    const rows: { nodeId: string; rect: DOMRect }[] = [];
-
-    for (const [nodeId, element] of this.rowElements) {
-      if (nodeId === draggingId) {
-        continue;
-      }
-      rows.push({ nodeId, rect: element.getBoundingClientRect() });
-    }
-
-    if (rows.length === 0) {
-      return null;
-    }
-
-    rows.sort((a, b) => a.rect.top - b.rect.top);
-
-    const slop = TX_TREE_ROW_HIT_SLOP_PX;
-    const maxBottomAll = this.getMaxRegisteredRowBottom();
-
-    if (clientY < rows[0].rect.top - slop) {
-      return rows[0];
-    }
-
-    const last = rows[rows.length - 1];
-    if (Number.isFinite(maxBottomAll) && clientY > maxBottomAll + slop) {
-      const belowTree = this.resolveBelowTreeDropTarget(draggingId);
-      if (belowTree) {
-        return belowTree;
-      }
-      return last;
-    }
-
-    for (let i = 0; i < rows.length; i++) {
-      const row = rows[i];
-      const topBound =
-        i === 0 ? row.rect.top - slop : (rows[i - 1].rect.bottom + row.rect.top) / 2;
-      const bottomBound =
-        i === rows.length - 1
-          ? (Number.isFinite(maxBottomAll) ? maxBottomAll : row.rect.bottom) + slop
-          : (row.rect.bottom + rows[i + 1].rect.top) / 2;
-
-      if (clientY >= topBound && clientY < bottomBound) {
-        return row;
-      }
-    }
-
-    return last;
-  }
-
-  /** Drop target when the pointer is below the last visible row (append at root tail). */
-  private resolveBelowTreeDropTarget(
-    draggingId: string | null,
-  ): { nodeId: string; rect: DOMRect } | null {
-    const tailRootId = resolveTailRootRowId(this.model.getVisibleRows(), draggingId);
-    if (!tailRootId) {
-      return null;
-    }
-
-    const element = this.rowElements.get(tailRootId);
-    if (!element) {
-      return null;
-    }
-
-    return { nodeId: tailRootId, rect: element.getBoundingClientRect() };
-  }
-
-  private isPointerInRowBand(clientY: number, rect: DOMRect): boolean {
-    const slop = TX_TREE_ROW_HIT_SLOP_PX;
-    return clientY >= rect.top - slop && clientY <= rect.bottom + slop;
-  }
-
-  /**
-   * When the pointer sits in an inter-row gap, the row band resolves to before/after
-   * instead of the inner 25/50/25 zones (which are unreachable there).
-   */
-  private resolveDropPosition(
-    clientY: number,
-    rect: DOMRect,
-    allowed: readonly TxTreeDropPosition[],
-    targetHasChildren: boolean,
-    stickyPosition: TxTreeDropPosition | null,
-  ): TxTreeDropPosition | null {
-    if (clientY > rect.bottom + 1) {
-      if (stickyPosition === 'after') {
-        return 'after';
-      }
-      return allowed.includes('after') ? 'after' : null;
-    }
-
-    if (clientY < rect.top - 1) {
-      if (stickyPosition === 'before') {
-        return 'before';
-      }
-      return allowed.includes('before') ? 'before' : null;
-    }
-
-    return resolveDropPositionWithHysteresis(
-      clientY,
-      rect,
-      allowed,
-      targetHasChildren,
-      stickyPosition,
-    );
-  }
-
-  private createGhost(nodeId: string): void {
+  private createGhost(nodeId: string, rect: DOMRect | null): void {
     this.removeGhost();
 
     const rowEl = this.rowElements.get(nodeId);
@@ -814,20 +634,13 @@ export class TxTreeDnDController<TMeta = unknown> {
     }
 
     const clone = rowEl.cloneNode(true) as HTMLElement;
-    clone.classList.remove(
-      'tx-tree-row-host--dragging',
-      'tx-tree-row-host--drop-before',
-      'tx-tree-row-host--drop-after',
-      'tx-tree-row-host--drop-inside',
-      'tx-tree-row-host--drop-deny',
-      'tx-dnd-deny-active',
-    );
+    clone.classList.remove('tx-tree-row-host--dragging', 'tx-tree-row-host--drop-inside');
     clone.classList.add('tx-tree-ghost');
     clone.setAttribute('aria-hidden', 'true');
     clone.style.position = 'fixed';
     clone.style.left = '0';
     clone.style.top = '0';
-    clone.style.width = `${rowEl.getBoundingClientRect().width}px`;
+    clone.style.width = `${(rect ?? rowEl.getBoundingClientRect()).width}px`;
     clone.style.pointerEvents = 'none';
     clone.style.zIndex = '10000';
     clone.style.willChange = 'transform';
@@ -856,79 +669,6 @@ export class TxTreeDnDController<TMeta = unknown> {
     document.querySelectorAll('.tx-tree-ghost').forEach((element) => element.remove());
   }
 
-  /** Bottom edge of an expanded folder block in viewport coordinates. */
-  private resolveFolderBlockBottomPx(
-    folderId: string,
-    excludeRowId: string | null = null,
-  ): number | null {
-    const rows = this.model.getVisibleRows();
-    const folderIndex = rows.findIndex((row) => row.id === folderId);
-    if (folderIndex < 0) {
-      return null;
-    }
-
-    const folderDepth = rows[folderIndex].depth;
-    let lastRowId = folderId;
-    const folderRow = rows[folderIndex];
-    if (folderRow.hasChildren && folderRow.expanded) {
-      for (let j = folderIndex + 1; j < rows.length; j++) {
-        if (rows[j].depth <= folderDepth) {
-          break;
-        }
-        if (rows[j].id !== excludeRowId) {
-          lastRowId = rows[j].id;
-        }
-      }
-    }
-
-    if (lastRowId === excludeRowId) {
-      const folderEl = this.rowElements.get(folderId);
-      return folderEl?.getBoundingClientRect().bottom ?? null;
-    }
-
-    const element = this.rowElements.get(lastRowId);
-    return element?.getBoundingClientRect().bottom ?? null;
-  }
-
-  /** Folder-exit seam offset from the tree container top (px). */
-  private resolveFolderSeamTopPx(
-    folderId: string,
-    excludeRowId: string | null = null,
-  ): number | null {
-    const treeHost = this.callbacks.getTreeHost?.();
-    const blockBottom = this.resolveFolderBlockBottomPx(folderId, excludeRowId);
-    if (!treeHost || blockBottom === null) {
-      return null;
-    }
-
-    return blockBottom - treeHost.getBoundingClientRect().top;
-  }
-
-  /**
-   * Resolves the expanded folder whose exit seam should receive the insert line for an `after`
-   * drop on a folder row or one of its descendants.
-   */
-  private resolveFolderExitSeamFolderId(
-    logicalTargetId: string,
-    logicalPosition: TxTreeDropPosition,
-  ): string | null {
-    if (logicalPosition !== 'after') {
-      return null;
-    }
-
-    const rows = this.model.getVisibleRows();
-    const target = rows.find((row) => row.id === logicalTargetId);
-    if (!target) {
-      return null;
-    }
-
-    if (target.hasChildren && target.expanded) {
-      return target.id;
-    }
-
-    return target.parentId;
-  }
-
   private setState(next: TxTreeDnDState): void {
     if (statesEqual(this.state, next)) {
       return;
@@ -937,26 +677,33 @@ export class TxTreeDnDController<TMeta = unknown> {
     this.callbacks.onStateChange(next);
   }
 
-  private scheduleAutoExpand(nodeId: string, delayMs: number): void {
-    if (!this.getConfig().expansion.expandFolderOnDrag || delayMs <= 0) {
+  /** Expands a collapsed parent after the pointer rests on it. */
+  private scheduleAutoExpand(nodeId: string | null): void {
+    const expansion = this.getConfig().expansion;
+    if (!expansion.expandFolderOnDrag || expansion.autoExpandOnDropHoverMs <= 0) {
       return;
     }
-    if (this.lastHoverTargetId === nodeId) {
+    if (this.autoExpandHoverId === nodeId) {
       return;
     }
+
     this.clearHoverExpand();
-    this.lastHoverTargetId = nodeId;
+    this.autoExpandHoverId = nodeId;
+    if (!nodeId) {
+      return;
+    }
+
     this.autoExpandTimer = setTimeout(() => {
       this.autoExpandTimer = null;
-      if (this.state.dropTargetId !== nodeId) {
+      if (this.autoExpandHoverId !== nodeId) {
         return;
       }
-      const row = this.model.getVisibleRows().find((r) => r.id === nodeId);
+      const row = this.model.getVisibleRows().find((item) => item.id === nodeId);
       if (!row?.hasChildren || row.expanded) {
         return;
       }
       this.callbacks.onExpandNode(nodeId);
-    }, delayMs);
+    }, expansion.autoExpandOnDropHoverMs);
   }
 
   private clearHoverExpand(): void {
@@ -964,21 +711,17 @@ export class TxTreeDnDController<TMeta = unknown> {
       clearTimeout(this.autoExpandTimer);
       this.autoExpandTimer = null;
     }
-    this.lastHoverTargetId = null;
+    this.autoExpandHoverId = null;
   }
 }
 
 function statesEqual(a: TxTreeDnDState, b: TxTreeDnDState): boolean {
   return (
     a.draggingId === b.draggingId &&
-    a.dropTargetId === b.dropTargetId &&
-    a.dropPosition === b.dropPosition &&
     a.denyTargetId === b.denyTargetId &&
-    a.indicatorTargetId === b.indicatorTargetId &&
-    a.indicatorPosition === b.indicatorPosition &&
-    a.indicatorIndentDepth === b.indicatorIndentDepth &&
-    a.indicatorFolderSeamTopPx === b.indicatorFolderSeamTopPx
+    dropIntentsEqual(a.intent, b.intent) &&
+    dropIndicatorsEqual(a.indicator, b.indicator)
   );
 }
 
-export type { TxTreeDropPosition };
+export type { TxTreeDropIntent, TxTreeDropPosition };

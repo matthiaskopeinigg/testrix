@@ -16,16 +16,10 @@ import { TxInlineRenameInputComponent } from '@app/shared/components/forms/tx-in
 /** Max tag chips shown on a tree row meta line; additional tags collapse to +N. */
 const TX_TREE_ROW_MAX_VISIBLE_TAGS = 6;
 
-import type {
-  TxTreeConfig,
-  TxTreeDnDState,
-  TxTreeDropPosition,
-  TxTreeVisibleRow,
-} from './tx-tree.types';
+import type { TxTreeConfig, TxTreeDnDState, TxTreeVisibleRow } from './tx-tree.types';
 import {
   TX_TREE_DROP_HIT_AFTER_RATIO,
   TX_TREE_DROP_HIT_BEFORE_RATIO,
-  TX_TREE_ROW_HIT_SLOP_PX,
 } from './tx-tree.types';
 
 @Component({
@@ -45,13 +39,9 @@ import {
     '[class.tx-tree-row-host--selected]': 'selected()',
     '[class.tx-tree-row-host--disabled]': 'row().node.disabled',
     '[class.tx-tree-row-host--dragging]': 'isDragging()',
-    '[class.tx-tree-row-host--drop-before]': 'dropPosition() === "before"',
-    '[class.tx-tree-row-host--drop-after]': 'dropPosition() === "after"',
-    '[class.tx-tree-row-host--drop-inside]': 'dropPosition() === "inside"',
-    '[class.tx-tree-row-host--drop-deny]': 'showDropDeny()',
+    '[class.tx-tree-row-host--drop-inside]': 'showDropInside()',
     '[class.tx-tree-row-host--debug]': 'debug()',
     '[class.tx-tree-row-host--debug-target]': 'isDebugDragTarget()',
-    '[class.tx-dnd-deny-active]': 'showDropRejectShake()',
     '[attr.data-tx-tree-node-id]': 'row().id',
     '[attr.data-kind]': 'row().node.kind || null',
     '[style.--tx-tree-indent]': 'indentPx() + "px"',
@@ -105,65 +95,16 @@ export class TxTreeRowComponent<TMeta = unknown> implements AfterViewInit, OnDes
     }
 
     const id = this.row().id;
-    return (
-      id === state.draggingId ||
-      id === state.dropTargetId ||
-      id === state.denyTargetId
-    );
+    const intentParentId = state.intent?.parentId ?? null;
+    return id === state.draggingId || id === intentParentId || id === state.denyTargetId;
   }
 
-  protected dropPosition(): TxTreeDropPosition | null {
-    const state = this.dndState();
-    if (state.denyTargetId || state.draggingId === this.row().id) {
-      return null;
-    }
-
-    if (state.indicatorTargetId !== null && state.indicatorPosition !== null) {
-      if (state.indicatorTargetId !== this.row().id) {
-        return null;
-      }
-      return state.indicatorPosition;
-    }
-
-    if (
-      state.dropTargetId === this.row().id &&
-      state.dropPosition === 'inside'
-    ) {
-      return 'inside';
-    }
-
-    return null;
+  /** Highlights this row as the folder the drag will nest into. */
+  protected showDropInside(): boolean {
+    const intent = this.dndState().intent;
+    return intent?.kind === 'inside' && intent.parentId === this.row().id;
   }
 
-  protected insertLineDepth(): number {
-    const state = this.dndState();
-    if (
-      state.indicatorTargetId === this.row().id &&
-      state.indicatorIndentDepth !== null
-    ) {
-      return state.indicatorIndentDepth;
-    }
-    return this.row().depth;
-  }
-
-  /** Subtle invalid-target hint while hovering (no shake animation). */
-  protected showDropDeny(): boolean {
-    const state = this.dndState();
-    return state.denyTargetId === this.row().id && !!state.draggingId;
-  }
-
-  /** Shake animation after a rejected drop (pointer up). */
-  protected showDropRejectShake(): boolean {
-    const state = this.dndState();
-    const config = this.config();
-    return (
-      config.visual.animateDeny &&
-      state.denyTargetId === this.row().id &&
-      !state.draggingId
-    );
-  }
-
-  protected readonly hitSlopPx = TX_TREE_ROW_HIT_SLOP_PX;
   protected readonly dropBeforePercent = Math.round(TX_TREE_DROP_HIT_BEFORE_RATIO * 100);
   protected readonly dropAfterPercent = Math.round(TX_TREE_DROP_HIT_AFTER_RATIO * 100);
   protected readonly dropInsidePercent =

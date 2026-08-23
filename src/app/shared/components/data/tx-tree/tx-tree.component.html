@@ -32,12 +32,11 @@
     <p class="tx-tree__empty" role="status">{{ emptyMessage() }}</p>
   }
   <div class="tx-tree__empty-space" aria-hidden="true"></div>
-  @if (showFolderExitSeam()) {
+  @if (dndState().indicator; as indicator) {
     <span
-      class="tx-tree__folder-exit-line"
-      [style.top.px]="dndState().indicatorFolderSeamTopPx"
-      [style.--row-indicator-depth]="folderExitSeamIndent()"
-      [style.--tx-tree-indent]="resolvedConfig().visual.indentPx + 'px'"
+      class="tx-tree__insert-line"
+      [style.top.px]="indicator.topPx"
+      [style.inset-inline-start.px]="indicator.indentPx"
       aria-hidden="true"
     ></span>
   }

@@ -143,6 +143,11 @@ describe('CollectionsSidebarPanelComponent', () => {
     expect(rows.length).toBe(4);
   });
 
+  it('expands the drop target folder after an inside drop', () => {
+    const config = fixture.componentInstance['treeConfig']();
+    expect(config.expansion.expandFolderOnDrop).toBe(true);
+  });
+
   it('opens a workspace tab when a request row is clicked', () => {
     const requestRow = [...fixture.nativeElement.querySelectorAll('.tx-tree-row')].find((row: Element) =>
       row.textContent?.includes('/login'),

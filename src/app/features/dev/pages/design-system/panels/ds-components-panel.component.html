@@ -481,22 +481,30 @@
                     </dd>
                   </div>
                   <div class="ds-tree-demo__dnd-row">
-                    <dt>Target</dt>
+                    <dt>Parent</dt>
                     <dd>
-                      @if (treeDndDebug().target; as target) {
-                        <code>{{ target.id }}</code> · {{ target.label }}
+                      @if (treeDndDebug().parent; as parent) {
+                        <code>{{ parent.id }}</code> · {{ parent.label }}
                         <span class="ds-tree-demo__dnd-meta"
-                          >depth {{ target.depth }} · kind {{ target.kind ?? '—' }}</span
+                          >depth {{ parent.depth }} · kind {{ parent.kind ?? '—' }}</span
                         >
+                      } @else if (treeDndDebug().intent) {
+                        <span class="ds-tree-demo__dnd-meta">tree root</span>
                       } @else {
-                        <span class="ds-tree-demo__dnd-meta">no row under pointer</span>
+                        <span class="ds-tree-demo__dnd-meta">no legal slot under pointer</span>
                       }
                     </dd>
                   </div>
                   <div class="ds-tree-demo__dnd-row">
-                    <dt>Position</dt>
+                    <dt>Intent</dt>
                     <dd>
-                      <code>{{ treeDndDebug().dropPosition ?? '—' }}</code>
+                      <code>{{ treeDropIntentLabel() }}</code>
+                      @if (treeDndDebug().raw.indicator; as indicator) {
+                        <span class="ds-tree-demo__dnd-meta"
+                          >line at {{ indicator.topPx | number: '1.0-0' }}px · indent
+                          {{ indicator.indentPx | number: '1.0-0' }}px</span
+                        >
+                      }
                     </dd>
                   </div>
                   <div class="ds-tree-demo__dnd-row">
@@ -518,9 +526,9 @@
                 </dl>
               } @else {
                 <p class="ds-tree-demo__dnd-hint">
-                  Hitbox-only view: each row is top (25%) · center (inside on folders) · bottom
-                  (25%). Drag to test; labels are hidden. Rows stack flush (±{{ treeHitSlopPx }}px
-                  slop at list edges only).
+                  Hitbox-only view: the centre band of a folder nests inside it, everywhere else
+                  resolves to the nearest insert seam. Drag horizontally at a seam to pick the
+                  indent level. Labels are hidden.
                 </p>
               }
               <details class="ds-tree-demo__dnd-raw">

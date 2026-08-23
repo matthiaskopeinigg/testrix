@@ -3,7 +3,7 @@ import type {
   TxTreeDnDDebugInfo,
   TxTreeDnDDebugNodeRef,
   TxTreeDnDState,
-  TxTreeDropPosition,
+  TxTreeDropIntent,
 } from './tx-tree.types';
 
 /**
@@ -21,36 +21,47 @@ export function buildTxTreeDnDDebugInfo<TMeta>(
   const draggingId = state.draggingId;
   const phase = draggingId ? 'dragging' : 'idle';
   const source = draggingId ? model.getNodeDebugRef(draggingId) : null;
-  const target = state.dropTargetId ? model.getNodeDebugRef(state.dropTargetId) : null;
-  const denied =
-    !!state.denyTargetId &&
-    !!state.dropTargetId &&
-    state.denyTargetId === state.dropTargetId;
+  const parentId = state.intent?.parentId ?? null;
+  const parent = parentId ? model.getNodeDebugRef(parentId) : null;
+  const denied = !!state.denyTargetId;
   const dropAllowed =
-    !!draggingId &&
-    !!state.dropTargetId &&
-    !!state.dropPosition &&
-    !denied &&
-    model.canDrop(draggingId, state.dropTargetId, state.dropPosition);
+    !!draggingId && !!state.intent && model.canDropIntent(draggingId, state.intent);
 
   return {
     phase,
     pointer,
     source,
-    target,
-    dropPosition: state.dropPosition,
+    parent,
+    intent: state.intent,
     dropAllowed,
     denied,
     denyTargetId: state.denyTargetId,
-    summary: formatDnDDebugSummary(source, target, state.dropPosition, dropAllowed, denied, phase),
+    summary: formatDnDDebugSummary(source, parent, state.intent, dropAllowed, denied, phase),
     raw: state,
   };
 }
 
+/** Compact one-line form of an intent, e.g. `reorder → Folder[2] @depth 1`. */
+export function formatTxTreeDropIntent(
+  intent: TxTreeDropIntent | null,
+  parentLabel: string | null,
+): string {
+  if (!intent) {
+    return '—';
+  }
+
+  const parent = parentLabel ?? 'root';
+  if (intent.kind === 'inside') {
+    return `inside → ${parent}`;
+  }
+
+  return `reorder → ${parent}[${intent.index}] @depth ${intent.depth}`;
+}
+
 function formatDnDDebugSummary(
   source: TxTreeDnDDebugNodeRef | null,
-  target: TxTreeDnDDebugNodeRef | null,
-  position: TxTreeDropPosition | null,
+  parent: TxTreeDnDDebugNodeRef | null,
+  intent: TxTreeDropIntent | null,
   dropAllowed: boolean,
   denied: boolean,
   phase: TxTreeDnDDebugInfo['phase'],
@@ -63,31 +74,18 @@ function formatDnDDebugSummary(
     return 'Dragging…';
   }
 
-  if (!target) {
-    return `Dragging “${source.label}” — no drop target`;
-  }
-
-  if (!position) {
+  if (!intent) {
     return denied
-      ? `Dragging “${source.label}” → “${target.label}” (denied)`
-      : `Dragging “${source.label}” over “${target.label}”`;
+      ? `Dragging “${source.label}” — no legal drop here`
+      : `Dragging “${source.label}” — no drop target`;
   }
 
-  const relation = describeDropRelation(position);
-  const verdict = denied ? 'denied' : dropAllowed ? 'allowed' : 'blocked';
+  const destination = parent ? `“${parent.label}”` : 'the tree root';
+  const verdict = dropAllowed ? 'allowed' : 'blocked';
 
-  return `Move “${source.label}” ${relation} “${target.label}” (${verdict})`;
-}
-
-function describeDropRelation(position: TxTreeDropPosition): string {
-  switch (position) {
-    case 'before':
-      return 'before';
-    case 'after':
-      return 'after';
-    case 'inside':
-      return 'into';
-    default:
-      return 'near';
+  if (intent.kind === 'inside') {
+    return `Move “${source.label}” into ${destination} (${verdict})`;
   }
+
+  return `Move “${source.label}” to ${destination} index ${intent.index} (${verdict})`;
 }

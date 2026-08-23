@@ -55,10 +55,10 @@ import {
   TX_DATA_GRID_DEMO_COLUMNS,
   TX_DATA_GRID_DEMO_ROWS,
 } from '@app/shared/components/data/tx-data-grid/tx-data-grid.types';
+import { formatTxTreeDropIntent } from '@app/shared/components/data/tx-tree/tx-tree-dnd-debug';
 import { TX_TREE_DEMO_NODES } from '@app/shared/components/data/tx-tree/tx-tree.sample';
 import {
   TX_TREE_INITIAL_DND_DEBUG_INFO,
-  TX_TREE_ROW_HIT_SLOP_PX,
   type TxTreeDnDDebugInfo,
   type TxTreeDragScope,
   type TxTreeNode,
@@ -232,13 +232,17 @@ export class DsComponentsPanelComponent {
   readonly treeAnimateMove = signal(true);
   readonly treeLastDrop = signal<TxTreeNodeDropEvent | null>(null);
   readonly treeDndDebug = signal<TxTreeDnDDebugInfo>({ ...TX_TREE_INITIAL_DND_DEBUG_INFO });
-  protected readonly treeHitSlopPx = TX_TREE_ROW_HIT_SLOP_PX;
+
+  /** Compact label for the resolved drop intent shown in the DnD HUD. */
+  readonly treeDropIntentLabel = computed(() => {
+    const info = this.treeDndDebug();
+    return formatTxTreeDropIntent(info.intent, info.parent?.label ?? null);
+  });
 
   readonly treeDemoConfig = computed(() =>
     mergeTxTreeConfig({
       expansion: {
         expandFolderOnDrag: this.treeExpandFolderOnDrag(),
-        expandFolderOnDrop: false,
       },
       visual: {
         animateMove: this.treeAnimateMove(),

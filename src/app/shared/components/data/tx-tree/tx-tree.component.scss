@@ -33,29 +33,38 @@
 }
 
 /* DnD overlay lines are not list items — skip entrance stagger motion. */
-.tx-tree.tx-entrance-stagger > .tx-tree__folder-exit-line,
+.tx-tree.tx-entrance-stagger > .tx-tree__insert-line,
 .tx-tree.tx-entrance-stagger > .tx-tree__empty-space {
   opacity: 1;
   transform: none;
   animation: none;
 }
 
-.tx-tree__folder-exit-line {
+/*
+ * Single insert indicator for the whole tree, positioned from the resolved drop slot.
+ * `top` is the slot seam and `inset-inline-start` its indent, both in tree coordinates.
+ */
+.tx-tree__insert-line {
   position: absolute;
-  left: calc(
-    var(--tx-tree-indent, 16px) * var(--row-indicator-depth, 0) + 0.5rem
-  );
-  right: 0.5rem;
+  inset-inline-end: 0.5rem;
   height: var(--tx-dnd-insert-line-size, 3px);
   border-radius: var(--tx-dnd-insert-line-radius, 2px);
   background: var(--tx-primary);
   pointer-events: none;
   z-index: 4;
   transform: translateY(-50%);
+  margin-inline-start: 0.5rem;
 }
 
-:host-context(.tx-tree-host--dragging) .tx-tree__folder-exit-line {
+:host-context(.tx-tree-host--dragging) .tx-tree__insert-line {
   animation: tx-dnd-insert-line-glow 1.35s var(--tx-ease-standard) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :host-context(.tx-tree-host--dragging) .tx-tree__insert-line {
+    animation: none;
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--tx-primary) 35%, transparent);
+  }
 }
 
 .tx-tree__empty {

@@ -470,30 +470,6 @@ html[data-animation-speed='none'] .tx-entrance-stagger.tx-entrance-stagger--play
   }
 }
 
-@keyframes tx-dnd-insert-line-before-in {
-  from {
-    opacity: 0;
-    transform: translateY(-50%) scaleX(0.35);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(-50%) scaleX(1);
-  }
-}
-
-@keyframes tx-dnd-insert-line-after-in {
-  from {
-    opacity: 0;
-    transform: translateY(50%) scaleX(0.35);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(50%) scaleX(1);
-  }
-}
-
 @keyframes tx-tree-expand-reveal {
   from {
     opacity: 0;

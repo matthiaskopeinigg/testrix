@@ -3,17 +3,12 @@ import type {
   TxTreeDnDDebugNodeRef,
   TxTreeDragContext,
   TxTreeDropContext,
+  TxTreeDropIntent,
   TxTreeDropPosition,
   TxTreeNode,
   TxTreeNodeDropEvent,
   TxTreeSortConfig,
   TxTreeVisibleRow,
-} from './tx-tree.types';
-import {
-  TX_TREE_DROP_BOUNDARY_HYSTERESIS_PX,
-  TX_TREE_DROP_HIT_AFTER_RATIO,
-  TX_TREE_DROP_HIT_BEFORE_RATIO,
-  TX_TREE_DROP_POSITION_HYSTERESIS_PX,
 } from './tx-tree.types';
 
 /** Mutable clone used while applying structural edits. */
@@ -147,238 +142,332 @@ export class TxTreeModel<TMeta = unknown> {
     return true;
   }
 
+  /** Children of `parentId` in display order (`null` reads the tree root). */
+  getDisplayChildren(parentId: string | null): TxTreeNode<TMeta>[] {
+    if (parentId === null) {
+      return sortSiblings([...this.nodes], this.config.sort);
+    }
+
+    const loc = findLocation(this.nodes, parentId);
+    if (!loc?.node.children?.length) {
+      return [];
+    }
+
+    return sortSiblings([...loc.node.children], this.config.sort);
+  }
+
   /**
-   * Maps raw hit-test targets (including self-hits while dragging) to a valid drop target.
-   * Remaps no-op "inside parent folder" drops to folder exit (`after` on the folder).
+   * Describes a drop intent as the `(targetId, position)` pair that consumer policies and
+   * {@link TxTreeNodeDropEvent} expect.
+   *
+   * @returns `null` when the destination has no sibling to describe (empty tree root).
    */
-  resolveLogicalDrop(
+  describeIntent(
     sourceId: string,
-    targetId: string,
-    position: TxTreeDropPosition,
-  ): { readonly targetId: string; readonly position: TxTreeDropPosition } {
-    const remapped = this.applyConfiguredDropRemap(sourceId, targetId, position);
-    if (remapped) {
-      targetId = remapped.targetId;
-      position = remapped.position;
-    }
-
-    if (targetId === sourceId) {
-      return this.resolveSelfHitDrop(sourceId, position);
-    }
-
-    if (
-      position === 'inside' &&
-      !this.canDrop(sourceId, targetId, position) &&
-      this.isNoOpInsideAppend(sourceId, targetId) &&
-      this.canDrop(sourceId, targetId, 'after')
-    ) {
-      return { targetId, position: 'after' };
-    }
-
-    const adjacentDown = remapAdjacentDownwardBeforeDrop(
-      this.nodes,
-      sourceId,
-      targetId,
-      position,
-    );
-    if (adjacentDown) {
-      return adjacentDown;
-    }
-
-    return { targetId, position };
-  }
-
-  /** True when an `inside` drop on `folderId` would leave the source in the same slot. */
-  isNoOpInsideAppend(sourceId: string, folderId: string): boolean {
-    const sourceLoc = findLocation(this.nodes, sourceId);
-    const targetLoc = findLocation(this.nodes, folderId);
-    if (!sourceLoc || !targetLoc) {
-      return false;
-    }
-    return isEquivalentMove(sourceLoc, targetLoc, 'inside');
-  }
-
-  private applyConfiguredDropRemap(
-    sourceId: string,
-    targetId: string,
-    position: TxTreeDropPosition,
+    intent: TxTreeDropIntent,
   ): { readonly targetId: string; readonly position: TxTreeDropPosition } | null {
-    const remap = this.config.drop.remapDropTarget;
-    if (!remap) {
-      return null;
+    if (intent.kind === 'inside') {
+      return { targetId: intent.parentId, position: 'inside' };
     }
 
-    const sourceLoc = findLocation(this.nodes, sourceId);
-    const targetLoc = findLocation(this.nodes, targetId);
-    if (!sourceLoc || !targetLoc) {
-      return null;
+    const siblings = this.getDestinationSiblings(sourceId, intent.parentId);
+    if (siblings.length === 0) {
+      return intent.parentId === null
+        ? null
+        : { targetId: intent.parentId, position: 'inside' };
     }
 
-    const remapped = remap(
-      this.toDropContext(
-        sourceLoc,
-        targetLoc,
-        position,
-        resolveNextParentId(targetLoc, position),
-      ),
-    );
-    if (!remapped || (remapped.targetId === targetId && remapped.position === position)) {
-      return null;
+    if (intent.index < siblings.length) {
+      return { targetId: siblings[intent.index].id, position: 'before' };
     }
 
-    return remapped;
+    return { targetId: siblings[siblings.length - 1].id, position: 'after' };
   }
 
-  private resolveSelfHitDrop(
+  /** Converts a `(targetId, position)` pair into the equivalent intent. */
+  intentFromDropTarget(
     sourceId: string,
+    targetId: string,
     position: TxTreeDropPosition,
-  ): { readonly targetId: string; readonly position: TxTreeDropPosition } {
-    const rows = this.getVisibleRows();
-    const index = rows.findIndex((row) => row.id === sourceId);
-    if (index < 0) {
-      return { targetId: sourceId, position };
+  ): TxTreeDropIntent | null {
+    if (position === 'inside') {
+      return { kind: 'inside', parentId: targetId };
     }
 
-    const row = rows[index];
-
-    if (position === 'after') {
-      const next = rows[index + 1];
-      if (next && next.parentId === row.parentId) {
-        return { targetId: next.id, position: 'after' };
-      }
-      return { targetId: sourceId, position: 'after' };
+    const targetLoc = findLocation(this.nodes, targetId);
+    if (!targetLoc) {
+      return null;
     }
 
-    if (position === 'before') {
-      const prev = rows[index - 1];
-      if (prev && prev.parentId === row.parentId) {
-        return { targetId: prev.id, position: 'after' };
-      }
-      if (row.parentId && this.canDrop(sourceId, row.parentId, 'before')) {
-        return { targetId: row.parentId, position: 'before' };
-      }
+    const parentId = targetLoc.parent?.id ?? null;
+    const siblings = this.getDestinationSiblings(sourceId, parentId);
+    const targetIndex = siblings.findIndex((node) => node.id === targetId);
+    if (targetIndex < 0) {
+      return null;
     }
 
-    return { targetId: sourceId, position };
+    return {
+      kind: 'reorder',
+      parentId,
+      index: position === 'before' ? targetIndex : targetIndex + 1,
+      depth: parentId === null ? 0 : depthOf(this.nodes, parentId) + 1,
+    };
   }
 
-  canDrop(sourceId: string, targetId: string, position: TxTreeDropPosition): boolean {
+  /**
+   * Whether the dragged node may land on `intent`.
+   *
+   * Runs every policy in one place: structure, depth, scope, folders-first ordering, and the
+   * consumer predicates. Slots that fail are simply not offered, so the indicator skips them
+   * instead of showing a deny state over a plausible-looking gap.
+   *
+   * Slots that would leave the node where it already is stay legal, so the indicator can
+   * rest at the dragged row's own position; {@link applyIntent} treats them as no-ops.
+   */
+  canDropIntent(sourceId: string, intent: TxTreeDropIntent): boolean {
     const drop = this.config.drop;
-    if (!drop.enabled || !drop.positions.includes(position)) {
-      return false;
-    }
-
-    if (sourceId === targetId) {
+    if (!drop.enabled) {
       return false;
     }
 
     const sourceLoc = findLocation(this.nodes, sourceId);
-    const targetLoc = findLocation(this.nodes, targetId);
-    if (!sourceLoc || !targetLoc) {
+    if (!sourceLoc) {
       return false;
     }
 
+    const parentId = intent.parentId;
+    if (parentId === sourceId) {
+      return false;
+    }
+
+    const parentLoc = parentId === null ? null : findLocation(this.nodes, parentId);
+    if (parentId !== null) {
+      if (!parentLoc) {
+        return false;
+      }
+      if (parentLoc.node.disabled || parentLoc.node.droppable === false) {
+        return false;
+      }
+      if (!hasChildrenCapability(parentLoc.node)) {
+        return false;
+      }
+      if (isDescendantOf(this.nodes, sourceId, parentId)) {
+        return false;
+      }
+    }
+
+    const sourceParentId = sourceLoc.parent?.id ?? null;
+    if (!drop.reparentAllowed && parentId !== sourceParentId) {
+      return false;
+    }
+
+    const described = this.describeIntent(sourceId, intent);
+    const position: TxTreeDropPosition =
+      intent.kind === 'inside' ? 'inside' : (described?.position ?? 'before');
+    if (!drop.positions.includes(position)) {
+      return false;
+    }
+
+    if (!this.isIntentDepthAllowed(sourceLoc, intent)) {
+      return false;
+    }
+
+    if (!this.isIntentScopeAllowed(sourceLoc, intent)) {
+      return false;
+    }
+
+    if (this.violatesFoldersFirst(sourceLoc, intent)) {
+      return false;
+    }
+
+    if (!described) {
+      return true;
+    }
+
+    const targetLoc = findLocation(this.nodes, described.targetId);
+    if (!targetLoc) {
+      return false;
+    }
     if (targetLoc.node.disabled || targetLoc.node.droppable === false) {
       return false;
     }
 
-    if (isDescendantOf(this.nodes, sourceId, targetId)) {
-      return false;
-    }
+    const ctx = this.toDropContext(sourceLoc, targetLoc, position);
 
-    if (position === 'inside' && !hasChildrenCapability(targetLoc.node)) {
-      return false;
-    }
-
-    if (!drop.reparentAllowed && position === 'inside') {
-      return false;
-    }
-
-    const nextParentId = resolveNextParentId(targetLoc, position);
-    if (!this.isScopeAllowed(sourceLoc, targetLoc, position, nextParentId)) {
-      return false;
-    }
-
-    if (drop.maxDepth !== null) {
-      const sourceSubtreeDepth = subtreeDepth(sourceLoc.node);
-      const targetDepth = depthOf(this.nodes, targetLoc.node.id);
-      const baseDepth = position === 'inside' ? targetDepth + 1 : targetLoc.parent ? depthOf(this.nodes, targetLoc.parent.id) + 1 : 0;
-      if (baseDepth < 0) {
-        return false;
-      }
-      if (baseDepth + sourceSubtreeDepth - 1 > drop.maxDepth) {
+    if (drop.remapDropTarget) {
+      const remapped = drop.remapDropTarget(ctx);
+      if (
+        remapped &&
+        (remapped.targetId !== described.targetId || remapped.position !== position)
+      ) {
         return false;
       }
     }
 
-    if (isEquivalentMove(sourceLoc, targetLoc, position)) {
-      return false;
-    }
-
-    if (wouldViolateFoldersFirst(this.nodes, sourceLoc, targetLoc, position, this.config.sort)) {
-      return false;
-    }
-
-    if (drop.canDrop) {
-      return drop.canDrop(
-        this.toDropContext(sourceLoc, targetLoc, position, nextParentId),
-      );
-    }
-
-    return true;
+    return drop.canDrop ? drop.canDrop(ctx) : true;
   }
 
   /**
-   * Applies a structural move and returns the new nested tree, or `null` when denied.
+   * Applies a drop intent, returning the new nested tree, or `null` when denied.
+   *
+   * Sibling lists are normalised to display order before the splice, so `intent.index`
+   * means the same thing regardless of the configured sort, and `order` fields are then
+   * renumbered from the resulting sequence.
    */
-  moveNode(
+  applyIntent(
     sourceId: string,
-    targetId: string,
-    position: TxTreeDropPosition,
+    intent: TxTreeDropIntent,
   ): { nodes: TxTreeNode<TMeta>[]; event: TxTreeNodeDropEvent } | null {
-    if (!this.canDrop(sourceId, targetId, position)) {
+    if (this.isNoOpIntent(sourceId, intent) || !this.canDropIntent(sourceId, intent)) {
       return null;
     }
 
-    const sourceLoc = findLocation(this.nodes, sourceId);
-    const targetLoc = findLocation(this.nodes, targetId);
-    if (!sourceLoc || !targetLoc) {
-      return null;
-    }
+    const described = this.describeIntent(sourceId, intent);
+    const previousParentId = findLocation(this.nodes, sourceId)?.parent?.id ?? null;
 
-    const previousParentId = sourceLoc.parent?.id ?? null;
-    let working = cloneNodes(this.nodes);
+    const working = sortAllSiblingLists(cloneNodes(this.nodes), this.config.sort);
     const extracted = extractNode(working, sourceId);
     if (!extracted) {
       return null;
     }
 
-    working = extracted.tree;
-    const targetAfterRemove = findLocation(working, targetId);
-    if (!targetAfterRemove) {
+    if (!insertAtIntent(working, intent, extracted.node, this.config.sort)) {
       return null;
     }
 
-    working = insertNode(working, targetAfterRemove, position, extracted.node, this.config.sort);
-    if (this.config.sort.siblingSort === 'manual') {
-      renumberSiblingOrders(working);
-    } else {
-      syncOrderFieldsFromSiblingOrder(working);
-      working = sortAllSiblingLists(working, this.config.sort);
-    }
-
-    const nextParentId = findLocation(working, sourceId)?.parent?.id ?? null;
+    syncOrderFieldsFromSiblingOrder(working);
 
     return {
       nodes: working,
       event: {
         sourceId,
-        targetId,
-        position,
+        targetId: described?.targetId ?? sourceId,
+        position: described?.position ?? 'after',
         previousParentId,
-        nextParentId,
+        nextParentId: findLocation(working, sourceId)?.parent?.id ?? null,
       },
     };
+  }
+
+  /** True when the pair describes a legal move that would actually change the tree. */
+  canDrop(sourceId: string, targetId: string, position: TxTreeDropPosition): boolean {
+    if (sourceId === targetId) {
+      return false;
+    }
+    const intent = this.intentFromDropTarget(sourceId, targetId, position);
+    return (
+      intent !== null &&
+      !this.isNoOpIntent(sourceId, intent) &&
+      this.canDropIntent(sourceId, intent)
+    );
+  }
+
+  /** Applies a structural move expressed as a `(targetId, position)` pair. */
+  moveNode(
+    sourceId: string,
+    targetId: string,
+    position: TxTreeDropPosition,
+  ): { nodes: TxTreeNode<TMeta>[]; event: TxTreeNodeDropEvent } | null {
+    if (sourceId === targetId) {
+      return null;
+    }
+    const intent = this.intentFromDropTarget(sourceId, targetId, position);
+    return intent === null ? null : this.applyIntent(sourceId, intent);
+  }
+
+  /** Destination siblings in display order with the dragged node removed. */
+  private getDestinationSiblings(
+    sourceId: string,
+    parentId: string | null,
+  ): TxTreeNode<TMeta>[] {
+    return this.getDisplayChildren(parentId).filter((node) => node.id !== sourceId);
+  }
+
+  /** True when applying the intent would leave the source exactly where it is. */
+  isNoOpIntent(sourceId: string, intent: TxTreeDropIntent): boolean {
+    const sourceParentId = findLocation(this.nodes, sourceId)?.parent?.id ?? null;
+    if (intent.parentId !== sourceParentId) {
+      return false;
+    }
+
+    const siblings = this.getDisplayChildren(sourceParentId);
+    if (intent.kind === 'inside') {
+      return siblings[siblings.length - 1]?.id === sourceId;
+    }
+
+    return intent.index === siblings.findIndex((node) => node.id === sourceId);
+  }
+
+  private isIntentDepthAllowed(
+    sourceLoc: NodeLocation<TMeta>,
+    intent: TxTreeDropIntent,
+  ): boolean {
+    const maxDepth = this.config.drop.maxDepth;
+    if (maxDepth === null) {
+      return true;
+    }
+
+    const landingDepth =
+      intent.kind === 'inside'
+        ? depthOf(this.nodes, intent.parentId) + 1
+        : intent.depth;
+    if (landingDepth < 0) {
+      return false;
+    }
+
+    return landingDepth + subtreeDepth(sourceLoc.node) - 1 <= maxDepth;
+  }
+
+  private isIntentScopeAllowed(
+    sourceLoc: NodeLocation<TMeta>,
+    intent: TxTreeDropIntent,
+  ): boolean {
+    const scope = this.config.drag.scope;
+    if (scope === 'anywhere') {
+      return true;
+    }
+    if (scope === 'disabled') {
+      return false;
+    }
+
+    const sourceParentId = sourceLoc.parent?.id ?? null;
+    if (scope === 'sameParent') {
+      return intent.kind === 'reorder' && intent.parentId === sourceParentId;
+    }
+
+    if (intent.parentId === sourceParentId) {
+      return true;
+    }
+
+    const rootId = findSubtreeRootId(this.nodes, sourceLoc.node.id);
+    if (!rootId || intent.parentId === null) {
+      return false;
+    }
+
+    return intent.parentId === rootId || isDescendantOf(this.nodes, rootId, intent.parentId);
+  }
+
+  /** True when the intent would place a folder after a leaf among its new siblings. */
+  private violatesFoldersFirst(
+    sourceLoc: NodeLocation<TMeta>,
+    intent: TxTreeDropIntent,
+  ): boolean {
+    const sort = this.config.sort;
+    if (!sort.foldersFirst || !isFolderSortGroup(sourceLoc.node)) {
+      return false;
+    }
+
+    const siblings = this.getDestinationSiblings(sourceLoc.node.id, intent.parentId);
+    const index =
+      intent.kind === 'inside'
+        ? resolveInsideChildInsertIndex(siblings, sourceLoc.node.id, sourceLoc.node, sort)
+        : intent.index;
+
+    return violatesFoldersFirstOrder([
+      ...siblings.slice(0, index),
+      sourceLoc.node,
+      ...siblings.slice(index),
+    ]);
   }
 
   private toDragContext(loc: NodeLocation<TMeta>): TxTreeDragContext<TMeta> {
@@ -394,7 +483,6 @@ export class TxTreeModel<TMeta = unknown> {
     sourceLoc: NodeLocation<TMeta>,
     targetLoc: NodeLocation<TMeta>,
     position: TxTreeDropPosition,
-    nextParentId: string | null,
   ): TxTreeDropContext<TMeta> {
     return {
       sourceId: sourceLoc.node.id,
@@ -405,45 +493,6 @@ export class TxTreeModel<TMeta = unknown> {
       sourceParentId: sourceLoc.parent?.id ?? null,
       targetParentId: targetLoc.parent?.id ?? null,
     };
-  }
-
-  private isScopeAllowed(
-    sourceLoc: NodeLocation<TMeta>,
-    targetLoc: NodeLocation<TMeta>,
-    position: TxTreeDropPosition,
-    nextParentId: string | null,
-  ): boolean {
-    const scope = this.config.drag.scope;
-    const sourceParentId = sourceLoc.parent?.id ?? null;
-
-    if (scope === 'anywhere') {
-      return true;
-    }
-
-    if (scope === 'sameParent') {
-      if (position === 'inside') {
-        return false;
-      }
-      return targetLoc.parent?.id === sourceParentId;
-    }
-
-    if (scope === 'subtree') {
-      const rootId = findSubtreeRootId(this.nodes, sourceLoc.node.id);
-      if (!rootId) {
-        return false;
-      }
-      if (position === 'inside') {
-        return isDescendantOf(this.nodes, rootId, targetLoc.node.id) || targetLoc.node.id === rootId;
-      }
-      const targetParentId = targetLoc.parent?.id ?? null;
-      return (
-        targetParentId === sourceParentId ||
-        isDescendantOf(this.nodes, rootId, targetLoc.node.id) ||
-        isDescendantOf(this.nodes, rootId, targetParentId ?? '')
-      );
-    }
-
-    return false;
   }
 
   private walkVisible(
@@ -498,82 +547,6 @@ function hasChildrenCapability<TMeta>(node: TxTreeNode<TMeta>): boolean {
     node.kind === 'table' ||
     node.kind === 'view'
   );
-}
-
-/**
- * Returns true when the drop would leave the source in the same sibling slot.
- */
-/**
- * When the source sits directly above the target, a `before` drop on the target is a no-op.
- * Remap to `after` on the target so dragging one row down onto the next row reorders.
- */
-function remapAdjacentDownwardBeforeDrop<TMeta>(
-  nodes: MutableTxTreeNode<TMeta>[],
-  sourceId: string,
-  targetId: string,
-  position: TxTreeDropPosition,
-): { readonly targetId: string; readonly position: TxTreeDropPosition } | null {
-  if (position !== 'before') {
-    return null;
-  }
-
-  const sourceLoc = findLocation(nodes, sourceId);
-  const targetLoc = findLocation(nodes, targetId);
-  if (!sourceLoc || !targetLoc) {
-    return null;
-  }
-
-  if ((sourceLoc.parent?.id ?? null) !== (targetLoc.parent?.id ?? null)) {
-    return null;
-  }
-
-  if (sourceLoc.index !== targetLoc.index - 1) {
-    return null;
-  }
-
-  return { targetId, position: 'after' };
-}
-
-function isEquivalentMove<TMeta>(
-  sourceLoc: NodeLocation<TMeta>,
-  targetLoc: NodeLocation<TMeta>,
-  position: TxTreeDropPosition,
-): boolean {
-  const sourceParentId = sourceLoc.parent?.id ?? null;
-  const sourceIndex = sourceLoc.index;
-
-  if (position === 'inside') {
-    if (sourceParentId !== targetLoc.node.id) {
-      return false;
-    }
-    const siblings = sourceLoc.parent?.children;
-    if (!siblings?.length) {
-      return false;
-    }
-    return sourceIndex === siblings.length - 1;
-  }
-
-  const targetParentId = targetLoc.parent?.id ?? null;
-  if (sourceParentId !== targetParentId) {
-    return false;
-  }
-
-  let insertIndex = position === 'before' ? targetLoc.index : targetLoc.index + 1;
-  if (sourceIndex < insertIndex) {
-    insertIndex -= 1;
-  }
-
-  return sourceIndex === insertIndex;
-}
-
-function resolveNextParentId<TMeta>(
-  targetLoc: NodeLocation<TMeta>,
-  position: TxTreeDropPosition,
-): string | null {
-  if (position === 'inside') {
-    return targetLoc.node.id;
-  }
-  return targetLoc.parent?.id ?? null;
 }
 
 function cloneNodes<TMeta>(nodes: readonly TxTreeNode<TMeta>[]): MutableTxTreeNode<TMeta>[] {
@@ -717,30 +690,54 @@ function extractNode<TMeta>(
   return { tree: nodes, node };
 }
 
-function insertNode<TMeta>(
+/**
+ * Splices the extracted node into the slot described by `intent`.
+ *
+ * `nodes` must already be in display order so the intent index lines up with what the user
+ * saw. Root inserts mutate `nodes` in place; nested inserts replace the parent's children.
+ *
+ * @returns `false` when the destination parent no longer exists.
+ */
+function insertAtIntent<TMeta>(
   nodes: MutableTxTreeNode<TMeta>[],
-  targetLoc: NodeLocation<TMeta>,
-  position: TxTreeDropPosition,
+  intent: TxTreeDropIntent,
   node: MutableTxTreeNode<TMeta>,
   sort: TxTreeSortConfig,
-): MutableTxTreeNode<TMeta>[] {
-  if (position === 'inside') {
-    const children = targetLoc.node.children ? [...targetLoc.node.children] : [];
-    const insertIndex = resolveInsideChildInsertIndex(children, node.id, node, sort);
-    children.splice(insertIndex, 0, node);
-    targetLoc.node.children = children;
-    return nodes;
+): boolean {
+  if (intent.kind === 'inside') {
+    const parentLoc = findLocation(nodes, intent.parentId);
+    if (!parentLoc) {
+      return false;
+    }
+    const children = copyChildren(parentLoc);
+    const index = resolveInsideChildInsertIndex(children, node.id, node, sort);
+    children.splice(index, 0, node);
+    parentLoc.node.children = children;
+    return true;
   }
 
-  const siblings = targetLoc.parent ? targetLoc.parent.children : nodes;
-  if (!siblings) {
-    return nodes;
+  if (intent.parentId === null) {
+    nodes.splice(clampInsertIndex(intent.index, nodes.length), 0, node);
+    return true;
   }
 
-  const list = siblings as MutableTxTreeNode<TMeta>[];
-  const insertIndex = position === 'before' ? targetLoc.index : targetLoc.index + 1;
-  list.splice(insertIndex, 0, node);
-  return nodes;
+  const parentLoc = findLocation(nodes, intent.parentId);
+  if (!parentLoc) {
+    return false;
+  }
+
+  const children = copyChildren(parentLoc);
+  children.splice(clampInsertIndex(intent.index, children.length), 0, node);
+  parentLoc.node.children = children;
+  return true;
+}
+
+function copyChildren<TMeta>(loc: NodeLocation<TMeta>): MutableTxTreeNode<TMeta>[] {
+  return loc.node.children ? ([...loc.node.children] as MutableTxTreeNode<TMeta>[]) : [];
+}
+
+function clampInsertIndex(index: number, length: number): number {
+  return Math.min(Math.max(index, 0), length);
 }
 
 export function sortSiblings<TMeta>(
@@ -761,36 +758,6 @@ function isFolderSortGroup<TMeta>(node: TxTreeNode<TMeta>): boolean {
   return node.kind === 'folder' || node.kind === 'collection' || hasChildrenCapability(node);
 }
 
-/**
- * Returns true when the drop would place a folder after a non-folder among siblings.
- */
-export function wouldViolateFoldersFirst<TMeta>(
-  nodes: readonly TxTreeNode<TMeta>[],
-  sourceLoc: NodeLocation<TMeta>,
-  targetLoc: NodeLocation<TMeta>,
-  position: TxTreeDropPosition,
-  sort: TxTreeSortConfig,
-): boolean {
-  if (!sort.foldersFirst || !isFolderSortGroup(sourceLoc.node)) {
-    return false;
-  }
-
-  const withoutSource = getDestinationSiblingsWithoutSource(
-    nodes as MutableTxTreeNode<TMeta>[],
-    sourceLoc,
-    targetLoc,
-    position,
-  );
-  const insertIndex = computeSiblingInsertIndex(sourceLoc, targetLoc, position, sort);
-  const hypothetical = [
-    ...withoutSource.slice(0, insertIndex),
-    sourceLoc.node,
-    ...withoutSource.slice(insertIndex),
-  ];
-
-  return violatesFoldersFirstOrder(hypothetical);
-}
-
 function violatesFoldersFirstOrder<TMeta>(siblings: readonly TxTreeNode<TMeta>[]): boolean {
   let seenNonFolder = false;
   for (const node of siblings) {
@@ -803,32 +770,6 @@ function violatesFoldersFirstOrder<TMeta>(siblings: readonly TxTreeNode<TMeta>[]
     }
   }
   return false;
-}
-
-function getDestinationSiblingsWithoutSource<TMeta>(
-  nodes: MutableTxTreeNode<TMeta>[],
-  sourceLoc: NodeLocation<TMeta>,
-  targetLoc: NodeLocation<TMeta>,
-  position: TxTreeDropPosition,
-): MutableTxTreeNode<TMeta>[] {
-  if (position === 'inside') {
-    return (targetLoc.node.children ?? []).filter(
-      (child) => child.id !== sourceLoc.node.id,
-    ) as MutableTxTreeNode<TMeta>[];
-  }
-
-  const nextParentId = resolveNextParentId(targetLoc, position);
-  const siblings =
-    nextParentId === null
-      ? nodes
-      : ((findLocation(nodes, nextParentId)?.node.children ?? []) as MutableTxTreeNode<TMeta>[]);
-
-  const sourceParentId = sourceLoc.parent?.id ?? null;
-  if (sourceParentId === nextParentId) {
-    return siblings.filter((node) => node.id !== sourceLoc.node.id);
-  }
-
-  return siblings;
 }
 
 /**
@@ -847,30 +788,6 @@ function resolveInsideChildInsertIndex<TMeta>(
 
   const firstNonFolder = withoutSource.findIndex((child) => !isFolderSortGroup(child));
   return firstNonFolder === -1 ? withoutSource.length : firstNonFolder;
-}
-
-function computeSiblingInsertIndex<TMeta>(
-  sourceLoc: NodeLocation<TMeta>,
-  targetLoc: NodeLocation<TMeta>,
-  position: TxTreeDropPosition,
-  sort?: TxTreeSortConfig,
-): number {
-  if (position === 'inside') {
-    const children = targetLoc.node.children ?? [];
-    return resolveInsideChildInsertIndex(
-      children,
-      sourceLoc.node.id,
-      sourceLoc.node,
-      sort ?? { siblingSort: 'manual', foldersFirst: false },
-    );
-  }
-
-  let insertIndex = position === 'before' ? targetLoc.index : targetLoc.index + 1;
-  const sameParent = (sourceLoc.parent?.id ?? null) === (targetLoc.parent?.id ?? null);
-  if (sameParent && sourceLoc.index < insertIndex) {
-    insertIndex -= 1;
-  }
-  return insertIndex;
 }
 
 function compareSiblings<TMeta>(
@@ -911,331 +828,6 @@ function sortAllSiblingLists<TMeta>(
     }
   }
   return sortSiblings(nodes, sort);
-}
-
-/**
- * Returns true when `after` on the upper row and `before` on the lower row target the same
- * sibling insert index (consecutive visible rows with the same parent).
- */
-export function isSharedSiblingGapDrop(
-  rows: readonly Pick<TxTreeVisibleRow<unknown>, 'id' | 'parentId'>[],
-  upperTargetId: string,
-  upperPosition: TxTreeDropPosition,
-  lowerTargetId: string,
-  lowerPosition: TxTreeDropPosition,
-): boolean {
-  if (upperPosition !== 'after' || lowerPosition !== 'before') {
-    return false;
-  }
-
-  const upperIdx = rows.findIndex((row) => row.id === upperTargetId);
-  const lowerIdx = rows.findIndex((row) => row.id === lowerTargetId);
-  if (upperIdx < 0 || lowerIdx !== upperIdx + 1) {
-    return false;
-  }
-
-  return rows[upperIdx].parentId === rows[lowerIdx].parentId;
-}
-
-/**
- * Returns the last root-level row id for tail drop targets (empty space below the tree).
- * Skips `excludeId` when it is the trailing root row (e.g. while dragging that root node).
- */
-export function resolveTailRootRowId(
-  rows: readonly Pick<TxTreeVisibleRow<unknown>, 'id' | 'parentId'>[],
-  excludeId?: string | null,
-): string | null {
-  const rootRows = rows.filter((row) => row.parentId === null);
-  if (rootRows.length === 0) {
-    return rows.length > 0 ? rows[rows.length - 1].id : null;
-  }
-
-  for (let i = rootRows.length - 1; i >= 0; i--) {
-    if (rootRows[i].id !== excludeId) {
-      return rootRows[i].id;
-    }
-  }
-
-  return rootRows[rootRows.length - 1]?.id ?? null;
-}
-
-/**
- * Maps `after` on an expanded folder row to `after` on its last visible descendant so
- * the insert line appears at the bottom of the folder contents (exit-folder drop).
- */
-export function resolveFolderExitIndicator(
-  rows: readonly Pick<TxTreeVisibleRow<unknown>, 'id' | 'depth' | 'hasChildren' | 'expanded'>[],
-  targetId: string,
-  position: TxTreeDropPosition,
-): { readonly targetId: string; readonly position: TxTreeDropPosition } {
-  if (position !== 'after') {
-    return { targetId, position };
-  }
-
-  const index = rows.findIndex((row) => row.id === targetId);
-  if (index < 0) {
-    return { targetId, position };
-  }
-
-  const folder = rows[index];
-  if (!folder.hasChildren || !folder.expanded) {
-    return { targetId, position };
-  }
-
-  let lastDescendantIndex = index;
-  for (let j = index + 1; j < rows.length; j++) {
-    if (rows[j].depth <= folder.depth) {
-      break;
-    }
-    lastDescendantIndex = j;
-  }
-
-  if (lastDescendantIndex === index) {
-    return { targetId, position };
-  }
-
-  return { targetId: rows[lastDescendantIndex].id, position: 'after' };
-}
-
-/**
- * Resolves insert-line target/position for display (folder exit + sibling seam rules).
- */
-export function resolveDropIndicatorDisplay(
-  rows: readonly Pick<TxTreeVisibleRow<unknown>, 'id' | 'parentId' | 'depth' | 'hasChildren' | 'expanded'>[],
-  dropTargetId: string,
-  dropPosition: TxTreeDropPosition,
-): {
-  readonly targetId: string;
-  readonly position: TxTreeDropPosition;
-  readonly indentDepth: number | null;
-} {
-  const folderExit = resolveFolderExitIndicator(rows, dropTargetId, dropPosition);
-  const canonical = canonicalizeDropIndicator(rows, folderExit.targetId, folderExit.position);
-
-  let indentDepth: number | null = null;
-  if (dropPosition === 'after' && folderExit.targetId !== dropTargetId) {
-    const folder = rows.find((row) => row.id === dropTargetId);
-    if (folder) {
-      indentDepth = folder.depth;
-    }
-  }
-
-  return { ...canonical, indentDepth };
-}
-
-/**
- * When folder-exit targets the dragging row, attach the insert line to the seam after the
- * folder block (`before` on the next outer row). Falls back to the last non-dragging child
- * or the dragging row when the folder is the tree tail.
- */
-export function remapFolderExitToAfterBlockSeam(
-  rows: readonly Pick<TxTreeVisibleRow<unknown>, 'id' | 'depth' | 'hasChildren' | 'expanded'>[],
-  draggingId: string,
-  folderId: string,
-  indentDepth: number,
-): {
-  readonly targetId: string | null;
-  readonly position: TxTreeDropPosition | null;
-  readonly indentDepth: number | null;
-} {
-  const folderIndex = rows.findIndex((row) => row.id === folderId);
-  if (folderIndex < 0) {
-    return { targetId: draggingId, position: 'after', indentDepth };
-  }
-
-  const folderDepth = rows[folderIndex].depth;
-  let blockEndIndex = folderIndex;
-  const folderRow = rows[folderIndex];
-  if (folderRow.hasChildren && folderRow.expanded) {
-    for (let j = folderIndex + 1; j < rows.length; j++) {
-      if (rows[j].depth <= folderDepth) {
-        break;
-      }
-      blockEndIndex = j;
-    }
-  }
-
-  for (let j = blockEndIndex + 1; j < rows.length; j++) {
-    if (rows[j].depth <= folderDepth) {
-      return { targetId: rows[j].id, position: 'before', indentDepth };
-    }
-  }
-
-  if (rows[blockEndIndex]?.id === draggingId) {
-    return { targetId: draggingId, position: 'after', indentDepth };
-  }
-
-  for (let j = blockEndIndex; j > folderIndex; j--) {
-    if (rows[j].id !== draggingId) {
-      return { targetId: rows[j].id, position: 'after', indentDepth };
-    }
-  }
-
-  return { targetId: draggingId, position: 'after', indentDepth };
-}
-
-/**
- * When a non-exit self-hit maps the insert line onto the dragging row, attach it to the
- * previous visible sibling in the same folder instead.
- */
-export function remapIndicatorOffDraggingRow(
-  rows: readonly Pick<TxTreeVisibleRow<unknown>, 'id' | 'parentId' | 'depth'>[],
-  draggingId: string,
-  indicatorTargetId: string,
-  indicatorPosition: TxTreeDropPosition,
-  indentDepth: number | null,
-): {
-  readonly targetId: string | null;
-  readonly position: TxTreeDropPosition | null;
-  readonly indentDepth: number | null;
-} {
-  if (indicatorTargetId !== draggingId) {
-    return { targetId: indicatorTargetId, position: indicatorPosition, indentDepth };
-  }
-
-  if (indicatorPosition !== 'before' && indicatorPosition !== 'after') {
-    return { targetId: indicatorTargetId, position: indicatorPosition, indentDepth };
-  }
-
-  const dragIndex = rows.findIndex((row) => row.id === draggingId);
-  if (dragIndex < 0) {
-    return { targetId: null, position: null, indentDepth: null };
-  }
-
-  const dragRow = rows[dragIndex];
-  for (let i = dragIndex - 1; i >= 0; i--) {
-    const candidate = rows[i];
-    if (candidate.parentId === dragRow.parentId) {
-      return { targetId: candidate.id, position: 'after', indentDepth };
-    }
-    if (candidate.depth < dragRow.depth) {
-      break;
-    }
-  }
-
-  return { targetId: null, position: null, indentDepth: null };
-}
-
-/**
- * Maps `after` on a row to `before` on the next visible sibling when they share the same
- * insert slot, so the insert indicator is rendered on a single row.
- */
-export function canonicalizeDropIndicator(
-  rows: readonly Pick<TxTreeVisibleRow<unknown>, 'id' | 'parentId'>[],
-  targetId: string,
-  position: TxTreeDropPosition,
-): { readonly targetId: string; readonly position: TxTreeDropPosition } {
-  if (position !== 'after') {
-    return { targetId, position };
-  }
-
-  const index = rows.findIndex((row) => row.id === targetId);
-  if (index < 0 || index >= rows.length - 1) {
-    return { targetId, position };
-  }
-
-  const upper = rows[index];
-  const lower = rows[index + 1];
-  if (upper.parentId !== lower.parentId) {
-    return { targetId, position };
-  }
-
-  return { targetId: lower.id, position: 'before' };
-}
-
-/** True when the pointer is in the shared seam between two stacked row rects. */
-export function isPointerInRowSeamZone(
-  clientY: number,
-  upperRect: DOMRect,
-  lowerRect: DOMRect,
-  hysteresisPx: number = TX_TREE_DROP_BOUNDARY_HYSTERESIS_PX,
-): boolean {
-  const seam = (upperRect.bottom + lowerRect.top) / 2;
-  const gap = Math.max(0, lowerRect.top - upperRect.bottom);
-  const band = Math.max(hysteresisPx, gap / 2 + 4);
-  return Math.abs(clientY - seam) <= band;
-}
-
-/** Resolves pointer Y position within a row to a drop band. */
-export function resolveDropPositionFromPointer(
-  clientY: number,
-  rect: DOMRect,
-  allowed: readonly TxTreeDropPosition[],
-  targetHasChildren: boolean,
-): TxTreeDropPosition | null {
-  const height = rect.height || 1;
-  const offset = clientY - rect.top;
-  const ratio = offset / height;
-
-  const canBefore = allowed.includes('before');
-  const canAfter = allowed.includes('after');
-  const canInside = allowed.includes('inside') && targetHasChildren;
-
-  if (ratio < TX_TREE_DROP_HIT_BEFORE_RATIO && canBefore) {
-    return 'before';
-  }
-  if (ratio > 1 - TX_TREE_DROP_HIT_AFTER_RATIO && canAfter) {
-    return 'after';
-  }
-  if (canInside) {
-    return 'inside';
-  }
-  if (canAfter) {
-    return 'after';
-  }
-  if (canBefore) {
-    return 'before';
-  }
-  return null;
-}
-
-/**
- * Resolves drop band with hysteresis so the indicator does not flip at zone edges.
- *
- * @param previous - Last committed position for the current target row.
- */
-export function resolveDropPositionWithHysteresis(
-  clientY: number,
-  rect: DOMRect,
-  allowed: readonly TxTreeDropPosition[],
-  targetHasChildren: boolean,
-  previous: TxTreeDropPosition | null,
-  hysteresisPx: number = TX_TREE_DROP_POSITION_HYSTERESIS_PX,
-): TxTreeDropPosition | null {
-  const next = resolveDropPositionFromPointer(clientY, rect, allowed, targetHasChildren);
-  if (!next || !previous || previous === next) {
-    return next;
-  }
-
-  const height = rect.height || 1;
-  const offset = clientY - rect.top;
-  const beforeEdge = height * TX_TREE_DROP_HIT_BEFORE_RATIO;
-  const afterEdge = height * (1 - TX_TREE_DROP_HIT_AFTER_RATIO);
-
-  if (previous === 'before' && next !== 'before' && offset < beforeEdge + hysteresisPx) {
-    return 'before';
-  }
-  if (previous === 'after' && next !== 'after' && offset > afterEdge - hysteresisPx) {
-    return 'after';
-  }
-  if (previous === 'inside' && next === 'before' && offset < beforeEdge + hysteresisPx) {
-    return 'inside';
-  }
-  if (previous === 'inside' && next === 'after' && offset > afterEdge - hysteresisPx) {
-    return 'inside';
-  }
-  if (previous === 'before' && next === 'inside' && offset < beforeEdge + hysteresisPx) {
-    return 'before';
-  }
-  if (previous === 'after' && next === 'inside' && offset > afterEdge - hysteresisPx) {
-    return 'after';
-  }
-
-  return next;
-}
-
-function renumberSiblingOrders<TMeta>(nodes: MutableTxTreeNode<TMeta>[]): void {
-  syncOrderFieldsFromSiblingOrder(nodes);
 }
 
 /** Writes `order` from the current in-memory sibling sequence (post-drop). */

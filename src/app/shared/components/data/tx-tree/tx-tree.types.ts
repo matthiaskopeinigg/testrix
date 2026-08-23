@@ -72,6 +72,41 @@ export interface TxTreeNodeDropEvent {
   readonly nextParentId: string | null;
 }
 
+/**
+ * Insert between siblings of {@link parentId}.
+ *
+ * {@link index} counts the parent's children in display order **after** the dragged
+ * subtree is removed, so applying the intent is a plain splice.
+ */
+export interface TxTreeReorderIntent {
+  readonly kind: 'reorder';
+  /** Receiving parent, or `null` for the tree root. */
+  readonly parentId: string | null;
+  readonly index: number;
+  /** Row depth the insert line renders at. */
+  readonly depth: number;
+}
+
+/** Append into an expandable node. */
+export interface TxTreeInsideIntent {
+  readonly kind: 'inside';
+  readonly parentId: string;
+}
+
+/**
+ * Canonical drop target for a drag gesture.
+ *
+ * A single intent drives both the insert indicator and the committed move, so the
+ * preview cannot disagree with the result.
+ */
+export type TxTreeDropIntent = TxTreeReorderIntent | TxTreeInsideIntent;
+
+/** Insert-line geometry relative to the tree content box. */
+export interface TxTreeDropIndicator {
+  readonly topPx: number;
+  readonly indentPx: number;
+}
+
 /** Flattened row used for rendering and hit-testing. */
 export interface TxTreeVisibleRow<TMeta = unknown> {
   readonly id: string;
@@ -102,7 +137,10 @@ export interface TxTreeExpansionConfig {
   readonly expandOnClick: boolean;
   /** When true, hovering a collapsed folder while dragging expands it after {@link autoExpandOnDropHoverMs}. */
   readonly expandFolderOnDrag: boolean;
-  /** When true, expands the target folder after a successful drop with position `inside`. */
+  /**
+   * When true, expands the target folder after a successful drop with position `inside`, so
+   * the dropped row stays visible where it landed. Set to false to keep the folder closed.
+   */
   readonly expandFolderOnDrop: boolean;
   readonly autoExpandOnDropHoverMs: number;
 }
@@ -127,12 +165,17 @@ export interface TxTreeDropRemap {
 export interface TxTreeDropPolicy<TMeta = unknown> {
   readonly enabled: boolean;
   readonly positions: readonly TxTreeDropPosition[];
+  /** When false, only slots under the dragged node's current parent are offered. */
   readonly reparentAllowed: boolean;
   readonly maxDepth: number | null;
   readonly canDrop?: (ctx: TxTreeDropContext<TMeta>) => boolean;
   /**
-   * Rewrites a hit-test target before {@link canDrop} and {@link TxTreeModel.moveNode}.
-   * Use this when live children (catalog rows, status nodes) should not accept drops.
+   * Marks a candidate slot as not a valid anchor by returning any other target.
+   *
+   * Use this when live children (catalog rows, status nodes) should not accept drops. The
+   * rewritten target is not adopted: the slot is dropped from the table, and the nearest
+   * remaining legal slot wins instead. That keeps the insert indicator on a slot that the
+   * drop will actually use.
    */
   readonly remapDropTarget?: (ctx: TxTreeDropContext<TMeta>) => TxTreeDropRemap | null;
 }
@@ -146,7 +189,6 @@ export interface TxTreeSortConfig {
 export interface TxTreeVisualConfig {
   readonly indentPx: number;
   readonly showDragHandle: boolean;
-  readonly animateDeny: boolean;
   readonly animateInsertLine: boolean;
   /** FLIP transition when rows change position after a successful drop. */
   readonly animateMove: boolean;
@@ -168,14 +210,17 @@ export interface TxTreeConfig<TMeta = unknown> {
 export const TX_TREE_DROP_HIT_BEFORE_RATIO = 0.25;
 export const TX_TREE_DROP_HIT_AFTER_RATIO = 0.25;
 
-/** Pixel buffer before switching between before / inside / after bands. */
-export const TX_TREE_DROP_POSITION_HYSTERESIS_PX = 8;
+/** Pixel buffer the challenger must beat before the resolved drop slot switches. */
+export const TX_TREE_DROP_HYSTERESIS_PX = 6;
 
-/** Seam band where `after` on row N and `before` on row N+1 share one insert slot. */
-export const TX_TREE_DROP_BOUNDARY_HYSTERESIS_PX = 12;
+/** Inline inset of `.tx-tree-row` inside the tree content box (`margin-inline: 0.35rem`). */
+export const TX_TREE_ROW_INLINE_INSET_PX = 6;
 
-/** Extra vertical reach for row hit-testing (covers inter-row gaps). */
-export const TX_TREE_ROW_HIT_SLOP_PX = 6;
+/** Distance from a scroll edge where drag auto-scroll engages. */
+export const TX_TREE_AUTO_SCROLL_EDGE_PX = 28;
+
+/** Peak auto-scroll speed at the very edge of the scroll container. */
+export const TX_TREE_AUTO_SCROLL_MAX_PX_PER_FRAME = 14;
 
 export const TX_TREE_DEFAULT_CONFIG: TxTreeConfig = {
   selection: {
@@ -186,7 +231,7 @@ export const TX_TREE_DEFAULT_CONFIG: TxTreeConfig = {
     defaultExpanded: false,
     expandOnClick: true,
     expandFolderOnDrag: false,
-    expandFolderOnDrop: false,
+    expandFolderOnDrop: true,
     autoExpandOnDropHoverMs: 500,
   },
   drag: {
@@ -208,7 +253,6 @@ export const TX_TREE_DEFAULT_CONFIG: TxTreeConfig = {
   visual: {
     indentPx: 16,
     showDragHandle: false,
-    animateDeny: true,
     animateInsertLine: true,
     animateMove: true,
     animateExpand: true,
@@ -246,27 +290,24 @@ export interface TxTreeNodeRenameCommitEvent {
 
 export interface TxTreeDnDState {
   readonly draggingId: string | null;
-  readonly dropTargetId: string | null;
-  readonly dropPosition: TxTreeDropPosition | null;
+  /** Where the drag will land; the only input to both the indicator and the commit. */
+  readonly intent: TxTreeDropIntent | null;
+  /** Insert-line geometry for `reorder` intents (`inside` highlights the row instead). */
+  readonly indicator: TxTreeDropIndicator | null;
+  /**
+   * Row under the pointer when no drop is reachable there.
+   *
+   * Nothing is drawn for it — an unreachable position shows no indicator at all — so this
+   * exists only to explain the empty indicator in the debug HUD.
+   */
   readonly denyTargetId: string | null;
-  /** Insert-line row/position (may differ from drop target when exiting an expanded folder). */
-  readonly indicatorTargetId: string | null;
-  readonly indicatorPosition: TxTreeDropPosition | null;
-  /** Insert-line indent depth when it differs from the indicator row (folder exit to root). */
-  readonly indicatorIndentDepth: number | null;
-  /** Tree-anchored folder-exit seam (px from `.tx-tree` top); used when the row slot is the drag source. */
-  readonly indicatorFolderSeamTopPx: number | null;
 }
 
 export const TX_TREE_INITIAL_DND_STATE: TxTreeDnDState = {
   draggingId: null,
-  dropTargetId: null,
-  dropPosition: null,
+  intent: null,
+  indicator: null,
   denyTargetId: null,
-  indicatorTargetId: null,
-  indicatorPosition: null,
-  indicatorIndentDepth: null,
-  indicatorFolderSeamTopPx: null,
 };
 
 /** Resolved node reference for design-system / debug HUDs. */
@@ -283,8 +324,9 @@ export interface TxTreeDnDDebugInfo {
   readonly phase: 'idle' | 'dragging';
   readonly pointer: { readonly x: number; readonly y: number } | null;
   readonly source: TxTreeDnDDebugNodeRef | null;
-  readonly target: TxTreeDnDDebugNodeRef | null;
-  readonly dropPosition: TxTreeDropPosition | null;
+  /** Receiving parent for the pending intent (`null` at the tree root). */
+  readonly parent: TxTreeDnDDebugNodeRef | null;
+  readonly intent: TxTreeDropIntent | null;
   readonly dropAllowed: boolean;
   readonly denied: boolean;
   readonly denyTargetId: string | null;
@@ -297,8 +339,8 @@ export const TX_TREE_INITIAL_DND_DEBUG_INFO: TxTreeDnDDebugInfo = {
   phase: 'idle',
   pointer: null,
   source: null,
-  target: null,
-  dropPosition: null,
+  parent: null,
+  intent: null,
   dropAllowed: false,
   denied: false,
   denyTargetId: null,

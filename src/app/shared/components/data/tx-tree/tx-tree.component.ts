@@ -115,6 +115,7 @@ export class TxTreeComponent<TMeta = unknown> {
   private expandRefreshRaf: number | null = null;
   private expandRevealTimer: ReturnType<typeof setTimeout> | null = null;
   private expandedBeforeDrag: ReadonlySet<string> | null = null;
+  private visibleIdsBeforeDrop: ReadonlySet<string> | null = null;
   private skipNextNodesInputSync = false;
   private hasSyncedExpandedIdsInput = false;
 
@@ -198,15 +199,6 @@ export class TxTreeComponent<TMeta = unknown> {
 
   protected trackRow(_index: number, row: TxTreeVisibleRow<TMeta>): string {
     return row.id;
-  }
-
-  protected showFolderExitSeam(): boolean {
-    const state = this.dndState();
-    return state.indicatorFolderSeamTopPx !== null && state.indicatorIndentDepth !== null;
-  }
-
-  protected folderExitSeamIndent(): number {
-    return this.dndState().indicatorIndentDepth ?? 0;
   }
 
   protected expandRevealIndex(rowId: string): number | null {
@@ -332,10 +324,7 @@ export class TxTreeComponent<TMeta = unknown> {
   }
 
   protected handleRegisterRow(rowId: string, element: HTMLElement): void {
-    const row = this.visibleRows().find((r) => r.id === rowId);
-    const hasChildren =
-      row?.hasChildren || row?.node.kind === 'folder' || row?.node.kind === 'collection';
-    this.dndController?.registerRow(rowId, element, { hasChildren: !!hasChildren });
+    this.dndController?.registerRow(rowId, element);
   }
 
   protected handleUnregisterRow(rowId: string): void {
@@ -376,6 +365,10 @@ export class TxTreeComponent<TMeta = unknown> {
             ? captureTreeRowRects(this.hostEl.nativeElement)
             : null;
 
+          // Rows visible before the move, so the dropped row counts as moved rather than
+          // revealed when the drop expands its new parent.
+          this.visibleIdsBeforeDrop = new Set(this.visibleRows().map((row) => row.id));
+
           this.dndState.set({ ...TX_TREE_INITIAL_DND_STATE });
           this.revertExpansionOpenedDuringDrag();
           this.skipNextNodesInputSync = true;
@@ -391,21 +384,6 @@ export class TxTreeComponent<TMeta = unknown> {
 
           this.nodesChange.emit(nodes);
           this.nodeDrop.emit(event);
-        },
-        onDeny: (targetId) => {
-          this.ngZone.run(() => {
-            this.dndState.set({
-              ...TX_TREE_INITIAL_DND_STATE,
-              denyTargetId: targetId,
-            });
-            globalThis.setTimeout(() => {
-              this.dndState.update((current) =>
-                current.denyTargetId === targetId
-                  ? { ...current, denyTargetId: null }
-                  : current,
-              );
-            }, 480);
-          });
         },
         onExpandNode: (nodeId) => {
           this.model.expand(nodeId);
@@ -456,13 +434,16 @@ export class TxTreeComponent<TMeta = unknown> {
   ): void {
     const expansion = this.resolvedConfig().expansion;
     const snapshot = this.expandedBeforeDrag;
+    const visibleBeforeDrop = this.visibleIdsBeforeDrop;
     this.expandedBeforeDrag = null;
+    this.visibleIdsBeforeDrop = null;
 
     if (!snapshot) {
       return;
     }
 
-    const previousVisibleIds = new Set(this.visibleRows().map((row) => row.id));
+    const previousVisibleIds =
+      visibleBeforeDrop ?? new Set(this.visibleRows().map((row) => row.id));
     let expansionChanged = false;
 
     if (
@@ -470,8 +451,8 @@ export class TxTreeComponent<TMeta = unknown> {
       dropEvent?.position === 'inside' &&
       expansion.expandFolderOnDrop
     ) {
+      expansionChanged = !this.model.isExpanded(dropEvent.targetId);
       this.model.expand(dropEvent.targetId);
-      expansionChanged = true;
     } else if (
       completed &&
       dropEvent?.position === 'inside' &&
@@ -505,7 +486,8 @@ export class TxTreeComponent<TMeta = unknown> {
         return;
       }
       this.refreshRows();
-      this.dndController?.syncRowMetaFromModel();
+      this.cdr.detectChanges();
+      this.dndController?.invalidateGeometry();
     });
   }
 

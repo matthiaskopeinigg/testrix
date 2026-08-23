@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.4]
+
+### Changed
+
+- Tree drag-and-drop uses one drop intent for both the insert line and the committed move
+- Dragging near the edge of a sidebar scrolls the list
+- Dropping an item into a folder expands that folder
+- Welcome **Get started** sits centered above the quick-start cards
+
+### Fixed
+
+- Tree insert line and drop no longer land in different places
+- No insert line, highlight, or deny shake when a drop is not allowed
+- Dragged rows stay in place instead of collapsing, so the list no longer jumps under the cursor
+
 ## [1.1.3]
 
 ### Fixed
@@ -696,7 +711,8 @@ Tagged in git. GitHub installers were not published (Authenticode secrets were m
 
 Initial public beta of Testrix: local-first desktop API client (HTTP, WebSocket, collections, environments, test suites, load tests, mocks, and capture).
 
-[Unreleased]: https://github.com/matthiaskopeinigg/testrix/compare/v1.1.3...HEAD
+[Unreleased]: https://github.com/matthiaskopeinigg/testrix/compare/v1.1.4...HEAD
+[1.1.4]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.1.4
 [1.1.3]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.1.3
 [1.1.2]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.1.2
 [1.1.2-beta.5]: https://github.com/matthiaskopeinigg/testrix/releases/tag/v1.1.2-beta.5
