@@ -65,7 +65,7 @@
     "electron-updater": "^6.8.9",
     "ioredis": "^5.11.1",
     "jose": "^6.2.8",
-    "mongodb": "^7.5.0",
+    "mongodb": "^7.6.0",
     "mssql": "^12.7.0",
     "mysql2": "^3.23.3",
     "oracledb": "^7.0.1",
