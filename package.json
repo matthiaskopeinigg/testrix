@@ -75,7 +75,7 @@
     "tslib": "^2.3.0",
     "undici": "^7.29.0",
     "yaml": "^2.9.0",
-    "zod": "^4.4.3"
+    "zod": "^4.5.4"
   },
   "devDependencies": {
     "@angular/build": "^21.2.21",
