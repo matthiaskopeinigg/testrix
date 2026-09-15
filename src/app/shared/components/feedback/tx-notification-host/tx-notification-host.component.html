@@ -1,9 +1,0 @@
-@if (active(); as notification) {
-  <div class="tx-notification-layer" aria-live="polite" aria-atomic="true">
-    <tx-notification
-      [message]="notification.message"
-      [tone]="notification.tone"
-      (dismissed)="handleDismiss(notification.id)"
-    />
-  </div>
-}
