@@ -1,0 +1,70 @@
+<div class="tx-environments" #root (contextmenu)="$event.preventDefault()">
+  <tx-environments-toolbar />
+  <div
+    class="tx-environments__body"
+    #scroller
+    (click)="handleChromeClick($event)"
+    (contextmenu)="handleRootMenu($event)"
+  >
+    <div class="tx-environments__content">
+      @if (store.hasVisibleEnvironments()) {
+        <tx-environments-list
+          [renamingId]="renamingId()"
+          (itemMenu)="handleItemMenu($event)"
+          (renameStart)="startRename($event)"
+          (renameInput)="handleRenameInput($event)"
+          (renameKey)="handleRenameKey($event)"
+          (renameBlur)="finishRename()"
+        />
+      } @else {
+        <tx-empty-state
+          title="No matches"
+          body="Try a different search to see your environments again."
+        />
+      }
+
+      @if (dnd.isIndicatorVisible()) {
+        <div
+          class="tx-environments__indicator"
+          [style.left.px]="dnd.indicatorLeft()"
+          [style.transform]="'translate3d(0, ' + dnd.indicatorY() + 'px, 0)'"
+          aria-hidden="true"
+        ></div>
+      }
+    </div>
+  </div>
+  <p class="tx-environments__live" role="status" aria-live="polite">{{ dnd.announcement() }}</p>
+</div>
+
+<ng-template #envListMenu>
+  @if (menu(); as menu) {
+    <div class="tx-environments-menu tx-menu" role="menu">
+      @if (menu.kind === 'item') {
+        <button type="button" class="tx-environments-menu__item" role="menuitem" (click)="handleOpen()">
+          Open
+        </button>
+        <button type="button" class="tx-environments-menu__item" role="menuitem" (click)="handleRenameFromMenu()">
+          Rename
+        </button>
+        <button type="button" class="tx-environments-menu__item" role="menuitem" (click)="handleDuplicate()">
+          Duplicate
+        </button>
+        @if (canDelete()) {
+          <span class="tx-environments-menu__rule" aria-hidden="true"></span>
+          <button
+            type="button"
+            class="tx-environments-menu__item is-danger"
+            role="menuitem"
+            (click)="handleDelete()"
+          >
+            {{ deleteLabel() }}
+          </button>
+        }
+      } @else {
+        <button type="button" class="tx-environments-menu__item" role="menuitem" (click)="handleNewEnvironment()">
+          New environment
+        </button>
+      }
+    </div>
+  }
+</ng-template>

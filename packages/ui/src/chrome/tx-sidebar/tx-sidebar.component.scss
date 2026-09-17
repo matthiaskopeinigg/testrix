@@ -1,0 +1,140 @@
+:host {
+  position: relative;
+  z-index: 2;
+  display: block;
+  overflow: visible;
+  flex-shrink: 0;
+  width: var(--tx-sidebar-width);
+  min-width: var(--tx-sidebar-width);
+  transition:
+    width calc(var(--tx-motion-panel) * var(--tx-motion-scale, 1)) var(--tx-spring),
+    min-width calc(var(--tx-motion-panel) * var(--tx-motion-scale, 1)) var(--tx-spring);
+}
+
+:host(.is-collapsed) {
+  overflow: hidden;
+  width: 0;
+  min-width: 0;
+  pointer-events: none;
+}
+
+:host(.is-resizing) {
+  transition: none;
+}
+
+.tx-sidebar {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  background: var(--tx-bg-chrome);
+}
+
+:host(:not(.is-collapsed)) .tx-sidebar {
+  background:
+    linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--tx-bg-app) 48%, var(--tx-bg-chrome)) 0%,
+      var(--tx-bg-chrome) 36px,
+      var(--tx-bg-chrome) 100%
+    );
+}
+
+:host(:not(.is-collapsed)) .tx-sidebar::after {
+  content: '';
+  position: absolute;
+  top: 10px;
+  bottom: 10px;
+  left: 0;
+  z-index: 1;
+  width: 1px;
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    transparent,
+    color-mix(in srgb, var(--tx-border-subtle) 80%, transparent) 16%,
+    color-mix(in srgb, var(--tx-border-subtle) 80%, transparent) 84%,
+    transparent
+  );
+}
+
+.tx-sidebar__header {
+  display: flex;
+  align-items: center;
+  height: 40px;
+  padding: 0 16px;
+}
+
+.tx-sidebar__title {
+  margin: 0;
+  overflow: hidden;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--tx-text-faint);
+}
+
+.tx-sidebar__body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  padding: 4px 16px 18px;
+  overflow: hidden;
+}
+
+.tx-sidebar__resize-hint {
+  position: absolute;
+  top: 0;
+  right: -4px;
+  bottom: 0;
+  z-index: 6;
+  display: block;
+  width: 8px;
+  max-width: none;
+}
+
+:host ::ng-deep .tx-sidebar__resize-hint .tx-hint__trigger {
+  display: block;
+  width: 8px;
+  height: 100%;
+  max-width: none;
+}
+
+.tx-sidebar__resize {
+  position: relative;
+  display: block;
+  width: 8px;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: col-resize;
+}
+
+.tx-sidebar__resize::after {
+  content: '';
+  position: absolute;
+  top: var(--tx-radius-canvas);
+  bottom: calc(var(--tx-space-2) + var(--tx-radius-canvas));
+  left: 3px;
+  width: 2px;
+  border-radius: 99px;
+  background: transparent;
+  transition:
+    background-color calc(var(--tx-motion-fast) * var(--tx-motion-scale, 1)) var(--tx-ease-out),
+    box-shadow calc(var(--tx-motion-fast) * var(--tx-motion-scale, 1)) var(--tx-ease-out);
+}
+
+.tx-sidebar__resize:hover::after,
+.tx-sidebar__resize:focus-visible::after,
+:host(.is-resizing) .tx-sidebar__resize::after {
+  background: var(--tx-accent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--tx-accent) 35%, transparent);
+}

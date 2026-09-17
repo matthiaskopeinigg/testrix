@@ -1,0 +1,98 @@
+:host {
+  display: contents;
+}
+
+.tx-hint-layer__bubble {
+  position: fixed;
+  z-index: var(--tx-z-toast);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: max-content;
+  max-width: 220px;
+  padding: 7px 10px;
+  border: 1px solid var(--tx-border-subtle);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--tx-bg-overlay) 96%, transparent);
+  color: var(--tx-text-primary);
+  box-shadow: var(--tx-shadow-2), var(--tx-glow);
+  font-size: 12px;
+  font-weight: 550;
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+  white-space: normal;
+  pointer-events: none;
+  transform-origin: center top;
+}
+
+.tx-hint-layer__bubble[data-placement='top'] {
+  transform-origin: center bottom;
+}
+
+.tx-hint-layer__bubble[data-placement='left'] {
+  transform-origin: right center;
+}
+
+.tx-hint-layer__bubble[data-placement='right'] {
+  transform-origin: left center;
+}
+
+.tx-hint-enter {
+  animation: tx-hint-in calc(180ms * var(--tx-motion-scale, 1)) var(--tx-ease-out) both;
+}
+
+.tx-hint-leave {
+  animation: tx-hint-out calc(140ms * var(--tx-motion-leave-scale, var(--tx-motion-scale, 1)))
+    var(--tx-ease-in-out) both;
+}
+
+@keyframes tx-hint-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.96);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes tx-hint-out {
+  from {
+    opacity: 1;
+    transform: none;
+  }
+
+  to {
+    opacity: 0;
+    transform: translateY(4px) scale(0.96);
+  }
+}
+
+.tx-hint-layer__copy {
+  min-width: 0;
+}
+
+.tx-hint-layer__keys {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.tx-hint-layer__key {
+  display: inline-grid;
+  place-items: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border: 1px solid var(--tx-border-subtle);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--tx-bg-chrome) 78%, transparent);
+  color: var(--tx-text-muted);
+  font-family: var(--tx-font-mono);
+  font-size: 10px;
+  font-weight: 650;
+  line-height: 1;
+}

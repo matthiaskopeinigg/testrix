@@ -1,0 +1,46 @@
+<div
+  class="tx-tools-list"
+  role="listbox"
+  aria-label="Tools"
+  (keydown)="handleListKeydown($event)"
+>
+  @for (tool of store.items(); track tool.id) {
+    <div
+      class="tx-tools-list__item"
+      [attr.data-tool-id]="tool.id"
+      [attr.data-flip-id]="tool.id"
+      [class.is-just-moved]="isJustMoved(tool.id)"
+      [txDraggable]="tool"
+      [txDraggablePreview]="dragPreview"
+      [txDraggableScrollContainer]="dnd.scrollContainer()"
+      (dragStarted)="handleDragStarted($event)"
+      (dragMoved)="handleDragMoved($event)"
+      (dragEnded)="handleDragEnded($event)"
+    >
+      <tx-tools-list-item
+        [tool]="tool"
+        [active]="isTabActive(tool.id)"
+        [selected]="store.isSelected(tool.id)"
+        (select)="handleSelect($event.id, $event.event)"
+        (shift)="handleReorder(tool.id, $event.direction)"
+      />
+    </div>
+  }
+</div>
+
+<ng-template #dragPreview let-tool>
+  <div class="tx-tools-preview">
+    <span class="tx-tools-preview__icon" aria-hidden="true">
+      <svg width="14" height="14" viewBox="0 0 14 14">
+        <rect x="2.2" y="2.2" width="4" height="4" rx="0.8" fill="none" stroke="currentColor" stroke-width="1.2" />
+        <rect x="7.8" y="2.2" width="4" height="4" rx="0.8" fill="none" stroke="currentColor" stroke-width="1.2" />
+        <rect x="2.2" y="7.8" width="4" height="4" rx="0.8" fill="none" stroke="currentColor" stroke-width="1.2" />
+        <path d="M8.4 9.8h3.2M10 8.2v3.2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" />
+      </svg>
+    </span>
+    <span class="tx-tools-preview__name">{{ tool.label }}</span>
+    @if (dragCount() > 1) {
+      <span class="tx-tools-preview__badge">{{ dragCount() }}</span>
+    }
+  </div>
+</ng-template>

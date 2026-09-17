@@ -1,0 +1,11 @@
+name: Bug report
+description: Report a defect in Testrix
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: Steps, expected, actual.
+    validations:
+      required: true

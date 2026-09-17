@@ -1,0 +1,14 @@
+<tx-overlay [labelledBy]="titleId" variant="confirm" (closed)="cancelled.emit()">
+  <div class="tx-confirm">
+    <h2 class="tx-confirm__title" [id]="titleId">{{ title() }}</h2>
+    <p class="tx-confirm__body">{{ body() }}</p>
+    <div class="tx-confirm__actions">
+      <tx-button class="tx-confirm__cancel" variant="ghost" (clicked)="cancelled.emit()">
+        {{ cancelLabel() }}
+      </tx-button>
+      <tx-button class="tx-confirm__ok" variant="danger" (clicked)="confirmed.emit()">
+        {{ confirmLabel() }}
+      </tx-button>
+    </div>
+  </div>
+</tx-overlay>

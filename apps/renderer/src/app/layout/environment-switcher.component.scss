@@ -1,0 +1,18 @@
+:host {
+  display: flex;
+  min-width: 0;
+  -webkit-app-region: no-drag;
+}
+
+.tx-env-switch__mark {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 22px;
+  height: 18px;
+  color: var(--tx-accent);
+}
+
+:host(.is-none) .tx-env-switch__mark {
+  color: var(--tx-text-faint);
+}

@@ -1,0 +1,14 @@
+@if (template(); as preview) {
+  <div #root class="tx-drag-layer" aria-hidden="true">
+    <div #settle class="tx-drag-layer__settle">
+      <div class="tx-drag-layer__lift">
+        <div #chip class="tx-drag-layer__chip" [style.width.px]="width()">
+          <ng-container
+            [ngTemplateOutlet]="preview"
+            [ngTemplateOutletContext]="dnd.previewContext()"
+          />
+        </div>
+      </div>
+    </div>
+  </div>
+}

@@ -1,0 +1,10 @@
+:host {
+  display: grid;
+  place-items: center;
+  line-height: 0;
+}
+
+svg {
+  display: block;
+  flex-shrink: 0;
+}

@@ -1,0 +1,91 @@
+<section class="tx-welcome" aria-labelledby="welcome-title">
+  <div class="tx-welcome__atmosphere" aria-hidden="true">
+    <div class="tx-welcome__grid"></div>
+    <div class="tx-welcome__orb tx-welcome__orb--a"></div>
+    <div class="tx-welcome__orb tx-welcome__orb--b"></div>
+  </div>
+
+  <div class="tx-welcome__layout">
+    <div class="tx-welcome__copy">
+      <div class="tx-welcome__mark">
+        <span class="tx-welcome__glow" aria-hidden="true"></span>
+        <img class="tx-welcome__logo" src="assets/logo.svg" alt="" width="88" height="88" />
+      </div>
+
+      <p class="tx-welcome__eyebrow">Local workbench</p>
+      <h1 id="welcome-title" class="tx-welcome__title">Testrix</h1>
+      <p class="tx-welcome__pitch">
+        Build and send API requests without a cloud account. Collections, environments, and tests stay
+        on this PC.
+      </p>
+
+      <div class="tx-welcome__cta">
+        <tx-button variant="primary" (clicked)="handleBrowseCollections()">Open a collection</tx-button>
+        <tx-button variant="ghost" (clicked)="shell.openPalette()">Command palette</tx-button>
+      </div>
+
+      <tx-hint class="tx-welcome__hint" variant="inline" keys="Ctrl K" label="anywhere" />
+    </div>
+
+    <div class="tx-welcome__preview" aria-hidden="true">
+      <div class="tx-welcome__preview-frame">
+        <div class="tx-welcome__preview-tabs">
+          <span class="tx-welcome__preview-tab is-active">
+            <span class="tx-welcome__preview-method" data-method="GET">GET</span>
+            Health check
+          </span>
+          <span class="tx-welcome__preview-tab">
+            <span class="tx-welcome__preview-method" data-method="POST">POST</span>
+            Create user
+          </span>
+        </div>
+
+        <div class="tx-welcome__preview-urlbar">
+          <span class="tx-welcome__preview-method is-chip" data-method="GET">GET</span>
+          <span class="tx-welcome__preview-url">https://api.local/health-check</span>
+          <span class="tx-welcome__preview-send">Send</span>
+        </div>
+
+        <div class="tx-welcome__preview-body">
+          <div class="tx-welcome__preview-req">
+            <div class="tx-welcome__preview-subtabs">
+              <span class="is-active">Params</span>
+              <span>Headers</span>
+              <span>Body</span>
+              <span>Auth</span>
+            </div>
+            <div class="tx-welcome__preview-rows">
+              <div class="tx-welcome__preview-row">
+                <span>limit</span>
+                <span>25</span>
+              </div>
+              <div class="tx-welcome__preview-row">
+                <span>q</span>
+                <span>health-check</span>
+              </div>
+              <div class="tx-welcome__preview-row is-faint">
+                <span>cursor</span>
+                <span></span>
+              </div>
+            </div>
+          </div>
+
+          <div class="tx-welcome__preview-sash"></div>
+
+          <div class="tx-welcome__preview-res">
+            <div class="tx-welcome__preview-meta">
+              <span class="tx-welcome__preview-status">200 OK</span>
+              <span>48 ms</span>
+              <span>214 B</span>
+            </div>
+            <pre class="tx-welcome__preview-code">&#123;
+  "ok": true,
+  "status": 200,
+  "data": &#123; "id": "health-01" &#125;
+&#125;</pre>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>

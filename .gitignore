@@ -1,0 +1,49 @@
+# Compiled output
+dist/
+tmp/
+out-tsc/
+.angular/
+
+# Node
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# IDEs
+.idea/
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+.history/
+
+# Cursor (local)
+.cursor/
+
+# Coverage and caches
+coverage/
+.sass-cache/
+*.tsbuildinfo
+
+# System
+.DS_Store
+Thumbs.db
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Electron / pack
+release/
+.config/
+apps/setup/resources/payload/
+apps/setup/resources/payload.zip
+apps/setup/resources/payload.zst
+build/icons/
+build/icon.ico
+build/icon.png
+apps/desktop/src/assets/icon.ico
+apps/desktop/src/assets/icon.png
+apps/setup/src/assets/icon.ico
+apps/setup/src/assets/icon.png
+apps/setup/build/

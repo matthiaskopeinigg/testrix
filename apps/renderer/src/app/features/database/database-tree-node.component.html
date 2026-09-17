@@ -1,0 +1,81 @@
+<div
+  class="tx-database-node"
+  [style.--tx-tree-depth]="depth()"
+  [class.is-folder]="node().kind === 'folder'"
+>
+  <tx-hint
+    stretch
+    [label]="canRename() ? 'Shift+click range' : node().name"
+    [detail]="canRename() ? 'Ctrl+click add' : node().detail ?? null"
+    placement="right"
+    [suppressed]="renaming()"
+  >
+    <div
+      class="tx-database-node__row"
+      [class.is-folder]="expandable()"
+      [class.is-leaf]="!expandable()"
+      [class.is-open]="open()"
+      [class.is-active]="active()"
+      [class.is-selected]="selected()"
+      [class.is-renaming]="renaming()"
+      [attr.role]="'button'"
+      [attr.tabindex]="0"
+      [attr.aria-expanded]="expandable() ? expanded() : null"
+      [attr.aria-current]="active() ? 'page' : null"
+      [attr.aria-label]="rowAriaLabel()"
+      [attr.aria-keyshortcuts]="canRename() ? 'Alt+ArrowUp Alt+ArrowDown' : null"
+      (click)="handleRowClick($event)"
+      (dblclick)="handleRowDblClick($event)"
+      (keydown)="handleRowKeydown($event)"
+      (contextmenu)="handleMenu($event)"
+    >
+      @if (expandable()) {
+        <button
+          type="button"
+          class="tx-database-node__chevron"
+          [class.is-expanded]="expanded()"
+          [attr.aria-label]="expanded() ? 'Collapse ' + node().name : 'Expand ' + node().name"
+          (click)="handleChevronClick($event)"
+        >
+          <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
+            <path d="M4 2.5 8 6 4 9.5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </button>
+      } @else {
+        <span class="tx-database-node__chevron-spacer" aria-hidden="true"></span>
+      }
+
+      <span class="tx-database-node__icon" aria-hidden="true">
+        @if (busy()) {
+          <tx-spinner label="Loading" />
+        } @else {
+          <tx-database-type-icon [type]="node().engine ?? null" [kind]="iconKind()" />
+        }
+        @if (node().kind === 'connection') {
+          <span class="tx-database-node__status-dot" [attr.data-status]="status()"></span>
+        }
+      </span>
+
+      @if (renaming()) {
+        <input
+          class="tx-database-node__rename"
+          type="text"
+          [value]="node().name"
+          [attr.data-database-rename]="node().id"
+          [attr.aria-label]="'Rename ' + node().name"
+          spellcheck="false"
+          autocomplete="off"
+          (click)="$event.stopPropagation()"
+          (input)="handleRenameInput($event)"
+          (keydown)="renameKey.emit($event)"
+          (blur)="renameBlur.emit()"
+        />
+      } @else {
+        <span class="tx-database-node__name">{{ node().name }}</span>
+        @if (node().detail && node().kind !== 'connection') {
+          <span class="tx-database-node__meta">{{ node().detail }}</span>
+        }
+      }
+    </div>
+  </tx-hint>
+</div>

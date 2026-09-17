@@ -1,0 +1,245 @@
+<div class="tx-db-table">
+  <header class="tx-db-table__bar">
+    <div class="tx-db-table__clauses">
+      <label class="tx-db-table__clause" cdkOverlayOrigin #whereOrigin="cdkOverlayOrigin">
+        <span class="tx-db-table__clause-tag" aria-hidden="true">WHERE</span>
+        <span class="tx-db-table__clause-field">
+          @if (whereGhost(); as ghost) {
+            <span class="tx-db-table__ghost" aria-hidden="true">
+              <span class="tx-db-table__ghost-pad">{{ ghost.pad }}</span><span class="tx-db-table__ghost-rest">{{ ghost.rest }}</span>
+            </span>
+          }
+          <input
+            #whereInput
+            id="table-where"
+            type="text"
+            placeholder="id = 1"
+            spellcheck="false"
+            autocomplete="off"
+            aria-label="WHERE filter"
+            [attr.aria-expanded]="clauseMenu() === 'where' && clauseMenuOpen()"
+            [attr.aria-autocomplete]="'both'"
+            [value]="where()"
+            (input)="handleWhere($event)"
+            (focus)="handleClauseFocus('where')"
+            (blur)="handleClauseBlur()"
+            (click)="handleClauseFocus('where')"
+            (keyup)="handleWhere($event)"
+            (keydown)="handleClauseKey('where', $event)"
+          />
+        </span>
+      </label>
+      <ng-template
+        cdkConnectedOverlay
+        [cdkConnectedOverlayOrigin]="whereOrigin"
+        [cdkConnectedOverlayOpen]="clauseMenu() === 'where' && clauseMenuOpen()"
+        [cdkConnectedOverlayPositions]="clauseMenuPositions"
+        [cdkConnectedOverlayMinWidth]="240"
+        [cdkConnectedOverlayPush]="true"
+        [cdkConnectedOverlayViewportMargin]="8"
+      >
+        <div class="tx-db-table__suggest tx-menu" role="listbox" aria-label="WHERE suggestions">
+          @for (item of clauseSuggestions(); track item.kind + item.value; let i = $index) {
+            <button
+              type="button"
+              class="tx-db-table__suggest-item"
+              role="option"
+              [class.is-active]="i === clauseIndex()"
+              (mousedown)="$event.preventDefault()"
+              (click)="handleClauseSelect('where', item)"
+              (pointerenter)="clauseIndex.set(i)"
+            >
+              <span>{{ item.label }}</span>
+              <span class="tx-db-table__suggest-detail">{{ item.detail }}</span>
+            </button>
+          }
+        </div>
+      </ng-template>
+      <span class="tx-db-table__rule" aria-hidden="true"></span>
+      <label class="tx-db-table__clause" cdkOverlayOrigin #orderOrigin="cdkOverlayOrigin">
+        <span class="tx-db-table__clause-tag" aria-hidden="true">ORDER BY</span>
+        <span class="tx-db-table__clause-field">
+          @if (orderGhost(); as ghost) {
+            <span class="tx-db-table__ghost" aria-hidden="true">
+              <span class="tx-db-table__ghost-pad">{{ ghost.pad }}</span><span class="tx-db-table__ghost-rest">{{ ghost.rest }}</span>
+            </span>
+          }
+          <input
+            #orderInput
+            id="table-order"
+            type="text"
+            placeholder="id DESC"
+            spellcheck="false"
+            autocomplete="off"
+            aria-label="ORDER BY"
+            [attr.aria-expanded]="clauseMenu() === 'order' && clauseMenuOpen()"
+            [attr.aria-autocomplete]="'both'"
+            [value]="order()"
+            (input)="handleOrder($event)"
+            (focus)="handleClauseFocus('order')"
+            (blur)="handleClauseBlur()"
+            (click)="handleClauseFocus('order')"
+            (keyup)="handleOrder($event)"
+            (keydown)="handleClauseKey('order', $event)"
+          />
+        </span>
+      </label>
+      <ng-template
+        cdkConnectedOverlay
+        [cdkConnectedOverlayOrigin]="orderOrigin"
+        [cdkConnectedOverlayOpen]="clauseMenu() === 'order' && clauseMenuOpen()"
+        [cdkConnectedOverlayPositions]="clauseMenuPositions"
+        [cdkConnectedOverlayMinWidth]="240"
+        [cdkConnectedOverlayPush]="true"
+        [cdkConnectedOverlayViewportMargin]="8"
+      >
+        <div class="tx-db-table__suggest tx-menu" role="listbox" aria-label="ORDER BY suggestions">
+          @for (item of clauseSuggestions(); track item.kind + item.value; let i = $index) {
+            <button
+              type="button"
+              class="tx-db-table__suggest-item"
+              role="option"
+              [class.is-active]="i === clauseIndex()"
+              (mousedown)="$event.preventDefault()"
+              (click)="handleClauseSelect('order', item)"
+              (pointerenter)="clauseIndex.set(i)"
+            >
+              <span>{{ item.label }}</span>
+              <span class="tx-db-table__suggest-detail">{{ item.detail }}</span>
+            </button>
+          }
+        </div>
+      </ng-template>
+    </div>
+
+    <div class="tx-db-table__cluster" role="group" aria-label="Paging">
+      <tx-hint label="Reload" placement="bottom">
+        <button type="button" class="tx-db-table__icon" [disabled]="running()" (click)="handleReload()" aria-label="Reload">
+          <svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true">
+            <path d="M3.1 8A4.9 4.9 0 0 1 11.6 4.2" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
+            <path d="M12.9 8A4.9 4.9 0 0 1 4.4 11.8" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
+            <path d="M11.2 2.4v2.7h2.7M4.8 13.6V10.9H2.1" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </button>
+      </tx-hint>
+      <tx-hint label="Previous page" placement="bottom">
+        <button type="button" class="tx-db-table__icon" [disabled]="!canPrev()" (click)="handlePage(-1)" aria-label="Previous page">
+          <svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true">
+            <path d="M10 3.5 5.5 8 10 12.5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </button>
+      </tx-hint>
+      <tx-hint label="Next page" placement="bottom">
+        <button type="button" class="tx-db-table__icon" [disabled]="!canNext()" (click)="handlePage(1)" aria-label="Next page">
+          <svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true">
+            <path d="M6 3.5 10.5 8 6 12.5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </button>
+      </tx-hint>
+    </div>
+
+    @if (!refuse()) {
+      <span class="tx-db-table__rule" aria-hidden="true"></span>
+      <div class="tx-db-table__cluster" role="group" aria-label="Rows">
+        <tx-hint label="Insert row" placement="bottom">
+          <button type="button" class="tx-db-table__icon" [disabled]="!canEdit()" (click)="handleInsert()" aria-label="Insert row">
+            <svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true">
+              <path d="M8 3.2v9.6M3.2 8h9.6" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
+            </svg>
+          </button>
+        </tx-hint>
+        <tx-hint label="Delete selected rows" placement="bottom">
+          <button type="button" class="tx-db-table__icon" [disabled]="!canEdit()" (click)="handleDeleteSelected()" aria-label="Delete selected rows">
+            <svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true">
+              <path d="M3.2 8h9.6" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
+            </svg>
+          </button>
+        </tx-hint>
+      </div>
+      <span class="tx-db-table__rule" aria-hidden="true"></span>
+      <div class="tx-db-table__cluster" role="group" aria-label="Transaction">
+        <tx-hint label="Submit draft into a held transaction" placement="bottom">
+          <button
+            type="button"
+            class="tx-db-table__icon is-accent"
+            [disabled]="!canSubmit()"
+            (click)="handleSubmit()"
+            aria-label="Submit"
+          >
+            <svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true">
+              <path d="M3.2 8.2 6.4 11.4 12.8 4.6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </button>
+        </tx-hint>
+        <tx-hint label="Discard local draft" placement="bottom">
+          <button type="button" class="tx-db-table__icon" [disabled]="!dirty()" (click)="handleRevert()" aria-label="Revert">
+            <svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true">
+              <path d="M4.2 6.2H2.2V4.2" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
+              <path d="M3.1 11.2A5.2 5.2 0 1 0 4.4 4.6L2.2 6.2" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </button>
+        </tx-hint>
+      </div>
+    } @else {
+      <span class="tx-db-table__readonly">Read-only</span>
+    }
+  </header>
+
+  @if (uncommitted()) {
+    <div class="tx-db-table__txn">
+      <span>
+        Uncommitted — Push to apply
+        @if (countdown()) {
+          , or auto-rollback in {{ countdown() }}
+        }
+      </span>
+      <tx-hint label="Commit the held transaction" placement="bottom">
+        <button type="button" class="tx-db-table__text is-accent" (click)="handlePush()">Push</button>
+      </tx-hint>
+      <tx-hint label="Roll back the held transaction" placement="bottom">
+        <button type="button" class="tx-db-table__text" (click)="handleRollback()">Rollback</button>
+      </tx-hint>
+    </div>
+  }
+
+  @if (error(); as message) {
+    <div class="tx-db-table__error" role="alert">
+      <p>{{ message }}</p>
+      <tx-hint label="Dismiss" placement="left">
+        <button type="button" class="tx-db-table__error-dismiss" (click)="dismissError()" aria-label="Dismiss error">
+          <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
+            <path d="M3 3l6 6M9 3 3 9" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
+          </svg>
+        </button>
+      </tx-hint>
+    </div>
+  }
+
+  <tx-database-result-grid
+    [table]="displayTable()"
+    [durationMs]="result()?.durationMs ?? null"
+    [filter]="filter()"
+    [dirtyKeys]="dirtyKeys()"
+    [rowKinds]="rowKinds()"
+    [rolledBack]="rolledBack()"
+    [editable]="canEdit()"
+    [offset]="offset()"
+    [pageSize]="pageSize()"
+    [pageSizes]="pageSizes"
+    [emptyLabel]="emptyLabel()"
+    [busy]="running()"
+    [columnTypes]="columnTypes()"
+    [relations]="relations()"
+    [rowFocus]="rowFocus()"
+    (filterChange)="filter.set($event)"
+    (pageSizeChange)="handlePageSize($event)"
+    (cellChange)="handleCellChange($event)"
+    (relationJump)="handleRelationJump($event)"
+    (rowSelect)="selectedRow.set($event)"
+    (rowsSelect)="selectedRows.set($event)"
+    (insertRow)="handleInsert()"
+    (duplicateRows)="handleDuplicate($event)"
+    (deleteRows)="handleDeleteRows($event)"
+    (restoreRows)="handleRestoreRows($event)"
+  />
+</div>

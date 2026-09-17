@@ -1,0 +1,23 @@
+@if (layer.active(); as hint) {
+  <div
+    class="tx-hint-layer__bubble"
+    role="presentation"
+    aria-hidden="true"
+    animate.enter="tx-hint-enter"
+    animate.leave="tx-hint-leave"
+    [attr.data-placement]="hint.placement"
+    [style.left.px]="hint.x"
+    [style.top.px]="hint.y"
+  >
+    @if (hint.keys.length) {
+      <span class="tx-hint-layer__keys">
+        @for (key of hint.keys; track $index) {
+          <span class="tx-hint-layer__key">{{ key }}</span>
+        }
+      </span>
+    }
+    @if (hint.text) {
+      <span class="tx-hint-layer__copy">{{ hint.text }}</span>
+    }
+  </div>
+}

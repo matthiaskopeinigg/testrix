@@ -1,0 +1,245 @@
+<div
+  class="tx-request-editor"
+  [style.--tx-request-split]="splitRatio()"
+>
+  <header class="tx-request-editor__urlbar" aria-label="Request URL">
+    <label class="tx-request-editor__method-wrap">
+      <span class="tx-visually-hidden">HTTP method</span>
+      <tx-select
+        class="tx-request-editor__method"
+        variant="bare"
+        [tone]="method()"
+        [value]="method()"
+        [options]="methodOptions"
+        ariaLabel="HTTP method"
+        (valueChange)="handleMethodChange($event)"
+      />
+    </label>
+
+    <input
+      class="tx-request-editor__url"
+      type="text"
+      [value]="url()"
+      (input)="handleUrlInput($event)"
+      aria-label="Request URL"
+      spellcheck="false"
+      autocomplete="off"
+      placeholder="https://api.example.com/path"
+    />
+
+    <tx-hint label="Send request" detail="Mock response only" keys="Ctrl Enter" placement="bottom">
+      <button
+        type="button"
+        class="tx-request-editor__send"
+        [disabled]="sendState() === 'sending'"
+        [attr.aria-label]="'Send request'"
+        (click)="handleSend()"
+      >
+        {{ sendState() === 'sending' ? 'Sending' : 'Send' }}
+      </button>
+    </tx-hint>
+  </header>
+
+  <div class="tx-request-editor__request">
+    <div class="tx-request-editor__head" role="tablist" aria-label="Request sections">
+      <button
+        type="button"
+        class="tx-request-editor__tab"
+        role="tab"
+        [class.is-active]="requestTab() === 'params'"
+        [attr.aria-selected]="requestTab() === 'params'"
+        (click)="handleRequestTab('params')"
+      >
+        Params
+        @if (paramCount() > 0) {
+          <span class="tx-request-editor__count">{{ paramCount() }}</span>
+        }
+      </button>
+      <button
+        type="button"
+        class="tx-request-editor__tab"
+        role="tab"
+        [class.is-active]="requestTab() === 'headers'"
+        [attr.aria-selected]="requestTab() === 'headers'"
+        (click)="handleRequestTab('headers')"
+      >
+        Headers
+        @if (headerCount() > 0) {
+          <span class="tx-request-editor__count">{{ headerCount() }}</span>
+        }
+      </button>
+      <button
+        type="button"
+        class="tx-request-editor__tab"
+        role="tab"
+        [class.is-active]="requestTab() === 'body'"
+        [attr.aria-selected]="requestTab() === 'body'"
+        (click)="handleRequestTab('body')"
+      >
+        Body
+      </button>
+      <button
+        type="button"
+        class="tx-request-editor__tab"
+        role="tab"
+        [class.is-active]="requestTab() === 'auth'"
+        [attr.aria-selected]="requestTab() === 'auth'"
+        (click)="handleRequestTab('auth')"
+      >
+        Auth
+      </button>
+    </div>
+
+    <div class="tx-request-editor__pane" role="tabpanel">
+      @switch (requestTab()) {
+        @case ('params') {
+          <tx-request-kv-table label="Query parameters" [(rows)]="params" />
+        }
+        @case ('headers') {
+          <tx-request-kv-table label="Request headers" [(rows)]="headers" />
+        }
+        @case ('body') {
+          @if (bodyDisabled()) {
+            <tx-empty-state
+              title="No body for {{ method() }}"
+              body="Switch to POST, PUT, PATCH, or DELETE to send a payload."
+            />
+          } @else {
+            <div class="tx-request-editor__pane-meta">
+              <span class="tx-request-editor__chip">JSON</span>
+            </div>
+            <textarea
+              class="tx-request-editor__code"
+              [value]="body()"
+              (input)="handleBodyInput($event)"
+              spellcheck="false"
+              aria-label="Request body"
+            ></textarea>
+          }
+        }
+        @case ('auth') {
+          <div class="tx-request-editor__auth">
+            <div class="tx-request-editor__field">
+              <span class="tx-request-editor__label">Type</span>
+              <span class="tx-request-editor__chip">Bearer</span>
+            </div>
+            <label class="tx-request-editor__field">
+              <span class="tx-request-editor__label">Token</span>
+              <input
+                class="tx-request-editor__field-input"
+                type="text"
+                [value]="authToken()"
+                (input)="handleTokenInput($event)"
+                spellcheck="false"
+                autocomplete="off"
+                aria-label="Bearer token"
+              />
+            </label>
+          </div>
+        }
+      }
+    </div>
+  </div>
+
+  <div
+    class="tx-request-editor__sash"
+    role="separator"
+    aria-orientation="horizontal"
+    aria-label="Resize request and response"
+    tabindex="0"
+    (pointerdown)="handleResizeStart($event)"
+  ></div>
+
+  <div
+    class="tx-request-editor__response"
+    [class.is-sending]="sendState() === 'sending'"
+  >
+    <div class="tx-request-editor__head tx-request-editor__head--response">
+      @if (hasResponse() && response(); as res) {
+        <span class="tx-request-editor__status" [attr.data-tone]="statusTone(res.status)">
+          {{ res.status }} {{ res.statusText }}
+        </span>
+        <span class="tx-request-editor__stat">{{ res.durationMs }} ms</span>
+        <span class="tx-request-editor__stat">{{ res.sizeLabel }}</span>
+      } @else if (sendState() === 'sending') {
+        <span class="tx-request-editor__status is-pending">Sending</span>
+      } @else {
+        <span class="tx-request-editor__stat">Response</span>
+      }
+
+      <div class="tx-request-editor__tabs" role="tablist" aria-label="Response sections">
+        <button
+          type="button"
+          class="tx-request-editor__tab"
+          role="tab"
+          [class.is-active]="responseTab() === 'body'"
+          [attr.aria-selected]="responseTab() === 'body'"
+          (click)="handleResponseTab('body')"
+        >
+          Body
+        </button>
+        <button
+          type="button"
+          class="tx-request-editor__tab"
+          role="tab"
+          [class.is-active]="responseTab() === 'headers'"
+          [attr.aria-selected]="responseTab() === 'headers'"
+          (click)="handleResponseTab('headers')"
+        >
+          Headers
+        </button>
+      </div>
+
+      <tx-hint [label]="copied() ? 'Copied' : 'Copy body'" placement="left">
+        <button
+          type="button"
+          class="tx-request-editor__copy"
+          [disabled]="!hasResponse()"
+          aria-label="Copy response body"
+          (click)="handleCopy()"
+        >
+          {{ copied() ? 'Copied' : 'Copy' }}
+        </button>
+      </tx-hint>
+    </div>
+
+    <div class="tx-request-editor__pane" role="tabpanel">
+      @if (sendState() === 'idle') {
+        <div class="tx-request-editor__idle">
+          <tx-empty-state title="Send to see a response" body="The editor stays local. This returns a mock payload.">
+            <tx-hint variant="inline" keys="Ctrl Enter" label="to send" />
+          </tx-empty-state>
+        </div>
+      } @else if (sendState() === 'sending') {
+        <div class="tx-request-editor__idle">
+          <tx-empty-state title="Waiting" body="A mock response will appear in a moment." />
+        </div>
+      } @else if (response(); as res) {
+        @if (responseTab() === 'body') {
+          <pre class="tx-request-editor__code" tabindex="0">{{ res.body }}</pre>
+        } @else {
+          <table class="tx-request-editor__headers" aria-label="Response headers">
+            <thead>
+              <tr>
+                <th scope="col">Key</th>
+                <th scope="col">Value</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of res.headers; track trackKv($index, row)) {
+                <tr>
+                  <td>
+                    <input class="tx-request-editor__headers-cell" type="text" [value]="row.key" readonly />
+                  </td>
+                  <td>
+                    <input class="tx-request-editor__headers-cell" type="text" [value]="row.value" readonly />
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        }
+      }
+    </div>
+  </div>
+</div>

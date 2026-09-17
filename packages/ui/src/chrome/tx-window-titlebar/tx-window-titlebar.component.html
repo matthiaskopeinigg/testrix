@@ -1,0 +1,62 @@
+<header class="tx-titlebar" [class.tx-titlebar--mac]="platform() === 'darwin'">
+  <div class="tx-titlebar__brand">
+    <img class="tx-titlebar__logo" [src]="logoSrc()" width="18" height="18" alt="" />
+    <span class="tx-titlebar__name">{{ productName() }}</span>
+    <div class="tx-titlebar__leading">
+      <ng-content select="[txTitlebarStart]" />
+    </div>
+  </div>
+  <div class="tx-titlebar__drag" aria-hidden="true"></div>
+  <div class="tx-titlebar__actions">
+    <div class="tx-titlebar__slot">
+      <ng-content />
+    </div>
+    <tx-hint label="Settings" [keys]="['Ctrl', ',']" placement="bottom">
+      <button type="button" class="tx-titlebar__icon" aria-label="Open settings" (click)="openSettings.emit()">
+        <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+          <circle cx="7" cy="7" r="2.1" fill="none" stroke="currentColor" stroke-width="1.2" />
+          <path
+            d="M7 1.6v1.2M7 11.2v1.2M1.6 7h1.2M11.2 7h1.2M3.1 3.1l.85.85M10.05 10.05l.85.85M10.9 3.1l-.85.85M3.95 10.05l-.85.85"
+            stroke="currentColor"
+            stroke-width="1.2"
+            stroke-linecap="round"
+          />
+        </svg>
+      </button>
+    </tx-hint>
+    @if (platform() !== 'darwin') {
+      <span class="tx-titlebar__split" aria-hidden="true"></span>
+      <tx-hint label="Minimize" placement="bottom">
+        <button type="button" class="tx-titlebar__icon" aria-label="Minimize" (click)="minimize.emit()">
+          <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true">
+            <path d="M1.5 5h7" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" />
+          </svg>
+        </button>
+      </tx-hint>
+      <tx-hint [label]="isMaximized() ? 'Restore' : 'Maximize'" placement="bottom">
+        <button
+          type="button"
+          class="tx-titlebar__icon"
+          [attr.aria-label]="isMaximized() ? 'Restore' : 'Maximize'"
+          (click)="maximize.emit()"
+        >
+          <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true">
+            <rect x="1.7" y="1.7" width="6.6" height="6.6" rx="1" fill="none" stroke="currentColor" stroke-width="1.2" />
+          </svg>
+        </button>
+      </tx-hint>
+      <tx-hint label="Close" placement="bottom">
+        <button
+          type="button"
+          class="tx-titlebar__icon tx-titlebar__icon--close"
+          aria-label="Close"
+          (click)="close.emit()"
+        >
+          <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true">
+            <path d="M2 2l6 6M8 2l-6 6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" />
+          </svg>
+        </button>
+      </tx-hint>
+    }
+  </div>
+</header>

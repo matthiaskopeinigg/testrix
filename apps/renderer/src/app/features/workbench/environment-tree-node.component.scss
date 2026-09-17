@@ -1,0 +1,156 @@
+@use 'mixins';
+
+:host {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.tx-env-node {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+}
+
+:host ::ng-deep .tx-hint__trigger {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.tx-env-node__row {
+  @include mixins.tx-hover-fill;
+  @include mixins.tx-focus-ring;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-height: 30px;
+  padding: 0 8px 0 calc(8px + (var(--tx-tree-depth, 0) * 14px));
+  border-radius: 8px;
+  color: var(--tx-text-primary);
+  cursor: grab;
+}
+
+.tx-env-node__row:active {
+  cursor: grabbing;
+}
+
+.tx-env-node__row.is-selected:not(.is-focused) {
+  background: color-mix(in srgb, var(--tx-accent) 12%, transparent);
+}
+
+.tx-env-node__row.is-focused {
+  @include mixins.tx-active-rail;
+  background: color-mix(in srgb, var(--tx-accent) 14%, transparent);
+}
+
+.tx-env-node__row.is-menu {
+  background: color-mix(in srgb, var(--tx-bg-hover) 80%, transparent);
+}
+
+.tx-env-node__chevron,
+.tx-env-node__chevron-spacer {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.tx-env-node__chevron {
+  @include mixins.tx-press;
+  @include mixins.tx-focus-ring;
+  border: 0;
+  padding: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--tx-text-faint);
+  cursor: pointer;
+  @include mixins.tx-chevron;
+}
+
+.tx-env-node__chevron.is-expanded {
+  transform: rotate(90deg);
+}
+
+.tx-env-node__icon {
+  display: grid;
+  place-items: center;
+  min-width: 22px;
+  color: var(--tx-text-muted);
+}
+
+.tx-env-node__row.is-focused .tx-env-node__icon {
+  color: var(--tx-accent);
+}
+
+.tx-env-node__row.is-inactive {
+  color: var(--tx-text-faint);
+}
+
+.tx-env-node__row.is-inactive .tx-env-node__icon,
+.tx-env-node__row.is-inactive .tx-env-node__hash,
+.tx-env-node__row.is-inactive .tx-env-node__description {
+  color: var(--tx-text-faint);
+}
+
+.tx-env-node__row.is-inactive.is-focused .tx-env-node__icon,
+.tx-env-node__row.is-inactive.is-focused .tx-env-node__hash {
+  color: color-mix(in srgb, var(--tx-accent) 55%, var(--tx-text-faint));
+}
+
+.tx-env-node__hash {
+  color: var(--tx-accent);
+  font-family: var(--tx-font-mono);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.tx-env-node__name {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 64%;
+  overflow: hidden;
+  font-size: 12px;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tx-env-node__row:not(:has(.tx-env-node__description)) .tx-env-node__name {
+  flex: 1;
+  max-width: none;
+}
+
+.tx-env-node__row.is-variable .tx-env-node__name {
+  font-family: var(--tx-font-mono);
+  font-size: 11px;
+}
+
+.tx-env-node__description {
+  flex: 1 1 0;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--tx-text-faint);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tx-env-node__rename {
+  @include mixins.tx-focus-ring;
+  flex: 1;
+  min-width: 0;
+  height: 22px;
+  padding: 0 6px;
+  border: 1px solid color-mix(in srgb, var(--tx-accent) 45%, var(--tx-border-subtle));
+  border-radius: 6px;
+  background: var(--tx-bg-canvas);
+  color: var(--tx-text-primary);
+  font: inherit;
+  font-size: 12px;
+}

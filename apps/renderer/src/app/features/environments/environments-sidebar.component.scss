@@ -1,0 +1,104 @@
+@use 'mixins';
+
+:host {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+}
+
+.tx-environments {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.tx-environments__body {
+  @include mixins.tx-scrollbar;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  margin: 0 -4px;
+  padding: 2px 4px 8px;
+  overflow-x: clip;
+  overflow-y: auto;
+}
+
+.tx-environments__content {
+  position: relative;
+  z-index: 0;
+  min-width: 0;
+  min-height: 100%;
+}
+
+.tx-environments__indicator {
+  position: absolute;
+  top: 0;
+  right: 8px;
+  z-index: 4;
+  height: 2px;
+  margin-top: -1px;
+  background: var(--tx-accent);
+  pointer-events: none;
+}
+
+.tx-environments__live {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.tx-environments-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 188px;
+  padding: 6px;
+  border: 1px solid var(--tx-border-subtle);
+  border-radius: 10px;
+  background: var(--tx-bg-overlay);
+  box-shadow: var(--tx-shadow-2);
+}
+
+.tx-environments-menu__item {
+  @include mixins.tx-press;
+  @include mixins.tx-hover-fill;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-height: 30px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--tx-text-primary);
+  font: inherit;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.tx-environments-menu__item.is-danger {
+  color: var(--tx-danger);
+}
+
+.tx-environments-menu__item.is-danger:hover {
+  background: color-mix(in srgb, var(--tx-danger) 12%, transparent);
+}
+
+.tx-environments-menu__rule {
+  display: block;
+  height: 1px;
+  margin: 4px 6px;
+  background: var(--tx-border-subtle);
+}

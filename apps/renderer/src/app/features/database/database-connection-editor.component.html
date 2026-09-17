@@ -1,0 +1,118 @@
+@if (draft(); as connection) {
+  <div class="tx-db-connection">
+    <header class="tx-db-connection__bar">
+      <span class="tx-db-connection__brand" aria-hidden="true">
+        <tx-database-type-icon [type]="connection.type" kind="engine" />
+      </span>
+      <div class="tx-db-connection__identity">
+        <tx-input id="db-name" label="Name" [value]="connection.name" (valueChange)="handleName($event)" />
+      </div>
+      <div class="tx-db-connection__type">
+        <tx-select
+          [value]="connection.type"
+          [options]="typeOptions"
+          ariaLabel="Database type"
+          (valueChange)="handleType($event)"
+        >
+          <ng-template txSelectOption let-option>
+            <span class="tx-db-connection__type-option">
+              <tx-database-type-icon [type]="engineType(option.value)" kind="engine" />
+              <span>{{ option.label }}</span>
+            </span>
+          </ng-template>
+        </tx-select>
+      </div>
+      <tx-hint label="Test connection" placement="bottom">
+        <tx-button [disabled]="testing()" (clicked)="handleTest()">{{ testing() ? 'Testing' : 'Test' }}</tx-button>
+      </tx-hint>
+    </header>
+
+    <div class="tx-db-connection__body">
+      <section class="tx-db-connection__card">
+        <tx-input
+          id="db-connection-string"
+          label="Connection string"
+          placeholder="postgres://user:password@localhost:5432/dbname"
+          [value]="connectionString()"
+          (valueChange)="handleConnectionString($event)"
+        />
+        @if (stringError(); as message) {
+          <p class="tx-db-connection__hint is-error">{{ message }}</p>
+        } @else {
+          <p class="tx-db-connection__hint">Paste a URI to fill host, port, user, password, and database.</p>
+        }
+
+        @if (connection.type === 'sqlite') {
+          <div class="tx-db-connection__row">
+            <tx-input id="db-file" label="File" [value]="connection.filePath ?? ''" (valueChange)="patchFile($event)" />
+            <tx-button variant="ghost" (clicked)="handleChooseSqlite()">Browse</tx-button>
+          </div>
+          <div class="tx-db-connection__flags">
+            <tx-check variant="inline" label="Connect on boot" [checked]="connection.connectOnBoot" (checkedChange)="handleBoot($event)" />
+          </div>
+        } @else {
+          <div class="tx-db-connection__grid">
+            <tx-input id="db-host" label="Host" [value]="connection.host" (valueChange)="handleHost($event)" />
+            <tx-input id="db-port" label="Port" [value]="portValue(connection.port)" (valueChange)="handlePort($event)" />
+            <tx-input id="db-user" label="User" [value]="connection.user ?? ''" (valueChange)="handleUser($event)" />
+            <tx-input id="db-pass" label="Password" type="password" [value]="connection.password ?? ''" (valueChange)="handlePassword($event)" />
+            <tx-input id="db-name-db" label="Database" [value]="connection.database ?? ''" (valueChange)="handleDatabase($event)" />
+            <div class="tx-db-connection__flags">
+              <tx-check variant="inline" label="TLS" [checked]="connection.tls === true" (checkedChange)="handleTls($event)" />
+              <tx-check variant="inline" label="Connect on boot" [checked]="connection.connectOnBoot" (checkedChange)="handleBoot($event)" />
+              @if (connection.type === 'oracle') {
+                <tx-check variant="inline" label="Use SID" [checked]="connection.useSid === true" (checkedChange)="handleUseSid($event)" />
+              }
+            </div>
+          </div>
+        }
+
+        @if (connection.type === 'oracle') {
+          <div class="tx-db-connection__row">
+            <tx-input id="db-client" label="Client path" [value]="connection.clientPath ?? ''" (valueChange)="patchClient($event)" />
+            <tx-button variant="ghost" (clicked)="handleChooseOracle()">Browse</tx-button>
+          </div>
+        }
+
+        <div class="tx-db-connection__grid tx-db-connection__grid--timeouts">
+          <tx-input
+            id="db-connect-timeout"
+            label="Connect timeout (ms)"
+            [value]="timeoutValue(connection.connectTimeoutMs)"
+            (valueChange)="handleConnectTimeout($event)"
+          />
+          <tx-input
+            id="db-command-timeout"
+            label="Command timeout (ms)"
+            [value]="timeoutValue(connection.commandTimeoutMs)"
+            (valueChange)="handleCommandTimeout($event)"
+          />
+          @if (connection.type === 'sqlite') {
+            <tx-input
+              id="db-busy-timeout"
+              label="Busy timeout (ms)"
+              [value]="timeoutValue(connection.busyTimeoutMs)"
+              (valueChange)="handleBusyTimeout($event)"
+            />
+          }
+        </div>
+      </section>
+    </div>
+
+    <footer class="tx-db-connection__footer">
+      @if (testMessage(); as message) {
+        <p class="tx-db-connection__status" [class.is-error]="message !== 'Connected'">{{ message }}</p>
+      } @else if (dirty()) {
+        <p class="tx-db-connection__status is-muted">Unsaved changes</p>
+      } @else {
+        <span></span>
+      }
+      <tx-hint label="Discard unsaved changes" placement="top">
+        <tx-button variant="ghost" (clicked)="handleCancel()">Cancel</tx-button>
+      </tx-hint>
+      <tx-hint label="Save connection" placement="top">
+        <tx-button variant="primary" [disabled]="!dirty()" (clicked)="handleSave()">Save</tx-button>
+      </tx-hint>
+    </footer>
+  </div>
+}

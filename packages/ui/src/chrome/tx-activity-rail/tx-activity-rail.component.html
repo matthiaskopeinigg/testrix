@@ -1,0 +1,94 @@
+<nav class="tx-rail" aria-label="Workspace sections">
+  <div
+    class="tx-rail__pill"
+    aria-hidden="true"
+    [class.is-hidden]="collapsed()"
+  ></div>
+  <div class="tx-rail__stack">
+  @for (item of items(); track item.id) {
+    <tx-hint
+      class="tx-rail__hint"
+      [label]="item.label"
+      [detail]="item.soon ? 'Coming in 2.0' : null"
+      placement="right"
+    >
+      <button
+        #railBtn
+        type="button"
+        class="tx-rail__btn"
+        [class.is-active]="!collapsed() && item.id === selectedId()"
+        [attr.data-id]="item.id"
+        [attr.aria-current]="!collapsed() && item.id === selectedId() ? 'page' : null"
+        [attr.aria-label]="item.soon ? item.label + ' (coming soon)' : item.label"
+        (click)="handleSelect(item)"
+      >
+        @switch (item.id) {
+          @case ('collections') {
+            <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
+              <rect x="3" y="3.5" width="12" height="3.2" rx="1" fill="none" stroke="currentColor" stroke-width="1.35" />
+              <rect x="3" y="8.2" width="12" height="3.2" rx="1" fill="none" stroke="currentColor" stroke-width="1.35" />
+              <rect x="3" y="12.9" width="8" height="2.2" rx="1" fill="none" stroke="currentColor" stroke-width="1.35" />
+            </svg>
+          }
+          @case ('services') {
+            <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
+              <rect x="3.2" y="3.2" width="5.2" height="5.2" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.35" />
+              <rect x="9.6" y="3.2" width="5.2" height="5.2" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.35" />
+              <rect x="3.2" y="9.6" width="5.2" height="5.2" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.35" />
+              <rect x="9.6" y="9.6" width="5.2" height="5.2" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.35" />
+            </svg>
+          }
+          @case ('database') {
+            <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
+              <ellipse cx="9" cy="4.6" rx="5.2" ry="2" fill="none" stroke="currentColor" stroke-width="1.35" />
+              <path d="M3.8 4.6v8.8c0 1.1 2.3 2 5.2 2s5.2-.9 5.2-2V4.6" fill="none" stroke="currentColor" stroke-width="1.35" />
+              <path d="M3.8 9c0 1.1 2.3 2 5.2 2s5.2-.9 5.2-2" fill="none" stroke="currentColor" stroke-width="1.35" />
+            </svg>
+          }
+          @case ('environments') {
+            <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
+              <path
+                d="M6.6 3.4H5.6A1.6 1.6 0 0 0 4 5v2.1A1.6 1.6 0 0 1 2.4 8.7 1.6 1.6 0 0 1 4 10.3V12.4A1.6 1.6 0 0 0 5.6 14h1M11.4 3.4h1A1.6 1.6 0 0 1 14 5v2.1A1.6 1.6 0 0 0 15.6 8.7 1.6 1.6 0 0 0 14 10.3V12.4A1.6 1.6 0 0 1 12.4 14h-1"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.35"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+          }
+          @case ('tools') {
+            <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
+              <path
+                d="M11.8 3.4a2.6 2.6 0 0 0-3.4 3.4L4.2 11l2.8 2.8 4.2-4.2a2.6 2.6 0 0 0 3.4-3.4L12.8 8 10 5.2l1.8-1.8z"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.35"
+                stroke-linejoin="round"
+              />
+            </svg>
+          }
+        }
+        @if (item.soon) {
+          <span class="tx-rail__soon" aria-hidden="true"></span>
+        }
+      </button>
+    </tx-hint>
+  }
+  </div>
+  <tx-hint class="tx-rail__hint tx-rail__footer" label="Help" keys="F1" placement="right">
+    <button
+      type="button"
+      class="tx-rail__btn"
+      [class.is-active]="helpOpen()"
+      aria-label="Open help"
+      (click)="openHelp.emit()"
+    >
+      <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
+        <circle cx="9" cy="9" r="6.2" fill="none" stroke="currentColor" stroke-width="1.35" />
+        <path d="M7.2 7.1c.3-1 1.1-1.5 1.9-1.5.9 0 1.7.5 1.7 1.5 0 1.1-1 1.4-1.6 1.8-.5.3-.7.6-.7 1.2" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" />
+        <path d="M9 13.1v.2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
+      </svg>
+    </button>
+  </tx-hint>
+</nav>

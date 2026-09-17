@@ -1,0 +1,28 @@
+:host {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.tx-spinner__ring {
+  box-sizing: border-box;
+  width: 12px;
+  height: 12px;
+  border: 1.5px solid color-mix(in srgb, var(--tx-text-faint) 55%, transparent);
+  border-top-color: var(--tx-accent);
+  border-radius: 50%;
+  animation: tx-spin calc(0.7s * var(--tx-motion-scale, 1)) linear infinite;
+}
+
+.tx-spinner__ring.is-md {
+  width: 18px;
+  height: 18px;
+  border-width: 2px;
+}
+
+@keyframes tx-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

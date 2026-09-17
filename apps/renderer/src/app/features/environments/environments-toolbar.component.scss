@@ -1,0 +1,21 @@
+:host {
+  display: block;
+  flex-shrink: 0;
+}
+
+.tx-environments-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0 0 10px;
+}
+
+.tx-environments-toolbar__search {
+  min-width: 0;
+
+  :deep(.tx-field__input) {
+    min-height: 32px;
+    padding: 0 10px;
+    font-size: 12px;
+  }
+}

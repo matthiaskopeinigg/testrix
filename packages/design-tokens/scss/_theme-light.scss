@@ -1,0 +1,23 @@
+[data-theme='light'] {
+  color-scheme: light;
+  --tx-bg-app: #f6f2f5;
+  --tx-bg-chrome: #efe8ed;
+  --tx-bg-canvas: #ffffff;
+  --tx-bg-overlay: #ffffff;
+  --tx-bg-hover: rgba(18, 10, 16, 0.05);
+  --tx-bg-active: var(--tx-accent-soft);
+  --tx-border-subtle: rgba(18, 10, 16, 0.08);
+  --tx-border-strong: rgba(18, 10, 16, 0.14);
+  --tx-text-primary: rgba(22, 12, 20, 0.92);
+  --tx-text-muted: rgba(22, 12, 20, 0.56);
+  --tx-text-faint: rgba(22, 12, 20, 0.38);
+  --tx-danger: #d6455d;
+  --tx-success: #1f9d5c;
+  --tx-shadow-1: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  --tx-shadow-2: 0 22px 50px rgba(40, 12, 28, 0.14);
+  --tx-scrim: rgba(22, 12, 20, 0.38);
+  --tx-glow: 0 0 70px rgba(225, 29, 116, 0.16);
+  --tx-scrollbar-thumb: rgba(22, 12, 20, 0.18);
+  --tx-scrollbar-thumb-hover: rgba(22, 12, 20, 0.36);
+  --tx-scrollbar-thumb-active: color-mix(in srgb, var(--tx-accent) 48%, rgba(22, 12, 20, 0.4));
+}

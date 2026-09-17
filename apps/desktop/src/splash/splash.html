@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; img-src 'self' data:; script-src 'self'; style-src 'self'"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Testrix</title>
+    <link rel="stylesheet" href="./splash.css" />
+  </head>
+  <body>
+    <div class="tx-splash">
+      <button type="button" class="tx-splash__close" id="tx-splash-close" aria-label="Close splash">
+        <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true">
+          <path d="M2 2l6 6M8 2l-6 6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" />
+        </svg>
+      </button>
+      <div class="tx-splash__stage">
+        <div class="tx-splash__glow" aria-hidden="true"></div>
+        <div class="tx-splash__ring-wrap" aria-hidden="true">
+          <div class="tx-splash__ring"></div>
+        </div>
+        <img class="tx-splash__logo" src="./assets/logo.svg" alt="Testrix" width="168" height="168" />
+        <p id="tx-splash-version" class="tx-splash__version"></p>
+        <p id="tx-splash-status" class="tx-splash__status">Starting…</p>
+      </div>
+    </div>
+    <script src="./splash.js"></script>
+  </body>
+</html>

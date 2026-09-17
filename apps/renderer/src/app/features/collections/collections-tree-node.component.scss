@@ -1,0 +1,141 @@
+@use 'mixins';
+
+:host {
+  display: block;
+}
+
+.tx-collections-node {
+  display: block;
+}
+
+:host ::ng-deep .tx-hint__trigger {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.tx-collections-node__row {
+  @include mixins.tx-hover-fill;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-height: 30px;
+  padding: 0 8px 0 calc(8px + (var(--tx-tree-depth, 0) * 14px));
+  border-radius: 8px;
+  color: var(--tx-text-primary);
+  cursor: grab;
+}
+
+.tx-collections-node__row.is-folder {
+  @include mixins.tx-focus-ring;
+  cursor: pointer;
+}
+
+.tx-collections-node__row.is-leaf {
+  @include mixins.tx-focus-ring;
+  cursor: pointer;
+}
+
+.tx-collections-node__row.is-open:not(.is-active):not(.is-selected) {
+  background: color-mix(in srgb, var(--tx-accent) 8%, transparent);
+}
+
+.tx-collections-node__row.is-selected:not(.is-active) {
+  background: color-mix(in srgb, var(--tx-accent) 12%, transparent);
+}
+
+.tx-collections-node__row.is-active {
+  @include mixins.tx-active-rail;
+  background: color-mix(in srgb, var(--tx-accent) 14%, transparent);
+}
+
+.tx-collections-node__row:active {
+  cursor: grabbing;
+}
+
+.tx-collections-node__row.is-folder:active {
+  cursor: grabbing;
+}
+
+.tx-collections-node__row.is-renaming,
+.tx-collections-node__row.is-renaming:active {
+  cursor: text;
+}
+
+.tx-collections-node__chevron,
+.tx-collections-node__chevron-spacer {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.tx-collections-node__chevron {
+  @include mixins.tx-press;
+  @include mixins.tx-focus-ring;
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  border: 0;
+  padding: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--tx-text-faint);
+  cursor: pointer;
+  @include mixins.tx-chevron;
+}
+
+.tx-collections-node__chevron.is-expanded {
+  transform: rotate(90deg);
+}
+
+.tx-collections-node__icon {
+  display: grid;
+  place-items: center;
+  min-width: 28px;
+  color: var(--tx-text-muted);
+}
+
+.tx-collections-node__method {
+  @include mixins.tx-http-method-tone;
+  font-family: var(--tx-font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.tx-collections-node__name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 12px;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tx-collections-node__rename {
+  @include mixins.tx-focus-ring;
+  flex: 1;
+  min-width: 0;
+  height: 22px;
+  padding: 0 6px;
+  border: 1px solid color-mix(in srgb, var(--tx-accent) 45%, var(--tx-border-subtle));
+  border-radius: 6px;
+  background: var(--tx-bg-canvas);
+  color: var(--tx-text-primary);
+  font: inherit;
+  font-size: 12px;
+}
+
+.tx-collections-node__status {
+  flex-shrink: 0;
+  font-family: var(--tx-font-mono);
+  font-size: 10px;
+  color: var(--tx-text-faint);
+}

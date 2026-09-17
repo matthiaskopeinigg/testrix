@@ -1,0 +1,43 @@
+<tx-overlay labelledBy="palette-title" variant="palette" (closed)="shell.closeOverlays()">
+  <div class="tx-palette">
+    <h2 id="palette-title" class="visually-hidden">Command palette</h2>
+    <label class="tx-palette__search">
+      <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+        <circle cx="7" cy="7" r="4.2" fill="none" stroke="currentColor" stroke-width="1.4" />
+        <path d="M10.4 10.4 13.2 13.2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
+      </svg>
+      <span class="visually-hidden">Search commands</span>
+      <input
+        type="search"
+        autofocus
+        placeholder="Search commands…"
+        [value]="query()"
+        (input)="handleInput($event)"
+      />
+    </label>
+    <ul class="tx-palette__list" role="listbox" aria-label="Commands">
+      @for (command of filtered(); track command.id; let first = $first) {
+        <li>
+          <button
+            type="button"
+            class="tx-palette__item"
+            [class.is-active]="first"
+            role="option"
+            [attr.aria-selected]="first"
+            (click)="command.run()"
+          >
+            <span class="tx-palette__copy">
+              <span class="tx-palette__label">{{ command.label }}</span>
+              <span class="tx-palette__desc">{{ command.hint }}</span>
+            </span>
+            @if (command.shortcut) {
+              <tx-hint variant="inline" [keys]="command.shortcut" />
+            }
+          </button>
+        </li>
+      } @empty {
+        <li class="tx-palette__empty">No matching commands</li>
+      }
+    </ul>
+  </div>
+</tx-overlay>

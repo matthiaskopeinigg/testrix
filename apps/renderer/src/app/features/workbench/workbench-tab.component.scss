@@ -1,0 +1,169 @@
+@use 'mixins';
+
+:host {
+  display: block;
+  width: max-content;
+  max-width: 100%;
+  height: 100%;
+  min-width: 0;
+}
+
+.tx-workbench-tab {
+  @include mixins.tx-focus-ring;
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  box-sizing: border-box;
+  width: max-content;
+  max-width: 200px;
+  height: 100%;
+  padding: 0 6px 0 10px;
+  overflow: hidden;
+  border: 0;
+  border-radius: 8px 8px 0 0;
+  background: color-mix(in srgb, var(--tx-bg-chrome) 78%, var(--tx-bg-canvas));
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, white 6%, transparent),
+    inset 1px 0 0 color-mix(in srgb, var(--tx-text-primary) 6%, transparent),
+    inset -1px 0 0 color-mix(in srgb, var(--tx-text-primary) 6%, transparent);
+  color: var(--tx-text-muted);
+  font: inherit;
+  cursor: grab;
+  outline: none;
+  transition:
+    background-color calc(var(--tx-motion-fast) * var(--tx-motion-scale, 1)) var(--tx-ease-out),
+    color calc(var(--tx-motion-fast) * var(--tx-motion-scale, 1)) var(--tx-ease-out),
+    box-shadow calc(var(--tx-motion-fast) * var(--tx-motion-scale, 1)) var(--tx-ease-out);
+}
+
+.tx-workbench-tab:active {
+  cursor: grabbing;
+}
+
+.tx-workbench-tab:hover {
+  color: var(--tx-text-primary);
+  background: color-mix(in srgb, var(--tx-bg-chrome) 88%, var(--tx-bg-canvas));
+}
+
+.tx-workbench-tab.is-selected:not(.is-active) {
+  color: var(--tx-text-primary);
+  background: color-mix(in srgb, var(--tx-accent) 12%, var(--tx-bg-chrome));
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, white 6%, transparent),
+    inset 0 2px 0 color-mix(in srgb, var(--tx-accent) 55%, transparent);
+}
+
+.tx-workbench-tab.is-active {
+  z-index: 3;
+  overflow: hidden;
+  border-radius: 8px 8px 0 0;
+  color: var(--tx-text-primary);
+  background: var(--tx-bg-canvas);
+  box-shadow:
+    inset 1px 0 0 var(--tx-border-subtle),
+    inset -1px 0 0 var(--tx-border-subtle),
+    inset 0 1px 0 color-mix(in srgb, white 8%, transparent);
+  transition: color calc(var(--tx-motion-fast) * var(--tx-motion-scale, 1)) var(--tx-ease-out);
+}
+
+.tx-workbench-tab.is-active:hover {
+  background: var(--tx-bg-canvas);
+}
+
+.tx-workbench-tab.is-active::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 2px;
+  background: var(--tx-accent);
+}
+
+.tx-workbench-tab__method {
+  @include mixins.tx-http-method-tone;
+  flex-shrink: 0;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--tx-method-tone) 16%, transparent);
+  font-family: var(--tx-font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 16px;
+}
+
+.tx-workbench-tab__kind {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  color: var(--tx-text-muted);
+}
+
+.tx-workbench-tab.is-active .tx-workbench-tab__kind {
+  color: var(--tx-accent);
+}
+
+.tx-workbench-tab__title-hint {
+  display: flex;
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+.tx-workbench-tab__close-hint {
+  display: flex;
+  flex: 0 0 auto;
+}
+
+:host ::ng-deep .tx-workbench-tab__title-hint .tx-hint__trigger {
+  display: flex;
+  min-width: 0;
+}
+
+:host ::ng-deep .tx-workbench-tab__close-hint .tx-hint__trigger,
+:host ::ng-deep .tx-workbench-tab__close-hint .tx-hint__trigger > button {
+  width: auto;
+}
+
+.tx-workbench-tab__title {
+  overflow: hidden;
+  font-size: 12px;
+  font-weight: 550;
+  letter-spacing: -0.01em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tx-workbench-tab.is-active .tx-workbench-tab__title {
+  font-weight: 600;
+}
+
+.tx-workbench-tab__close {
+  @include mixins.tx-press;
+  @include mixins.tx-focus-ring;
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--tx-text-faint);
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: auto;
+}
+
+.tx-workbench-tab:hover .tx-workbench-tab__close,
+.tx-workbench-tab.is-active .tx-workbench-tab__close,
+.tx-workbench-tab__close:focus-visible {
+  opacity: 1;
+}
+
+.tx-workbench-tab__close:hover {
+  color: var(--tx-text-primary);
+  background: var(--tx-bg-hover);
+}

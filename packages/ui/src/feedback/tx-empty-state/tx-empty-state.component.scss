@@ -1,0 +1,27 @@
+.tx-empty {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  color: var(--tx-text-muted);
+}
+
+.tx-empty__title {
+  margin: 0;
+  font-size: var(--tx-type-ui);
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  color: var(--tx-text-primary);
+}
+
+.tx-empty__body {
+  margin: 0;
+  font-size: var(--tx-type-chrome);
+  line-height: 1.45;
+}
+
+.tx-empty__actions {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}

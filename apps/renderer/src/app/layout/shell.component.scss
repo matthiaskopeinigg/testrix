@@ -1,0 +1,235 @@
+:host {
+  display: block;
+  height: 100%;
+}
+
+.tx-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  background: var(--tx-bg-chrome);
+  animation: tx-shell-enter calc(180ms * var(--tx-motion-scale, 1)) var(--tx-ease-out) both;
+}
+
+.tx-shell__body {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.tx-shell__canvas {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  margin: 0 var(--tx-space-2) var(--tx-space-2) 0;
+  overflow: hidden;
+  border: 1px solid var(--tx-border-subtle);
+  border-radius: var(--tx-radius-canvas);
+  background:
+    radial-gradient(1200px 520px at 50% -8%, color-mix(in srgb, var(--tx-accent) 16%, transparent), transparent 58%),
+    var(--tx-bg-canvas);
+  animation: tx-canvas-enter calc(240ms * var(--tx-motion-scale, 1)) var(--tx-spring) both;
+}
+
+.tx-shell__aside {
+  margin: 0;
+  max-width: 28ch;
+  overflow: auto;
+  color: var(--tx-text-muted);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.tx-shell__pane-stage {
+  position: relative;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.tx-shell__pane-stage > * {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+}
+
+.tx-shell__pane-stage > .tx-sidebar-pane-out {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: var(--tx-bg-chrome);
+}
+
+.tx-shell__pane-stage:not([data-slide]) > .tx-sidebar-pane-in {
+  animation: none;
+}
+
+.tx-shell__pane-stage[data-slide='down'] > .tx-sidebar-pane-in {
+  animation: tx-sidebar-pane-in-down calc(420ms * var(--tx-motion-scale, 1)) var(--tx-spring) both;
+}
+
+.tx-shell__pane-stage[data-slide='down'] > .tx-sidebar-pane-out {
+  animation: tx-sidebar-pane-out-up
+    calc(280ms * var(--tx-motion-leave-scale, var(--tx-motion-scale, 1))) var(--tx-ease-in-out) both;
+}
+
+.tx-shell__pane-stage[data-slide='up'] > .tx-sidebar-pane-in {
+  animation: tx-sidebar-pane-in-up calc(420ms * var(--tx-motion-scale, 1)) var(--tx-spring) both;
+}
+
+.tx-shell__pane-stage[data-slide='up'] > .tx-sidebar-pane-out {
+  animation: tx-sidebar-pane-out-down
+    calc(280ms * var(--tx-motion-leave-scale, var(--tx-motion-scale, 1))) var(--tx-ease-in-out) both;
+}
+
+@keyframes tx-sidebar-pane-in-down {
+  from {
+    opacity: 0;
+    transform: translateY(22%) scale(0.96);
+    filter: blur(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+}
+
+@keyframes tx-sidebar-pane-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(-22%) scale(0.96);
+    filter: blur(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+}
+
+@keyframes tx-sidebar-pane-out-up {
+  from {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+
+  to {
+    opacity: 0;
+    transform: translateY(-16%) scale(0.98);
+    filter: blur(6px);
+  }
+}
+
+@keyframes tx-sidebar-pane-out-down {
+  from {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+
+  to {
+    opacity: 0;
+    transform: translateY(16%) scale(0.98);
+    filter: blur(6px);
+  }
+}
+
+@keyframes tx-shell-enter {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes tx-canvas-enter {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.985);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.tx-shell--scene-a > .tx-shell__body > tx-sidebar {
+  animation: tx-scene-sidebar-a calc(320ms * var(--tx-motion-scale, 1)) var(--tx-spring) both;
+}
+
+.tx-shell--scene-b > .tx-shell__body > tx-sidebar {
+  animation: tx-scene-sidebar-b calc(320ms * var(--tx-motion-scale, 1)) var(--tx-spring) both;
+}
+
+.tx-shell--scene-a > .tx-shell__canvas {
+  animation: tx-scene-canvas-a calc(360ms * var(--tx-motion-scale, 1)) var(--tx-spring) both;
+}
+
+.tx-shell--scene-b > .tx-shell__canvas {
+  animation: tx-scene-canvas-b calc(360ms * var(--tx-motion-scale, 1)) var(--tx-spring) both;
+}
+
+@keyframes tx-scene-sidebar-a {
+  from {
+    opacity: 0.35;
+    transform: translateX(-12px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes tx-scene-sidebar-b {
+  from {
+    opacity: 0.35;
+    transform: translateX(-12px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes tx-scene-canvas-a {
+  from {
+    opacity: 0.72;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes tx-scene-canvas-b {
+  from {
+    opacity: 0.72;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+

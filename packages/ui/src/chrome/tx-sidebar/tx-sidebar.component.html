@@ -1,0 +1,26 @@
+<aside class="tx-sidebar" [attr.aria-hidden]="collapsed()">
+  <header class="tx-sidebar__header">
+    <h2 class="tx-sidebar__title">{{ title() }}</h2>
+  </header>
+  <div class="tx-sidebar__body">
+    <ng-content />
+  </div>
+  @if (!collapsed()) {
+    <tx-hint
+      class="tx-sidebar__resize-hint"
+      label="Resize sidebar"
+      placement="left"
+      [suppressed]="resizing()"
+    >
+      <div
+        class="tx-sidebar__resize"
+        role="separator"
+        aria-orientation="vertical"
+        aria-label="Resize sidebar"
+        tabindex="0"
+        (pointerdown)="handleResizeStart($event)"
+        (keydown)="handleResizeKey($event)"
+      ></div>
+    </tx-hint>
+  }
+</aside>

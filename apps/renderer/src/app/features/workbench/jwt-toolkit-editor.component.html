@@ -1,0 +1,156 @@
+<section class="tx-tool" [attr.aria-label]="tab().title">
+  <header class="tx-tool__head">
+    <div class="tx-tool__title">
+      <h1>JWT Toolkit</h1>
+      <p>Decode any compact token. Encode and verify HS256 only, with a local secret.</p>
+    </div>
+    <div class="tx-tool__modes" role="tablist" aria-label="JWT mode">
+      <button
+        type="button"
+        class="tx-tool__mode"
+        role="tab"
+        [class.is-active]="mode() === 'decode'"
+        [attr.aria-selected]="mode() === 'decode'"
+        (click)="setMode('decode')"
+      >
+        Decode
+      </button>
+      <button
+        type="button"
+        class="tx-tool__mode"
+        role="tab"
+        [class.is-active]="mode() === 'encode'"
+        [attr.aria-selected]="mode() === 'encode'"
+        (click)="setMode('encode')"
+      >
+        Encode HS256
+      </button>
+    </div>
+  </header>
+
+  <div class="tx-tool__split">
+    @if (mode() === 'decode') {
+      <div class="tx-tool__pane">
+        <div class="tx-tool__pane-label">Token</div>
+        <label class="tx-tool__body">
+          <span class="visually-hidden">Compact JWT</span>
+          <textarea
+            class="tx-tool__textarea"
+            [value]="token()"
+            spellcheck="false"
+            placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+            (input)="handleToken($event)"
+          ></textarea>
+        </label>
+      </div>
+      <div class="tx-tool__pane">
+        <div class="tx-tool__pane-label">Header and payload</div>
+        @if (decoded().error; as message) {
+          <p class="tx-tool__error">{{ message }}</p>
+        }
+        <div class="tx-tool__stack">
+          <div class="tx-tool__stack-block">
+            <div class="tx-tool__pane-label">Header</div>
+            <div class="tx-tool__body">
+              <pre class="tx-tool__pre">{{ decoded().parts?.headerJson ?? '' }}</pre>
+            </div>
+          </div>
+          <div class="tx-tool__stack-block">
+            <div class="tx-tool__pane-label">Payload</div>
+            <div class="tx-tool__body">
+              <pre class="tx-tool__pre">{{ decoded().parts?.payloadJson ?? '' }}</pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    } @else {
+      <div class="tx-tool__pane">
+        <div class="tx-tool__pane-label">Payload JSON</div>
+        @if (encodeError(); as message) {
+          <p class="tx-tool__error">{{ message }}</p>
+        }
+        <label class="tx-tool__body">
+          <span class="visually-hidden">JWT payload JSON</span>
+          <textarea
+            class="tx-tool__textarea"
+            [value]="payloadJson()"
+            spellcheck="false"
+            (input)="handlePayload($event)"
+          ></textarea>
+        </label>
+      </div>
+      <div class="tx-tool__pane">
+        <div class="tx-tool__pane-label">Compact token</div>
+        <div class="tx-tool__body">
+          <pre class="tx-tool__pre">{{ encodedToken() }}</pre>
+        </div>
+      </div>
+    }
+  </div>
+
+  <footer class="tx-tool__footer">
+    <tx-input
+      id="jwt-secret"
+      label="HS256 secret"
+      [value]="secret()"
+      placeholder="Local secret"
+      (valueChange)="secret.set($event)"
+    />
+    <tx-hint label="Copy compact token" placement="top">
+      <button
+        type="button"
+        class="tx-tool__btn tx-tool__btn--accent"
+        [disabled]="!copyValue()"
+        aria-label="Copy compact token"
+        (click)="copyLatest($event)"
+      >
+        Copy token
+      </button>
+    </tx-hint>
+    @if (mode() === 'decode' && decoded().parts; as parts) {
+      <tx-hint label="Copy payload JSON" placement="top">
+        <button
+          type="button"
+          class="tx-tool__btn"
+          aria-label="Copy payload JSON"
+          (click)="copyJson($event, parts.payloadJson)"
+        >
+          Copy JSON
+        </button>
+      </tx-hint>
+    }
+    <tx-hint label="Move between encode and decode" placement="top">
+      <button type="button" class="tx-tool__btn" aria-label="Swap encode and decode" (click)="swap()">
+        Swap
+      </button>
+    </tx-hint>
+    <tx-hint label="Clear fields" placement="top">
+      <button type="button" class="tx-tool__btn" aria-label="Clear fields" (click)="clear()">Clear</button>
+    </tx-hint>
+    @if (mode() === 'decode') {
+      <span
+        class="tx-tool__status"
+        [class.is-ok]="verifyState() === 'match'"
+        [class.is-bad]="verifyState() === 'mismatch' || verifyState() === 'invalid'"
+      >
+        @switch (verifyState()) {
+          @case ('match') {
+            Signature matches
+          }
+          @case ('mismatch') {
+            Signature mismatch
+          }
+          @case ('unsupported') {
+            Verify supports HS256 only
+          }
+          @case ('invalid') {
+            Token is not a JWT
+          }
+          @default {
+            Add a secret to verify HS256
+          }
+        }
+      </span>
+    }
+  </footer>
+</section>

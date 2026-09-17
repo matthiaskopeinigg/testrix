@@ -1,0 +1,33 @@
+<button
+  type="button"
+  class="tx-check"
+  [class.is-on]="checked()"
+  [class.tx-check--inline]="variant() === 'inline'"
+  [class.tx-check--compact]="variant() === 'compact'"
+  [disabled]="disabled()"
+  role="switch"
+  [attr.aria-checked]="checked()"
+  [attr.aria-label]="variant() === 'compact' ? label() : null"
+  (click)="handleClick($event)"
+>
+  <span class="tx-check__box" aria-hidden="true">
+    <svg class="tx-check__tick" width="16" height="16" viewBox="0 0 16 16">
+      <path
+        d="M3.7 8.2 6.6 11.1 12.4 4.8"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.8"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      />
+    </svg>
+  </span>
+  @if (variant() !== 'compact') {
+    <span class="tx-check__copy">
+      <span class="tx-check__label">{{ label() }}</span>
+      @if (detail(); as line) {
+        <span class="tx-check__detail">{{ line }}</span>
+      }
+    </span>
+  }
+</button>

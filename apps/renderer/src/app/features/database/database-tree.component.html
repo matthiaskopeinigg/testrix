@@ -1,0 +1,121 @@
+<div class="tx-database-tree__list">
+  @for (node of nodes(); track node.id) {
+    <div
+      class="tx-database-tree__block"
+      [attr.data-flip-id]="node.id"
+      [class.is-drop-folder]="isDropFolder(node.id)"
+      [class.is-just-moved]="isJustMoved(node.id)"
+    >
+      <div
+        class="tx-database-tree__item"
+        [txDraggable]="node"
+        [txDraggableDisabled]="!canDrag(node)"
+        [txDraggablePreview]="dragPreview"
+        [txDraggableScrollContainer]="dnd.scrollContainer()"
+        [attr.data-node-id]="node.id"
+        [attr.data-section]="node.section"
+        (dragStarted)="handleDragStarted($event)"
+        (dragMoved)="handleDragMoved($event)"
+        (dragEnded)="handleDragEnded($event)"
+      >
+        <tx-database-tree-node
+          [node]="node"
+          [depth]="depth()"
+          [expanded]="isExpanded(node)"
+          [open]="isNodeOpen(node.id)"
+          [active]="isNodeActive(node.id)"
+          [selected]="store.isSelected(node.id, node.section)"
+          [renaming]="renamingId() === node.id"
+          [busy]="isBusy(node)"
+          (toggle)="handleToggle($event)"
+          (selectNode)="handleSelect($event)"
+          (reorder)="handleReorder($event)"
+          (nodeMenu)="nodeMenu.emit($event)"
+          (renameStart)="renameStart.emit($event)"
+          (renameInput)="renameInput.emit($event)"
+          (renameKey)="renameKey.emit($event)"
+          (renameBlur)="renameBlur.emit()"
+        />
+      </div>
+
+      @if (isExpanded(node) && (childrenOf(node).length > 0 || isBusy(node) || showCatalogFilter(node) || catalogRemaining(node) > 0)) {
+          <div class="tx-tree-reveal" animate.enter="tx-tree-expand" animate.leave="tx-tree-collapse">
+            <div class="tx-tree-reveal__clip">
+              @if (showCatalogFilter(node)) {
+                <div class="tx-database-tree__filter" [style.--tx-tree-depth]="depth() + 1">
+                  <input
+                    type="search"
+                    [id]="'catalog-filter-' + node.id"
+                    [value]="store.catalogQuery(node.id)"
+                    [placeholder]="catalogFilterPlaceholder(node)"
+                    [attr.aria-label]="catalogFilterPlaceholder(node)"
+                    spellcheck="false"
+                    autocomplete="off"
+                    (click)="$event.stopPropagation()"
+                    (keydown)="$event.stopPropagation()"
+                    (input)="handleCatalogFilter(node, $event)"
+                  />
+                </div>
+              }
+              @if (childrenOf(node).length > 0) {
+              <tx-database-tree
+                [nodes]="childrenOf(node)"
+                [parentId]="node.id"
+                [depth]="depth() + 1"
+                [renamingId]="renamingId()"
+                (nodeMenu)="nodeMenu.emit($event)"
+                (renameStart)="renameStart.emit($event)"
+                (renameInput)="renameInput.emit($event)"
+                (renameKey)="renameKey.emit($event)"
+                (renameBlur)="renameBlur.emit()"
+                (openPicker)="openPicker.emit($event)"
+                (openTable)="openTable.emit($event)"
+                (openDdl)="openDdl.emit($event)"
+              />
+              } @else if (isBusy(node)) {
+                <div class="tx-database-tree__skeletons" [style.--tx-tree-depth]="depth() + 1" aria-hidden="true">
+                  <span></span><span></span><span></span>
+                </div>
+              } @else if (store.catalogQuery(node.id).trim()) {
+                <p class="tx-database-tree__empty" [style.--tx-tree-depth]="depth() + 1">No matches</p>
+              }
+              @if (catalogRemaining(node) > 0) {
+                <tx-hint stretch [label]="'Show the next ' + nextCatalogChunk(node)" placement="right">
+                  <button
+                    type="button"
+                    class="tx-database-tree__more"
+                    [style.--tx-tree-depth]="depth() + 1"
+                    (click)="handleLoadMore(node, $event)"
+                  >
+                    Load more
+                    <span>{{ catalogRemaining(node) }} remaining</span>
+                  </button>
+                </tx-hint>
+              }
+            </div>
+          </div>
+        }
+    </div>
+  }
+</div>
+
+<ng-template #dragPreview let-node>
+  <div
+    class="tx-database-preview"
+    [class.is-denied]="store.dropTarget()?.denied"
+    [class.is-into]="store.dropTarget()?.mode === 'into'"
+  >
+    <span class="tx-database-preview__icon" aria-hidden="true">
+      <tx-database-type-icon [type]="node.engine" [kind]="node.kind === 'connection' ? 'engine' : node.kind === 'query' ? 'query' : 'folder'" />
+    </span>
+    <span class="tx-database-preview__name">{{ node.name }}</span>
+    @if (dragCount() > 1) {
+      <span class="tx-database-preview__badge">{{ dragCount() }}</span>
+    }
+    @if (store.dropTarget()?.denied) {
+      <span class="tx-database-preview__badge is-deny" aria-hidden="true">Not allowed</span>
+    } @else if (store.dropTarget()?.mode === 'into') {
+      <span class="tx-database-preview__badge is-into" aria-hidden="true">Into folder</span>
+    }
+  </div>
+</ng-template>

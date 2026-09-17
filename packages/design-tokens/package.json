@@ -1,0 +1,11 @@
+{
+  "name": "@testrix/design-tokens",
+  "version": "2.0.0-beta.1",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./scss": "./scss/_index.scss",
+    "./scss/*": "./scss/*"
+  }
+}

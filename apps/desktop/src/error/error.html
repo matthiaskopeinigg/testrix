@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; img-src 'self' data:; script-src 'self'; style-src 'self'"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Testrix</title>
+    <link rel="stylesheet" href="./error.css" />
+  </head>
+  <body>
+    <div class="tx-error">
+      <header class="tx-error__titlebar">
+        <img class="tx-error__mark" src="./assets/logo.svg" width="16" height="16" alt="" />
+        <span class="tx-error__chrome" id="chrome-title">Testrix</span>
+        <div class="tx-error__drag"></div>
+        <button type="button" class="tx-error__icon" id="btn-close" aria-label="Close">
+          <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true">
+            <path d="M1 1l8 8M9 1l-8 8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
+          </svg>
+        </button>
+      </header>
+
+      <main class="tx-error__body">
+        <div class="tx-error__hero">
+          <div class="tx-error__brand">
+            <span class="tx-error__glow" aria-hidden="true"></span>
+            <img class="tx-error__logo" src="./assets/logo.svg" width="52" height="52" alt="" />
+            <span class="tx-error__badge" aria-hidden="true">!</span>
+          </div>
+          <div class="tx-error__heading">
+            <p class="tx-error__eyebrow" id="error-eyebrow">Startup</p>
+            <h1 id="error-title">Couldn't start</h1>
+            <p class="tx-error__meta">
+              <span id="error-version">—</span>
+            </p>
+          </div>
+        </div>
+
+        <div class="tx-error__sheet">
+          <div class="tx-error__panel">
+            <p class="tx-error__copy" id="error-message">Testrix did not finish loading.</p>
+            <div class="tx-error__code">
+              <span>Code</span>
+              <code id="error-code">APP_BOOT_TIMEOUT</code>
+            </div>
+          </div>
+          <footer class="tx-error__footer">
+            <button type="button" class="tx-error__btn tx-error__btn--ghost" id="btn-quit">Quit</button>
+            <button type="button" class="tx-error__btn tx-error__btn--primary" id="btn-relaunch">Retry</button>
+          </footer>
+        </div>
+      </main>
+    </div>
+    <script src="./error.js"></script>
+  </body>
+</html>

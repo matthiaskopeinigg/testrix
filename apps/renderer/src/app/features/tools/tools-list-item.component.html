@@ -1,0 +1,22 @@
+<tx-hint stretch label="Shift+click range" detail="Ctrl+click add" placement="right">
+  <div
+    class="tx-tools-item"
+    role="option"
+    tabindex="0"
+    [class.is-active]="active()"
+    [class.is-selected]="selected()"
+    [attr.aria-selected]="selected() || active()"
+    [attr.aria-label]="rowAriaLabel()"
+    [attr.aria-keyshortcuts]="'Alt+ArrowUp Alt+ArrowDown'"
+    (click)="handleRowClick($event)"
+    (keydown)="handleRowKeydown($event)"
+  >
+    <span class="tx-tools-item__icon" aria-hidden="true">
+      <tx-tool-icon [toolId]="tool().id" />
+    </span>
+    <span class="tx-tools-item__copy">
+      <span class="tx-tools-item__name">{{ tool().label }}</span>
+      <span class="tx-tools-item__detail">{{ tool().description }}</span>
+    </span>
+  </div>
+</tx-hint>

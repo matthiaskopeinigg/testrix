@@ -1,0 +1,151 @@
+:root {
+  --tx-space-1: 4px;
+  --tx-space-2: 8px;
+  --tx-space-3: 12px;
+  --tx-space-4: 16px;
+  --tx-space-5: 24px;
+  --tx-space-6: 32px;
+  --tx-space-7: 48px;
+
+  --tx-radius-control: 8px;
+  --tx-radius-panel: 12px;
+  --tx-radius-card: 16px;
+  --tx-radius-canvas: 14px;
+
+  --tx-font: 'Segoe UI Variable', 'Segoe UI', -apple-system, BlinkMacSystemFont, ui-sans-serif,
+    system-ui, sans-serif;
+  --tx-font-mono: 'Cascadia Code', 'Segoe UI Mono', ui-monospace, monospace;
+
+  --tx-type-chrome: 11px;
+  --tx-type-ui: 13px;
+  --tx-type-title: 18px;
+  --tx-type-display: 34px;
+  --tx-leading-ui: 1.45;
+
+  --tx-rail-width: 52px;
+  --tx-titlebar-height: 38px;
+  --tx-statusbar-height: 26px;
+  --tx-sidebar-width: 248px;
+  --tx-sidebar-min-width: 200px;
+  --tx-sidebar-max-width: 480px;
+
+  --tx-z-chrome: 10;
+  --tx-z-sidebar: 20;
+  --tx-z-overlay: 40;
+  --tx-z-toast: 50;
+  --tx-z-drag: 60;
+  --tx-icon-scale: 1;
+
+  --tx-accent: #e11d74;
+  --tx-accent-hover: #f03a8a;
+  --tx-accent-pressed: #c41263;
+  --tx-accent-soft: color-mix(in srgb, var(--tx-accent) 16%, transparent);
+  --tx-on-accent: #ffffff;
+
+  --tx-motion-fast: 90ms;
+  --tx-motion-base: 180ms;
+  --tx-motion-panel: 240ms;
+  --tx-motion-overlay: 200ms;
+  --tx-motion-scale: 1.25;
+  --tx-motion-leave-scale: 1.25;
+  --tx-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --tx-ease-in-out: cubic-bezier(0.45, 0, 0.55, 1);
+  --tx-spring: cubic-bezier(0.22, 1.2, 0.36, 1);
+
+  --tx-focus: 0 0 0 2px color-mix(in srgb, var(--tx-accent) 55%, transparent);
+
+  --tx-scrollbar-size: 12px;
+  --tx-scrollbar-inset: 3px;
+}
+
+html[data-motion='none'] {
+  --tx-motion-scale: 0;
+  --tx-motion-fast: 0ms;
+  --tx-motion-base: 0ms;
+  --tx-motion-panel: 0ms;
+  --tx-motion-overlay: 0ms;
+}
+
+html[data-motion='slow'] {
+  --tx-motion-scale: 3;
+}
+
+html[data-motion='normal'] {
+  --tx-motion-scale: 1.25;
+}
+
+html[data-motion='fast'] {
+  --tx-motion-scale: 0.72;
+}
+
+html[data-motion-leave='none'] {
+  --tx-motion-leave-scale: 0;
+}
+
+html[data-motion-leave='slow'] {
+  --tx-motion-leave-scale: 3;
+}
+
+html[data-motion-leave='normal'] {
+  --tx-motion-leave-scale: 1.25;
+}
+
+html[data-motion-leave='fast'] {
+  --tx-motion-leave-scale: 0.72;
+}
+
+html[data-font-ui='segoe-variable'] {
+  --tx-font: 'Segoe UI Variable Text', 'Segoe UI Variable Display', 'Segoe UI Variable', 'Segoe UI',
+    sans-serif;
+}
+
+html[data-font-ui='segoe'] {
+  --tx-font: 'Segoe UI', sans-serif;
+}
+
+html[data-font-ui='system'] {
+  --tx-font: Tahoma, Geneva, Verdana, sans-serif;
+}
+
+html[data-font-ui='system'],
+html[data-font-ui='system'] body {
+  letter-spacing: 0;
+}
+
+html[data-font-mono='cascadia'] {
+  --tx-font-mono: 'Cascadia Code', 'Cascadia Mono', 'Segoe UI Mono', ui-monospace, monospace;
+}
+
+html[data-font-mono='consolas'] {
+  --tx-font-mono: Consolas, 'Courier New', ui-monospace, monospace;
+}
+
+html[data-font-mono='ui-monospace'] {
+  --tx-font-mono: ui-monospace, 'Courier New', monospace;
+}
+
+html[data-font-scale='sm'] {
+  --tx-type-chrome: 10px;
+  --tx-type-ui: 12px;
+  --tx-type-title: 16px;
+  --tx-type-display: 30px;
+}
+
+html[data-font-scale='lg'] {
+  --tx-type-chrome: 15px;
+  --tx-type-ui: 18px;
+  --tx-type-title: 28px;
+  --tx-type-display: 52px;
+}
+
+html[data-icon-scale='sm'] {
+  --tx-icon-scale: 0.88;
+}
+
+html[data-icon-scale='md'] {
+  --tx-icon-scale: 1;
+}
+
+html[data-icon-scale='lg'] {
+  --tx-icon-scale: 1.52;
+}

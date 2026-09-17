@@ -1,0 +1,46 @@
+<div class="tx-database-picker" role="dialog" aria-labelledby="schema-picker-title">
+  <div class="tx-database-picker__panel">
+    <h2 id="schema-picker-title">Schemas</h2>
+    <p>Choose which schemas appear under this connection.</p>
+    <tx-input
+      id="schema-picker-search"
+      placeholder="Search schemas"
+      [value]="search()"
+      (valueChange)="handleSearch($event)"
+      ariaLabel="Search schemas"
+    />
+    <div class="tx-database-picker__list">
+      @if (loading()) {
+        <p class="tx-database-picker__loading">
+          <tx-spinner label="Loading schemas" />
+          Loading schemas
+        </p>
+      } @else if (error(); as message) {
+        <p class="tx-database-picker__empty">{{ message }}</p>
+      } @else {
+        @for (schema of visible(); track schema) {
+          <tx-check
+            variant="inline"
+            [checked]="isChecked(schema)"
+            [label]="schema"
+            (checkedChange)="handleToggle(schema, $event)"
+          />
+        } @empty {
+          <p class="tx-database-picker__empty">
+            {{ search().trim() ? 'No schemas match.' : 'No schemas yet. Test the connection, then refresh.' }}
+          </p>
+        }
+        @if (remaining() > 0) {
+          <button type="button" class="tx-database-picker__more" (click)="handleLoadMore()">
+            Load more
+            <span>{{ remaining() }} remaining</span>
+          </button>
+        }
+      }
+    </div>
+    <div class="tx-database-picker__actions">
+      <tx-button variant="ghost" (clicked)="handleCancel()">Cancel</tx-button>
+      <tx-button [disabled]="loading()" (clicked)="handleApply()">Apply</tx-button>
+    </div>
+  </div>
+</div>

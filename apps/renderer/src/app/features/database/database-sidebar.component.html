@@ -1,0 +1,162 @@
+<div class="tx-database" #root (contextmenu)="$event.preventDefault()">
+  <tx-database-toolbar />
+  <div
+    class="tx-database__body"
+    #scroller
+    (click)="handleChromeClick($event)"
+  >
+    <div class="tx-database__content">
+      <section class="tx-database__section" [class.is-collapsed]="!store.connectionsOpen()">
+        <button
+          type="button"
+          class="tx-database__section-head"
+          [attr.aria-expanded]="store.connectionsOpen()"
+          (click)="store.toggleSection('connections')"
+          (contextmenu)="handleRootMenu($event, 'connections')"
+        >
+          <span class="tx-database__chevron" [class.is-open]="store.connectionsOpen()" aria-hidden="true">
+            <svg width="10" height="10" viewBox="0 0 12 12">
+              <path d="M4 2.5 8 6 4 9.5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
+            </svg>
+          </span>
+          <span>Connections</span>
+          <span class="tx-database__count">{{ store.connectionCount() }}</span>
+        </button>
+        <div class="tx-database__section-pane">
+          <div
+            class="tx-database__section-body"
+            [attr.inert]="store.connectionsOpen() ? null : ''"
+            [attr.aria-hidden]="store.connectionsOpen() ? null : true"
+            (contextmenu)="handleRootMenu($event, 'connections')"
+          >
+          @if (store.visibleConnectionTree().length > 0) {
+            <tx-database-tree
+              [nodes]="store.visibleConnectionTree()"
+              [renamingId]="renamingId()"
+              (nodeMenu)="handleItemMenu($event)"
+              (renameStart)="startRename($event)"
+              (renameInput)="handleRenameInput($event)"
+              (renameKey)="handleRenameKey($event)"
+              (renameBlur)="finishRename()"
+              (openPicker)="handleOpenPicker($event)"
+              (openTable)="handleOpenTable($event)"
+            />
+          } @else {
+            <tx-empty-state title="No connections" body="Right-click to add a folder or a connection, then pick the engine in the tab." />
+          }
+          </div>
+        </div>
+      </section>
+
+      <div class="tx-database__split" aria-hidden="true"></div>
+
+      <section class="tx-database__section" [class.is-collapsed]="!store.queriesOpen()">
+        <button
+          type="button"
+          class="tx-database__section-head"
+          [attr.aria-expanded]="store.queriesOpen()"
+          (click)="store.toggleSection('queries')"
+          (contextmenu)="handleRootMenu($event, 'queries')"
+        >
+          <span class="tx-database__chevron" [class.is-open]="store.queriesOpen()" aria-hidden="true">
+            <svg width="10" height="10" viewBox="0 0 12 12">
+              <path d="M4 2.5 8 6 4 9.5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
+            </svg>
+          </span>
+          <span>Queries</span>
+          <span class="tx-database__count">{{ store.queryCount() }}</span>
+        </button>
+        <div class="tx-database__section-pane">
+          <div
+            class="tx-database__section-body"
+            [attr.inert]="store.queriesOpen() ? null : ''"
+            [attr.aria-hidden]="store.queriesOpen() ? null : true"
+            (contextmenu)="handleRootMenu($event, 'queries')"
+          >
+          @if (store.visibleQueryTree().length > 0) {
+            <tx-database-tree
+              [nodes]="store.visibleQueryTree()"
+              [renamingId]="renamingId()"
+              (nodeMenu)="handleItemMenu($event)"
+              (renameStart)="startRename($event)"
+              (renameInput)="handleRenameInput($event)"
+              (renameKey)="handleRenameKey($event)"
+              (renameBlur)="finishRename()"
+            />
+          } @else {
+            <tx-empty-state title="No saved queries" body="Right-click to add a query or a folder." />
+          }
+          </div>
+        </div>
+      </section>
+
+      <div
+        class="tx-database__indicator"
+        [class.is-visible]="dnd.isIndicatorVisible()"
+        [class.is-denied]="dnd.isIndicatorDenied()"
+        [style.left.px]="dnd.indicatorLeft()"
+        [style.transform]="'translate3d(0, ' + dnd.indicatorY() + 'px, 0)'"
+        aria-hidden="true"
+      ></div>
+    </div>
+  </div>
+  <p class="tx-database__live" role="status" aria-live="polite">{{ dnd.announcement() }}</p>
+</div>
+
+<ng-template #schemaPicker>
+  @if (store.pickerConnectionId(); as pickerId) {
+    <tx-database-schema-picker [connectionId]="pickerId" />
+  }
+</ng-template>
+
+<ng-template #databaseMenu>
+  @if (menu(); as menu) {
+    <div class="tx-database-menu tx-menu" role="menu">
+      @if (menu.kind === 'root-connections' || menu.kind === 'folder' && menu.section === 'connections') {
+        <button type="button" class="tx-database-menu__item" role="menuitem" (click)="handleNewFolder('connections')">
+          New folder
+        </button>
+        <button type="button" class="tx-database-menu__item" role="menuitem" (click)="handleNewConnection()">
+          New connection
+        </button>
+      }
+      @if (menu.kind === 'root-queries' || menu.kind === 'folder' && menu.section === 'queries') {
+        <button type="button" class="tx-database-menu__item" role="menuitem" (click)="handleNewFolder('queries')">
+          New folder
+        </button>
+        <button type="button" class="tx-database-menu__item" role="menuitem" (click)="handleNewQuery()">
+          New query
+        </button>
+      }
+      @if (menu.kind === 'connection' || menu.kind === 'schema' || menu.kind === 'group' || menu.kind === 'picker') {
+        @if (menu.kind === 'connection') {
+          <button type="button" class="tx-database-menu__item" role="menuitem" (click)="handleOpen()">Connection settings</button>
+        }
+        <button type="button" class="tx-database-menu__item" role="menuitem" (click)="handleNewQuery(menu.connectionId ?? menu.id ?? undefined)">New query</button>
+        <button type="button" class="tx-database-menu__item" role="menuitem" (click)="handleSchemas()">Choose schemas</button>
+        @if (menu.kind === 'connection') {
+          <button type="button" class="tx-database-menu__item" role="menuitem" (click)="handleTest()">Test</button>
+        }
+        <button type="button" class="tx-database-menu__item" role="menuitem" (click)="handleRefresh()">Refresh</button>
+        @if (menu.kind === 'schema' && menu.schema) {
+          <button type="button" class="tx-database-menu__item" role="menuitem" (click)="handleShowDiagram()">Show diagram</button>
+        }
+        @if (menu.kind === 'connection') {
+          <button type="button" class="tx-database-menu__item" role="menuitem" (click)="handleDisconnect()">Disconnect</button>
+        }
+      }
+      @if (menu.kind === 'query') {
+        <button type="button" class="tx-database-menu__item" role="menuitem" (click)="handleOpen()">Open</button>
+      }
+      @if (menu.kind === 'folder' || menu.kind === 'connection' || menu.kind === 'query') {
+        <span class="tx-database-menu__rule" aria-hidden="true"></span>
+        <button type="button" class="tx-database-menu__item" role="menuitem" (click)="handleRenameFromMenu()">Rename</button>
+        <button type="button" class="tx-database-menu__item" role="menuitem" (click)="handleDuplicate()">Duplicate</button>
+        <span class="tx-database-menu__rule" aria-hidden="true"></span>
+        <button type="button" class="tx-database-menu__item is-danger" role="menuitem" (click)="handleDelete()">
+          {{ deleteLabel() }}
+        </button>
+      }
+    </div>
+  }
+</ng-template>

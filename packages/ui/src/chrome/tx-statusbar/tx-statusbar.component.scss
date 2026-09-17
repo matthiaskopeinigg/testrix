@@ -1,0 +1,36 @@
+:host {
+  display: block;
+}
+
+.tx-statusbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: var(--tx-statusbar-height);
+  padding: 0 14px;
+  background: var(--tx-bg-chrome);
+  color: var(--tx-text-faint);
+  font-size: 11px;
+}
+
+.tx-statusbar__live {
+  width: 6px;
+  height: 6px;
+  border-radius: 99px;
+  background: var(--tx-success);
+  box-shadow: 0 0 8px var(--tx-success);
+}
+
+.tx-statusbar__spacer {
+  flex: 1;
+}
+
+.tx-statusbar__chip {
+  padding: 1px 7px;
+  border: 1px solid var(--tx-border-subtle);
+  border-radius: 99px;
+}
+
+.tx-statusbar__chip--motion {
+  text-transform: capitalize;
+}

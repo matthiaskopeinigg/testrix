@@ -1,0 +1,10 @@
+<div class="tx-environments-toolbar">
+  <div class="tx-environments-toolbar__search">
+    <tx-input
+      id="environments-search"
+      placeholder="Search environments"
+      [value]="store.searchQuery()"
+      (valueChange)="handleSearch($event)"
+    />
+  </div>
+</div>

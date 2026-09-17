@@ -1,0 +1,43 @@
+appId: dev.testrix.app
+productName: Testrix
+copyright: Copyright © 2026 Testrix contributors
+
+directories:
+  output: ../../release
+  buildResources: ../../build
+
+files:
+  - dist/**/*
+  - package.json
+
+asar: true
+
+extraResources:
+  - from: src/splash
+    to: splash
+  - from: src/error
+    to: error
+  - from: src/assets
+    to: assets
+  - from: ../renderer/dist/renderer/browser
+    to: browser
+
+win:
+  icon: icon.ico
+  target:
+    - dir
+  forceCodeSigning: false
+  signAndEditExecutable: false
+
+mac:
+  target:
+    - target: dir
+      arch:
+        - x64
+        - arm64
+  identity: null
+
+linux:
+  target:
+    - dir
+  category: Development

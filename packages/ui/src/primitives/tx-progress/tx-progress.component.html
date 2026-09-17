@@ -1,0 +1,22 @@
+<div class="tx-progress">
+  <div class="tx-progress__header">
+    <p class="tx-progress__label">{{ label() }}</p>
+    @if (value() !== null) {
+      <p class="tx-progress__percent">{{ value() }}%</p>
+    }
+  </div>
+  <div
+    class="tx-progress__track"
+    [class.tx-progress__track--indeterminate]="value() === null"
+    role="progressbar"
+    [attr.aria-valuemin]="0"
+    [attr.aria-valuemax]="100"
+    [attr.aria-valuenow]="value()"
+    [attr.aria-label]="label()"
+  >
+    <div
+      class="tx-progress__fill"
+      [style.width.%]="value() === null ? 32 : value()"
+    ></div>
+  </div>
+</div>

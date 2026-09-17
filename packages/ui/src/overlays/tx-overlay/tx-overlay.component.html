@@ -1,0 +1,19 @@
+<div
+  class="tx-overlay"
+  [class.tx-overlay--palette]="variant() === 'palette'"
+  [class.tx-overlay--settings]="variant() === 'settings'"
+  [class.tx-overlay--confirm]="variant() === 'confirm'"
+  role="presentation"
+  (keydown)="handleKeydown($event)"
+>
+  <button type="button" class="tx-overlay__scrim" aria-label="Close overlay" (click)="closed.emit()"></button>
+  <div
+    class="tx-overlay__panel"
+    role="dialog"
+    aria-modal="true"
+    [attr.aria-labelledby]="labelledBy()"
+    tabindex="-1"
+  >
+    <ng-content />
+  </div>
+</div>

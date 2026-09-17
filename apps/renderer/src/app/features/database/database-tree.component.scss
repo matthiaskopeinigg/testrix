@@ -1,0 +1,249 @@
+@use 'mixins';
+
+:host {
+  display: block;
+  width: 100%;
+  min-width: 0;
+}
+
+.tx-database-tree__list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  min-width: 0;
+  min-height: 8px;
+}
+
+.tx-database-tree__block {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  border-radius: 8px;
+}
+
+.tx-database-tree__item {
+  position: relative;
+  transition: opacity calc(var(--tx-motion-fast) * var(--tx-motion-scale, 1)) var(--tx-ease-out);
+}
+
+// Source row stays in place so the list never reflows mid-drag.
+.tx-database-tree__item.tx-dragging {
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+.tx-database-tree__block.is-drop-folder > .tx-database-tree__item {
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--tx-accent) 18%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tx-accent) 55%, transparent);
+  transition:
+    background-color calc(var(--tx-motion-fast) * var(--tx-motion-scale, 1)) var(--tx-ease-out),
+    box-shadow calc(var(--tx-motion-fast) * var(--tx-motion-scale, 1)) var(--tx-ease-out);
+}
+
+.tx-database-tree__block.is-just-moved > .tx-database-tree__item {
+  animation: tx-database-drop-glow calc(280ms * var(--tx-motion-scale, 1)) var(--tx-ease-out) both;
+}
+
+@keyframes tx-database-drop-glow {
+  0% {
+    background: color-mix(in srgb, var(--tx-accent) 20%, transparent);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tx-accent) 45%, transparent);
+  }
+
+  100% {
+    background: transparent;
+    box-shadow: inset 0 0 0 0 transparent;
+  }
+}
+
+// Rendered inside the shared drag layer, which owns positioning, lift, and tilt.
+.tx-database-preview {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 30px;
+  padding: 6px 10px;
+  border: 1px solid color-mix(in srgb, var(--tx-accent) 35%, var(--tx-border-subtle));
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--tx-bg-overlay) 97%, transparent);
+  box-shadow: var(--tx-shadow-2), var(--tx-glow);
+  color: var(--tx-text-primary);
+  font-size: 12px;
+  line-height: 1.2;
+  pointer-events: none;
+}
+
+.tx-database-preview.is-denied {
+  border-color: color-mix(in srgb, #ff6b7a 65%, transparent);
+}
+
+.tx-database-preview.is-into:not(.is-denied) {
+  border-color: color-mix(in srgb, var(--tx-accent) 70%, transparent);
+}
+
+.tx-database-preview__icon {
+  display: grid;
+  place-items: center;
+  min-width: 28px;
+  color: var(--tx-text-muted);
+}
+
+.tx-database-preview__method {
+  font-family: var(--tx-font-mono);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--tx-accent);
+}
+
+.tx-database-preview__method[data-method='POST'],
+.tx-database-preview__method[data-method='PUT'],
+.tx-database-preview__method[data-method='PATCH'] {
+  color: color-mix(in srgb, #5b9cff 80%, white);
+}
+
+.tx-database-preview__method[data-method='DELETE'] {
+  color: color-mix(in srgb, #ff6b7a 85%, white);
+}
+
+.tx-database-preview__name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tx-database-preview__status {
+  flex-shrink: 0;
+  font-family: var(--tx-font-mono);
+  font-size: 10px;
+  color: var(--tx-text-faint);
+}
+
+.tx-database-preview__badge {
+  flex-shrink: 0;
+  padding: 2px 6px;
+  border-radius: 99px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.tx-database-preview__badge:not(.is-deny):not(.is-into) {
+  min-width: 18px;
+  text-align: center;
+  background: color-mix(in srgb, var(--tx-accent) 18%, transparent);
+  color: var(--tx-accent);
+}
+
+.tx-database-preview__badge.is-deny {
+  background: color-mix(in srgb, #ff6b7a 22%, transparent);
+  color: #ff8b96;
+}
+
+.tx-database-preview__badge.is-into {
+  background: color-mix(in srgb, var(--tx-accent) 20%, transparent);
+  color: var(--tx-accent);
+}
+
+.tx-database-tree__skeletons {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 6px 8px 10px calc(34px + (var(--tx-tree-depth, 0) * 14px));
+}
+
+.tx-database-tree__skeletons span {
+  display: block;
+  height: 8px;
+  border-radius: 99px;
+  background: color-mix(in srgb, var(--tx-text-faint) 28%, transparent);
+  animation: tx-database-skel calc(1.1s * var(--tx-motion-scale, 1)) ease-in-out infinite;
+}
+
+.tx-database-tree__skeletons span:nth-child(1) {
+  width: 64%;
+}
+
+.tx-database-tree__skeletons span:nth-child(2) {
+  width: 48%;
+  animation-delay: 0.12s;
+}
+
+.tx-database-tree__skeletons span:nth-child(3) {
+  width: 56%;
+  animation-delay: 0.24s;
+}
+
+@keyframes tx-database-skel {
+  50% {
+    opacity: 0.4;
+  }
+}
+
+.tx-database-tree__filter {
+  padding: 2px 8px 6px calc(8px + (var(--tx-tree-depth, 0) * 14px));
+}
+
+.tx-database-tree__filter input {
+  @include mixins.tx-focus-ring;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 26px;
+  padding: 0 8px;
+  border: 1px solid var(--tx-border-subtle);
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--tx-bg-canvas) 82%, transparent);
+  color: var(--tx-text-primary);
+  font: inherit;
+  font-size: 11px;
+}
+
+.tx-database-tree__filter input::placeholder {
+  color: var(--tx-text-faint);
+}
+
+.tx-database-tree__more {
+  @include mixins.tx-press;
+  @include mixins.tx-focus-ring;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: calc(100% - 8px);
+  min-height: 26px;
+  margin: 0 4px 4px;
+  padding: 0 8px 0 calc(4px + (var(--tx-tree-depth, 0) * 14px));
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--tx-accent);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 650;
+  text-align: left;
+  cursor: pointer;
+}
+
+.tx-database-tree__more:hover {
+  background: color-mix(in srgb, var(--tx-accent) 12%, transparent);
+}
+
+.tx-database-tree__more span {
+  color: var(--tx-text-faint);
+  font-weight: 500;
+}
+
+.tx-database-tree__empty {
+  margin: 0;
+  padding: 4px 8px 8px calc(8px + (var(--tx-tree-depth, 0) * 14px));
+  color: var(--tx-text-faint);
+  font-size: 11px;
+}

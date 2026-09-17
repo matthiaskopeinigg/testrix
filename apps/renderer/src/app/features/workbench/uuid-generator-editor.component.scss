@@ -1,0 +1,194 @@
+@use 'mixins';
+
+:host {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+}
+
+.tx-uuid-editor {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+}
+
+.tx-uuid-editor__head {
+  display: flex;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px 16px;
+  padding: 16px 12px 0;
+}
+
+.tx-uuid-editor__title h1 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 650;
+  letter-spacing: -0.03em;
+}
+
+.tx-uuid-editor__title p {
+  margin: 6px 0 0;
+  color: var(--tx-text-muted);
+  font-size: var(--tx-type-chrome);
+  line-height: 1.45;
+}
+
+.tx-uuid-editor__controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+}
+
+.tx-uuid-editor__composer {
+  display: flex;
+  align-items: stretch;
+  flex-shrink: 0;
+  height: 44px;
+  margin: 12px 12px 0;
+  overflow: hidden;
+  border: 1px solid var(--tx-border-subtle);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--tx-bg-chrome) 82%, var(--tx-bg-canvas));
+}
+
+.tx-uuid-editor__composer > tx-hint {
+  display: flex;
+  align-self: stretch;
+  width: max-content;
+  max-width: none;
+  height: 100%;
+}
+
+.tx-uuid-editor__mark {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  min-width: 52px;
+  padding: 0 10px;
+  border-right: 1px solid var(--tx-border-subtle);
+  color: var(--tx-accent);
+  background: color-mix(in srgb, var(--tx-accent) 12%, transparent);
+  font-family: var(--tx-font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.tx-uuid-editor__field {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+}
+
+.tx-uuid-editor__field input {
+  @include mixins.tx-focus-ring;
+  width: 100%;
+  height: 100%;
+  padding: 0 12px;
+  border: 0;
+  background: transparent;
+  color: var(--tx-text-primary);
+  font-family: var(--tx-font-mono);
+  font-size: 13px;
+  letter-spacing: 0.02em;
+}
+
+.tx-uuid-editor__field input:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+.tx-uuid-editor__copy {
+  @include mixins.tx-press;
+  flex-shrink: 0;
+  height: 100%;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 0;
+  border-left: 1px solid var(--tx-border-subtle);
+  background: transparent;
+  color: var(--tx-text-muted);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.tx-uuid-editor__copy:hover {
+  color: var(--tx-text-primary);
+  background: var(--tx-bg-hover);
+}
+
+.tx-uuid-editor__generate {
+  @include mixins.tx-press;
+  flex-shrink: 0;
+  height: 100%;
+  padding: 0 14px;
+  border: 0;
+  background: var(--tx-accent);
+  color: var(--tx-on-accent);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 650;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.tx-uuid-editor__generate:hover {
+  background: var(--tx-accent-hover);
+}
+
+.tx-uuid-editor__facts {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  flex-shrink: 0;
+  gap: 8px 16px;
+  margin: 12px;
+  padding: 10px 14px;
+  border: 1px solid var(--tx-border-subtle);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--tx-bg-chrome) 55%, var(--tx-bg-canvas));
+}
+
+.tx-uuid-editor__facts div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.tx-uuid-editor__facts dt {
+  color: var(--tx-text-muted);
+  font-size: 11px;
+}
+
+.tx-uuid-editor__facts dd {
+  margin: 0;
+  overflow: hidden;
+  color: var(--tx-text-primary);
+  font-family: var(--tx-font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  border: 0;
+  white-space: nowrap;
+}

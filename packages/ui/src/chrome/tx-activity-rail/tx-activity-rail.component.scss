@@ -1,0 +1,120 @@
+@use 'mixins';
+
+:host {
+  display: flex;
+  flex-direction: column;
+  width: var(--tx-rail-width);
+  height: 100%;
+  flex-shrink: 0;
+  overflow: visible;
+  z-index: calc(var(--tx-z-chrome) + 1);
+}
+
+.tx-rail {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  min-height: 0;
+  gap: 6px;
+  height: 100%;
+  padding: 10px 0 12px;
+  background: var(--tx-bg-chrome);
+}
+
+:host:not(.is-collapsed) .tx-rail {
+  background:
+    linear-gradient(
+      90deg,
+      var(--tx-bg-chrome) 0%,
+      var(--tx-bg-chrome) 58%,
+      color-mix(in srgb, var(--tx-bg-app) 48%, var(--tx-bg-chrome)) 100%
+    );
+}
+
+:host:not(.is-collapsed) .tx-rail::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 22px;
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--tx-bg-app) 35%, transparent)
+  );
+}
+
+.tx-rail__stack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.tx-rail__footer {
+  margin-top: auto;
+}
+
+:host ::ng-deep .tx-rail__hint {
+  display: flex;
+  justify-content: center;
+}
+
+.tx-rail__pill {
+  position: absolute;
+  left: 6px;
+  top: 0;
+  width: 3px;
+  height: 22px;
+  border-radius: 99px;
+  background: var(--tx-accent);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--tx-accent) 70%, transparent);
+  will-change: transform;
+  transition:
+    transform calc(120ms * var(--tx-motion-scale, 1)) var(--tx-ease-out),
+    opacity calc(120ms * var(--tx-motion-scale, 1)) var(--tx-ease-out);
+}
+
+.tx-rail__pill.is-hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.tx-rail__btn {
+  @include mixins.tx-press;
+  @include mixins.tx-hover-fill;
+  @include mixins.tx-focus-ring;
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--tx-text-muted);
+  cursor: pointer;
+  transition:
+    transform calc(50ms * var(--tx-motion-scale, 1)) var(--tx-ease-out),
+    background-color calc(var(--tx-motion-fast) * var(--tx-motion-scale, 1)) var(--tx-ease-out),
+    color calc(var(--tx-motion-fast) * var(--tx-motion-scale, 1)) var(--tx-ease-out);
+}
+
+.tx-rail__btn.is-active {
+  color: var(--tx-text-primary);
+  background: var(--tx-bg-active);
+}
+
+.tx-rail__soon {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  width: 5px;
+  height: 5px;
+  border-radius: 99px;
+  background: var(--tx-accent);
+}

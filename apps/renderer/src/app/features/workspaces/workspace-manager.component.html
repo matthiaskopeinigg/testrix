@@ -1,0 +1,130 @@
+<tx-overlay [labelledBy]="titleId" (closed)="handleClose()">
+  <div class="tx-ws-manager">
+    <header class="tx-ws-manager__head">
+      <div>
+        <h2 class="tx-ws-manager__title" [id]="titleId">Manage workspaces</h2>
+        <p class="tx-ws-manager__lede">Each workspace keeps its own collections and environments on this PC.</p>
+      </div>
+      <tx-hint label="Close" keys="Esc" placement="left">
+        <button type="button" class="tx-ws-manager__icon" aria-label="Close" (click)="handleClose()">
+          <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+            <path d="M3 3l8 8M11 3 3 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+          </svg>
+        </button>
+      </tx-hint>
+    </header>
+
+    <ul class="tx-ws-manager__list" role="list">
+      @for (item of items(); track item.id) {
+        <li class="tx-ws-manager__item" [class.is-active]="activeId() === item.id">
+          @if (isRenaming(item.id)) {
+            <div class="tx-ws-manager__draft" (keydown)="handleDraftKey($event)">
+              <tx-input
+                [id]="'workspace-rename-' + item.id"
+                placeholder="Workspace name"
+                ariaLabel="Rename workspace"
+                [value]="draftValue()"
+                (valueChange)="handleDraftInput($event)"
+              />
+              <div class="tx-ws-manager__draft-actions">
+                <tx-button variant="ghost" (clicked)="cancelDraft()">Cancel</tx-button>
+                <tx-button variant="secondary" (clicked)="commitDraft()">Save</tx-button>
+              </div>
+            </div>
+          } @else {
+            <button
+              type="button"
+              class="tx-ws-manager__name"
+              [attr.aria-current]="activeId() === item.id ? 'true' : null"
+              (click)="handleSwitch(item.id)"
+            >
+              <span>{{ workspaceLabel(item) }}</span>
+              @if (activeId() === item.id) {
+                <span class="tx-ws-manager__current">Current</span>
+              }
+            </button>
+            <div class="tx-ws-manager__actions">
+              <tx-hint label="Rename" placement="bottom">
+                <button
+                  type="button"
+                  class="tx-ws-manager__icon"
+                  aria-label="Rename workspace"
+                  (click)="startRename(item.id, item.name)"
+                >
+                  <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
+                    <path
+                      d="M2 8.8 8.2 2.6l1.2 1.2L3.2 10H2V8.8z"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.2"
+                      stroke-linejoin="round"
+                    />
+                  </svg>
+                </button>
+              </tx-hint>
+              <tx-hint label="Duplicate" placement="bottom">
+                <button
+                  type="button"
+                  class="tx-ws-manager__icon"
+                  aria-label="Duplicate workspace"
+                  (click)="handleDuplicate(item.id)"
+                >
+                  <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
+                    <rect x="2" y="3.5" width="6" height="6" rx="1" fill="none" stroke="currentColor" stroke-width="1.2" />
+                    <path
+                      d="M4.5 3.5V2.8A.8.8 0 0 1 5.3 2H9.2A.8.8 0 0 1 10 2.8V6.7a.8.8 0 0 1-.8.8H8.5"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.2"
+                    />
+                  </svg>
+                </button>
+              </tx-hint>
+              @if (canDelete()) {
+                <tx-hint label="Delete" placement="bottom">
+                  <button
+                    type="button"
+                    class="tx-ws-manager__icon is-danger"
+                    aria-label="Delete workspace"
+                    (click)="handleDelete(item.id)"
+                  >
+                    <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
+                      <path
+                        d="M3 3.5h6M5 3.5V2.6h2v.9M4.2 3.5 4.5 9.4h3l.3-5.9"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
+                    </svg>
+                  </button>
+                </tx-hint>
+              }
+            </div>
+          }
+        </li>
+      }
+    </ul>
+
+    <footer class="tx-ws-manager__foot">
+      @if (draft()?.kind === 'create') {
+        <div class="tx-ws-manager__draft" (keydown)="handleDraftKey($event)">
+          <tx-input
+            id="workspace-new-name"
+            placeholder="Workspace name"
+            ariaLabel="New workspace name"
+            [value]="draftValue()"
+            (valueChange)="handleDraftInput($event)"
+          />
+          <div class="tx-ws-manager__draft-actions">
+            <tx-button variant="ghost" (clicked)="cancelDraft()">Cancel</tx-button>
+            <tx-button variant="primary" (clicked)="commitDraft()">Create</tx-button>
+          </div>
+        </div>
+      } @else {
+        <tx-button variant="secondary" (clicked)="startCreate()">New workspace</tx-button>
+      }
+    </footer>
+  </div>
+</tx-overlay>

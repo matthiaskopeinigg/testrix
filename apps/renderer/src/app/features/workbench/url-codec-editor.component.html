@@ -1,0 +1,142 @@
+<section class="tx-tool" [attr.aria-label]="tab().title">
+  <header class="tx-tool__head">
+    <div class="tx-tool__title">
+      <h1>URL Encode / Decode</h1>
+      <p>Percent-encode a component or a full URI, then round-trip query pairs.</p>
+    </div>
+    <div class="tx-tool__modes">
+      <div class="tx-tool__modes" role="tablist" aria-label="URL codec mode">
+        <button
+          type="button"
+          class="tx-tool__mode"
+          role="tab"
+          [class.is-active]="mode() === 'encode'"
+          [attr.aria-selected]="mode() === 'encode'"
+          (click)="setMode('encode')"
+        >
+          Encode
+        </button>
+        <button
+          type="button"
+          class="tx-tool__mode"
+          role="tab"
+          [class.is-active]="mode() === 'decode'"
+          [attr.aria-selected]="mode() === 'decode'"
+          (click)="setMode('decode')"
+        >
+          Decode
+        </button>
+      </div>
+      <div class="tx-tool__modes" role="tablist" aria-label="URL codec kind">
+        <button
+          type="button"
+          class="tx-tool__mode"
+          role="tab"
+          [class.is-active]="kind() === 'component'"
+          [attr.aria-selected]="kind() === 'component'"
+          (click)="setKind('component')"
+        >
+          Component
+        </button>
+        <button
+          type="button"
+          class="tx-tool__mode"
+          role="tab"
+          [class.is-active]="kind() === 'uri'"
+          [attr.aria-selected]="kind() === 'uri'"
+          (click)="setKind('uri')"
+        >
+          Full URI
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <div class="tx-tool__split">
+    <div class="tx-tool__pane">
+      <div class="tx-tool__pane-label">Input</div>
+      <label class="tx-tool__body">
+        <span class="visually-hidden">URL input</span>
+        <textarea
+          class="tx-tool__textarea"
+          [value]="source()"
+          spellcheck="false"
+          (input)="handleSource($event)"
+        ></textarea>
+      </label>
+    </div>
+    <div class="tx-tool__pane">
+      <div class="tx-tool__pane-label">Output</div>
+      @if (error(); as message) {
+        <p class="tx-tool__error">{{ message }}</p>
+      }
+      <div class="tx-tool__stack">
+        <div class="tx-tool__stack-block">
+          <div class="tx-tool__body">
+            <pre class="tx-tool__pre">{{ output() }}</pre>
+          </div>
+        </div>
+        <div class="tx-tool__stack-block">
+          <div class="tx-tool__pane-label">Query pairs</div>
+          <div class="tx-tool__body">
+            <div class="tx-tool__table">
+              @for (pair of pairs(); track $index) {
+                <div class="tx-tool__row">
+                  <input
+                    type="text"
+                    [value]="pair.key"
+                    spellcheck="false"
+                    aria-label="Query key"
+                    placeholder="key"
+                    (input)="handlePair($index, 'key', $event)"
+                  />
+                  <input
+                    type="text"
+                    [value]="pair.value"
+                    spellcheck="false"
+                    aria-label="Query value"
+                    placeholder="value"
+                    (input)="handlePair($index, 'value', $event)"
+                  />
+                  <tx-hint label="Remove pair" placement="left">
+                    <button
+                      type="button"
+                      class="tx-tool__icon-btn"
+                      aria-label="Remove pair"
+                      (click)="removePair($index)"
+                    >
+                      ×
+                    </button>
+                  </tx-hint>
+                </div>
+              }
+            </div>
+            <button type="button" class="tx-tool__btn" (click)="addPair()">Add pair</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="tx-tool__footer">
+    <tx-hint label="Copy output" placement="top">
+      <button
+        type="button"
+        class="tx-tool__btn tx-tool__btn--accent"
+        [disabled]="!output()"
+        aria-label="Copy output"
+        (click)="copyOutput($event)"
+      >
+        Copy
+      </button>
+    </tx-hint>
+    <tx-hint label="Swap input and output" placement="top">
+      <button type="button" class="tx-tool__btn" aria-label="Swap input and output" (click)="swap()">
+        Swap
+      </button>
+    </tx-hint>
+    <tx-hint label="Clear input" placement="top">
+      <button type="button" class="tx-tool__btn" aria-label="Clear input" (click)="clear()">Clear</button>
+    </tx-hint>
+  </footer>
+</section>

@@ -1,0 +1,32 @@
+<label class="tx-field" [class.is-multiline]="multiline()">
+  @if (label()) {
+    <span class="tx-field__label">{{ label() }}</span>
+  }
+  <span class="tx-field__shell">
+    @if (multiline()) {
+      <textarea
+        class="tx-field__input tx-field__input--area"
+        [id]="id()"
+        [value]="value()"
+        [placeholder]="placeholder()"
+        [attr.rows]="rows()"
+        [attr.aria-label]="ariaLabel()"
+        spellcheck="false"
+        (input)="handleInput($event)"
+      ></textarea>
+    } @else {
+      <input
+        class="tx-field__input"
+        [id]="id()"
+        [attr.type]="type()"
+        [value]="value()"
+        [placeholder]="placeholder()"
+        [attr.autocomplete]="autocomplete()"
+        [attr.aria-label]="ariaLabel()"
+        spellcheck="false"
+        (input)="handleInput($event)"
+      />
+    }
+    <ng-content />
+  </span>
+</label>

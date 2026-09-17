@@ -1,0 +1,7 @@
+@use './tool-chrome';
+
+:host {
+  @include tool-chrome.host;
+}
+
+@include tool-chrome.styles;

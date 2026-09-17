@@ -1,0 +1,58 @@
+{
+  "name": "testrix",
+  "version": "2.0.0-beta.1",
+  "description": "Testrix — local-first desktop API workbench",
+  "license": "MIT",
+  "private": true,
+  "type": "module",
+  "author": "Testrix contributors",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/matthiaskopeinigg/testrix.git"
+  },
+  "packageManager": "npm@11.6.2",
+  "engines": {
+    "node": ">=20.11.0"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "node tooling/scripts/serve-desktop.mjs --devtools",
+    "start": "node tooling/scripts/serve-desktop.mjs",
+    "start:compare": "cross-env TESTRIX_COMPARE=1 node tooling/scripts/serve-desktop.mjs",
+    "build": "npm run sync:brand && npm run build --workspace=@testrix/renderer && npm run electron:bundle",
+    "test": "vitest run",
+    "lint": "echo skip",
+    "sync:brand": "node tooling/scripts/sync-brand-assets.mjs",
+    "electron:bundle": "node tooling/scripts/bundle-electron.mjs",
+    "setup:preview": "node tooling/scripts/preview-ui.mjs installer",
+    "setup:preview:uninstall": "node tooling/scripts/preview-ui.mjs uninstaller",
+    "preview:splash": "node tooling/scripts/preview-ui.mjs splash",
+    "preview:boot-error": "node tooling/scripts/preview-ui.mjs boot-error",
+    "preview:app-error": "node tooling/scripts/preview-ui.mjs app-error",
+    "preview:installer": "node tooling/scripts/preview-ui.mjs installer",
+    "preview:uninstaller": "node tooling/scripts/preview-ui.mjs uninstaller",
+    "electron:build:win:payload": "node tooling/scripts/pack-payload.mjs --platform=win",
+    "electron:build:win:setup": "node tooling/scripts/pack-setup.mjs --platform=win",
+    "electron:pack": "npm run build && npm run electron:build:win:payload && npm run electron:build:win:setup",
+    "db:up": "docker compose up -d",
+    "db:down": "docker compose down",
+    "db:reset": "docker compose down -v && docker compose up -d",
+    "db:ps": "docker compose ps"
+  },
+  "devDependencies": {
+    "@types/node": "^24.5.2",
+    "concurrently": "^9.2.4",
+    "cross-env": "^10.1.0",
+    "electron": "^44.3.0",
+    "esbuild": "^0.27.7",
+    "png-to-ico": "^3.0.2",
+    "prettier": "^3.9.6",
+    "sharp": "^0.35.4",
+    "typescript": "~6.0.3",
+    "vitest": "^4.1.10",
+    "wait-on": "^9.1.0"
+  }
+}

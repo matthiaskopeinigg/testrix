@@ -1,0 +1,119 @@
+<div class="tx-collections-tree__list">
+  @for (node of nodes(); track node.id) {
+    <div
+      class="tx-collections-tree__block"
+      [attr.data-flip-id]="node.id"
+      [class.is-drop-folder]="isDropFolder(node.id)"
+      [class.is-just-moved]="isJustMoved(node.id)"
+    >
+      <div
+        class="tx-collections-tree__item"
+        [txDraggable]="node"
+        [txDraggableDisabled]="dragDisabled()"
+        [txDraggablePreview]="dragPreview"
+        [txDraggableScrollContainer]="dnd.scrollContainer()"
+        [attr.data-node-id]="node.id"
+        (dragStarted)="handleDragStarted($event)"
+        (dragMoved)="handleDragMoved($event)"
+        (dragEnded)="handleDragEnded($event)"
+      >
+        <tx-collections-tree-node
+          [node]="node"
+          [depth]="depth()"
+          [expanded]="isExpanded(node)"
+          [open]="isNodeOpen(node.id)"
+          [active]="isNodeActive(node.id)"
+          [selected]="store.isSelected(node.id)"
+          [renaming]="renamingId() === node.id"
+          (toggle)="handleToggle($event)"
+          (selectNode)="handleSelect($event)"
+          (reorder)="handleReorder($event)"
+          (nodeMenu)="nodeMenu.emit($event)"
+          (renameStart)="renameStart.emit($event)"
+          (renameInput)="renameInput.emit($event)"
+          (renameKey)="renameKey.emit($event)"
+          (renameBlur)="renameBlur.emit()"
+        />
+      </div>
+
+      @if (asFolder(node); as folder) {
+        @if (isExpanded(folder)) {
+          <div class="tx-tree-reveal" animate.enter="tx-tree-expand" animate.leave="tx-tree-collapse">
+            <div class="tx-tree-reveal__clip">
+              <tx-collections-tree
+                [nodes]="folder.children"
+                [parentId]="folder.id"
+                [depth]="depth() + 1"
+                [renamingId]="renamingId()"
+                (nodeMenu)="nodeMenu.emit($event)"
+                (renameStart)="renameStart.emit($event)"
+                (renameInput)="renameInput.emit($event)"
+                (renameKey)="renameKey.emit($event)"
+                (renameBlur)="renameBlur.emit()"
+              />
+            </div>
+          </div>
+        }
+      }
+    </div>
+  }
+</div>
+
+<ng-template #dragPreview let-node>
+  <div
+    class="tx-collections-preview"
+    [class.is-denied]="store.dropTarget()?.denied"
+    [class.is-into]="store.dropTarget()?.mode === 'into'"
+  >
+    <span class="tx-collections-preview__icon" aria-hidden="true">
+      @switch (node.kind) {
+        @case ('folder') {
+          <svg width="14" height="14" viewBox="0 0 14 14">
+            <path
+              d="M2 3.5h3.2l1 1.2H12v6.3H2V3.5z"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.25"
+              stroke-linejoin="round"
+            />
+          </svg>
+        }
+        @case ('http') {
+          <span class="tx-collections-preview__method" [attr.data-method]="asHttp(node)?.method">{{
+            asHttp(node)?.method
+          }}</span>
+        }
+        @case ('websocket') {
+          <svg width="14" height="14" viewBox="0 0 14 14">
+            <path
+              d="M3.2 7h7.6M5 4.5 7.5 7 5 9.5M9 4.5 6.5 7 9 9.5"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.25"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+        }
+      }
+    </span>
+
+    <span class="tx-collections-preview__name">{{ node.name }}</span>
+
+    @if (dragCount() > 1) {
+      <span class="tx-collections-preview__badge">{{ dragCount() }}</span>
+    }
+
+    @if (asHttp(node); as http) {
+      @if (http.status !== null) {
+        <span class="tx-collections-preview__status">{{ http.status }}</span>
+      }
+    }
+
+    @if (store.dropTarget()?.denied) {
+      <span class="tx-collections-preview__badge is-deny" aria-hidden="true">Not allowed</span>
+    } @else if (store.dropTarget()?.mode === 'into') {
+      <span class="tx-collections-preview__badge is-into" aria-hidden="true">Into folder</span>
+    }
+  </div>
+</ng-template>

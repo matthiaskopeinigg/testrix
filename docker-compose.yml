@@ -1,0 +1,147 @@
+# Local engines for Database sidebar Test / query work.
+# SQLite is file-based and is not run here.
+#
+#   docker compose up -d
+#   docker compose --profile oracle up -d
+#
+# Shared login is testrix / testrix except where an engine forbids it (see docs/development.md).
+
+name: testrix
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    ports:
+      - '5432:5432'
+    environment:
+      POSTGRES_USER: testrix
+      POSTGRES_PASSWORD: testrix
+      POSTGRES_DB: testrix
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U testrix -d testrix']
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  mysql:
+    image: mysql:8.4
+    ports:
+      - '3306:3306'
+    environment:
+      MYSQL_ROOT_PASSWORD: testrix
+      MYSQL_USER: testrix
+      MYSQL_PASSWORD: testrix
+      MYSQL_DATABASE: testrix
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./docker/mysql/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ['CMD', 'mysqladmin', 'ping', '-h', '127.0.0.1', '-utestrix', '-ptestrix']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  mariadb:
+    image: mariadb:11
+    ports:
+      - '3307:3306'
+    environment:
+      MARIADB_ROOT_PASSWORD: testrix
+      MARIADB_USER: testrix
+      MARIADB_PASSWORD: testrix
+      MARIADB_DATABASE: testrix
+    volumes:
+      - mariadb-data:/var/lib/mysql
+      - ./docker/mysql/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ['CMD', 'healthcheck.sh', '--connect', '--innodb_initialized']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  mssql:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    ports:
+      - '1433:1433'
+    environment:
+      ACCEPT_EULA: 'Y'
+      MSSQL_SA_PASSWORD: Testrix_Dev1!
+    volumes:
+      - mssql-data:/var/opt/mssql
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          '/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P Testrix_Dev1! -C -Q "SELECT 1" -b -o /dev/null',
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+
+  mssql-init:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    depends_on:
+      mssql:
+        condition: service_healthy
+    volumes:
+      - ./docker/mssql/init.sql:/init.sql:ro
+    entrypoint: ['/opt/mssql-tools18/bin/sqlcmd']
+    command: ['-S', 'mssql', '-U', 'sa', '-P', 'Testrix_Dev1!', '-C', '-i', '/init.sql']
+    restart: on-failure
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - '6379:6379'
+    command: ['redis-server', '--save', '', '--appendonly', 'no']
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  mongodb:
+    image: mongo:7
+    ports:
+      - '27017:27017'
+    environment:
+      MONGO_INITDB_DATABASE: testrix
+    volumes:
+      - mongo-data:/data/db
+      - ./docker/mongo/init.js:/docker-entrypoint-initdb.d/01-init.js:ro
+    healthcheck:
+      test: ['CMD', 'mongosh', '--quiet', '--eval', 'db.runCommand({ ping: 1 }).ok']
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  oracle:
+    profiles: ['oracle']
+    image: gvenzl/oracle-free:23-slim-faststart
+    ports:
+      - '1521:1521'
+    environment:
+      ORACLE_PASSWORD: testrix1
+      APP_USER: testrix
+      APP_USER_PASSWORD: testrix1
+    volumes:
+      - oracle-data:/opt/oracle/oradata
+      - ./docker/oracle/init.sql:/container-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ['CMD', 'healthcheck.sh']
+      interval: 10s
+      timeout: 10s
+      retries: 30
+      start_period: 40s
+
+volumes:
+  postgres-data:
+  mysql-data:
+  mariadb-data:
+  mssql-data:
+  mongo-data:
+  oracle-data:

@@ -1,0 +1,62 @@
+<div class="tx-workbench" [class.has-tabs]="hasTabs()">
+  @if (hasTabs()) {
+    <div
+      class="tx-workbench__splits"
+      [class.is-split]="groups().length > 1"
+      [class.is-split-preview]="!!splitPreview()"
+      [class.is-dragging]="dragging()"
+    >
+      @for (group of groups(); track group.id; let index = $index) {
+        <div class="tx-workbench__pane" [style.flex]="groupFlex(index)">
+          <tx-workbench-group
+            [group]="group"
+            [listId]="listId(group.id)"
+            [connectedTo]="connectedTo(group.id)"
+            [focused]="focusedGroupId() === group.id"
+            [justOpenedId]="store.justOpenedId()"
+            (select)="handleSelect(group.id, $event)"
+            (close)="handleClose(group.id, $event)"
+            (reorder)="handleReorder(group.id, $event)"
+            (transfer)="handleTransfer($event)"
+            (focusGroup)="handleFocusGroup(group.id)"
+            (dragStart)="handleDragStart()"
+            (dragEnd)="handleDragEnd()"
+          />
+        </div>
+        @if (index < groups().length - 1) {
+          <div
+            class="tx-workbench__sash"
+            role="separator"
+            aria-orientation="vertical"
+            aria-label="Resize editor groups"
+            (pointerdown)="handleResizeStart($event)"
+          ></div>
+        }
+      }
+
+      @if (canSplit()) {
+        <div
+          class="tx-workbench__split-zone"
+          [class.is-active]="!!splitPreview()"
+          cdkDropList
+          [id]="splitRightId"
+          [cdkDropListData]="splitBucket"
+          (cdkDropListEntered)="handleSplitEntered($event)"
+          (cdkDropListExited)="handleSplitExited()"
+          (cdkDropListDropped)="handleSplitDrop($event)"
+        >
+          <div class="tx-workbench__split-ghost" aria-hidden="true">
+            <div class="tx-workbench__split-ghost-pane is-left"></div>
+            <div class="tx-workbench__split-ghost-pane is-right">
+              <span class="tx-workbench__split-ghost-label">
+                Split · {{ splitPreviewTab()?.title ?? 'right' }}
+              </span>
+            </div>
+          </div>
+        </div>
+      }
+    </div>
+  } @else {
+    <tx-welcome />
+  }
+</div>

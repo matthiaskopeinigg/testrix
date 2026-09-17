@@ -1,0 +1,9 @@
+<div class="tx-empty">
+  <h3 class="tx-empty__title">{{ title() }}</h3>
+  @if (body()) {
+    <p class="tx-empty__body">{{ body() }}</p>
+  }
+  <div class="tx-empty__actions">
+    <ng-content />
+  </div>
+</div>

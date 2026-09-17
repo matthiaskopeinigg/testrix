@@ -1,0 +1,9 @@
+<footer class="tx-statusbar">
+  <span class="tx-statusbar__live" aria-hidden="true"></span>
+  <span>{{ locality() }}</span>
+  <span class="tx-statusbar__spacer"></span>
+  @if (version()) {
+    <span class="tx-statusbar__chip">{{ version() }}</span>
+  }
+  <span class="tx-statusbar__chip tx-statusbar__chip--motion">Motion {{ motionSpeed() }}</span>
+</footer>

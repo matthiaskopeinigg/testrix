@@ -1,0 +1,93 @@
+@use 'mixins';
+
+.tx-palette {
+  display: flex;
+  flex-direction: column;
+  border-radius: 12px;
+  background: var(--tx-bg-overlay);
+}
+
+.tx-palette__search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 10px 10px;
+  color: var(--tx-text-faint);
+  border-bottom: 1px solid var(--tx-border-subtle);
+}
+
+.tx-palette__search input {
+  @include mixins.tx-focus-ring;
+  flex: 1;
+  min-height: 40px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--tx-text-primary);
+  font-size: 15px;
+}
+
+.tx-palette__search input:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+.tx-palette__list {
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tx-palette__item {
+  @include mixins.tx-press;
+  @include mixins.tx-hover-fill;
+  @include mixins.tx-focus-ring;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 52px;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.tx-palette__item.is-active,
+.tx-palette__item:hover {
+  background: color-mix(in srgb, var(--tx-accent) 18%, var(--tx-bg-overlay));
+}
+
+.tx-palette__copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.tx-palette__label {
+  font-weight: 620;
+}
+
+.tx-palette__desc {
+  color: var(--tx-text-muted);
+  font-size: 12px;
+}
+
+.tx-palette__empty {
+  padding: 24px 12px;
+  color: var(--tx-text-muted);
+  text-align: center;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}

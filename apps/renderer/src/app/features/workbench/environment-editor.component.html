@@ -1,0 +1,289 @@
+<div class="tx-env-editor" (contextmenu)="$event.preventDefault()" (pointerdown)="syncDnd()">
+  @if (environment(); as env) {
+    <div class="tx-env-split">
+      <aside class="tx-env-nav" aria-label="Variables and folders">
+        <div class="tx-env-nav__bar">
+          <tx-input
+            class="tx-env-nav__search"
+            id="env-tree-search"
+            type="search"
+            placeholder="Search"
+            ariaLabel="Search variables and folders"
+            [value]="query()"
+            (valueChange)="handleSearch($event)"
+          />
+        </div>
+
+        <nav
+          class="tx-env-nav__list"
+          #treeList
+          (click)="handleTreeChromeClick($event)"
+          (contextmenu)="handleRootMenu($event)"
+        >
+          @if (visibleTree().length === 0) {
+            <p class="tx-env-nav__empty">
+              {{ isFiltering() ? 'Nothing matches this search.' : 'Add a folder or variable to get started.' }}
+            </p>
+          } @else {
+            <tx-environment-tree
+              [nodes]="visibleTree()"
+              [envId]="env.id"
+              [parentId]="null"
+              [depth]="0"
+              [focusedId]="selectedId()"
+              [renamingId]="renamingId()"
+              [menuTargetId]="menuTargetId()"
+              [dragDisabled]="dragDisabled()"
+              (selectNode)="handleSelect($event)"
+              (toggle)="handleToggle($event)"
+              (nodeMenu)="handleNodeMenu($event)"
+              (renameStart)="handleRenameStart($event)"
+              (renameInput)="handleFolderName($event)"
+              (renameKey)="handleFolderRenameKey($event)"
+              (renameBlur)="finishRename()"
+            />
+          }
+          <div
+            class="tx-env-indicator"
+            [class.is-visible]="dnd.isIndicatorVisible()"
+            [style.transform]="'translate3d(0, ' + dnd.indicatorY() + 'px, 0)'"
+            aria-hidden="true"
+          ></div>
+        </nav>
+      </aside>
+
+      <section class="tx-env-inspector" [attr.aria-label]="inspectorMode()">
+        @switch (inspectorMode()) {
+          @case ('variable') {
+            @if (focusedVariable(); as variable) {
+              <header class="tx-env-inspector__head">
+                <span class="tx-env-inspector__mark" aria-hidden="true">#</span>
+                <div class="tx-env-inspector__heading">
+                  <h2 class="tx-env-inspector__title">{{ variable.key.trim() || 'Untitled key' }}</h2>
+                </div>
+              </header>
+              <div class="tx-env-inspector__body">
+                <tx-input
+                  id="env-var-key"
+                  label="Key"
+                  placeholder="KEY_NAME"
+                  [ariaLabel]="'Rename variable ' + (variable.key || 'variable')"
+                  [value]="variable.key"
+                  (valueChange)="handleKey($event)"
+                />
+                <tx-input
+                  id="env-var-value"
+                  label="Value"
+                  placeholder="Value"
+                  [type]="variable.secret && !isRevealed(variable.id) ? 'password' : 'text'"
+                  [ariaLabel]="(variable.key || 'Variable') + ' value'"
+                  [value]="variable.value"
+                  (valueChange)="handleValue($event)"
+                >
+                  @if (variable.secret) {
+                    <tx-hint [label]="isRevealed(variable.id) ? 'Hide value' : 'Show value'" placement="left">
+                      <button
+                        type="button"
+                        class="tx-env-field__reveal"
+                        [attr.aria-label]="isRevealed(variable.id) ? 'Hide value' : 'Show value'"
+                        (click)="handleReveal(variable.id)"
+                      >
+                        <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+                          @if (isRevealed(variable.id)) {
+                            <path
+                              d="M2 7s2.2-3.2 5-3.2S12 7 12 7s-2.2 3.2-5 3.2S2 7 2 7z"
+                              fill="none"
+                              stroke="currentColor"
+                              stroke-width="1.3"
+                            />
+                            <circle cx="7" cy="7" r="1.4" fill="currentColor" />
+                          } @else {
+                            <path
+                              d="M2 7s2.2-3.2 5-3.2S12 7 12 7 9.8 10.2 7 10.2 2 7 2 7zM3.2 3.2l7.6 7.6"
+                              fill="none"
+                              stroke="currentColor"
+                              stroke-width="1.3"
+                              stroke-linecap="round"
+                            />
+                          }
+                        </svg>
+                      </button>
+                    </tx-hint>
+                  }
+                </tx-input>
+                <div class="tx-env-options">
+                  <p class="tx-env-options__label">Options</p>
+                  <tx-hint
+                    stretch
+                    [label]="variable.secret ? 'Stored as a secret' : 'Value is visible'"
+                    placement="right"
+                  >
+                    <tx-check
+                      [checked]="variable.secret"
+                      label="Secret"
+                      [detail]="variable.secret ? 'Hidden in the value field' : 'Shown as plain text'"
+                      (checkedChange)="handleSecretToggle()"
+                    />
+                  </tx-hint>
+                  <tx-hint
+                    stretch
+                    [label]="variable.enabled ? 'Used in requests' : 'Skipped in requests'"
+                    placement="right"
+                  >
+                    <tx-check
+                      [checked]="variable.enabled"
+                      label="Enabled"
+                      [detail]="variable.enabled ? 'Included when sending requests' : 'Ignored when sending requests'"
+                      (checkedChange)="handleEnabledToggle()"
+                    />
+                  </tx-hint>
+                </div>
+                <tx-input
+                  id="env-var-description"
+                  label="Description"
+                  multiline
+                  [rows]="4"
+                  placeholder="Optional notes about this variable"
+                  [ariaLabel]="(variable.key || 'Variable') + ' description'"
+                  [value]="text(variable.description)"
+                  (valueChange)="handleDescription($event)"
+                />
+              </div>
+            }
+          }
+          @case ('folder') {
+            @if (focusedFolder(); as folder) {
+              <header class="tx-env-inspector__head">
+                <span class="tx-env-inspector__icon" aria-hidden="true">
+                  <svg width="18" height="18" viewBox="0 0 14 14">
+                    <path
+                      d="M2 3.5h3.2l1 1.2H12v6.3H2V3.5z"
+                      fill="currentColor"
+                      fill-opacity="0.22"
+                      stroke="currentColor"
+                      stroke-width="1.25"
+                      stroke-linejoin="round"
+                    />
+                  </svg>
+                </span>
+                <div class="tx-env-inspector__heading">
+                  <h2 class="tx-env-inspector__title">{{ folder.name.trim() || 'Untitled folder' }}</h2>
+                  <p class="tx-env-inspector__meta">
+                    {{ folderVariableCount(folder) }}
+                    {{ folderVariableCount(folder) === 1 ? 'variable' : 'variables' }}
+                    · {{ folderChildFolderCount(folder) }}
+                    {{ folderChildFolderCount(folder) === 1 ? 'folder' : 'folders' }}
+                  </p>
+                </div>
+              </header>
+              <div class="tx-env-inspector__body">
+                <tx-input
+                  id="env-folder-name"
+                  label="Name"
+                  placeholder="Folder name"
+                  [ariaLabel]="'Rename folder ' + (folder.name || 'folder')"
+                  [value]="folder.name"
+                  (valueChange)="handleFolderTitle($event)"
+                />
+                <tx-input
+                  id="env-folder-description"
+                  label="Description"
+                  multiline
+                  [rows]="4"
+                  placeholder="What belongs in this folder"
+                  [ariaLabel]="'Description for ' + (folder.name || 'folder')"
+                  [value]="text(folder.description)"
+                  (valueChange)="handleFolderDescription($event)"
+                />
+                <div class="tx-env-inspector__actions">
+                  <tx-hint
+                    label="Add variable inside"
+                    [detail]="'Inserts a key into ' + (folder.name.trim() || 'this folder')"
+                    placement="bottom"
+                  >
+                    <tx-button variant="secondary" ariaLabel="Add variable inside" (clicked)="handleAddVariable(folder.id)">
+                      Add variable inside
+                    </tx-button>
+                  </tx-hint>
+                </div>
+              </div>
+            }
+          }
+          @case ('bulk') {
+            <div class="tx-env-bulk">
+              <h2 class="tx-env-bulk__title">{{ bulkCount() }} items selected</h2>
+              <p class="tx-env-bulk__hint">Drag to reorder, or delete the whole set.</p>
+              <tx-hint label="Delete selected" detail="Asks before removing folders and keys" placement="bottom">
+                <tx-button variant="danger" ariaLabel="Delete selected items" (clicked)="handleBulkDelete()">
+                  Delete
+                </tx-button>
+              </tx-hint>
+            </div>
+          }
+          @default {
+            <div class="tx-env-empty">
+              <p>Select a variable to edit its value, or a folder to name and describe it.</p>
+            </div>
+          }
+        }
+      </section>
+    </div>
+  } @else {
+    <tx-empty-state
+      class="tx-env-editor__missing"
+      title="Environment missing"
+      body="This tab points at an environment that is no longer in the config folder."
+    />
+  }
+</div>
+
+<ng-template #envMenu>
+  @if (menu(); as menu) {
+    <div class="tx-env-menu tx-menu" role="menu">
+      @if (menu.kind === 'folder') {
+        <button type="button" class="tx-env-menu__item" role="menuitem" (click)="handleAddFolderFromMenu()">
+          New folder
+        </button>
+        <button type="button" class="tx-env-menu__item" role="menuitem" (click)="handleAddVariableFromMenu()">
+          Add variable inside
+        </button>
+        <button type="button" class="tx-env-menu__item" role="menuitem" (click)="handleRenameFromMenu()">
+          Rename
+        </button>
+        <span class="tx-env-menu__rule" aria-hidden="true"></span>
+        <button type="button" class="tx-env-menu__item is-danger" role="menuitem" (click)="handleMenuDelete()">
+          {{ selectedIds().includes(menu.id ?? '') && selectedIds().length > 1 ? 'Delete selected' : 'Delete' }}
+        </button>
+      } @else if (menu.kind === 'variable') {
+        <button
+          type="button"
+          class="tx-env-menu__item"
+          role="menuitemcheckbox"
+          [attr.aria-checked]="menu.secret"
+          (click)="handleMenuSecret()"
+        >
+          <span>Secret</span>
+          @if (menu.secret) {
+            <span class="tx-env-menu__check" aria-hidden="true">✓</span>
+          }
+        </button>
+        @if (menu.secret) {
+          <button type="button" class="tx-env-menu__item" role="menuitem" (click)="handleMenuReveal()">
+            {{ isRevealed(menu.id ?? '') ? 'Hide value' : 'Show value' }}
+          </button>
+        }
+        <span class="tx-env-menu__rule" aria-hidden="true"></span>
+        <button type="button" class="tx-env-menu__item is-danger" role="menuitem" (click)="handleMenuDelete()">
+          {{ selectedIds().includes(menu.id ?? '') && selectedIds().length > 1 ? 'Delete selected' : 'Delete' }}
+        </button>
+      } @else {
+        <button type="button" class="tx-env-menu__item" role="menuitem" (click)="handleAddFolderFromMenu()">
+          New folder
+        </button>
+        <button type="button" class="tx-env-menu__item" role="menuitem" (click)="handleAddVariableFromMenu()">
+          Add variable
+        </button>
+      }
+    </div>
+  }
+</ng-template>

@@ -1,0 +1,85 @@
+<div
+  class="tx-workbench-tab"
+  role="tab"
+  [class.is-active]="active()"
+  [class.is-selected]="selected()"
+  [class.is-just-opened]="justOpened()"
+  [class.is-environment]="tab().kind === 'environment'"
+  [class.is-tool]="tab().kind === 'tool'"
+  [attr.aria-selected]="active()"
+  [attr.aria-controls]="'workbench-panel-' + tab().id"
+  [attr.id]="'workbench-tab-' + tab().id"
+  [attr.aria-label]="ariaLabel()"
+  [attr.tabindex]="active() ? 0 : -1"
+  (click)="handleSelect($event)"
+  (contextmenu)="handleContextMenu($event)"
+  (keydown)="handleKeydown($event)"
+>
+  @if (tab().kind === 'http') {
+    <span class="tx-workbench-tab__method" [attr.data-method]="tab().method">{{ methodLabel() }}</span>
+  } @else if (tab().kind === 'environment') {
+    <span class="tx-workbench-tab__kind" aria-hidden="true">
+      <svg width="14" height="14" viewBox="0 0 24 24">
+        <path
+          d="M8 4H7a2 2 0 0 0-2 2v3a2 2 0 0 1-2 2 2 2 0 0 1 2 2v3a2 2 0 0 0 2 2h1M16 4h1a2 2 0 0 1 2 2v3a2 2 0 0 0 2 2 2 2 0 0 0-2 2v3a2 2 0 0 1-2 2h-1"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </svg>
+    </span>
+  } @else if (tab().kind === 'tool') {
+    <span class="tx-workbench-tab__kind" aria-hidden="true">
+      <tx-tool-icon [toolId]="tab().nodeId" />
+    </span>
+  } @else if (tab().kind === 'database-connection' || tab().kind === 'database-query' || tab().kind === 'database-table' || tab().kind === 'database-diagram') {
+    <span class="tx-workbench-tab__kind" aria-hidden="true">
+      @if (tab().kind === 'database-table') {
+        <tx-database-type-icon kind="table" />
+      } @else if (tab().kind === 'database-diagram') {
+        <tx-database-type-icon kind="diagram" />
+      } @else if (tab().kind === 'database-query') {
+        <tx-database-type-icon kind="query" />
+      } @else {
+        <tx-database-type-icon [type]="engineType()" kind="engine" />
+      }
+    </span>
+  } @else {
+    <span class="tx-workbench-tab__kind" aria-hidden="true">
+      <svg width="14" height="14" viewBox="0 0 14 14">
+        <path
+          d="M3.2 7h7.6M5 4.5 7.5 7 5 9.5M9 4.5 6.5 7 9 9.5"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.25"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </svg>
+    </span>
+  }
+  <tx-hint class="tx-workbench-tab__title-hint" label="Shift+click range" detail="Ctrl+click add" placement="bottom">
+    <span class="tx-workbench-tab__title">{{ tab().title }}</span>
+  </tx-hint>
+  <tx-hint class="tx-workbench-tab__close-hint" label="Close tab" placement="bottom">
+    <button
+      type="button"
+      class="tx-workbench-tab__close"
+      tabindex="-1"
+      aria-label="Close tab"
+      (click)="handleClose($event)"
+    >
+      <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true">
+        <path
+          d="M2 2l6 6M8 2 2 8"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.4"
+          stroke-linecap="round"
+        />
+      </svg>
+    </button>
+  </tx-hint>
+</div>

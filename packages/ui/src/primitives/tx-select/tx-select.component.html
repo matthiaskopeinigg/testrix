@@ -1,0 +1,74 @@
+<button
+  type="button"
+  class="tx-select__trigger"
+  cdkOverlayOrigin
+  #origin="cdkOverlayOrigin"
+  [attr.aria-label]="ariaLabel()"
+  [attr.aria-expanded]="open()"
+  [attr.aria-controls]="listId"
+  [attr.aria-haspopup]="'listbox'"
+  [attr.data-method]="tone()"
+  [style.font-family]="selectedFont()"
+  (click)="handleToggle(origin)"
+  (keydown)="handleKeydown($event, origin)"
+>
+  @if (optionTemplate(); as optionTpl) {
+    @if (selectedOption(); as option) {
+      <ng-container *ngTemplateOutlet="optionTpl.template; context: { $implicit: option, selected: true }" />
+    }
+  } @else {
+    <span class="tx-select__prefix"><ng-content /></span>
+    <span>{{ selectedLabel() }}</span>
+  }
+  <svg class="tx-select__chevron" width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
+    <path d="M2.5 4.5 6 8l3.5-3.5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
+  </svg>
+</button>
+
+<ng-template
+  cdkConnectedOverlay
+  [cdkConnectedOverlayOrigin]="origin"
+  [cdkConnectedOverlayOpen]="open()"
+  [cdkConnectedOverlayPositions]="positions()"
+  [cdkConnectedOverlayWidth]="overlayWidth()"
+  [cdkConnectedOverlayMinWidth]="overlayWidth()"
+  [cdkConnectedOverlayMaxWidth]="overlayWidth()"
+  [cdkConnectedOverlayPush]="true"
+  [cdkConnectedOverlayFlexibleDimensions]="false"
+  [cdkConnectedOverlayViewportMargin]="8"
+  (overlayOutsideClick)="handleOutside()"
+>
+  <ul
+    class="tx-select__menu"
+    role="listbox"
+    [id]="listId"
+    [attr.aria-label]="ariaLabel()"
+  >
+    @for (option of options(); track option.value; let i = $index) {
+      <li>
+        <button
+          type="button"
+          class="tx-select__option"
+          role="option"
+          [class.is-active]="i === activeIndex()"
+          [attr.aria-selected]="isSelected(option.value)"
+          [style.font-family]="option.fontFamily || null"
+          (click)="handleSelect(option.value)"
+          (pointerenter)="activeIndex.set(i)"
+        >
+          @if (optionTemplate(); as optionTpl) {
+            <ng-container *ngTemplateOutlet="optionTpl.template; context: { $implicit: option, selected: isSelected(option.value) }" />
+          } @else {
+            <span>{{ option.label }}</span>
+          }
+          @if (isSelected(option.value)) {
+            <span class="tx-select__check" aria-hidden="true">✓</span>
+          }
+        </button>
+        @if (option.gapAfter && i < options().length - 1) {
+          <span class="tx-select__rule" aria-hidden="true"></span>
+        }
+      </li>
+    }
+  </ul>
+</ng-template>

@@ -1,0 +1,38 @@
+<div
+  class="tx-workbench-group"
+  [class.is-focused]="focused()"
+  (pointerdown)="focusGroup.emit()"
+>
+  <tx-workbench-tablist
+    [groupId]="group().id"
+    [listId]="listId()"
+    [connectedTo]="connectedTo()"
+    [tabs]="group().tabs"
+    [activeTabId]="group().activeTabId"
+    [justOpenedId]="justOpenedId()"
+    [focused]="focused()"
+    (select)="select.emit($event)"
+    (close)="close.emit($event)"
+    (reorder)="reorder.emit($event)"
+    (transfer)="transfer.emit($event)"
+    (focusGroup)="focusGroup.emit()"
+    (dragStart)="dragStart.emit()"
+    (dragEnd)="dragEnd.emit()"
+  />
+  <div class="tx-workbench-group__stage">
+    @if (activeTab(); as tab) {
+      <div
+        class="tx-workbench-group__panel"
+        [attr.data-slide]="slideDir()"
+        [attr.data-swap]="swapNonce() % 2"
+        (animationstart)="handlePanelAnimationStart($event)"
+        (animationend)="handlePanelAnimationEnd($event)"
+        (animationcancel)="handlePanelAnimationEnd($event)"
+      >
+        @for (_ of [tab.id]; track _) {
+          <tx-workbench-panel [tab]="tab" />
+        }
+      </div>
+    }
+  </div>
+</div>

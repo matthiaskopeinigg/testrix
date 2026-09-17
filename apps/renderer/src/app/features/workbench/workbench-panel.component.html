@@ -1,0 +1,46 @@
+<section
+  class="tx-workbench-panel"
+  role="tabpanel"
+  [attr.id]="panelId()"
+  [attr.aria-labelledby]="labelledBy()"
+>
+  @if (tab().kind === 'http') {
+    <tx-request-editor [tab]="tab()" />
+  } @else if (tab().kind === 'websocket') {
+    <tx-websocket-editor [tab]="tab()" />
+  } @else if (tab().kind === 'tool') {
+    @switch (tab().nodeId) {
+      @case ('base64') {
+        <tx-base64-editor [tab]="tab()" />
+      }
+      @case ('jwt-toolkit') {
+        <tx-jwt-toolkit-editor [tab]="tab()" />
+      }
+      @case ('cron-builder') {
+        <tx-cron-builder-editor [tab]="tab()" />
+      }
+      @case ('url-codec') {
+        <tx-url-codec-editor [tab]="tab()" />
+      }
+      @case ('regex-builder') {
+        <tx-regex-builder-editor [tab]="tab()" />
+      }
+      @case ('password-generator') {
+        <tx-password-generator-editor [tab]="tab()" />
+      }
+      @default {
+        <tx-uuid-generator-editor [tab]="tab()" />
+      }
+    }
+  } @else if (tab().kind === 'database-connection') {
+    <tx-database-connection-editor [tab]="tab()" />
+  } @else if (tab().kind === 'database-query') {
+    <tx-database-query-editor [tab]="tab()" />
+  } @else if (tab().kind === 'database-table') {
+    <tx-database-table-editor [tab]="tab()" />
+  } @else if (tab().kind === 'database-diagram') {
+    <tx-database-erd [tab]="tab()" />
+  } @else {
+    <tx-environment-editor [tab]="tab()" />
+  }
+</section>

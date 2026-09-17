@@ -1,0 +1,882 @@
+<tx-overlay labelledBy="settings-title" variant="settings" (closed)="shell.closeOverlays()">
+  <div class="tx-settings">
+    <aside class="tx-settings__rail">
+      <div class="tx-settings__brand">
+        <img src="assets/logo.svg" alt="" width="22" height="22" />
+        <span>Settings</span>
+      </div>
+
+      <label class="tx-settings__search">
+        <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+          <circle cx="6" cy="6" r="4.2" fill="none" stroke="currentColor" stroke-width="1.4" />
+          <path d="M9.2 9.2 12 12" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
+        </svg>
+        <input
+          id="settings-search"
+          type="search"
+          placeholder="Search"
+          autocomplete="off"
+          spellcheck="false"
+          [value]="query()"
+          (input)="handleSearch($event)"
+        />
+      </label>
+
+      <nav class="tx-settings__nav" aria-label="Settings categories">
+        @for (group of groups; track group.label) {
+          <p class="tx-settings__group">{{ group.label }}</p>
+          @for (item of navItemsFor(group.ids); track item.id) {
+            <button
+              type="button"
+              class="tx-settings__nav-item"
+              [class.is-quiet]="isNavQuiet(item.id)"
+              [attr.aria-current]="category() === item.id ? 'page' : null"
+              (click)="selectCategory(item.id)"
+            >
+              <span class="tx-settings__nav-icon" aria-hidden="true">
+                @switch (item.id) {
+                  @case ('appearance') {
+                    <svg width="16" height="16" viewBox="0 0 16 16">
+                      <circle cx="8" cy="8" r="3.1" fill="none" stroke="currentColor" stroke-width="1.35" />
+                      <path
+                        d="M8 2.2v1.3M8 12.5v1.3M2.2 8h1.3M12.5 8h1.3M3.9 3.9l.9.9M11.2 11.2l.9.9M3.9 12.1l.9-.9M11.2 4.8l.9-.9"
+                        stroke="currentColor"
+                        stroke-width="1.35"
+                        stroke-linecap="round"
+                      />
+                    </svg>
+                  }
+                  @case ('keyboard') {
+                    <svg width="16" height="16" viewBox="0 0 16 16">
+                      <rect x="1.8" y="4.2" width="12.4" height="8" rx="1.6" fill="none" stroke="currentColor" stroke-width="1.35" />
+                      <path d="M4.2 6.6h1M7.5 6.6h1M10.8 6.6h1M5.8 9.2h4.4" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" />
+                    </svg>
+                  }
+                  @case ('collections') {
+                    <svg width="16" height="16" viewBox="0 0 16 16">
+                      <rect x="2.5" y="3.2" width="11" height="2.6" rx="0.9" fill="none" stroke="currentColor" stroke-width="1.35" />
+                      <rect x="2.5" y="6.7" width="11" height="2.6" rx="0.9" fill="none" stroke="currentColor" stroke-width="1.35" />
+                      <rect x="2.5" y="10.2" width="7.2" height="2.2" rx="0.9" fill="none" stroke="currentColor" stroke-width="1.35" />
+                    </svg>
+                  }
+                  @case ('environments') {
+                    <svg width="16" height="16" viewBox="0 0 24 24">
+                      <path
+                        d="M8 4H7a2 2 0 0 0-2 2v3a2 2 0 0 1-2 2 2 2 0 0 1 2 2v3a2 2 0 0 0 2 2h1M16 4h1a2 2 0 0 1 2 2v3a2 2 0 0 0 2 2 2 2 0 0 0-2 2v3a2 2 0 0 1-2 2h-1"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
+                    </svg>
+                  }
+                  @case ('database') {
+                    <svg width="16" height="16" viewBox="0 0 16 16">
+                      <ellipse cx="8" cy="4.4" rx="4.6" ry="1.6" fill="none" stroke="currentColor" stroke-width="1.35" />
+                      <path d="M3.4 4.4v6.8c0 .9 2.1 1.6 4.6 1.6s4.6-.7 4.6-1.6V4.4" fill="none" stroke="currentColor" stroke-width="1.35" />
+                    </svg>
+                  }
+                  @case ('proxy') {
+                    <svg width="16" height="16" viewBox="0 0 16 16">
+                      <path
+                        d="M2.6 6.2h8.2M8.4 4.2 10.8 6.2 8.4 8.2M13.4 9.8H5.2M7.6 11.8 5.2 9.8 7.6 7.8"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.35"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
+                    </svg>
+                  }
+                  @case ('dns') {
+                    <svg width="16" height="16" viewBox="0 0 16 16">
+                      <circle cx="8" cy="8" r="5.2" fill="none" stroke="currentColor" stroke-width="1.35" />
+                      <path d="M8 3.4v9.2M3.4 8h9.2" stroke="currentColor" stroke-width="1.35" />
+                    </svg>
+                  }
+                  @case ('certificates') {
+                    <svg width="16" height="16" viewBox="0 0 16 16">
+                      <path
+                        d="M8 2.8 12.8 4.6v4c0 2.9-2 4.7-4.8 5.6-2.8-.9-4.8-2.7-4.8-5.6v-4L8 2.8z"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.35"
+                        stroke-linejoin="round"
+                      />
+                      <path
+                        d="M6.1 8.1 7.4 9.4 10 6.6"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.35"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
+                    </svg>
+                  }
+                  @case ('logging') {
+                    <svg width="16" height="16" viewBox="0 0 16 16">
+                      <path d="M3.2 4.2h9.6M3.2 8h6.4M3.2 11.8h4.4" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" />
+                    </svg>
+                  }
+                  @case ('data') {
+                    <svg width="16" height="16" viewBox="0 0 16 16">
+                      <path
+                        d="M3.2 6.2 8 4.2l4.8 2v5.6L8 13.8 3.2 11.8V6.2z"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.35"
+                        stroke-linejoin="round"
+                      />
+                      <path d="M3.2 6.2 8 8.2l4.8-2M8 8.2v5.6" stroke="currentColor" stroke-width="1.35" />
+                    </svg>
+                  }
+                  @case ('about') {
+                    <svg width="16" height="16" viewBox="0 0 16 16">
+                      <circle cx="8" cy="8" r="5.2" fill="none" stroke="currentColor" stroke-width="1.35" />
+                      <path d="M8 7.2V11M8 5.2v.4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
+                    </svg>
+                  }
+                }
+              </span>
+              {{ item.label }}
+            </button>
+          }
+        }
+      </nav>
+    </aside>
+
+    <section class="tx-settings__pane">
+      <header class="tx-settings__head">
+        <div>
+          <h2 id="settings-title">{{ title() }}</h2>
+          <p>{{ subtitle() }}</p>
+        </div>
+        <tx-hint class="tx-settings__close" label="Close" keys="Esc" placement="left">
+          <button
+            type="button"
+            class="tx-settings__icon-btn"
+            aria-label="Close settings"
+            (click)="shell.closeOverlays()"
+          >
+            <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+              <path d="M3 3l8 8M11 3 3 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+            </svg>
+          </button>
+        </tx-hint>
+      </header>
+
+      <div class="tx-settings__body">
+        @if (query().trim() && hits().length === 0) {
+          <p class="tx-settings__empty">No settings match "{{ query().trim() }}".</p>
+        } @else if (hits().length > 0) {
+          <ul class="tx-pref tx-settings__hits" role="listbox" aria-label="Matching settings">
+            @for (hit of hits(); track hit.id) {
+              <li>
+                <button type="button" class="tx-settings__hit" (click)="openHit(hit.id, hit.category)">
+                  <span>{{ hit.label }}</span>
+                  <span>{{ categoryLabel(hit.category) }}</span>
+                </button>
+              </li>
+            }
+          </ul>
+        } @else {
+          @switch (category()) {
+            @case ('appearance') {
+              <div class="tx-pref">
+                <div class="tx-pref__row" [class.is-flash]="isHighlighted('theme')">
+                  <div class="tx-pref__copy">
+                    <h3>Theme</h3>
+                    <p>Color scheme for chrome and canvas</p>
+                  </div>
+                  <div class="tx-seg" role="radiogroup" aria-label="Theme">
+                    @for (theme of themes; track theme) {
+                      <label class="tx-seg__item" [class.is-on]="desktop.settings().theme === theme">
+                        <input
+                          type="radio"
+                          name="theme"
+                          [value]="theme"
+                          [checked]="desktop.settings().theme === theme"
+                          (change)="desktop.setTheme(theme)"
+                        />
+                        {{ theme }}
+                      </label>
+                    }
+                  </div>
+                </div>
+
+                <div class="tx-pref__row" [class.is-flash]="isHighlighted('motion')">
+                  <div class="tx-pref__copy">
+                    <h3>Animation</h3>
+                    <p>Speed for opening and in-app motion</p>
+                  </div>
+                  <div class="tx-seg" role="radiogroup" aria-label="Animation speed">
+                    @for (speed of speeds; track speed) {
+                      <label class="tx-seg__item" [class.is-on]="desktop.settings().animationSpeed === speed">
+                        <input
+                          type="radio"
+                          name="motion"
+                          [value]="speed"
+                          [checked]="desktop.settings().animationSpeed === speed"
+                          (change)="desktop.patchSettings({ animationSpeed: speed })"
+                        />
+                        {{ speed }}
+                      </label>
+                    }
+                  </div>
+                </div>
+
+                <div class="tx-pref__row" [class.is-flash]="isHighlighted('motion-leave')">
+                  <div class="tx-pref__copy">
+                    <h3>Close animation</h3>
+                    <p>Speed for closing overlays, menus, and sidebar panes</p>
+                  </div>
+                  <div class="tx-seg" role="radiogroup" aria-label="Close animation speed">
+                    @for (speed of speeds; track speed) {
+                      <label class="tx-seg__item" [class.is-on]="desktop.settings().closeAnimationSpeed === speed">
+                        <input
+                          type="radio"
+                          name="motion-leave"
+                          [value]="speed"
+                          [checked]="desktop.settings().closeAnimationSpeed === speed"
+                          (change)="desktop.patchSettings({ closeAnimationSpeed: speed })"
+                        />
+                        {{ speed }}
+                      </label>
+                    }
+                  </div>
+                </div>
+
+                <div class="tx-pref__row" [class.is-flash]="isHighlighted('font-ui')">
+                  <div class="tx-pref__copy">
+                    <h3>Interface font</h3>
+                    <p>UI typeface for chrome and forms</p>
+                  </div>
+                  <tx-select
+                    [value]="desktop.settings().fontUi"
+                    [options]="fontUiSelect"
+                    ariaLabel="Interface font"
+                    (valueChange)="setFontUi($event)"
+                  />
+                </div>
+
+                <div class="tx-pref__row" [class.is-flash]="isHighlighted('font-mono')">
+                  <div class="tx-pref__copy">
+                    <h3>Monospace font</h3>
+                    <p>Editor, URLs, and payload views</p>
+                  </div>
+                  <tx-select
+                    [value]="desktop.settings().fontMono"
+                    [options]="fontMonoSelect"
+                    ariaLabel="Monospace font"
+                    (valueChange)="setFontMono($event)"
+                  />
+                </div>
+
+                <div class="tx-pref__row" [class.is-flash]="isHighlighted('font-scale')">
+                  <div class="tx-pref__copy">
+                    <h3>Type scale</h3>
+                    <p>Relative size of UI copy</p>
+                  </div>
+                  <div class="tx-seg tx-seg--compact" role="radiogroup" aria-label="Type scale">
+                    @for (scale of scaleOptions; track scale) {
+                      <label
+                        class="tx-seg__item"
+                        [class.is-on]="desktop.settings().fontScale === scale"
+                        [style.font-size]="scalePreview[scale]"
+                      >
+                        <input
+                          type="radio"
+                          name="fontScale"
+                          [value]="scale"
+                          [checked]="desktop.settings().fontScale === scale"
+                          (change)="setScale('fontScale', scale)"
+                        />
+                        {{ scaleLabels[scale] }}
+                      </label>
+                    }
+                  </div>
+                </div>
+
+                <div class="tx-pref__row" [class.is-flash]="isHighlighted('icon-scale')">
+                  <div class="tx-pref__copy">
+                    <h3>Icon scale</h3>
+                    <p>Rail and tree icon density</p>
+                  </div>
+                  <div class="tx-seg tx-seg--compact" role="radiogroup" aria-label="Icon scale">
+                    @for (scale of scaleOptions; track scale) {
+                      <label
+                        class="tx-seg__item"
+                        [class.is-on]="desktop.settings().iconScale === scale"
+                        [style.font-size]="scalePreview[scale]"
+                      >
+                        <input
+                          type="radio"
+                          name="iconScale"
+                          [value]="scale"
+                          [checked]="desktop.settings().iconScale === scale"
+                          (change)="setScale('iconScale', scale)"
+                        />
+                        {{ scaleLabels[scale] }}
+                      </label>
+                    }
+                  </div>
+                </div>
+              </div>
+            }
+            @case ('keyboard') {
+              <ul class="tx-pref" [class.is-flash]="isHighlighted('shortcuts')">
+                @for (item of catalog; track item.id) {
+                  <li class="tx-pref__row">
+                    <div class="tx-pref__copy">
+                      <h3>{{ item.label }}</h3>
+                      <p>{{ item.hint }}</p>
+                    </div>
+                    <tx-hint
+                      [label]="recordingId() === item.id ? 'Listening' : 'Click to record'"
+                      [keys]="recordingId() === item.id ? 'Esc' : null"
+                      placement="left"
+                    >
+                      <button
+                        type="button"
+                        class="tx-settings__chord"
+                        [class.is-recording]="recordingId() === item.id"
+                        [attr.aria-label]="'Record shortcut for ' + item.label"
+                        (click)="startRecord(item.id)"
+                      >
+                        @if (recordingId() === item.id) {
+                          <span class="tx-settings__chord-wait">Press keys</span>
+                        } @else {
+                          <tx-hint variant="inline" [keys]="desktop.settings().shortcuts[item.id]" />
+                        }
+                      </button>
+                    </tx-hint>
+                  </li>
+                }
+              </ul>
+              @if (shortcutError(); as error) {
+                <p class="tx-settings__error">{{ error }}</p>
+              }
+            }
+            @case ('collections') {
+              <tx-empty-state
+                class="tx-settings__soon"
+                title="Nothing here yet"
+                body="Collection preferences will land here."
+              />
+            }
+            @case ('environments') {
+              <tx-empty-state
+                class="tx-settings__soon"
+                title="Nothing here yet"
+                body="Environment preferences will land here."
+              />
+            }
+            @case ('database') {
+              <div class="tx-pref">
+                <div class="tx-pref__row" [class.is-flash]="isHighlighted('db-startup')">
+                  <div class="tx-pref__copy">
+                    <h3>Connect on startup</h3>
+                    <p>When Testrix launches, probe every connection whose Connect on boot is on.</p>
+                  </div>
+                  <tx-check
+                    variant="compact"
+                    [checked]="desktop.settings().database.connectOnStartup"
+                    label="Connect on startup"
+                    (checkedChange)="setConnectOnStartup($event)"
+                  />
+                </div>
+                <div class="tx-pref__row" [class.is-flash]="isHighlighted('db-idle')">
+                  <div class="tx-pref__copy">
+                    <h3>Disconnect idle connections after (minutes)</h3>
+                    <p>Closes unused pools. 0 keeps them until quit. Open uncommitted sessions are not idle.</p>
+                  </div>
+                  <label class="tx-slider">
+                    <span class="visually-hidden">Idle disconnect minutes</span>
+                    <input
+                      type="range"
+                      [min]="idleMin"
+                      [max]="idleMax"
+                      step="1"
+                      [value]="desktop.settings().database.idleDisconnectMinutes"
+                      [attr.aria-valuetext]="desktop.settings().database.idleDisconnectMinutes + ' minutes'"
+                      (input)="setIdleMinutes($event)"
+                      (change)="setIdleMinutes($event)"
+                    />
+                    <span class="tx-slider__value">{{ desktop.settings().database.idleDisconnectMinutes }}</span>
+                  </label>
+                </div>
+                <div class="tx-pref__row" [class.is-flash]="isHighlighted('db-rollback')">
+                  <div class="tx-pref__copy">
+                    <h3>Rollback uncommitted queries after</h3>
+                    <p>After Run or Submit, Push to commit. Otherwise ROLLBACK when the timer ends. 0 waits until Push, Rollback, or tab close.</p>
+                  </div>
+                  <div class="tx-pref__fields">
+                    <label class="tx-slider">
+                      <span class="visually-hidden">Uncommitted rollback delay</span>
+                      <input
+                        type="range"
+                        min="0"
+                        [max]="rollbackSliderMax()"
+                        step="1"
+                        [value]="rollbackDisplay()"
+                        (input)="setRollback($event)"
+                        (change)="setRollback($event)"
+                      />
+                      <span class="tx-slider__value">{{ rollbackDisplay() }}</span>
+                    </label>
+                    <tx-select
+                      [value]="rollbackUnit()"
+                      [options]="[
+                        { value: 'seconds', label: 'Seconds' },
+                        { value: 'minutes', label: 'Minutes' }
+                      ]"
+                      ariaLabel="Rollback unit"
+                      (valueChange)="setRollbackUnit($event === 'minutes' ? 'minutes' : 'seconds')"
+                    />
+                  </div>
+                </div>
+                <div class="tx-pref__row tx-pref__row--stack" [class.is-flash]="isHighlighted('db-boot-list')">
+                  <div class="tx-pref__copy">
+                    <h3>Connect on boot</h3>
+                    <p>Per-connection probes used when Connect on startup is on.</p>
+                  </div>
+                  @for (connection of database.connections(); track connection.id) {
+                    <tx-check
+                      variant="compact"
+                      [checked]="connection.connectOnBoot"
+                      [label]="connection.name"
+                      (checkedChange)="setConnectOnBoot(connection.id, $event)"
+                    />
+                  } @empty {
+                    <p class="tx-path">No saved connections in this workspace.</p>
+                  }
+                </div>
+              </div>
+            }
+            @case ('proxy') {
+              <div class="tx-pref">
+                <div class="tx-pref__row" [class.is-flash]="isHighlighted('proxy-mode')">
+                  <div class="tx-pref__copy">
+                    <h3>Mode</h3>
+                    <p>System uses the OS proxy. Off skips a proxy.</p>
+                  </div>
+                  <tx-select
+                    [value]="desktop.settings().proxy.mode"
+                    [options]="proxyModeSelect"
+                    ariaLabel="Proxy mode"
+                    (valueChange)="setProxyMode($event)"
+                  />
+                </div>
+
+                @if (usesManualProxy()) {
+                  <div class="tx-pref__row tx-pref__row--stack" [class.is-flash]="isHighlighted('proxy-host')">
+                    <div class="tx-pref__copy">
+                      <h3>Server</h3>
+                      <p>Host and port for HTTP or SOCKS5</p>
+                    </div>
+                    <div class="tx-pref__fields">
+                      <tx-input
+                        id="proxy-host"
+                        label="Host"
+                        [value]="desktop.settings().proxy.host"
+                        placeholder="127.0.0.1"
+                        (valueChange)="patchProxy({ host: $event })"
+                      />
+                      <tx-input
+                        id="proxy-port"
+                        label="Port"
+                        [value]="desktop.settings().proxy.port"
+                        placeholder="8080"
+                        (valueChange)="patchProxy({ port: $event })"
+                      />
+                    </div>
+                  </div>
+
+                  <div class="tx-pref__row tx-pref__row--stack" [class.is-flash]="isHighlighted('proxy-auth')">
+                    <div class="tx-pref__copy">
+                      <h3>Authentication</h3>
+                      <p>Optional. Stored in settings.json on this PC.</p>
+                    </div>
+                    <div class="tx-pref__fields">
+                      <tx-input
+                        id="proxy-username"
+                        label="Username"
+                        [value]="desktop.settings().proxy.username"
+                        autocomplete="off"
+                        (valueChange)="patchProxy({ username: $event })"
+                      />
+                      <tx-input
+                        id="proxy-password"
+                        label="Password"
+                        type="password"
+                        [value]="desktop.settings().proxy.password"
+                        autocomplete="off"
+                        (valueChange)="patchProxy({ password: $event })"
+                      />
+                    </div>
+                  </div>
+
+                  <div class="tx-pref__row tx-pref__row--stack" [class.is-flash]="isHighlighted('proxy-bypass')">
+                    <div class="tx-pref__copy">
+                      <h3>Bypass</h3>
+                      <p>Hosts that skip the proxy, comma-separated</p>
+                    </div>
+                    <tx-input
+                      id="proxy-bypass"
+                      label="Bypass list"
+                      multiline
+                      [value]="desktop.settings().proxy.bypass"
+                      placeholder="localhost, 127.0.0.1, *.internal"
+                      (valueChange)="patchProxy({ bypass: $event })"
+                    />
+                  </div>
+                }
+              </div>
+            }
+            @case ('dns') {
+              <div class="tx-pref">
+                <div class="tx-pref__row" [class.is-flash]="isHighlighted('dns-mode')">
+                  <div class="tx-pref__copy">
+                    <h3>Mode</h3>
+                    <p>System uses OS resolvers. Custom uses the list below.</p>
+                  </div>
+                  <div class="tx-seg" role="radiogroup" aria-label="DNS mode">
+                    @for (mode of dnsModes; track mode) {
+                      <label class="tx-seg__item" [class.is-on]="desktop.settings().dns.mode === mode">
+                        <input
+                          type="radio"
+                          name="dns-mode"
+                          [value]="mode"
+                          [checked]="desktop.settings().dns.mode === mode"
+                          (change)="setDnsMode(mode)"
+                        />
+                        {{ dnsModeLabels[mode] }}
+                      </label>
+                    }
+                  </div>
+                </div>
+
+                @if (desktop.settings().dns.mode === 'custom') {
+                  <div class="tx-pref__row tx-pref__row--stack" [class.is-flash]="isHighlighted('dns-servers')">
+                    <div class="tx-pref__copy">
+                      <h3>Servers</h3>
+                      <p>IPv4 or IPv6 addresses, comma or newline separated</p>
+                    </div>
+                    <tx-input
+                      id="dns-servers"
+                      label="DNS servers"
+                      multiline
+                      [value]="desktop.settings().dns.servers"
+                      placeholder="1.1.1.1, 8.8.8.8"
+                      (valueChange)="patchDns({ servers: $event })"
+                    />
+                  </div>
+                }
+              </div>
+            }
+            @case ('certificates') {
+              <div class="tx-pref">
+                <div class="tx-pref__row" [class.is-flash]="isHighlighted('tls-verify')">
+                  <div class="tx-pref__copy">
+                    <h3>Verify TLS</h3>
+                    <p>Reject untrusted HTTPS certificates</p>
+                  </div>
+                  <tx-check
+                    variant="compact"
+                    [checked]="desktop.settings().certificates.verifyTls"
+                    label="Verify TLS certificates"
+                    (checkedChange)="patchCertificates({ verifyTls: $event })"
+                  />
+                </div>
+
+                <div class="tx-pref__row tx-pref__row--stack" [class.is-flash]="isHighlighted('extra-ca')">
+                  <div class="tx-pref__copy">
+                    <h3>Extra CA</h3>
+                    <p>PEM or CRT added to the local trust store</p>
+                  </div>
+                  <tx-input
+                    id="extra-ca"
+                    label="Certificate path"
+                    [value]="desktop.settings().certificates.extraCaPath"
+                    placeholder="Path to a .pem or .crt file"
+                    (valueChange)="patchCertificates({ extraCaPath: $event })"
+                  >
+                    @if (desktop.hasDesktop) {
+                      <tx-button variant="ghost" (clicked)="chooseCertFile('ca')">Choose</tx-button>
+                    }
+                    @if (desktop.settings().certificates.extraCaPath) {
+                      <tx-button variant="ghost" (clicked)="patchCertificates({ extraCaPath: '' })">Clear</tx-button>
+                    }
+                  </tx-input>
+                </div>
+
+                <div class="tx-pref__row tx-pref__row--stack" [class.is-flash]="isHighlighted('client-certs')">
+                  <div class="tx-pref__heading">
+                    <div class="tx-pref__copy">
+                      <h3>Client certificates</h3>
+                      <p>PEM pair or PKCS#12 (.pfx) as the certificate file</p>
+                    </div>
+                    <tx-button variant="ghost" (clicked)="addClientCert()">Add certificate</tx-button>
+                  </div>
+
+                  @if (desktop.settings().certificates.clientCerts.length === 0) {
+                    <p class="tx-pref__empty">No client certificates yet.</p>
+                  } @else {
+                    @for (cert of desktop.settings().certificates.clientCerts; track cert.id) {
+                      <div class="tx-pref__cert">
+                        <div class="tx-pref__cert-head">
+                          <h4 class="tx-pref__cert-title">{{ cert.host || 'Untitled host' }}</h4>
+                          <tx-button variant="ghost" (clicked)="removeClientCert(cert.id)">Remove</tx-button>
+                        </div>
+                        <div class="tx-pref__fields">
+                          <tx-input
+                            class="tx-pref__fields--span"
+                            [id]="'cert-host-' + cert.id"
+                            label="Host"
+                            [value]="cert.host"
+                            placeholder="api.internal"
+                            (valueChange)="patchClientCert(cert.id, { host: $event })"
+                          />
+                          <tx-input
+                            class="tx-pref__fields--span"
+                            [id]="'cert-file-' + cert.id"
+                            label="Certificate"
+                            [value]="cert.certPath"
+                            placeholder="Path to .pem, .crt, or .pfx"
+                            (valueChange)="patchClientCert(cert.id, { certPath: $event })"
+                          >
+                            @if (desktop.hasDesktop) {
+                              <tx-button variant="ghost" (clicked)="chooseCertFile('cert', cert.id)">Choose</tx-button>
+                            }
+                          </tx-input>
+                          <tx-input
+                            [id]="'cert-key-' + cert.id"
+                            label="Private key"
+                            [value]="cert.keyPath"
+                            placeholder="Optional for PKCS#12"
+                            (valueChange)="patchClientCert(cert.id, { keyPath: $event })"
+                          >
+                            @if (desktop.hasDesktop) {
+                              <tx-button variant="ghost" (clicked)="chooseCertFile('key', cert.id)">Choose</tx-button>
+                            }
+                          </tx-input>
+                          <tx-input
+                            [id]="'cert-pass-' + cert.id"
+                            label="Passphrase"
+                            type="password"
+                            [value]="cert.passphrase"
+                            autocomplete="off"
+                            (valueChange)="patchClientCert(cert.id, { passphrase: $event })"
+                          />
+                        </div>
+                      </div>
+                    }
+                  }
+                </div>
+              </div>
+            }
+            @case ('logging') {
+              <div class="tx-pref">
+                <div class="tx-pref__row" [class.is-flash]="isHighlighted('log-level')">
+                  <div class="tx-pref__copy">
+                    <h3>Log level</h3>
+                    <p>Minimum severity written to the logger</p>
+                  </div>
+                  <tx-select
+                    [value]="desktop.settings().logLevel"
+                    [options]="logLevelSelect"
+                    ariaLabel="Log level"
+                    (valueChange)="setLogLevel($event)"
+                  />
+                </div>
+
+                <div class="tx-pref__row" [class.is-flash]="isHighlighted('log-file')">
+                  <div class="tx-pref__copy">
+                    <h3>Write log file</h3>
+                    <p>Append to testrix.log in the logs folder</p>
+                  </div>
+                  <tx-check
+                    variant="compact"
+                    [checked]="desktop.settings().logToFile"
+                    label="Write logs to a file"
+                    (checkedChange)="setLogToFile($event)"
+                  />
+                </div>
+
+                <div class="tx-pref__row tx-pref__row--stack" [class.is-flash]="isHighlighted('log-folder')">
+                  <div class="tx-pref__heading">
+                    <div class="tx-pref__copy">
+                      <h3>Logs folder</h3>
+                      <p class="tx-path">{{ desktop.configPaths().logsFolder }}</p>
+                    </div>
+                    @if (desktop.hasDesktop) {
+                      <div class="tx-pref__actions">
+                        <tx-button variant="ghost" (clicked)="handleChooseLogsFolder()">Change folder</tx-button>
+                        <tx-button variant="ghost" (clicked)="handleReveal('logs')">Open in folder</tx-button>
+                      </div>
+                    }
+                  </div>
+                </div>
+
+                <div class="tx-pref__row" [class.is-flash]="isHighlighted('log-max')">
+                  <div class="tx-pref__copy">
+                    <h3>Max log file (MB)</h3>
+                    <p>Rotate testrix.log when it exceeds this size</p>
+                  </div>
+                  <label class="tx-slider">
+                    <span class="visually-hidden">Max log file in megabytes</span>
+                    <input
+                      type="range"
+                      [min]="logFileMaxMbMin"
+                      [max]="logFileMaxMbMax"
+                      step="1"
+                      [value]="logFileMaxMb()"
+                      [attr.aria-valuetext]="logFileMaxMb() + ' megabytes'"
+                      (input)="previewLogFileMaxMb($event)"
+                      (change)="commitLogFileMaxMb($event)"
+                    />
+                    <span class="tx-slider__value">{{ logFileMaxMb() }} MB</span>
+                  </label>
+                </div>
+
+                <div class="tx-pref__row tx-pref__row--stack" [class.is-flash]="isHighlighted('log-recent')">
+                  <div class="tx-pref__heading">
+                    <div class="tx-pref__copy">
+                      <h3>Last logs</h3>
+                      <p>Most recent lines from the logger</p>
+                    </div>
+                    <div class="tx-pref__actions">
+                      <tx-hint label="Refresh last logs" placement="left">
+                        <tx-button variant="ghost" (clicked)="refreshLogs()">Refresh</tx-button>
+                      </tx-hint>
+                    </div>
+                  </div>
+                  @if (lastLogs().length === 0) {
+                    <p class="tx-logs tx-logs--empty">No log lines yet.</p>
+                  } @else {
+                    <div class="tx-logs" role="log" aria-label="Last logs">
+                      @for (line of lastLogs(); track $index) {
+                        <div class="tx-logs__line" [attr.data-level]="logLevelOf(line)">{{ line }}</div>
+                      }
+                    </div>
+                  }
+                </div>
+              </div>
+            }
+            @case ('data') {
+              <div class="tx-pref tx-pref--dense">
+                <div class="tx-pref__row tx-pref__row--stack" [class.is-flash]="isHighlighted('config-folder')">
+                  <div class="tx-pref__heading">
+                    <div class="tx-pref__copy">
+                      <h3>App folder</h3>
+                      <p class="tx-path">{{ desktop.configPaths().folder }}</p>
+                    </div>
+                    @if (desktop.hasDesktop) {
+                      <div class="tx-pref__actions">
+                        <tx-button variant="ghost" (clicked)="handleChooseFolder()">Change folder</tx-button>
+                        <tx-button variant="ghost" (clicked)="handleReveal('folder')">Open in folder</tx-button>
+                      </div>
+                    }
+                  </div>
+                </div>
+
+                @if (desktop.hasDesktop) {
+                  <div class="tx-pref__row tx-pref__row--stack" [class.is-flash]="isHighlighted('configs-folder')">
+                    <div class="tx-pref__heading">
+                      <div class="tx-pref__copy">
+                        <h3>Configs</h3>
+                        <p class="tx-path">{{ desktop.configPaths().configsFolder }}</p>
+                      </div>
+                      <div class="tx-pref__actions">
+                        <tx-button variant="ghost" (clicked)="handleChooseConfigsFolder()">Change folder</tx-button>
+                        <tx-button variant="ghost" (clicked)="handleReveal('configs')">Open in folder</tx-button>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="tx-pref__row tx-pref__row--stack">
+                    <div class="tx-pref__heading">
+                      <div class="tx-pref__copy">
+                        <h3>Workspaces</h3>
+                        <p class="tx-path">{{ desktop.configPaths().workspacesFolder }}</p>
+                      </div>
+                      <tx-button variant="ghost" (clicked)="handleReveal('workspaces')">Open in folder</tx-button>
+                    </div>
+                  </div>
+                }
+
+                @for (file of desktop.configPaths().files; track file.name) {
+                  <div class="tx-pref__row tx-pref__row--stack">
+                    <div class="tx-pref__heading">
+                      <div class="tx-pref__copy">
+                        <h3>
+                          {{ file.name }}
+                          <span class="tx-settings__schema">v{{ file.schemaVersion }}</span>
+                          @if (!file.exists) {
+                            <span class="tx-settings__pill">Pending</span>
+                          }
+                        </h3>
+                        <p class="tx-path">{{ file.path }}</p>
+                      </div>
+                      @if (desktop.hasDesktop) {
+                        <tx-button variant="ghost" (clicked)="handleReveal(file.name)">Open in folder</tx-button>
+                      }
+                    </div>
+                  </div>
+                }
+
+                <div class="tx-pref__row tx-pref__row--stack" [class.is-flash]="isHighlighted('reset-all')">
+                  <div class="tx-pref__copy">
+                    <h3>Reset all settings</h3>
+                    <p>
+                      Restores appearance, keyboard, logging, database, and network defaults. Session, workspaces,
+                      collections, environments, database.json, and queries.json stay as they are.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            }
+            @case ('about') {
+              <div class="tx-about" [class.is-flash]="isHighlighted('version')">
+                <div class="tx-about__hero">
+                  <img class="tx-about__logo" src="assets/logo.svg" alt="" width="48" height="48" />
+                  <div class="tx-about__identity">
+                    <h3>Testrix</h3>
+                    <p>Local API workbench. Collections, environments, and tests stay on this PC.</p>
+                  </div>
+                </div>
+                <dl class="tx-about__facts">
+                  <div>
+                    <dt>Version</dt>
+                    <dd>{{ desktop.version() }}</dd>
+                  </div>
+                  <div>
+                    <dt>Platform</dt>
+                    <dd>{{ platformLabel() }}</dd>
+                  </div>
+                  <div>
+                    <dt>Mode</dt>
+                    <dd>Offline</dd>
+                  </div>
+                </dl>
+                <div class="tx-about__update">
+                  <div>
+                    <h3>Updates</h3>
+                    <p>{{ desktop.updateStatus() }}</p>
+                  </div>
+                  <tx-button variant="ghost" (clicked)="handleCheckUpdates()">Check for updates</tx-button>
+                </div>
+              </div>
+            }
+          }
+
+          @if (canResetCategory()) {
+            <div class="tx-settings__reset">
+              <tx-button variant="ghost" (clicked)="handleReset()">{{ resetLabel() }}</tx-button>
+            </div>
+          }
+        }
+      </div>
+    </section>
+  </div>
+</tx-overlay>

@@ -1,0 +1,121 @@
+<tx-overlay labelledBy="help-title" variant="settings" (closed)="shell.closeOverlays()">
+  <div class="tx-help">
+    <aside class="tx-help__rail">
+      <div class="tx-help__brand">
+        <img src="assets/logo.svg" alt="" width="22" height="22" />
+        <span>Help</span>
+      </div>
+
+      <label class="tx-help__search">
+        <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+          <circle cx="6" cy="6" r="4.2" fill="none" stroke="currentColor" stroke-width="1.4" />
+          <path d="M9.2 9.2 12 12" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
+        </svg>
+        <input
+          id="help-search"
+          type="search"
+          placeholder="Search"
+          autocomplete="off"
+          spellcheck="false"
+          [value]="query()"
+          (input)="handleSearch($event)"
+        />
+      </label>
+
+      <nav class="tx-help__nav" aria-label="Help sections">
+        @for (group of groups; track group.label) {
+          <p class="tx-help__group">{{ group.label }}</p>
+          @for (item of navItemsFor(group.ids); track item.id) {
+            <button
+              type="button"
+              class="tx-help__nav-item"
+              [class.is-quiet]="isNavQuiet(item.id)"
+              [attr.aria-current]="section() === item.id ? 'page' : null"
+              (click)="selectSection(item.id)"
+            >
+              {{ item.label }}
+            </button>
+          }
+        }
+      </nav>
+    </aside>
+
+    <section class="tx-help__pane">
+      <header class="tx-help__head">
+        <div>
+          <h2 id="help-title">{{ title() }}</h2>
+          <p>{{ subtitle() }}</p>
+        </div>
+        <tx-hint class="tx-help__close" label="Close" keys="Esc" placement="left">
+          <button
+            type="button"
+            class="tx-help__icon-btn"
+            aria-label="Close help"
+            (click)="shell.closeOverlays()"
+          >
+            <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+              <path d="M3 3l8 8M11 3 3 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+            </svg>
+          </button>
+        </tx-hint>
+      </header>
+
+      <div class="tx-help__body">
+        @if (query().trim() && hits().length === 0) {
+          <p class="tx-help__empty">No topics match "{{ query().trim() }}".</p>
+        } @else if (hits().length > 0) {
+          <ul class="tx-help__hits" role="listbox" aria-label="Matching help topics">
+            @for (hit of hits(); track hit.id) {
+              <li>
+                <button type="button" class="tx-help__hit" (click)="openHit(hit.id, hit.section)">
+                  <span>{{ hit.title }}</span>
+                  <span>{{ sectionLabel(hit.section) }}</span>
+                </button>
+              </li>
+            }
+          </ul>
+        } @else {
+          @if (section() === 'shortcuts') {
+            <div class="tx-help__chords">
+              <div>
+                <h3>Command palette</h3>
+                <tx-hint variant="inline" [keys]="desktop.settings().shortcuts.palette" />
+              </div>
+              <div>
+                <h3>Settings</h3>
+                <tx-hint variant="inline" [keys]="desktop.settings().shortcuts.settings" />
+              </div>
+              <div>
+                <h3>Toggle sidebar</h3>
+                <tx-hint variant="inline" [keys]="desktop.settings().shortcuts.sidebar" />
+              </div>
+              <div>
+                <h3>Help</h3>
+                <tx-hint variant="inline" keys="F1" />
+              </div>
+            </div>
+          }
+
+          <div class="tx-help__articles">
+            @for (article of articles(); track article.id) {
+              <article class="tx-help__card" [class.is-flash]="isHighlighted(article.id)">
+                <h3>{{ article.title }}</h3>
+                <p class="tx-help__lead">{{ article.summary }}</p>
+                @for (paragraph of article.body; track paragraph) {
+                  <p>{{ paragraph }}</p>
+                }
+                @if (article.tips.length > 0) {
+                  <ul class="tx-help__tips">
+                    @for (tip of article.tips; track tip) {
+                      <li>{{ tip }}</li>
+                    }
+                  </ul>
+                }
+              </article>
+            }
+          </div>
+        }
+      </div>
+    </section>
+  </div>
+</tx-overlay>

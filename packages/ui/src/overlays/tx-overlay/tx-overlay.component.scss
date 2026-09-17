@@ -1,0 +1,204 @@
+:host {
+  position: fixed;
+  inset: 0;
+  z-index: var(--tx-z-overlay);
+  display: block;
+  cursor: default;
+  -webkit-app-region: no-drag;
+}
+
+.tx-overlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.tx-overlay--palette {
+  place-items: start center;
+  padding-top: 14vh;
+}
+
+.tx-overlay__scrim {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: var(--tx-scrim);
+  cursor: default;
+  -webkit-app-region: no-drag;
+}
+
+:host-context(.tx-overlay-enter) .tx-overlay__scrim {
+  animation: tx-overlay-scrim-in calc(280ms * var(--tx-motion-scale, 1)) var(--tx-ease-out) both;
+}
+
+:host-context(.tx-overlay-leave) .tx-overlay__scrim {
+  animation: tx-overlay-scrim-out calc(220ms * var(--tx-motion-leave-scale, var(--tx-motion-scale, 1)))
+    var(--tx-ease-in-out) both;
+}
+
+:host-context(.tx-overlay-enter) .tx-overlay__panel {
+  animation: tx-overlay-panel-in calc(480ms * var(--tx-motion-scale, 1)) var(--tx-spring) both;
+}
+
+:host-context(.tx-overlay-leave) .tx-overlay__panel {
+  animation: tx-overlay-panel-out calc(240ms * var(--tx-motion-leave-scale, var(--tx-motion-scale, 1)))
+    var(--tx-ease-in-out) both;
+}
+
+:host-context(.tx-overlay-enter) .tx-overlay--settings .tx-overlay__panel {
+  animation: tx-settings-sheet-in calc(420ms * var(--tx-motion-scale, 1)) var(--tx-spring) both;
+}
+
+:host-context(.tx-overlay-leave) .tx-overlay--settings .tx-overlay__panel {
+  animation: tx-settings-sheet-out calc(260ms * var(--tx-motion-leave-scale, var(--tx-motion-scale, 1)))
+    var(--tx-ease-in-out) both;
+}
+
+@keyframes tx-overlay-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(28px) scale(0.94);
+    filter: blur(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+}
+
+@keyframes tx-overlay-panel-out {
+  from {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+
+  to {
+    opacity: 0;
+    transform: translateY(16px) scale(0.98);
+    filter: blur(4px);
+  }
+}
+
+@keyframes tx-overlay-scrim-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes tx-overlay-scrim-out {
+  from {
+    opacity: 1;
+  }
+
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes tx-enter-fade {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes tx-leave-fade {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+
+  to {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+}
+
+@keyframes tx-settings-sheet-in {
+  from {
+    opacity: 0;
+    transform: translateY(32px) scale(0.96);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes tx-settings-sheet-out {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+
+  to {
+    opacity: 0;
+    transform: translateY(16px) scale(0.98);
+  }
+}
+
+.tx-overlay__panel {
+  position: relative;
+  z-index: 1;
+  width: min(480px, calc(100vw - 48px));
+  max-height: min(72vh, 640px);
+  overflow: auto;
+  padding: 22px;
+  border: 1px solid var(--tx-border-subtle);
+  border-radius: var(--tx-radius-card);
+  background: var(--tx-bg-overlay);
+  box-shadow: var(--tx-shadow-2), var(--tx-glow);
+}
+
+.tx-overlay--palette .tx-overlay__panel {
+  width: min(560px, calc(100vw - 48px));
+  padding: 10px;
+  background: var(--tx-bg-overlay);
+}
+
+.tx-overlay--confirm .tx-overlay__panel {
+  width: min(400px, calc(100vw - 48px));
+  max-height: none;
+  overflow: visible;
+  padding: 20px 20px 16px;
+}
+
+.tx-overlay--settings {
+  padding: 28px 24px 24px;
+}
+
+.tx-overlay--settings .tx-overlay__panel {
+  display: flex;
+  flex-direction: column;
+  width: min(1080px, calc(100vw - 48px));
+  height: min(760px, calc(100vh - 64px));
+  max-height: none;
+  overflow: hidden;
+  padding: 0;
+  border-radius: var(--tx-radius-canvas);
+  background: var(--tx-bg-canvas);
+  box-shadow: 0 32px 80px rgba(0, 0, 0, 0.48);
+}
+
+.tx-overlay--settings .tx-overlay__panel > * {
+  min-height: 0;
+  height: 100%;
+  width: 100%;
+}

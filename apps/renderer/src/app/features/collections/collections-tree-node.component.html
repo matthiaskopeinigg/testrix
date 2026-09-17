@@ -1,0 +1,111 @@
+<div
+  class="tx-collections-node"
+  [style.--tx-tree-depth]="depth()"
+  [class.is-folder]="node().kind === 'folder'"
+>
+  <tx-hint
+    stretch
+    label="Shift+click range"
+    detail="Ctrl+click add"
+    placement="right"
+    [suppressed]="renaming()"
+  >
+    <div
+      class="tx-collections-node__row"
+      [class.is-folder]="node().kind === 'folder'"
+      [class.is-leaf]="isLeaf()"
+      [class.is-open]="open()"
+      [class.is-active]="active()"
+      [class.is-selected]="selected()"
+      [class.is-renaming]="renaming()"
+      [attr.role]="node().kind === 'folder' || isLeaf() ? 'button' : null"
+      [attr.tabindex]="node().kind === 'folder' || isLeaf() ? 0 : null"
+      [attr.aria-expanded]="node().kind === 'folder' ? expanded() : null"
+      [attr.aria-current]="active() ? 'page' : null"
+      [attr.aria-label]="rowAriaLabel()"
+      [attr.aria-keyshortcuts]="'Alt+ArrowUp Alt+ArrowDown'"
+      (click)="handleRowClick($event)"
+      (keydown)="handleRowKeydown($event)"
+      (contextmenu)="handleMenu($event)"
+    >
+      @if (node().kind === 'folder') {
+        <button
+          type="button"
+          class="tx-collections-node__chevron"
+          [class.is-expanded]="expanded()"
+          [attr.aria-label]="expanded() ? 'Collapse ' + node().name : 'Expand ' + node().name"
+          (click)="handleChevronClick($event)"
+        >
+          <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
+            <path
+              d="M4 2.5 8 6 4 9.5"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.4"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+        </button>
+      } @else {
+        <span class="tx-collections-node__chevron-spacer" aria-hidden="true"></span>
+      }
+
+      <span class="tx-collections-node__icon" aria-hidden="true">
+        @switch (node().kind) {
+          @case ('folder') {
+            <svg width="14" height="14" viewBox="0 0 14 14">
+              <path
+                d="M2 3.5h3.2l1 1.2H12v6.3H2V3.5z"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.25"
+                stroke-linejoin="round"
+              />
+            </svg>
+          }
+          @case ('http') {
+            <span class="tx-collections-node__method" [attr.data-method]="httpNode()?.method">{{
+              httpNode()?.method
+            }}</span>
+          }
+          @case ('websocket') {
+            <svg width="14" height="14" viewBox="0 0 14 14">
+              <path
+                d="M3.2 7h7.6M5 4.5 7.5 7 5 9.5M9 4.5 6.5 7 9 9.5"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.25"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+          }
+        }
+      </span>
+
+      @if (renaming()) {
+        <input
+          class="tx-collections-node__rename"
+          type="text"
+          [value]="node().name"
+          [attr.data-collections-rename]="node().id"
+          [attr.aria-label]="'Rename ' + node().name"
+          spellcheck="false"
+          autocomplete="off"
+          (click)="$event.stopPropagation()"
+          (input)="handleRenameInput($event)"
+          (keydown)="renameKey.emit($event)"
+          (blur)="renameBlur.emit()"
+        />
+      } @else {
+        <span class="tx-collections-node__name">{{ node().name }}</span>
+        @if (httpNode(); as http) {
+          @if (http.status !== null) {
+            <span class="tx-collections-node__status" aria-hidden="true">{{ http.status }}</span>
+          }
+        }
+      }
+    </div>
+  </tx-hint>
+</div>

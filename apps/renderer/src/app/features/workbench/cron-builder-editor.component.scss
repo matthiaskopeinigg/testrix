@@ -1,0 +1,11 @@
+@use './tool-chrome';
+
+:host {
+  @include tool-chrome.host;
+}
+
+@include tool-chrome.styles;
+
+.tx-tool__error {
+  padding: 0;
+}

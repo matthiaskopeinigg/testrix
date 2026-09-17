@@ -1,0 +1,82 @@
+<section class="tx-tool" [attr.aria-label]="tab().title">
+  <header class="tx-tool__head">
+    <div class="tx-tool__title">
+      <h1>Base64</h1>
+      <p>Encode and decode UTF-8 text on this machine. Nothing is sent anywhere.</p>
+    </div>
+    <div class="tx-tool__modes" role="tablist" aria-label="Base64 mode">
+      <button
+        type="button"
+        class="tx-tool__mode"
+        role="tab"
+        [class.is-active]="mode() === 'encode'"
+        [attr.aria-selected]="mode() === 'encode'"
+        (click)="setMode('encode')"
+      >
+        Encode
+      </button>
+      <button
+        type="button"
+        class="tx-tool__mode"
+        role="tab"
+        [class.is-active]="mode() === 'decode'"
+        [attr.aria-selected]="mode() === 'decode'"
+        (click)="setMode('decode')"
+      >
+        Decode
+      </button>
+      <tx-check
+        variant="inline"
+        [checked]="urlSafe()"
+        label="URL-safe"
+        (checkedChange)="urlSafe.set($event)"
+      />
+    </div>
+  </header>
+
+  <div class="tx-tool__split">
+    <div class="tx-tool__pane">
+      <div class="tx-tool__pane-label">{{ mode() === 'encode' ? 'Text' : 'Base64' }}</div>
+      <label class="tx-tool__body">
+        <span class="visually-hidden">{{ mode() === 'encode' ? 'Text to encode' : 'Base64 to decode' }}</span>
+        <textarea
+          class="tx-tool__textarea"
+          [value]="source()"
+          spellcheck="false"
+          (input)="handleSource($event)"
+        ></textarea>
+      </label>
+    </div>
+    <div class="tx-tool__pane">
+      <div class="tx-tool__pane-label">{{ mode() === 'encode' ? 'Base64' : 'Text' }}</div>
+      @if (error(); as message) {
+        <p class="tx-tool__error">{{ message }}</p>
+      }
+      <div class="tx-tool__body">
+        <pre class="tx-tool__pre">{{ output() }}</pre>
+      </div>
+    </div>
+  </div>
+
+  <footer class="tx-tool__footer">
+    <tx-hint label="Copy output" placement="top">
+      <button
+        type="button"
+        class="tx-tool__btn tx-tool__btn--accent"
+        [disabled]="!output()"
+        aria-label="Copy output"
+        (click)="copyOutput($event)"
+      >
+        Copy
+      </button>
+    </tx-hint>
+    <tx-hint label="Swap input and output" placement="top">
+      <button type="button" class="tx-tool__btn" aria-label="Swap input and output" (click)="swap()">
+        Swap
+      </button>
+    </tx-hint>
+    <tx-hint label="Clear input" placement="top">
+      <button type="button" class="tx-tool__btn" aria-label="Clear input" (click)="clear()">Clear</button>
+    </tx-hint>
+  </footer>
+</section>

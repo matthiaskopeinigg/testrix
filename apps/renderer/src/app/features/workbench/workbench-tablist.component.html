@@ -1,0 +1,120 @@
+<div
+  class="tx-workbench-tablist"
+  [class.is-focused]="focused()"
+  role="tablist"
+  aria-label="Open requests"
+  (keydown)="handleListKeydown($event)"
+  (pointerdown)="focusGroup.emit()"
+  (contextmenu)="$event.preventDefault()"
+>
+  <div
+    class="tx-workbench-tablist__track"
+    cdkDropList
+    cdkDropListOrientation="horizontal"
+    [id]="listId()"
+    [attr.data-tab-list]="listId()"
+    [cdkDropListData]="dropData()"
+    [cdkDropListConnectedTo]="connectedTo()"
+    (cdkDropListDropped)="handleDrop($event)"
+  >
+    @for (tab of tabs(); track tab.id) {
+      <div
+        class="tx-workbench-tablist__item"
+        cdkDrag
+        cdkDragPreviewClass="tx-workbench-drag-preview"
+        [cdkDragData]="tab"
+        [attr.data-tab-id]="tab.id"
+        [class.is-active]="tab.id === activeTabId()"
+        [class.is-selected]="isSelected(tab.id)"
+        [class.is-just-opened]="tab.id === justOpenedId()"
+        (cdkDragStarted)="handleDragStarted(tab)"
+        (cdkDragEnded)="handleDragEnded()"
+      >
+        <tx-workbench-tab
+          [tab]="tab"
+          [active]="tab.id === activeTabId()"
+          [selected]="isSelected(tab.id)"
+          [justOpened]="tab.id === justOpenedId()"
+          (select)="handleSelect($event)"
+          (close)="handleClose($event)"
+          (menu)="handleTabMenu($event)"
+        />
+        <div *cdkDragPreview matchSize class="tx-workbench-tab-preview-shell">
+          <div class="tx-workbench-tab-preview">
+          <span class="tx-workbench-tab-preview__icon" aria-hidden="true">
+            @if (tab.kind === 'http') {
+              <span class="tx-workbench-tab-preview__method" [attr.data-method]="tab.method">{{
+                methodLabel(tab)
+              }}</span>
+            } @else if (tab.kind === 'environment') {
+              <svg width="14" height="14" viewBox="0 0 24 24">
+                <path
+                  d="M8 4H7a2 2 0 0 0-2 2v3a2 2 0 0 1-2 2 2 2 0 0 1 2 2v3a2 2 0 0 0 2 2h1M16 4h1a2 2 0 0 1 2 2v3a2 2 0 0 0 2 2 2 2 0 0 0-2 2v3a2 2 0 0 1-2 2h-1"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+            } @else if (tab.kind === 'tool') {
+              <tx-tool-icon [toolId]="tab.nodeId" />
+            } @else if (tab.kind.startsWith('database')) {
+              <svg width="14" height="14" viewBox="0 0 14 14">
+                <ellipse cx="7" cy="4.2" rx="4.4" ry="1.6" fill="none" stroke="currentColor" stroke-width="1.25" />
+                <path d="M2.6 4.2v5.6c0 .9 2 1.6 4.4 1.6s4.4-.7 4.4-1.6V4.2" fill="none" stroke="currentColor" stroke-width="1.25" />
+              </svg>
+            } @else {
+              <svg width="14" height="14" viewBox="0 0 14 14">
+                <path
+                  d="M3.2 7h7.6M5 4.5 7.5 7 5 9.5M9 4.5 6.5 7 9 9.5"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.25"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+            }
+          </span>
+          <span class="tx-workbench-tab-preview__title">{{ tab.title }}</span>
+          @if (dragCount() > 1) {
+            <span class="tx-workbench-tab-preview__badge">{{ dragCount() }}</span>
+          }
+          </div>
+        </div>
+      </div>
+    }
+  </div>
+</div>
+
+<ng-template #tabMenu>
+  @if (menuTab()) {
+    <div class="tx-workbench-tablist__menu tx-menu" role="menu">
+      <button type="button" class="tx-workbench-tablist__menu-item" role="menuitem" (click)="handleMenuClose()">
+        Close
+      </button>
+      @if (canCloseOthers()) {
+        <button type="button" class="tx-workbench-tablist__menu-item" role="menuitem" (click)="handleMenuCloseOthers()">
+          Close others
+        </button>
+      }
+      @if (canCloseToTheRight()) {
+        <button
+          type="button"
+          class="tx-workbench-tablist__menu-item"
+          role="menuitem"
+          (click)="handleMenuCloseToTheRight()"
+        >
+          Close to the right
+        </button>
+      }
+      @if (canCloseAll()) {
+        <span class="tx-workbench-tablist__menu-rule" aria-hidden="true"></span>
+        <button type="button" class="tx-workbench-tablist__menu-item" role="menuitem" (click)="handleMenuCloseAll()">
+          Close all
+        </button>
+      }
+    </div>
+  }
+</ng-template>

@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; style-src 'self'; img-src 'self' data:; script-src 'self'"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Testrix Setup</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="setup">
+      <header class="titlebar">
+        <img class="titlebar__logo" src="./assets/logo.svg" width="16" height="16" alt="" />
+        <span class="titlebar__title" id="chrome-title">Testrix Setup</span>
+        <div class="titlebar__drag"></div>
+        <button type="button" class="icon-btn" id="btn-min" aria-label="Minimize">
+          <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true">
+            <path d="M1 5h8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
+          </svg>
+        </button>
+        <button type="button" class="icon-btn icon-btn--close" id="btn-win-close" aria-label="Close">
+          <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true">
+            <path d="M1 1l8 8M9 1l-8 8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
+          </svg>
+        </button>
+      </header>
+
+      <main class="body">
+        <div class="hero">
+          <div class="hero__mark">
+            <span class="hero__glow" aria-hidden="true"></span>
+            <img class="logo" src="./assets/logo.svg" width="52" height="52" alt="" />
+          </div>
+          <div class="hero__copy">
+            <p class="eyebrow">Local workbench</p>
+            <h1 id="hero-title">Install Testrix</h1>
+            <p class="subtitle">
+              <span id="meta-version">—</span>
+              <span aria-hidden="true"> · </span>
+              <span id="meta-tagline">Stays on this machine</span>
+            </p>
+          </div>
+        </div>
+
+        <div class="sheet">
+          <section id="panel-form" class="sheet__body">
+            <div id="install-fields">
+              <p class="label">Install for</p>
+              <div class="choice-grid">
+                <label class="choice">
+                  <input type="radio" name="scope" value="user" checked />
+                  <span>
+                    <strong>Only for me</strong>
+                    <small>No administrator rights needed.</small>
+                  </span>
+                </label>
+                <label class="choice">
+                  <input type="radio" name="scope" value="machine" />
+                  <span>
+                    <strong>Everyone on this PC</strong>
+                    <small>Program Files. Requires admin.</small>
+                  </span>
+                </label>
+              </div>
+              <label class="label" for="install-dir">Destination folder</label>
+              <div class="path-row">
+                <input id="install-dir" type="text" spellcheck="false" />
+                <button type="button" class="btn btn--ghost" id="btn-browse">Browse</button>
+              </div>
+              <label class="choice choice--check">
+                <input type="checkbox" id="chk-shortcuts" />
+                <span>
+                  <strong>Create shortcuts</strong>
+                  <small>Start menu and desktop</small>
+                </span>
+              </label>
+            </div>
+
+            <div id="uninstall-fields" class="hidden">
+              <div class="info">
+                <span>Location</span>
+                <strong id="info-path">—</strong>
+              </div>
+              <label class="choice">
+                <input type="checkbox" id="chk-remove-data" />
+                <span>
+                  <strong>Also remove user settings and data</strong>
+                  <small>Deletes local configuration. Off by default.</small>
+                </span>
+              </label>
+            </div>
+          </section>
+
+          <section id="panel-progress" class="sheet__body sheet__body--stage hidden">
+            <div class="progress-head">
+              <p id="progress-label">Installing files…</p>
+              <p id="progress-percent">0%</p>
+            </div>
+            <div class="track" role="progressbar" aria-valuemin="0" aria-valuemax="100">
+              <div id="progress-fill" class="fill"></div>
+            </div>
+            <p id="progress-error" class="error hidden"></p>
+          </section>
+
+          <section id="panel-done" class="sheet__body sheet__body--stage hidden" role="status">
+            <svg class="check" width="36" height="36" viewBox="0 0 36 36" aria-hidden="true">
+              <path
+                class="check__path"
+                d="M9 18.5l6 6 12-13"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.6"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+            <h2 id="done-title">Setup finished</h2>
+            <p id="done-copy">You can open Testrix now, or close this window.</p>
+          </section>
+
+          <footer class="footer">
+            <button type="button" class="icon-btn" id="btn-help" aria-label="Help">?</button>
+            <span class="grow"></span>
+            <button type="button" class="btn btn--ghost" id="btn-cancel">Cancel</button>
+            <button type="button" class="btn btn--primary hidden" id="btn-open">Open</button>
+            <button type="button" class="btn btn--primary" id="btn-primary">Install</button>
+          </footer>
+        </div>
+      </main>
+    </div>
+
+    <div id="help" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="help-title">
+      <button type="button" class="modal__scrim" id="help-scrim" aria-label="Close help"></button>
+      <div class="modal__card">
+        <h2 id="help-title">Setup help</h2>
+        <p id="help-body">
+          This installer copies Testrix onto your computer. Shortcuts are optional. Per-user install does not need
+          administrator rights.
+        </p>
+        <button type="button" class="btn btn--primary" id="help-done">Got it</button>
+      </div>
+    </div>
+    <script src="./app.js"></script>
+  </body>
+</html>

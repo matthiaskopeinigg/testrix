@@ -1,0 +1,138 @@
+:host {
+  display: block;
+  height: 100%;
+  min-height: 0;
+}
+
+.tx-workbench {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.tx-workbench__splits {
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+}
+
+.tx-workbench__pane {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.tx-workbench__sash {
+  position: relative;
+  z-index: 2;
+  flex: 0 0 4px;
+  margin: 0 -1px;
+  background: transparent;
+  cursor: col-resize;
+}
+
+.tx-workbench__sash::after {
+  content: '';
+  position: absolute;
+  inset: 0 1px;
+  background: var(--tx-border-subtle);
+  transition: background-color calc(var(--tx-motion-fast) * var(--tx-motion-scale, 1)) var(--tx-ease-out);
+}
+
+.tx-workbench__sash:hover::after,
+.tx-workbench__sash:active::after {
+  background: var(--tx-accent);
+}
+
+.tx-workbench__split-zone {
+  position: absolute;
+  top: 40px;
+  right: 0;
+  bottom: 0;
+  z-index: 4;
+  width: 32%;
+  min-width: 120px;
+  pointer-events: none;
+}
+
+.tx-workbench__splits.is-dragging .tx-workbench__split-zone {
+  pointer-events: auto;
+}
+
+.tx-workbench__split-zone:not(.is-active) .tx-workbench__split-ghost {
+  opacity: 0;
+  transform: scale(0.985);
+}
+
+.tx-workbench__split-ghost {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  padding: 4px;
+  pointer-events: none;
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity calc(180ms * var(--tx-motion-scale, 1)) var(--tx-ease-out),
+    transform calc(180ms * var(--tx-motion-scale, 1)) var(--tx-ease-out);
+}
+
+.tx-workbench__split-zone.is-active .tx-workbench__split-ghost {
+  /* Full-bleed preview across the workbench while hovering the right zone. */
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: calc(-100% * 68 / 32);
+  width: auto;
+}
+
+.tx-workbench__splits.is-split-preview .tx-workbench__pane {
+  filter: saturate(0.92);
+}
+
+.tx-workbench__split-ghost-pane {
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--tx-accent) 35%, transparent);
+  background: color-mix(in srgb, var(--tx-accent) 8%, transparent);
+}
+
+.tx-workbench__split-ghost-pane.is-left {
+  opacity: 0.55;
+  background: color-mix(in srgb, var(--tx-bg-chrome) 40%, transparent);
+  border-color: color-mix(in srgb, var(--tx-border-subtle) 80%, transparent);
+}
+
+.tx-workbench__split-ghost-pane.is-right {
+  display: grid;
+  place-items: center;
+  border-color: color-mix(in srgb, var(--tx-accent) 70%, transparent);
+  background: color-mix(in srgb, var(--tx-accent) 18%, transparent);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--tx-accent) 25%, transparent),
+    0 0 28px color-mix(in srgb, var(--tx-accent) 18%, transparent);
+}
+
+.tx-workbench__split-ghost-label {
+  max-width: calc(100% - 16px);
+  overflow: hidden;
+  padding: 4px 10px;
+  border-radius: 99px;
+  background: color-mix(in srgb, var(--tx-bg-overlay) 88%, transparent);
+  color: var(--tx-accent);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}

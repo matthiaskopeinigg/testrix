@@ -1,0 +1,118 @@
+:host {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+}
+
+.tx-db-erd {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--tx-bg-canvas);
+}
+
+.tx-db-erd__bar {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+  padding: 0 10px 0 14px;
+  border-bottom: 1px solid var(--tx-border-subtle);
+}
+
+.tx-db-erd__bar h2 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.tx-db-erd__hint {
+  margin-right: auto;
+  color: var(--tx-text-faint);
+  font-size: 11px;
+}
+
+.tx-db-erd__loading {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: var(--tx-text-muted);
+  font-size: 13px;
+}
+
+.tx-db-erd__canvas {
+  flex: 1;
+  min-height: 0;
+  cursor: grab;
+  touch-action: none;
+}
+
+.tx-db-erd__canvas:active,
+.tx-db-erd__canvas.is-panning:active {
+  cursor: grabbing;
+}
+
+.tx-db-erd__canvas.is-dragging-node,
+.tx-db-erd__canvas.is-dragging-node:active {
+  cursor: grabbing;
+}
+
+.tx-db-erd__svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.tx-db-erd__edge {
+  stroke: color-mix(in srgb, var(--tx-accent) 55%, var(--tx-border-subtle));
+  stroke-width: 1.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.tx-db-erd__node {
+  cursor: grab;
+}
+
+.tx-db-erd__node.is-dragging {
+  cursor: grabbing;
+}
+
+.tx-db-erd__card {
+  fill: color-mix(in srgb, var(--tx-bg-chrome) 88%, transparent);
+  stroke: var(--tx-border-subtle);
+}
+
+.tx-db-erd__node:hover .tx-db-erd__card {
+  stroke: var(--tx-accent);
+}
+
+.tx-db-erd__node.is-dragging .tx-db-erd__card {
+  stroke: var(--tx-accent);
+}
+
+.tx-db-erd__title {
+  fill: var(--tx-text-primary);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.tx-db-erd__col {
+  fill: var(--tx-text-muted);
+  font-size: 11px;
+}
+
+.tx-db-erd__tick {
+  fill: color-mix(in srgb, var(--tx-accent) 70%, transparent);
+}
+
+.tx-db-erd__tick.is-pk {
+  fill: #3dcc8a;
+}

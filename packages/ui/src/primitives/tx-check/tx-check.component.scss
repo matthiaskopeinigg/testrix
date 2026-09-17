@@ -1,0 +1,138 @@
+@use 'mixins';
+
+:host {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+}
+
+:host(.tx-check-host--inline),
+:host(.tx-check-host--compact) {
+  display: inline-flex;
+  width: auto;
+  max-width: 100%;
+}
+
+.tx-check {
+  @include mixins.tx-focus-ring;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 44px;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--tx-text-muted);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  text-align: left;
+  cursor: pointer;
+}
+
+.tx-check:hover:not(:disabled) {
+  background: var(--tx-bg-hover);
+  color: var(--tx-text-primary);
+}
+
+.tx-check.is-on {
+  color: var(--tx-text-primary);
+}
+
+.tx-check:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.tx-check--inline {
+  width: auto;
+  min-height: 32px;
+  padding: 4px 8px;
+  gap: 8px;
+}
+
+.tx-check--compact {
+  width: auto;
+  min-height: 0;
+  padding: 4px;
+  gap: 0;
+  border-radius: 8px;
+}
+
+.tx-check__copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.tx-check__label {
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.tx-check--inline .tx-check__label {
+  font-size: 12px;
+}
+
+.tx-check__detail {
+  color: var(--tx-text-faint);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+.tx-check__box {
+  position: relative;
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  overflow: hidden;
+  border: 1.5px solid var(--tx-border-strong);
+  border-radius: 6px;
+  background: transparent;
+  transition:
+    border-color calc(160ms * var(--tx-motion-scale, 1)) var(--tx-ease-out),
+    background-color calc(160ms * var(--tx-motion-scale, 1)) var(--tx-ease-out);
+}
+
+.tx-check__box::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 4.5px;
+  background: var(--tx-accent);
+  transform: scale(0);
+  transform-origin: center;
+  transition: transform calc(280ms * var(--tx-motion-scale, 1)) var(--tx-spring);
+}
+
+.tx-check.is-on .tx-check__box {
+  border-color: var(--tx-accent);
+}
+
+.tx-check.is-on .tx-check__box::before {
+  transform: scale(1);
+}
+
+.tx-check__tick {
+  position: relative;
+  z-index: 1;
+  color: var(--tx-on-accent);
+}
+
+.tx-check__tick path {
+  stroke-dasharray: 14;
+  stroke-dashoffset: 14;
+  transition: stroke-dashoffset calc(220ms * var(--tx-motion-scale, 1)) var(--tx-ease-out);
+}
+
+.tx-check.is-on .tx-check__tick path {
+  stroke-dashoffset: 0;
+  transition-delay: calc(90ms * var(--tx-motion-scale, 1));
+}

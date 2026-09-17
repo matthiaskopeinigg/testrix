@@ -1,0 +1,14 @@
+:host {
+  display: grid;
+  place-items: center;
+  color: var(--tx-text-muted);
+}
+
+.tx-database-type-icon {
+  display: grid;
+  place-items: center;
+}
+
+.tx-database-type-icon[data-kind='engine'] {
+  color: inherit;
+}

@@ -1,0 +1,57 @@
+@use 'mixins';
+
+:host {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+}
+
+.tx-tools {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.tx-tools__body {
+  @include mixins.tx-scrollbar;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  margin: 0 -4px;
+  padding: 8px 4px;
+  overflow-x: clip;
+  overflow-y: auto;
+}
+
+.tx-tools__content {
+  position: relative;
+  z-index: 0;
+  min-width: 0;
+  min-height: 100%;
+}
+
+.tx-tools__indicator {
+  position: absolute;
+  top: 0;
+  right: 8px;
+  z-index: 4;
+  height: 2px;
+  margin-top: -1px;
+  background: var(--tx-accent);
+  pointer-events: none;
+}
+
+.tx-tools__live {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

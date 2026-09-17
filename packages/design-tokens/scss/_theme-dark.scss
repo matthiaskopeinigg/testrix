@@ -1,0 +1,24 @@
+[data-theme='dark'],
+:root {
+  color-scheme: dark;
+  --tx-bg-app: #0a090c;
+  --tx-bg-chrome: #110e14;
+  --tx-bg-canvas: #161218;
+  --tx-bg-overlay: #1c1820;
+  --tx-bg-hover: rgba(255, 255, 255, 0.045);
+  --tx-bg-active: var(--tx-accent-soft);
+  --tx-border-subtle: rgba(255, 255, 255, 0.07);
+  --tx-border-strong: rgba(255, 255, 255, 0.12);
+  --tx-text-primary: rgba(255, 250, 252, 0.94);
+  --tx-text-muted: rgba(255, 236, 244, 0.58);
+  --tx-text-faint: rgba(255, 236, 244, 0.34);
+  --tx-danger: #ff6b81;
+  --tx-success: #3dd68c;
+  --tx-shadow-1: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  --tx-shadow-2: 0 24px 60px rgba(0, 0, 0, 0.55);
+  --tx-scrim: rgba(6, 4, 8, 0.72);
+  --tx-glow: 0 0 80px rgba(225, 29, 116, 0.22);
+  --tx-scrollbar-thumb: rgba(255, 236, 244, 0.16);
+  --tx-scrollbar-thumb-hover: rgba(255, 236, 244, 0.34);
+  --tx-scrollbar-thumb-active: color-mix(in srgb, var(--tx-accent) 58%, rgba(255, 236, 244, 0.42));
+}

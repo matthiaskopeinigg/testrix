@@ -1,0 +1,85 @@
+<div class="tx-env-node" [style.--tx-tree-depth]="depth()" [class.is-folder]="isFolder()">
+  <tx-hint stretch label="Shift+click range" detail="Ctrl+click add" placement="right">
+    <div
+      class="tx-env-node__row"
+      [class.is-folder]="isFolder()"
+      [class.is-variable]="!isFolder()"
+      [class.is-focused]="focused()"
+      [class.is-selected]="selected()"
+      [class.is-menu]="menuOpen()"
+      [class.is-renaming]="renaming()"
+      [class.is-inactive]="inactive()"
+      role="button"
+      [attr.tabindex]="renaming() ? -1 : 0"
+      [attr.aria-expanded]="isFolder() ? expanded() : null"
+      [attr.aria-current]="focused() ? 'true' : null"
+      [attr.aria-label]="rowAriaLabel()"
+      (click)="handleRowClick($event)"
+      (dblclick)="handleRowDblClick($event)"
+      (keydown)="handleRowKeydown($event)"
+      (contextmenu)="handleMenu($event)"
+    >
+      @if (isFolder()) {
+        <button
+          type="button"
+          class="tx-env-node__chevron"
+          [class.is-expanded]="expanded()"
+          [attr.aria-label]="expanded() ? 'Collapse ' + label() : 'Expand ' + label()"
+          (click)="handleChevronClick($event)"
+        >
+          <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
+            <path
+              d="M4 2.5 8 6 4 9.5"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.4"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+        </button>
+      } @else {
+        <span class="tx-env-node__chevron-spacer" aria-hidden="true"></span>
+      }
+
+      <span class="tx-env-node__icon" aria-hidden="true">
+        @if (isFolder()) {
+          <svg width="14" height="14" viewBox="0 0 14 14">
+            <path
+              d="M2 3.5h3.2l1 1.2H12v6.3H2V3.5z"
+              fill="currentColor"
+              fill-opacity="0.22"
+              stroke="currentColor"
+              stroke-width="1.25"
+              stroke-linejoin="round"
+            />
+          </svg>
+        } @else {
+          <span class="tx-env-node__hash">#</span>
+        }
+      </span>
+
+      @if (renaming() && isFolder()) {
+        <input
+          class="tx-env-node__rename"
+          type="text"
+          [value]="folderName()"
+          [attr.data-env-focus]="node().id"
+          [attr.aria-label]="'Rename folder ' + label()"
+          spellcheck="false"
+          autocomplete="off"
+          (click)="$event.stopPropagation()"
+          (dblclick)="$event.stopPropagation()"
+          (input)="handleRenameInput($event)"
+          (keydown)="renameKey.emit($event)"
+          (blur)="renameBlur.emit()"
+        />
+      } @else {
+        <span class="tx-env-node__name">{{ label() }}</span>
+        @if (description(); as text) {
+          <span class="tx-env-node__description">{{ text }}</span>
+        }
+      }
+    </div>
+  </tx-hint>
+</div>

@@ -1,0 +1,83 @@
+<section class="tx-uuid-editor" [attr.aria-label]="tab().title">
+  <header class="tx-uuid-editor__head">
+    <div class="tx-uuid-editor__title">
+      <h1>UUID Generator</h1>
+      <p>RFC 4122 version 4 identifiers, created on this machine.</p>
+    </div>
+    <div class="tx-uuid-editor__controls">
+      <tx-check
+        variant="inline"
+        [checked]="uppercase()"
+        label="Uppercase"
+        (checkedChange)="uppercase.set($event)"
+      />
+      <tx-check
+        variant="inline"
+        [checked]="hyphens()"
+        label="Hyphens"
+        (checkedChange)="hyphens.set($event)"
+      />
+    </div>
+  </header>
+
+  <div class="tx-uuid-editor__composer">
+    <span class="tx-uuid-editor__mark" aria-hidden="true">UUID</span>
+    <label class="tx-uuid-editor__field">
+      <span class="visually-hidden">Generated UUID</span>
+      <input
+        type="text"
+        readonly
+        [value]="displayValue()"
+        spellcheck="false"
+        (focus)="selectValue($event)"
+      />
+    </label>
+    <tx-hint label="Copy UUID" placement="bottom">
+      <button
+        type="button"
+        class="tx-uuid-editor__copy"
+        aria-label="Copy UUID"
+        (click)="copyLatest($event)"
+      >
+        Copy
+      </button>
+    </tx-hint>
+    <tx-hint label="Generate and copy UUID" placement="bottom">
+      <button
+        type="button"
+        class="tx-uuid-editor__generate"
+        aria-label="Generate and copy UUID"
+        (click)="generateAndCopy($event)"
+      >
+        Generate & copy
+      </button>
+    </tx-hint>
+  </div>
+
+  <dl class="tx-uuid-editor__facts">
+    <div>
+      <dt>Version</dt>
+      <dd>4 (random)</dd>
+    </div>
+    <div>
+      <dt>Random bits</dt>
+      <dd>122</dd>
+    </div>
+    <div>
+      <dt>Variant</dt>
+      <dd>RFC 4122</dd>
+    </div>
+    <div>
+      <dt>Layout</dt>
+      <dd>8-4-4-4-12</dd>
+    </div>
+    <div>
+      <dt>Source</dt>
+      <dd>local crypto</dd>
+    </div>
+    <div>
+      <dt>Network</dt>
+      <dd>None</dd>
+    </div>
+  </dl>
+</section>

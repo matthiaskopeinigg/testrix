@@ -1,0 +1,53 @@
+<tx-hint
+  stretch
+  label="Shift+click range"
+  detail="Ctrl+click add"
+  placement="right"
+  [suppressed]="renaming()"
+>
+  <div
+    class="tx-environments-item"
+    role="option"
+    tabindex="0"
+    [class.is-active]="active()"
+    [class.is-selected]="selected()"
+    [class.is-renaming]="renaming()"
+    [attr.aria-selected]="selected() || active()"
+    [attr.aria-label]="rowAriaLabel()"
+    [attr.aria-keyshortcuts]="'Alt+ArrowUp Alt+ArrowDown'"
+    (click)="handleRowClick($event)"
+    (keydown)="handleRowKeydown($event)"
+    (contextmenu)="handleMenu($event)"
+  >
+    <span class="tx-environments-item__icon" aria-hidden="true">
+      <svg width="14" height="14" viewBox="0 0 24 24">
+        <path
+          d="M8 4H7a2 2 0 0 0-2 2v3a2 2 0 0 1-2 2 2 2 0 0 1 2 2v3a2 2 0 0 0 2 2h1M16 4h1a2 2 0 0 1 2 2v3a2 2 0 0 0 2 2 2 2 0 0 0-2 2v3a2 2 0 0 1-2 2h-1"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </svg>
+    </span>
+    @if (renaming()) {
+      <input
+        class="tx-environments-item__rename"
+        type="text"
+        [value]="environment().name"
+        [attr.data-env-rename]="environment().id"
+        [attr.aria-label]="'Rename ' + environment().name"
+        spellcheck="false"
+        autocomplete="off"
+        (click)="$event.stopPropagation()"
+        (input)="handleRenameInput($event)"
+        (keydown)="renameKey.emit($event)"
+        (blur)="renameBlur.emit()"
+      />
+    } @else {
+      <span class="tx-environments-item__name">{{ environment().name }}</span>
+      <span class="tx-environments-item__count">{{ countLabel() }}</span>
+    }
+  </div>
+</tx-hint>

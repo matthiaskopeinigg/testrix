@@ -1,0 +1,67 @@
+@use 'mixins';
+
+:host {
+  display: inline-flex;
+}
+
+.tx-button {
+  @include mixins.tx-press;
+  @include mixins.tx-focus-ring;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--tx-space-2);
+  min-height: 34px;
+  padding: 0 14px;
+  border: 1px solid transparent;
+  border-radius: var(--tx-radius-control);
+  font: inherit;
+  font-size: var(--tx-type-ui);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  color: var(--tx-text-primary);
+  background: transparent;
+}
+
+.tx-button--primary {
+  min-height: 42px;
+  padding: 0 18px;
+  color: var(--tx-on-accent);
+  background: var(--tx-accent);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--tx-accent) 32%, transparent);
+}
+
+.tx-button--primary:hover:not(:disabled) {
+  background: var(--tx-accent-hover);
+  box-shadow: 0 12px 28px color-mix(in srgb, var(--tx-accent) 42%, transparent);
+}
+
+.tx-button--primary:active:not(:disabled) {
+  background: var(--tx-accent-pressed);
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--tx-accent) 28%, transparent);
+}
+
+.tx-button--secondary {
+  border-color: var(--tx-border-subtle);
+  background: color-mix(in srgb, var(--tx-bg-canvas) 70%, transparent);
+}
+
+.tx-button--secondary:hover:not(:disabled) {
+  background: var(--tx-bg-hover);
+}
+
+.tx-button--ghost {
+  @include mixins.tx-hover-fill;
+}
+
+.tx-button--danger {
+  min-height: 42px;
+  color: #fff;
+  background: var(--tx-danger);
+}
+
+.tx-button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}

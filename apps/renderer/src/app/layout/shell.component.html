@@ -1,0 +1,80 @@
+<div
+  class="tx-shell"
+  [class.tx-shell--scene-a]="shell.sceneNonce() > 0 && shell.sceneNonce() % 2 === 1"
+  [class.tx-shell--scene-b]="shell.sceneNonce() > 0 && shell.sceneNonce() % 2 === 0"
+>
+  <tx-window-titlebar
+    [logoSrc]="'assets/logo.svg'"
+    [productName]="'Testrix'"
+    [platform]="desktop.platform()"
+    [isMaximized]="desktop.isMaximized()"
+    (minimize)="desktop.api.window.minimize()"
+    (maximize)="desktop.api.window.maximize()"
+    (close)="desktop.api.window.close()"
+    (openSettings)="shell.openSettings()"
+  >
+    <tx-workspace-switcher txTitlebarStart />
+    <tx-environment-switcher />
+  </tx-window-titlebar>
+  <div class="tx-shell__body">
+    <tx-activity-rail
+      [activeId]="shell.activeRail()"
+      [collapsed]="shell.sidebarCollapsed()"
+      [helpOpen]="shell.helpOpen()"
+      (selectItem)="handleRail($event)"
+      (openHelp)="shell.toggleHelp()"
+    />
+    <tx-sidebar
+      [title]="sidebarTitle()"
+      [collapsed]="shell.sidebarCollapsed()"
+      [width]="shell.sidebarWidth()"
+      (widthChange)="shell.setSidebarWidth($event)"
+      (collapse)="shell.hideSidebar()"
+    >
+      <div class="tx-shell__pane-stage" [attr.data-slide]="shell.railSlideDir()">
+        @if (shell.activeRail() === 'collections') {
+          <tx-collections-sidebar [animate.enter]="sidebarPaneEnter()" animate.leave="tx-sidebar-pane-out" />
+        } @else if (shell.activeRail() === 'database') {
+          <tx-database-sidebar [animate.enter]="sidebarPaneEnter()" animate.leave="tx-sidebar-pane-out" />
+        } @else if (shell.activeRail() === 'environments') {
+          <tx-environments-sidebar [animate.enter]="sidebarPaneEnter()" animate.leave="tx-sidebar-pane-out" />
+        } @else if (shell.activeRail() === 'tools') {
+          <tx-tools-sidebar [animate.enter]="sidebarPaneEnter()" animate.leave="tx-sidebar-pane-out" />
+        } @else {
+          <p class="tx-shell__aside" [animate.enter]="sidebarPaneEnter()" animate.leave="tx-sidebar-pane-out">
+            {{ sidebarBody() }}
+          </p>
+        }
+      </div>
+    </tx-sidebar>
+    <main class="tx-shell__canvas" id="main" (pointerdown)="handleOutsideSidebar($event)">
+      <tx-workbench />
+    </main>
+  </div>
+</div>
+@if (shell.paletteOpen()) {
+  <tx-command-palette animate.enter="tx-overlay-enter" animate.leave="tx-overlay-leave" />
+}
+@if (shell.settingsOpen()) {
+  <tx-settings-overlay animate.enter="tx-overlay-enter" animate.leave="tx-overlay-leave" />
+}
+@if (shell.helpOpen()) {
+  <tx-help-overlay animate.enter="tx-overlay-enter" animate.leave="tx-overlay-leave" />
+}
+@if (shell.workspaceManagerOpen()) {
+  <tx-workspace-manager animate.enter="tx-overlay-enter" animate.leave="tx-overlay-leave" (closed)="shell.closeOverlays()" />
+}
+@if (confirm.request(); as request) {
+  <tx-confirm-dialog
+    animate.enter="tx-overlay-enter"
+    animate.leave="tx-overlay-leave"
+    [title]="request.title"
+    [body]="request.body"
+    [confirmLabel]="request.confirmLabel"
+    [cancelLabel]="request.cancelLabel"
+    (confirmed)="confirm.complete(true)"
+    (cancelled)="confirm.complete(false)"
+  />
+}
+<tx-drag-layer />
+<tx-hint-layer />

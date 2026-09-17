@@ -1,0 +1,241 @@
+<div class="tx-db-query" (keydown)="handleHotkey($event)">
+  <header class="tx-db-query__bar">
+    <tx-select
+      variant="chrome"
+      [value]="query()?.connectionId ?? ''"
+      [options]="connectionOptions()"
+      ariaLabel="Query connection"
+      (valueChange)="handleConnection($event)"
+    />
+    <tx-select
+      variant="chrome"
+      [value]="schema()"
+      [options]="schemaOptions()"
+      ariaLabel="Query schema"
+      (valueChange)="handleSchema($event)"
+    />
+    <span class="tx-db-query__spacer"></span>
+    <div class="tx-db-query__run" cdkOverlayOrigin #runOrigin="cdkOverlayOrigin">
+      <tx-hint label="Run" keys="Ctrl Enter" placement="bottom">
+        <button
+          type="button"
+          class="tx-db-query__icon is-accent"
+          [disabled]="running()"
+          (click)="executeFromEditor()"
+          aria-label="Run"
+          [attr.aria-expanded]="chooserOpen()"
+          [attr.aria-haspopup]="'menu'"
+        >
+          @if (running()) {
+            <tx-spinner label="Running" />
+          } @else {
+            <svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true">
+              <path d="M5 3.2 12.2 8 5 12.8V3.2z" fill="currentColor" />
+            </svg>
+          }
+        </button>
+      </tx-hint>
+      <ng-template
+        cdkConnectedOverlay
+        [cdkConnectedOverlayOrigin]="runOrigin"
+        [cdkConnectedOverlayOpen]="chooserOpen()"
+        [cdkConnectedOverlayPositions]="chooserPositions"
+        [cdkConnectedOverlayPush]="true"
+        [cdkConnectedOverlayViewportMargin]="8"
+      >
+        <div class="tx-db-query__chooser tx-menu" role="menu" aria-label="Run query">
+          <button
+            type="button"
+            class="tx-db-query__choice"
+            role="menuitem"
+            [class.is-active]="chooserMode() === 'caret'"
+            (mouseenter)="handleChooserHover('caret')"
+            (mousedown)="$event.preventDefault()"
+            (click)="runMode('caret')"
+          >
+            Run query from cursor
+          </button>
+          <button
+            type="button"
+            class="tx-db-query__choice"
+            role="menuitem"
+            [class.is-active]="chooserMode() === 'all'"
+            (mouseenter)="handleChooserHover('all')"
+            (mousedown)="$event.preventDefault()"
+            (click)="runMode('all')"
+          >
+            Run all queries
+          </button>
+        </div>
+      </ng-template>
+    </div>
+    <tx-hint label="Format" placement="bottom">
+      <button type="button" class="tx-db-query__icon" (click)="handleFormat()" aria-label="Format">
+        <svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true">
+          <path d="M3 4.2h10M3 8h6.5M3 11.8h10" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
+        </svg>
+      </button>
+    </tx-hint>
+    <tx-hint label="Copy" placement="bottom">
+      <button type="button" class="tx-db-query__icon" (click)="handleCopy()" aria-label="Copy results">
+        <svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true">
+          <rect x="5.2" y="3.2" width="7.2" height="8.4" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.3" />
+          <path d="M3.6 6.2v6.2c0 .7.5 1.2 1.2 1.2h5.4" fill="none" stroke="currentColor" stroke-width="1.3" />
+        </svg>
+      </button>
+    </tx-hint>
+    @if (hasConsoleContent()) {
+      <tx-hint [label]="showConsole() ? 'Hide results' : 'Show results'" placement="bottom">
+        <button
+          type="button"
+          class="tx-db-query__icon"
+          (click)="toggleConsole()"
+          [attr.aria-label]="showConsole() ? 'Hide results' : 'Show results'"
+        >
+          @if (showConsole()) {
+            <svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true">
+              <path d="M3 9.4 8 4.6 13 9.4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          } @else {
+            <svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true">
+              <path d="M3 6.6 8 11.4 13 6.6" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          }
+        </button>
+      </tx-hint>
+    }
+    @if (canTransact()) {
+      <span class="tx-db-query__rule" aria-hidden="true"></span>
+      <div class="tx-db-query__cluster" role="group" aria-label="Transaction">
+        <tx-hint label="Commit the held transaction" placement="bottom">
+          <button
+            type="button"
+            class="tx-db-query__text is-accent"
+            [disabled]="!uncommitted()"
+            (click)="handlePush()"
+          >
+            Commit
+          </button>
+        </tx-hint>
+        <tx-hint label="Push the held transaction" placement="bottom">
+          <button type="button" class="tx-db-query__text" [disabled]="!uncommitted()" (click)="handlePush()">
+            Push
+          </button>
+        </tx-hint>
+        <tx-hint label="Roll back the held transaction" placement="bottom">
+          <button type="button" class="tx-db-query__text" [disabled]="!uncommitted()" (click)="handleRollback()">
+            Rollback
+          </button>
+        </tx-hint>
+      </div>
+    }
+  </header>
+
+  @if (uncommitted()) {
+    <div class="tx-db-query__txn">
+      <span>
+        Uncommitted — Push to apply
+        @if (countdown()) {
+          , or auto-rollback in {{ countdown() }}
+        }
+      </span>
+      <tx-hint label="Commit the held transaction" placement="bottom">
+        <button type="button" class="tx-db-query__text is-accent" (click)="handlePush()">Push</button>
+      </tx-hint>
+      <tx-hint label="Roll back the held transaction" placement="bottom">
+        <button type="button" class="tx-db-query__text" (click)="handleRollback()">Rollback</button>
+      </tx-hint>
+    </div>
+  }
+
+  <div class="tx-db-query__editor-pane">
+    <div class="tx-db-query__gutter" #gutter aria-hidden="true">
+      @for (line of lineNumbers(); track line) {
+        <span>{{ line }}</span>
+      }
+    </div>
+    <div class="tx-db-query__code">
+      <pre class="tx-db-query__highlight" #highlight aria-hidden="true">@for (token of highlightTokens(); track $index) {<span [class]="'is-' + token.kind">{{ token.text }}</span>}</pre>
+      @if (ghost(); as ghostText) {
+        <pre class="tx-db-query__ghost" #ghostPane aria-hidden="true"><span class="tx-db-query__ghost-pad">{{ ghostText.pad }}</span><span class="tx-db-query__ghost-rest">{{ ghostText.rest }}</span></pre>
+      }
+      <textarea
+        #editor
+        class="tx-db-query__editor"
+        spellcheck="false"
+        [placeholder]="placeholder()"
+        (input)="handleSql($event)"
+        (scroll)="handleScroll($event)"
+        (click)="handleCaret($event)"
+        (keyup)="handleCaret($event)"
+        (keydown)="handleEditorKey($event)"
+        aria-label="SQL editor"
+        [attr.aria-autocomplete]="'both'"
+      ></textarea>
+      @if (completeOpen() && suggestions().length > 0) {
+        <div
+          class="tx-db-query__suggest tx-menu"
+          role="listbox"
+          aria-label="SQL suggestions"
+          [style.top.px]="suggestPos().top"
+          [style.left.px]="suggestPos().left"
+        >
+          @for (item of suggestions(); track item.kind + item.value; let i = $index) {
+            <button
+              type="button"
+              class="tx-db-query__suggest-item"
+              role="option"
+              [class.is-active]="i === completeIndex()"
+              (mousedown)="$event.preventDefault()"
+              (click)="applySuggestion(item)"
+              (pointerenter)="completeIndex.set(i)"
+            >
+              <span>{{ item.label }}</span>
+              <span class="tx-db-query__suggest-detail">{{ item.detail }}</span>
+            </button>
+          }
+        </div>
+      }
+    </div>
+  </div>
+
+  @if (showConsole()) {
+    <div
+      class="tx-db-query__sash"
+      role="separator"
+      aria-orientation="horizontal"
+      aria-label="Resize editor and results"
+      tabindex="0"
+      (pointerdown)="handleResizeStart($event)"
+      (dblclick)="hideConsole()"
+    ></div>
+
+    <div class="tx-db-query__console" [style.flex]="'0 0 ' + consoleHeight() + 'px'">
+      @if (error(); as message) {
+        <div class="tx-db-query__error" role="alert">
+          <p>{{ message }}</p>
+          <tx-hint label="Dismiss" placement="left">
+            <button type="button" class="tx-db-query__error-dismiss" (click)="dismissError()" aria-label="Dismiss error">
+              <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
+                <path d="M3 3l6 6M9 3 3 9" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
+              </svg>
+            </button>
+          </tx-hint>
+        </div>
+      }
+
+      <tx-database-result-grid
+        [table]="result()?.table ?? null"
+        [durationMs]="result()?.durationMs ?? null"
+        [filter]="filter()"
+        [pageSize]="pageSize()"
+        [pageSizes]="pageSizes"
+        [rolledBack]="rolledBack()"
+        [busy]="running()"
+        [emptyLabel]="'No rows'"
+        (filterChange)="filter.set($event)"
+        (pageSizeChange)="handlePageSize($event)"
+      />
+    </div>
+  }
+</div>

@@ -1,0 +1,84 @@
+<div class="tx-collections" #root (contextmenu)="$event.preventDefault()">
+  <tx-collections-toolbar />
+  <div
+    class="tx-collections__body"
+    #scroller
+    (click)="handleChromeClick($event)"
+    (contextmenu)="handleRootMenu($event)"
+  >
+    <div class="tx-collections__content">
+      @if (store.hasVisibleNodes()) {
+        <tx-collections-tree
+          [nodes]="store.visibleTree()"
+          [parentId]="null"
+          [depth]="0"
+          [renamingId]="renamingId()"
+          (nodeMenu)="handleItemMenu($event)"
+          (renameStart)="startRename($event)"
+          (renameInput)="handleRenameInput($event)"
+          (renameKey)="handleRenameKey($event)"
+          (renameBlur)="finishRename()"
+        />
+      } @else {
+        <tx-empty-state
+          title="No matches"
+          body="Try a different search or clear filters to see your collections again."
+        />
+      }
+
+      <!-- One persistent indicator. Slot changes move it; nothing ever remounts. -->
+      <div
+        class="tx-collections__indicator"
+        [class.is-visible]="dnd.isIndicatorVisible()"
+        [class.is-denied]="dnd.isIndicatorDenied()"
+        [style.left.px]="dnd.indicatorLeft()"
+        [style.transform]="'translate3d(0, ' + dnd.indicatorY() + 'px, 0)'"
+        aria-hidden="true"
+      ></div>
+    </div>
+  </div>
+  <p class="tx-collections__live" role="status" aria-live="polite">{{ dnd.announcement() }}</p>
+</div>
+
+<ng-template #collectionsMenu>
+  @if (menu(); as menu) {
+    <div class="tx-collections-menu tx-menu" role="menu">
+      @if (menu.kind === 'root' || menu.kind === 'folder') {
+        <button type="button" class="tx-collections-menu__item" role="menuitem" (click)="handleNew('folder')">
+          New folder
+        </button>
+        <button type="button" class="tx-collections-menu__item" role="menuitem" (click)="handleNew('http')">
+          New request
+        </button>
+        <button type="button" class="tx-collections-menu__item" role="menuitem" (click)="handleNew('websocket')">
+          New WebSocket
+        </button>
+      }
+      @if (menu.kind === 'http' || menu.kind === 'websocket') {
+        <button type="button" class="tx-collections-menu__item" role="menuitem" (click)="handleOpen()">
+          Open
+        </button>
+      }
+      @if (menu.kind !== 'root') {
+        @if (menu.kind === 'folder') {
+          <span class="tx-collections-menu__rule" aria-hidden="true"></span>
+        }
+        <button type="button" class="tx-collections-menu__item" role="menuitem" (click)="handleRenameFromMenu()">
+          Rename
+        </button>
+        <button type="button" class="tx-collections-menu__item" role="menuitem" (click)="handleDuplicate()">
+          Duplicate
+        </button>
+        <span class="tx-collections-menu__rule" aria-hidden="true"></span>
+        <button
+          type="button"
+          class="tx-collections-menu__item is-danger"
+          role="menuitem"
+          (click)="handleDelete()"
+        >
+          {{ deleteLabel() }}
+        </button>
+      }
+    </div>
+  }
+</ng-template>

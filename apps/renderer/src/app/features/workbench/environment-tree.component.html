@@ -1,0 +1,102 @@
+<div class="tx-env-tree__list">
+  @for (node of nodes(); track node.id) {
+    <div
+      class="tx-env-tree__block"
+      [attr.data-flip-id]="node.id"
+      [class.is-drop-folder]="isDropFolder(node.id)"
+      [class.is-just-moved]="isJustMoved(node.id)"
+    >
+      <div
+        class="tx-env-tree__item"
+        [txDraggable]="node"
+        [txDraggableDisabled]="dragDisabled() || renamingId() === node.id"
+        [txDraggablePreview]="dragPreview"
+        [txDraggableScrollContainer]="dnd.scrollContainer()"
+        [attr.data-env-node-id]="node.id"
+        [attr.data-env-depth]="depth()"
+        [attr.data-env-kind]="node.kind"
+        (dragStarted)="handleDragStarted($event)"
+        (dragMoved)="handleDragMoved($event)"
+        (dragEnded)="handleDragEnded($event)"
+      >
+        <tx-environment-tree-node
+          [node]="node"
+          [parentId]="parentId()"
+          [depth]="depth()"
+          [expanded]="isExpanded(node)"
+          [focused]="focusedId() === node.id"
+          [selected]="isSelected(node.id)"
+          [renaming]="renamingId() === node.id"
+          [menuOpen]="menuTargetId() === node.id"
+          (toggle)="toggle.emit($event)"
+          (selectNode)="selectNode.emit($event)"
+          (contextMenu)="nodeMenu.emit($event)"
+          (renameStart)="renameStart.emit($event)"
+          (renameInput)="renameInput.emit($event)"
+          (renameKey)="renameKey.emit($event)"
+          (renameBlur)="renameBlur.emit()"
+        />
+      </div>
+
+      @if (asFolder(node); as folder) {
+        @if (isExpanded(folder) && folder.children.length > 0) {
+          <div class="tx-tree-reveal" animate.enter="tx-tree-expand" animate.leave="tx-tree-collapse">
+            <div class="tx-tree-reveal__clip">
+              <tx-environment-tree
+                [nodes]="folder.children"
+                [envId]="envId()"
+                [parentId]="folder.id"
+                [depth]="depth() + 1"
+                [focusedId]="focusedId()"
+                [renamingId]="renamingId()"
+                [menuTargetId]="menuTargetId()"
+                [dragDisabled]="dragDisabled()"
+                (selectNode)="selectNode.emit($event)"
+                (toggle)="toggle.emit($event)"
+                (nodeMenu)="nodeMenu.emit($event)"
+                (renameStart)="renameStart.emit($event)"
+                (renameInput)="renameInput.emit($event)"
+                (renameKey)="renameKey.emit($event)"
+                (renameBlur)="renameBlur.emit()"
+              />
+            </div>
+          </div>
+        }
+      }
+    </div>
+  }
+</div>
+
+<ng-template #dragPreview let-node>
+  <div
+    class="tx-env-preview"
+    [class.is-denied]="dnd.dropTarget()?.denied"
+    [class.is-into]="dnd.dropTarget()?.mode === 'into'"
+  >
+    <span class="tx-env-preview__icon" aria-hidden="true">
+      @if (node.kind === 'folder') {
+        <svg width="14" height="14" viewBox="0 0 14 14">
+          <path
+            d="M2 3.5h3.2l1 1.2H12v6.3H2V3.5z"
+            fill="currentColor"
+            fill-opacity="0.22"
+            stroke="currentColor"
+            stroke-width="1.25"
+            stroke-linejoin="round"
+          />
+        </svg>
+      } @else {
+        <span class="tx-env-preview__hash">#</span>
+      }
+    </span>
+    <span class="tx-env-preview__name">{{ previewName(node) }}</span>
+    @if (dragCount() > 1) {
+      <span class="tx-env-preview__badge">{{ dragCount() }}</span>
+    }
+    @if (dnd.dropTarget()?.denied) {
+      <span class="tx-env-preview__badge is-deny">Not allowed</span>
+    } @else if (dnd.dropTarget()?.mode === 'into') {
+      <span class="tx-env-preview__badge is-into">Into folder</span>
+    }
+  </div>
+</ng-template>

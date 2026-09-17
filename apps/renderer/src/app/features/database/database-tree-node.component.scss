@@ -1,0 +1,179 @@
+@use 'mixins';
+
+:host {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.tx-database-node {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+}
+
+:host ::ng-deep .tx-hint__trigger {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.tx-database-node__row {
+  @include mixins.tx-hover-fill;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-height: 30px;
+  padding: 0 8px 0 calc(8px + (var(--tx-tree-depth, 0) * 14px));
+  border-radius: 8px;
+  color: var(--tx-text-primary);
+  cursor: grab;
+}
+
+.tx-database-node__row.is-folder {
+  @include mixins.tx-focus-ring;
+  cursor: pointer;
+}
+
+.tx-database-node__row.is-leaf {
+  @include mixins.tx-focus-ring;
+  cursor: pointer;
+}
+
+.tx-database-node__row.is-open:not(.is-active):not(.is-selected) {
+  background: color-mix(in srgb, var(--tx-accent) 8%, transparent);
+}
+
+.tx-database-node__row.is-selected:not(.is-active) {
+  background: color-mix(in srgb, var(--tx-accent) 12%, transparent);
+}
+
+.tx-database-node__row.is-active {
+  @include mixins.tx-active-rail;
+  background: color-mix(in srgb, var(--tx-accent) 14%, transparent);
+}
+
+.tx-database-node__row:active {
+  cursor: grabbing;
+}
+
+.tx-database-node__row.is-folder:active {
+  cursor: grabbing;
+}
+
+.tx-database-node__row.is-renaming,
+.tx-database-node__row.is-renaming:active {
+  cursor: text;
+}
+
+.tx-database-node__chevron,
+.tx-database-node__chevron-spacer {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.tx-database-node__chevron {
+  @include mixins.tx-press;
+  @include mixins.tx-focus-ring;
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  border: 0;
+  padding: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--tx-text-faint);
+  cursor: pointer;
+  @include mixins.tx-chevron;
+}
+
+.tx-database-node__chevron.is-expanded {
+  transform: rotate(90deg);
+}
+
+.tx-database-node__icon {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-width: 28px;
+  color: var(--tx-text-muted);
+}
+
+.tx-database-node__status-dot {
+  position: absolute;
+  right: 2px;
+  bottom: 1px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--tx-text-faint);
+  box-shadow: 0 0 0 2px var(--tx-bg-sidebar, var(--tx-bg-canvas));
+}
+
+.tx-database-node__status-dot[data-status='connected'] {
+  background: #3dcc8a;
+}
+
+.tx-database-node__status-dot[data-status='error'] {
+  background: #ff6b7a;
+}
+
+.tx-database-node__status-dot[data-status='checking'] {
+  background: #f5c14a;
+}
+
+.tx-database-node__meta {
+  flex-shrink: 0;
+  max-width: 42%;
+  overflow: hidden;
+  font-size: 10px;
+  color: var(--tx-text-faint);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tx-database-node__method {
+  @include mixins.tx-http-method-tone;
+  font-family: var(--tx-font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.tx-database-node__name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 12px;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tx-database-node__rename {
+  @include mixins.tx-focus-ring;
+  flex: 1;
+  min-width: 0;
+  height: 22px;
+  padding: 0 6px;
+  border: 1px solid color-mix(in srgb, var(--tx-accent) 45%, var(--tx-border-subtle));
+  border-radius: 6px;
+  background: var(--tx-bg-canvas);
+  color: var(--tx-text-primary);
+  font: inherit;
+  font-size: 12px;
+}
+
+.tx-database-node__status {
+  flex-shrink: 0;
+  font-family: var(--tx-font-mono);
+  font-size: 10px;
+  color: var(--tx-text-faint);
+}

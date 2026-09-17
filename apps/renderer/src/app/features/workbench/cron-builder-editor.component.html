@@ -1,0 +1,117 @@
+<section class="tx-tool" [attr.aria-label]="tab().title">
+  <header class="tx-tool__head">
+    <div class="tx-tool__title">
+      <h1>Cron Builder</h1>
+      <p>Five-field expressions with a live summary and the next local fire times.</p>
+    </div>
+  </header>
+
+  <div class="tx-tool__split">
+    <div class="tx-tool__pane">
+      <div class="tx-tool__pane-label">Expression</div>
+      <div class="tx-tool__body">
+        <div class="tx-tool__grid">
+          <label class="tx-tool__field">
+            <span class="tx-tool__field-label">Minute</span>
+            <tx-select
+              variant="field"
+              ariaLabel="Minute"
+              [value]="fields().minute"
+              [options]="minuteOptions()"
+              (valueChange)="setField('minute', $event)"
+            />
+          </label>
+          <label class="tx-tool__field">
+            <span class="tx-tool__field-label">Hour</span>
+            <tx-select
+              variant="field"
+              ariaLabel="Hour"
+              [value]="fields().hour"
+              [options]="hourOptions()"
+              (valueChange)="setField('hour', $event)"
+            />
+          </label>
+          <label class="tx-tool__field">
+            <span class="tx-tool__field-label">Day of month</span>
+            <tx-select
+              variant="field"
+              ariaLabel="Day of month"
+              [value]="fields().dom"
+              [options]="domOptions()"
+              (valueChange)="setField('dom', $event)"
+            />
+          </label>
+          <label class="tx-tool__field">
+            <span class="tx-tool__field-label">Month</span>
+            <tx-select
+              variant="field"
+              ariaLabel="Month"
+              [value]="fields().month"
+              [options]="monthOptions()"
+              (valueChange)="setField('month', $event)"
+            />
+          </label>
+          <label class="tx-tool__field">
+            <span class="tx-tool__field-label">Day of week</span>
+            <tx-select
+              variant="field"
+              ariaLabel="Day of week"
+              [value]="fields().dow"
+              [options]="dowOptions()"
+              (valueChange)="setField('dow', $event)"
+            />
+          </label>
+        </div>
+        <label class="tx-tool__field">
+          <span class="tx-tool__field-label">Raw expression</span>
+          <input
+            class="tx-tool__input"
+            type="text"
+            [value]="raw()"
+            spellcheck="false"
+            autocomplete="off"
+            aria-label="Cron expression"
+            (input)="handleRaw($event)"
+          />
+        </label>
+        @if (error(); as message) {
+          <p class="tx-tool__error">{{ message }}</p>
+        }
+      </div>
+    </div>
+    <div class="tx-tool__pane">
+      <div class="tx-tool__pane-label">Preview</div>
+      <div class="tx-tool__body">
+        <p class="tx-tool__muted">{{ summary() }}</p>
+        @if (nextTimes().length > 0) {
+          <ul class="tx-tool__list">
+            @for (time of nextTimes(); track time) {
+              <li class="tx-tool__list-item tx-tool__mono">{{ time }}</li>
+            }
+          </ul>
+        } @else if (!error()) {
+          <p class="tx-tool__muted">No fire times in the next year.</p>
+        }
+      </div>
+    </div>
+  </div>
+
+  <footer class="tx-tool__footer">
+    <tx-hint label="Copy expression" placement="top">
+      <button
+        type="button"
+        class="tx-tool__btn tx-tool__btn--accent"
+        [disabled]="!raw().trim()"
+        aria-label="Copy expression"
+        (click)="copyExpression($event)"
+      >
+        Copy
+      </button>
+    </tx-hint>
+    <tx-hint label="Reset to every 5 minutes" placement="top">
+      <button type="button" class="tx-tool__btn" aria-label="Clear expression" (click)="clear()">
+        Clear
+      </button>
+    </tx-hint>
+  </footer>
+</section>

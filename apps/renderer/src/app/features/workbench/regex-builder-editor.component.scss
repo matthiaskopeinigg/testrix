@@ -1,0 +1,20 @@
+@use './tool-chrome';
+
+:host {
+  @include tool-chrome.host;
+}
+
+@include tool-chrome.styles;
+
+.tx-tool__error {
+  padding: 0;
+}
+
+.tx-tool__field {
+  flex: 0 0 auto;
+}
+
+.tx-tool__body > .tx-tool__field:last-child {
+  flex: 1;
+  min-height: 0;
+}

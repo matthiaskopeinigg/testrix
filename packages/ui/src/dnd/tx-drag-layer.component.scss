@@ -1,0 +1,41 @@
+:host {
+  display: contents;
+}
+
+.tx-drag-layer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: var(--tx-z-drag, 60);
+  // Revealed by the first paint of the frame loop, so it can never flash at the origin.
+  visibility: hidden;
+  pointer-events: none;
+  will-change: transform;
+}
+
+.tx-drag-layer__settle,
+.tx-drag-layer__lift,
+.tx-drag-layer__chip {
+  display: block;
+}
+
+.tx-drag-layer__lift {
+  animation: tx-drag-lift calc(140ms * var(--tx-motion-scale, 1)) var(--tx-spring) both;
+}
+
+.tx-drag-layer__chip {
+  transform-origin: 50% 50%;
+  will-change: transform;
+}
+
+@keyframes tx-drag-lift {
+  from {
+    opacity: 0.7;
+    transform: scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}

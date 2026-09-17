@@ -1,0 +1,109 @@
+<section class="tx-tool" [attr.aria-label]="tab().title">
+  <header class="tx-tool__head">
+    <div class="tx-tool__title">
+      <h1>Regex Tester</h1>
+      <p>Run a JavaScript regular expression against a haystack. Invalid patterns stay on the page.</p>
+    </div>
+    <div class="tx-tool__checks">
+      @for (flag of flagOptions; track flag) {
+        <tx-check
+          variant="inline"
+          [checked]="hasFlag(flag)"
+          [label]="flag"
+          (checkedChange)="toggleFlag(flag, $event)"
+        />
+      }
+    </div>
+  </header>
+
+  <div class="tx-tool__split">
+    <div class="tx-tool__pane">
+      <div class="tx-tool__pane-label">Pattern and haystack</div>
+      <div class="tx-tool__body">
+        <label class="tx-tool__field">
+          <span class="tx-tool__field-label">Pattern</span>
+          <input
+            class="tx-tool__input"
+            type="text"
+            [value]="pattern()"
+            spellcheck="false"
+            autocomplete="off"
+            aria-label="Regular expression"
+            placeholder="users/(\\d+)"
+            (input)="handlePattern($event)"
+          />
+        </label>
+        @if (error(); as message) {
+          <p class="tx-tool__error">{{ message }}</p>
+        }
+        <label class="tx-tool__field">
+          <span class="tx-tool__field-label">Haystack</span>
+          <textarea
+            class="tx-tool__textarea"
+            [value]="haystack()"
+            spellcheck="false"
+            aria-label="Test haystack"
+            (input)="handleHaystack($event)"
+          ></textarea>
+        </label>
+      </div>
+    </div>
+    <div class="tx-tool__pane">
+      <div class="tx-tool__pane-label">Matches</div>
+      <div class="tx-tool__stack">
+        <div class="tx-tool__stack-block">
+          <div class="tx-tool__body">
+            <div class="tx-tool__highlight">
+              @for (segment of segments(); track $index) {
+                @if (segment.isMatch) {
+                  <mark class="tx-tool__mark">{{ segment.text }}</mark>
+                } @else {
+                  <span>{{ segment.text }}</span>
+                }
+              }
+            </div>
+          </div>
+        </div>
+        <div class="tx-tool__stack-block">
+          <div class="tx-tool__pane-label">{{ matches().length }} match{{ matches().length === 1 ? '' : 'es' }}</div>
+          <div class="tx-tool__body">
+            @if (matches().length === 0) {
+              <p class="tx-tool__muted">No matches yet.</p>
+            } @else {
+              <ul class="tx-tool__list">
+                @for (match of matches(); track match.index) {
+                  <li class="tx-tool__list-item">
+                    <span class="tx-tool__mono">{{ match.index }} @ {{ match.start }}–{{ match.end }}</span>
+                    <span class="tx-tool__mono">{{ match.text }}</span>
+                    @if (match.groups.length > 0) {
+                      <span class="tx-tool__muted">Groups: {{ match.groups.join(', ') }}</span>
+                    }
+                  </li>
+                }
+              </ul>
+            }
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="tx-tool__footer">
+    <tx-hint label="Copy pattern" placement="top">
+      <button
+        type="button"
+        class="tx-tool__btn tx-tool__btn--accent"
+        [disabled]="!pattern()"
+        aria-label="Copy pattern"
+        (click)="copyPattern($event)"
+      >
+        Copy
+      </button>
+    </tx-hint>
+    <tx-hint label="Clear pattern and haystack" placement="top">
+      <button type="button" class="tx-tool__btn" aria-label="Clear pattern and haystack" (click)="clear()">
+        Clear
+      </button>
+    </tx-hint>
+  </footer>
+</section>

@@ -1,0 +1,131 @@
+@use 'mixins';
+
+:host {
+  display: flex;
+  min-width: 0;
+  -webkit-app-region: no-drag;
+}
+
+.tx-ws-switch__trigger {
+  @include mixins.tx-press;
+  @include mixins.tx-focus-ring;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  max-width: 220px;
+  min-height: 26px;
+  padding: 0 6px 0 2px;
+  border: 1px solid var(--tx-border-subtle);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--tx-bg-canvas) 55%, transparent);
+  color: var(--tx-text-primary);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 650;
+  text-align: left;
+  cursor: pointer;
+}
+
+.tx-ws-switch__mark {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 22px;
+  height: 18px;
+  color: var(--tx-accent);
+}
+
+.tx-ws-switch__name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tx-ws-switch__chevron {
+  flex-shrink: 0;
+  color: var(--tx-text-faint);
+}
+
+.tx-ws-switch__menu {
+  display: flex;
+  flex-direction: column;
+  min-width: 240px;
+  padding: 6px;
+  border: 1px solid var(--tx-border-subtle);
+  border-radius: 12px;
+  background: var(--tx-bg-overlay);
+  box-shadow: var(--tx-shadow-2);
+}
+
+.tx-ws-switch__manage {
+  @include mixins.tx-press;
+  @include mixins.tx-focus-ring;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 34px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--tx-text-primary);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.tx-ws-switch__manage:hover {
+  background: var(--tx-bg-hover);
+}
+
+.tx-ws-switch__manage svg {
+  flex-shrink: 0;
+  color: var(--tx-text-muted);
+}
+
+.tx-ws-switch__rule {
+  display: block;
+  height: 1px;
+  margin: 6px 8px;
+  background: var(--tx-border-strong);
+}
+
+.tx-ws-switch__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tx-ws-switch__option {
+  @include mixins.tx-press;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  min-height: 32px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--tx-text-primary);
+  font: inherit;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.tx-ws-switch__option:hover,
+.tx-ws-switch__option[aria-selected='true'] {
+  background: color-mix(in srgb, var(--tx-accent) 14%, transparent);
+}
+
+.tx-ws-switch__check {
+  color: var(--tx-accent);
+  font-size: 11px;
+}

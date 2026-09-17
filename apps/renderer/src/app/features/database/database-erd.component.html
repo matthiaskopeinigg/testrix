@@ -1,0 +1,57 @@
+<div class="tx-db-erd" [attr.aria-label]="'Diagram for ' + schema()">
+  <header class="tx-db-erd__bar">
+    <h2>{{ schema() }}</h2>
+    <span class="tx-db-erd__hint">Scroll to zoom · drag canvas to pan · drag a table to move it · click a table to open it</span>
+  </header>
+  @if (busy() && layout().nodes.length === 0) {
+    <div class="tx-db-erd__loading">
+      <tx-spinner size="md" label="Loading diagram" />
+      Loading diagram
+    </div>
+  } @else {
+    <div
+      class="tx-db-erd__canvas"
+      [class.is-dragging-node]="draggingId() !== null"
+      (wheel)="handleWheel($event)"
+      (pointerdown)="handlePanStart($event)"
+      (pointermove)="handlePanMove($event)"
+      (pointerup)="handlePanEnd()"
+      (pointercancel)="handlePanEnd()"
+    >
+      <svg class="tx-db-erd__svg" [attr.aria-busy]="busy() ? 'true' : null">
+        <g [attr.transform]="transform()">
+          @for (edge of displayLayout().edges; track edge.id) {
+            <path class="tx-db-erd__edge" [attr.d]="edge.path" fill="none" />
+          }
+          @for (node of displayLayout().nodes; track node.id) {
+            <g
+              class="tx-db-erd__node"
+              data-erd-node
+              [class.is-dragging]="draggingId() === node.id"
+              [attr.transform]="'translate(' + node.x + ' ' + node.y + ')'"
+              (pointerdown)="handleNodeDown($event, node)"
+            >
+              <rect
+                class="tx-db-erd__card"
+                [attr.width]="node.width"
+                [attr.height]="node.height"
+                rx="8"
+              />
+              <text class="tx-db-erd__title" x="12" y="18">{{ node.name }}</text>
+              @for (tick of ticks(node); track tick.kind + tick.name; let i = $index) {
+                <circle
+                  class="tx-db-erd__tick"
+                  [class.is-pk]="tick.kind === 'pk'"
+                  cx="16"
+                  [attr.cy]="32 + i * 16"
+                  r="3.2"
+                />
+                <text class="tx-db-erd__col" x="26" [attr.y]="36 + i * 16">{{ tick.name }}</text>
+              }
+            </g>
+          }
+        </g>
+      </svg>
+    </div>
+  }
+</div>

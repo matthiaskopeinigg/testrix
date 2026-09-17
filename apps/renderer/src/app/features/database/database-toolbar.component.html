@@ -1,0 +1,131 @@
+<div class="tx-database-toolbar">
+  <div class="tx-database-toolbar__search">
+    <tx-input
+      id="database-search"
+      placeholder="Search connections, tables, users…"
+      [value]="store.searchQuery()"
+      (valueChange)="handleSearch($event)"
+    />
+  </div>
+  <div class="tx-database-toolbar__actions" role="toolbar" aria-label="Database tools">
+    <tx-hint [label]="expandToggleLabel()" placement="bottom">
+      <button
+        type="button"
+        class="tx-database-toolbar__btn"
+        [class.is-active]="store.allFoldersExpanded()"
+        [attr.aria-label]="expandToggleLabel()"
+        [attr.aria-pressed]="store.allFoldersExpanded()"
+        (click)="handleToggleExpandAll()"
+      >
+        @if (store.allFoldersExpanded()) {
+          <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+            <path d="M3 10.5 8 6l5 4.5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
+            <path d="M3 13.5 8 9l5 4.5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" opacity="0.55" />
+          </svg>
+        } @else {
+          <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+            <path d="M3 5.5 8 10l5-4.5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
+            <path d="M3 2.5 8 7l5-4.5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" opacity="0.55" />
+          </svg>
+        }
+      </button>
+    </tx-hint>
+    <div class="tx-database-toolbar__menu-wrap">
+      <tx-hint
+        label="Filter"
+        [detail]="store.isFilterActive() ? 'Filters active' : null"
+        placement="bottom"
+        [suppressed]="openMenu() === 'filter'"
+      >
+        <button
+          type="button"
+          class="tx-database-toolbar__btn"
+          [class.is-active]="store.isFilterActive() || openMenu() === 'filter'"
+          aria-label="Filter database"
+          [attr.aria-expanded]="openMenu() === 'filter'"
+          (click)="handleToggleMenu('filter', $event)"
+        >
+          <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+            <path d="M2.5 3.5h11l-4 4.8V13l-3-1.5V8.3L2.5 3.5z" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linejoin="round" />
+          </svg>
+        </button>
+      </tx-hint>
+    </div>
+    <div class="tx-database-toolbar__menu-wrap">
+      <tx-hint [label]="'Sort: ' + sortLabel()" placement="bottom" [suppressed]="openMenu() === 'sort'">
+        <button
+          type="button"
+          class="tx-database-toolbar__btn"
+          [class.is-active]="openMenu() === 'sort'"
+          aria-label="Sort database"
+          [attr.aria-expanded]="openMenu() === 'sort'"
+          (click)="handleToggleMenu('sort', $event)"
+        >
+          <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+            <path d="M4 4h8M4 8h5.5M4 12h3" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
+          </svg>
+        </button>
+      </tx-hint>
+    </div>
+  </div>
+
+  @if (openMenu(); as menu) {
+    <div
+      class="tx-database-toolbar__menu tx-menu"
+      role="menu"
+      animate.leave="tx-popover-leave"
+      [style.top.px]="menuPosition()?.top"
+      [style.left.px]="menuPosition()?.left"
+      [style.width.px]="menuPosition()?.width"
+      [style.max-height.px]="menuPosition()?.maxHeight"
+      (pointerdown)="$event.stopPropagation()"
+    >
+      @if (menu === 'filter') {
+        <p class="tx-database-toolbar__menu-title">Show</p>
+        @for (option of filterOptions; track option.id) {
+          <button
+            type="button"
+            class="tx-database-toolbar__option"
+            role="menuitemradio"
+            [attr.aria-checked]="store.filter() === option.id"
+            (click)="handleFilter(option.id)"
+          >
+            <span>{{ option.label }}</span>
+            @if (store.filter() === option.id) {
+              <span class="tx-database-toolbar__check" aria-hidden="true">✓</span>
+            }
+          </button>
+        }
+        <p class="tx-database-toolbar__menu-title">Catalog</p>
+        <button
+          type="button"
+          class="tx-database-toolbar__option"
+          role="menuitemcheckbox"
+          [attr.aria-checked]="store.showSystemObjects()"
+          (click)="handleToggleSystem()"
+        >
+          <span>Show system objects</span>
+          @if (store.showSystemObjects()) {
+            <span class="tx-database-toolbar__check" aria-hidden="true">✓</span>
+          }
+        </button>
+      } @else {
+        <p class="tx-database-toolbar__menu-title">Sort by</p>
+        @for (option of sortOptions; track option.id) {
+          <button
+            type="button"
+            class="tx-database-toolbar__option"
+            role="menuitemradio"
+            [attr.aria-checked]="store.sortMode() === option.id"
+            (click)="handleSort(option.id)"
+          >
+            <span>{{ option.label }}</span>
+            @if (store.sortMode() === option.id) {
+              <span class="tx-database-toolbar__check" aria-hidden="true">✓</span>
+            }
+          </button>
+        }
+      }
+    </div>
+  }
+</div>

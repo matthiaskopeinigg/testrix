@@ -1,0 +1,177 @@
+html,
+body {
+  margin: 0;
+  height: 100vh;
+  overflow: hidden;
+  background: transparent;
+  font-family: 'Segoe UI Variable', 'Segoe UI', -apple-system, BlinkMacSystemFont, ui-sans-serif, sans-serif;
+}
+
+.tx-splash {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  padding: 48px;
+}
+
+.tx-splash__close {
+  display: none;
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 2;
+  width: 32px;
+  height: 28px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: rgba(255, 236, 244, 0.58);
+  cursor: pointer;
+  -webkit-app-region: no-drag;
+}
+
+body.is-preview .tx-splash__close {
+  display: grid;
+  place-items: center;
+}
+
+.tx-splash__close:hover {
+  background: #ff6b81;
+  color: #fff;
+}
+
+.tx-splash__stage {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  -webkit-app-region: drag;
+  animation: tx-splash-enter 480ms cubic-bezier(0.22, 1.2, 0.36, 1) both;
+}
+
+.tx-splash__glow {
+  position: absolute;
+  top: 12px;
+  width: 220px;
+  height: 220px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(225, 29, 116, 0.42), transparent 68%);
+  filter: blur(10px);
+  pointer-events: none;
+}
+
+.tx-splash__ring-wrap {
+  position: absolute;
+  top: -10px;
+  width: 204px;
+  height: 204px;
+  animation: tx-splash-spin 0.9s linear infinite;
+}
+
+.tx-splash__ring {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border: 2px solid rgba(225, 29, 116, 0.16);
+  border-top-color: #e11d74;
+  animation: tx-splash-draw 520ms ease-out both;
+}
+
+.tx-splash__logo {
+  position: relative;
+  width: 168px;
+  height: 168px;
+  object-fit: contain;
+  filter: drop-shadow(0 18px 32px rgba(0, 0, 0, 0.45));
+  animation: tx-splash-settle 700ms cubic-bezier(0.22, 1.2, 0.36, 1) both;
+}
+
+.tx-splash__version,
+.tx-splash__status {
+  margin: 0;
+  color: rgba(255, 250, 252, 0.86);
+  text-shadow: 0 2px 16px rgba(0, 0, 0, 0.5);
+}
+
+.tx-splash__version {
+  margin-top: 22px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.tx-splash__status {
+  margin-top: 10px;
+  font-size: 12px;
+  color: rgba(255, 236, 244, 0.58);
+}
+
+body.is-leaving .tx-splash__stage {
+  animation: tx-splash-leave 180ms ease-in forwards;
+}
+
+@keyframes tx-splash-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes tx-splash-settle {
+  0% {
+    transform: scale(0.86);
+    opacity: 0;
+  }
+
+  70% {
+    transform: scale(1.04);
+    opacity: 1;
+  }
+
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes tx-splash-draw {
+  from {
+    opacity: 0;
+    transform: scale(0.8) rotate(-40deg);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+@keyframes tx-splash-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes tx-splash-leave {
+  to {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tx-splash__stage,
+  .tx-splash__logo,
+  .tx-splash__ring,
+  .tx-splash__glow {
+    animation: tx-splash-enter 160ms linear both;
+  }
+}

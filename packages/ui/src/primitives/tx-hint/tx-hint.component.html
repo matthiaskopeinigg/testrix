@@ -1,0 +1,39 @@
+@if (variant() === 'inline') {
+  <span class="tx-hint__inline" aria-hidden="true">
+    @for (key of keyParts(); track $index) {
+      <span class="tx-hint__key">{{ key }}</span>
+    }
+    @if (label()) {
+      <span class="tx-hint__label">{{ label() }}</span>
+    }
+  </span>
+  <span class="visually-hidden">
+    @if (keyParts().length) {
+      Shortcut {{ keyParts().join(' ') }}.
+    }
+    @if (label()) {
+      {{ label() }}
+    }
+  </span>
+} @else {
+  <span
+    class="tx-hint__trigger"
+    [attr.aria-describedby]="isOpen() ? tooltipId : null"
+    (pointerenter)="handleOpen()"
+    (pointerleave)="handlePointerLeave()"
+    (pointerdown)="handlePointerDown()"
+    (keydown)="handleTriggerKey($event)"
+    (focusin)="handleFocusOpen($event)"
+    (focusout)="handleClose()"
+  >
+    <ng-content />
+  </span>
+  <span class="visually-hidden" role="tooltip" [id]="tooltipId" [attr.aria-hidden]="!isOpen()">
+    @if (keyParts().length) {
+      Shortcut {{ keyParts().join(' ') }}.
+    }
+    @if (bubbleText()) {
+      {{ bubbleText() }}
+    }
+  </span>
+}

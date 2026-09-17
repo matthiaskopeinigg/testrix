@@ -1,0 +1,21 @@
+<div class="tx-tools" #root (contextmenu)="$event.preventDefault()">
+  <div class="tx-tools__body" #scroller (click)="handleChromeClick($event)">
+    <div class="tx-tools__content">
+      @if (store.hasItems()) {
+        <tx-tools-list />
+      } @else {
+        <tx-empty-state title="No tools" body="Development utilities will appear here." />
+      }
+
+      @if (dnd.isIndicatorVisible()) {
+        <div
+          class="tx-tools__indicator"
+          [style.left.px]="dnd.indicatorLeft()"
+          [style.transform]="'translate3d(0, ' + dnd.indicatorY() + 'px, 0)'"
+          aria-hidden="true"
+        ></div>
+      }
+    </div>
+  </div>
+  <p class="tx-tools__live" role="status" aria-live="polite">{{ dnd.announcement() }}</p>
+</div>

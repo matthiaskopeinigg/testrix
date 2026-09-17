@@ -1,0 +1,13 @@
+@use './tool-chrome';
+
+:host {
+  @include tool-chrome.host;
+}
+
+@include tool-chrome.styles;
+
+.tx-tool__footer tx-input {
+  flex: 1;
+  min-width: 180px;
+  max-width: 360px;
+}

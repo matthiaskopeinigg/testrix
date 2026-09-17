@@ -1,0 +1,221 @@
+@use 'mixins';
+
+:host {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+}
+
+.tx-database {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.tx-database__body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  margin: 0 -4px;
+  padding: 0 4px 8px;
+  overflow: hidden;
+}
+
+// Positioning context for the drop indicator, so slot coordinates are content-space.
+.tx-database__content {
+  position: relative;
+  z-index: 0;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.tx-database__indicator {
+  display: none;
+  position: absolute;
+  top: 0;
+  right: 8px;
+  z-index: 4;
+  height: 3px;
+  margin-top: -1px;
+  border-radius: 99px;
+  background: var(--tx-accent);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--tx-accent) 55%, transparent);
+  pointer-events: none;
+}
+
+.tx-database__indicator::before {
+  content: '';
+  position: absolute;
+  top: -3px;
+  left: -3px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: inherit;
+  box-shadow: 0 0 8px color-mix(in srgb, var(--tx-accent) 60%, transparent);
+}
+
+.tx-database__indicator.is-visible {
+  display: block;
+}
+
+.tx-database__indicator.is-denied {
+  background: #ff6b7a;
+  box-shadow: 0 0 10px color-mix(in srgb, #ff6b7a 55%, transparent);
+}
+
+.tx-database__live {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.tx-database-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 220px;
+  max-height: 70vh;
+  overflow: auto;
+  padding: 6px;
+  border: 1px solid var(--tx-border-subtle);
+  border-radius: 10px;
+  background: var(--tx-bg-overlay);
+  box-shadow: var(--tx-shadow-2);
+}
+
+.tx-database-menu__item {
+  @include mixins.tx-press;
+  @include mixins.tx-hover-fill;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 30px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--tx-text-primary);
+  font: inherit;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.tx-database-menu__item.is-danger {
+  color: var(--tx-danger);
+}
+
+.tx-database-menu__item.is-danger:hover {
+  background: color-mix(in srgb, var(--tx-danger) 12%, transparent);
+}
+
+.tx-database-menu__rule {
+  display: block;
+  height: 1px;
+  margin: 4px 6px;
+  background: var(--tx-border-subtle);
+}
+
+.tx-database__section {
+  display: flex;
+  flex: 1 1 0%;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  transition: gap calc(180ms * var(--tx-motion-scale, 1)) var(--tx-ease-out);
+}
+
+.tx-database__section.is-collapsed {
+  flex: 0 0 auto;
+  gap: 0;
+}
+
+.tx-database__section-head {
+  @include mixins.tx-press;
+  @include mixins.tx-hover-fill;
+  @include mixins.tx-focus-ring;
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-height: 28px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--tx-text-muted);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.tx-database__chevron {
+  display: grid;
+  place-items: center;
+  width: 12px;
+  @include mixins.tx-chevron;
+}
+
+.tx-database__chevron.is-open {
+  transform: rotate(90deg);
+}
+
+.tx-database__count {
+  margin-left: auto;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--tx-text-faint);
+}
+
+.tx-database__split {
+  flex: 0 0 auto;
+  height: 1px;
+  margin: 8px 10px;
+  background: color-mix(in srgb, var(--tx-text-faint) 28%, transparent);
+}
+
+.tx-database__section-pane {
+  display: grid;
+  flex: 1 1 0%;
+  grid-template-rows: 1fr;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  transition: grid-template-rows calc(220ms * var(--tx-motion-scale, 1)) var(--tx-ease-out);
+}
+
+.tx-database__section.is-collapsed .tx-database__section-pane {
+  flex: 0 0 auto;
+  grid-template-rows: 0fr;
+}
+
+.tx-database__section-body {
+  @include mixins.tx-scrollbar;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+}
+
