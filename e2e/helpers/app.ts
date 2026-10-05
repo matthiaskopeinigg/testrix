@@ -27,7 +27,12 @@ export function isAppBuilt(): boolean {
 export async function launchApp(userData?: string, env: NodeJS.ProcessEnv = {}): Promise<Launched> {
   const profile = userData ?? (await mkdtemp(path.join(os.tmpdir(), 'testrix-e2e-')));
   const app = await electron.launch({
-    args: [MAIN, ...(process.platform === 'linux' ? ['--no-sandbox'] : [])],
+    args: [
+      MAIN,
+      ...(process.platform === 'linux'
+        ? ['--no-sandbox', '--disable-gpu', '--disable-dev-shm-usage', '--ozone-platform=x11']
+        : []),
+    ],
     env: {
       ...process.env,
       TESTRIX_UPDATE_FEED: 'http://127.0.0.1:1',
@@ -38,15 +43,22 @@ export async function launchApp(userData?: string, env: NodeJS.ProcessEnv = {}):
       TESTRIX_USER_DATA_DIR: profile,
       TESTRIX_NO_SPLASH: '1',
       ELECTRON_ENABLE_LOGGING: '1',
+      ...(process.platform === 'linux' ? { ELECTRON_OZONE_PLATFORM_HINT: 'x11' } : {}),
       ...env,
     },
   });
-  const window = await app.firstWindow();
+  if (process.env['CI']) {
+    const child = app.process();
+    child.stdout?.on('data', (chunk: Buffer) => process.stdout.write(chunk));
+    child.stderr?.on('data', (chunk: Buffer) => process.stderr.write(chunk));
+  }
+  const window = await app.firstWindow({ timeout: 60_000 });
   await window.waitForSelector('tx-shell', { timeout: 60_000 });
   return { app, window, userData: profile };
 }
 
-export async function closeApp(launched: Launched, keepProfile = false): Promise<void> {
+export async function closeApp(launched: Launched | undefined, keepProfile = false): Promise<void> {
+  if (!launched?.app) return;
   await launched.app.close();
   if (!keepProfile) await rm(launched.userData, { recursive: true, force: true });
 }
@@ -57,7 +69,10 @@ export async function relaunchApp(launched: Launched): Promise<Launched> {
 }
 
 export async function clickRail(window: Page, label: string): Promise<void> {
-  const heading = window.locator('tx-sidebar').first().getByRole('heading', { name: label, exact: true });
+  const heading = window
+    .locator('tx-sidebar')
+    .first()
+    .getByRole('heading', { name: label, exact: true });
   if (await heading.isVisible()) return;
   await window.getByRole('button', { name: label, exact: true }).click();
 }

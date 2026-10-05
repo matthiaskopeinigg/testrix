@@ -38,7 +38,7 @@ jobs:
   e2e:
     name: Electron E2E
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
@@ -47,6 +47,8 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
+      - name: Install the Electron binary
+        run: node -e "console.log(require('electron'))"
       - run: xvfb-run --auto-servernum npm run test:e2e
       - uses: actions/upload-artifact@v4
         if: failure()
