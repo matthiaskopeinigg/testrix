@@ -3,9 +3,51 @@ description: Report a defect in Testrix
 labels: [bug]
 body:
   - type: textarea
-    id: what
+    id: reproduce
     attributes:
-      label: What happened?
-      description: Steps, expected, actual.
+      label: How to reproduce
+      description: Numbered steps. Attach a screenshot when you have one.
+      placeholder: |
+        1. Open …
+        2. Click …
+        3. See …
     validations:
       required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected
+      description: What should have happened.
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual
+      description: What happened instead.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Settings → About, or the titlebar chip.
+      placeholder: 2.0.0-beta.1
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - Windows
+        - macOS
+        - Linux
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: extra
+    attributes:
+      label: Logs or extra notes
+      description: Optional. Settings → Logging shows where Testrix writes logs. Do not paste secrets or tokens.

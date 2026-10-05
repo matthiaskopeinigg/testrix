@@ -1,0 +1,432 @@
+<div class="tx-collab">
+  @if (!collab.hasRepos()) {
+    <tx-empty-state
+      title="Work together through a repository"
+      body="Connect one repository and every workspace your team keeps there can come to this PC. Saved collections, flows, and environments stay in step; secrets stay here."
+    >
+      <tx-button variant="primary" (clicked)="collab.openConnect()">Connect a repository</tx-button>
+    </tx-empty-state>
+  } @else if (collab.needsPublishPrompt()) {
+    <tx-empty-state
+      title="Connected. Add a workspace when you are ready."
+      body="This workspace is only on this PC. Publish it, or choose a workspace from a repository."
+    >
+      <tx-button variant="primary" (clicked)="collab.publishActiveWorkspace()">
+        Publish this workspace
+      </tx-button>
+      <tx-button variant="secondary" (clicked)="collab.chooseWorkspaces()">Choose workspaces</tx-button>
+    </tx-empty-state>
+  } @else if (collab.dockRepo(); as repo) {
+    <header class="tx-collab__head">
+      <div class="tx-collab__head-row">
+        @if (collab.showRepoSwitcher()) {
+          <tx-hint label="Repository" [detail]="repo.remoteUrl" placement="bottom" [suppressed]="repoMenuOpen()">
+            <button
+              type="button"
+              class="tx-collab__repo"
+              aria-haspopup="menu"
+              [attr.aria-expanded]="repoMenuOpen()"
+              [attr.aria-label]="'Repository ' + repo.repoName"
+              (click)="toggleRepoMenu()"
+            >
+              <span class="tx-collab__repo-dot" [attr.data-state]="repo.state" aria-hidden="true"></span>
+              <span class="tx-collab__repo-name">{{ repo.repoName }}</span>
+              <svg width="10" height="10" viewBox="0 0 12 12" aria-hidden="true">
+                <path d="M2.5 4.5 6 8l3.5-3.5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
+              </svg>
+            </button>
+          </tx-hint>
+        } @else {
+          <tx-hint label="Repository" [detail]="repo.remoteUrl" placement="bottom">
+            <span class="tx-collab__repo is-static">
+              <span class="tx-collab__repo-dot" [attr.data-state]="repo.state" aria-hidden="true"></span>
+              <span class="tx-collab__repo-name">{{ repo.repoName }}</span>
+            </span>
+          </tx-hint>
+        }
+        <div class="tx-collab__tools">
+          <tx-hint label="Sync now" placement="bottom">
+            <button type="button" class="tx-collab__icon" aria-label="Sync now" (click)="collab.syncNow(repo.id)">
+              <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+                <path d="M11.4 5.4A4.6 4.6 0 0 0 3 4.2V2.6" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" />
+                <path d="M2.6 8.6A4.6 4.6 0 0 0 11 9.8v1.6" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" />
+                <path d="M3 2.6h1.8M11 11.4H9.2" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" />
+              </svg>
+            </button>
+          </tx-hint>
+          <tx-hint [label]="repo.sync === 'paused' ? 'Resume sync' : 'Pause sync'" placement="bottom">
+            <button
+              type="button"
+              class="tx-collab__icon"
+              [attr.aria-label]="repo.sync === 'paused' ? 'Resume sync' : 'Pause sync'"
+              (click)="collab.pauseOrResume(repo.id)"
+            >
+              @if (repo.sync === 'paused') {
+                <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+                  <path d="M4.4 3.2 10.6 7l-6.2 3.8z" fill="currentColor" />
+                </svg>
+              } @else {
+                <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+                  <path d="M5.2 3.4v7.2M8.8 3.4v7.2" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+                </svg>
+              }
+            </button>
+          </tx-hint>
+          <tx-hint label="More" placement="bottom" [suppressed]="moreOpen()">
+            <button
+              type="button"
+              class="tx-collab__icon"
+              aria-label="More repository actions"
+              aria-haspopup="menu"
+              [attr.aria-expanded]="moreOpen()"
+              (click)="toggleMore()"
+            >
+              <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+                <circle cx="3.4" cy="7" r="1.1" fill="currentColor" />
+                <circle cx="7" cy="7" r="1.1" fill="currentColor" />
+                <circle cx="10.6" cy="7" r="1.1" fill="currentColor" />
+              </svg>
+            </button>
+          </tx-hint>
+        </div>
+      </div>
+
+      <div class="tx-collab__status" aria-live="polite">
+        @if (repo.state === 'syncing') {
+          <tx-spinner label="Syncing" />
+        }
+        <span class="tx-collab__status-line">{{ collab.dockStatusLine() }}</span>
+        <span class="tx-collab__status-detail">{{ collab.dockStatusDetail() }}</span>
+      </div>
+      <span class="tx-collab__chip">
+        {{ collab.remoteChip() }}
+        @if (repo.transport === 'ssh') {
+          <span class="tx-collab__chip-tag">SSH</span>
+        }
+      </span>
+
+      @if (repoMenuOpen()) {
+        <div class="tx-collab__menu tx-collab__menu--left" role="menu" aria-label="Repositories">
+          @for (item of collab.repos(); track item.id) {
+            <button type="button" role="menuitemradio" [attr.aria-checked]="item.id === repo.id" (click)="pickRepo(item.id)">
+              <span class="tx-collab__repo-dot" [attr.data-state]="item.state" aria-hidden="true"></span>
+              <span class="tx-collab__menu-label">{{ item.repoName }}</span>
+              <span class="tx-collab__menu-meta">{{ item.label }}</span>
+              @if (item.id === repo.id) {
+                <span class="tx-collab__menu-check" aria-hidden="true">✓</span>
+              }
+            </button>
+          }
+          <span class="tx-collab__menu-rule" aria-hidden="true"></span>
+          <button type="button" role="menuitem" (click)="connectAnother()">Connect another repository</button>
+        </div>
+      }
+      @if (moreOpen()) {
+        <div class="tx-collab__menu" role="menu" aria-label="Repository actions">
+          <button type="button" role="menuitem" (click)="addFromRepo(repo.id)">Add workspaces to this PC</button>
+          <button type="button" role="menuitem" (click)="copyAddress(repo.id)">Copy repository address</button>
+          <button type="button" role="menuitem" (click)="openSettings()">Collab settings</button>
+          <span class="tx-collab__menu-rule" aria-hidden="true"></span>
+          <button type="button" role="menuitem" class="is-danger" (click)="disconnect(repo)">Disconnect repository</button>
+        </div>
+      }
+    </header>
+
+    <nav class="tx-collab__tabs" role="tablist" aria-label="Collab">
+      @for (item of tabs; track item.id) {
+        <button
+          type="button"
+          role="tab"
+          [id]="'collab-tab-' + item.id"
+          [attr.aria-selected]="collab.tab() === item.id"
+          [attr.aria-controls]="'collab-panel-' + item.id"
+          [class.is-on]="collab.tab() === item.id"
+          (click)="collab.setTab(item.id)"
+        >
+          {{ item.label }}
+          @if (badgeFor(item.id); as badge) {
+            <span class="tx-collab__badge">{{ badge }}</span>
+          }
+        </button>
+      }
+    </nav>
+
+    <section
+      class="tx-collab__body"
+      role="tabpanel"
+      [id]="'collab-panel-' + collab.tab()"
+      [attr.aria-labelledby]="'collab-tab-' + collab.tab()"
+    >
+      @switch (collab.tab()) {
+        @case ('overview') {
+          @if (!collab.dockIsActiveRepo()) {
+            <p class="tx-collab__notice">
+              {{ activeName() }} is {{ collab.isShared() ? 'in another repository' : 'only on this PC' }}.
+              Open a workspace from {{ repo.repoName }} to see its changes here.
+            </p>
+          }
+          @if (collab.dockIsActiveRepo() && collab.status().reviews.length > 0) {
+            <div class="tx-collab__needs" aria-labelledby="collab-needs">
+              <h3 id="collab-needs">Needs you</h3>
+              @for (review of collab.status().reviews; track review.id) {
+                <article class="tx-collab__needs-row">
+                  <div>
+                    <span class="tx-collab__needs-label">{{ review.label }}</span>
+                    <span class="tx-collab__needs-detail">{{ review.summary }}</span>
+                  </div>
+                  <button type="button" class="tx-collab__link" (click)="collab.openReview()">Review</button>
+                </article>
+              }
+            </div>
+          }
+
+          <div class="tx-collab__cards">
+            <button type="button" class="tx-collab__card" (click)="collab.setTab('workspaces')">
+              <span class="tx-collab__card-value">{{ onPcCount(repo) }} of {{ repo.workspaces.length }}</span>
+              <span class="tx-collab__card-label">workspaces on this PC</span>
+            </button>
+            <button type="button" class="tx-collab__card" (click)="collab.setTab('people')">
+              <span class="tx-collab__card-value">{{ collab.dockIsActiveRepo() ? collab.activePresence().length : '–' }}</span>
+              <span class="tx-collab__card-label">active now</span>
+            </button>
+            <button type="button" class="tx-collab__card" (click)="collab.setTab('runs')">
+              <span class="tx-collab__card-value">{{ collab.dockIsActiveRepo() ? collab.liveRuns().length : '–' }}</span>
+              <span class="tx-collab__card-label">runs in progress</span>
+            </button>
+          </div>
+
+          @if (collab.dockIsActiveRepo()) {
+            <div class="tx-collab__block" aria-labelledby="collab-changes">
+              <header>
+                <h3 id="collab-changes">Changes in {{ activeName() }}</h3>
+              </header>
+              @if (collab.status().changes.mine.length === 0 && collab.status().changes.theirs.length === 0) {
+                <p class="tx-collab__quiet">Nothing waiting. Everything is in sync.</p>
+              } @else {
+                @if (collab.status().changes.mine.length > 0) {
+                  <p class="tx-collab__group">Yours, not sent yet</p>
+                  <ul class="tx-collab__items">
+                    @for (change of collab.status().changes.mine; track change.id) {
+                      <li>
+                        <button type="button" class="tx-collab__change" (click)="openChange(change)">
+                          <tx-collab-kind-icon [kind]="change.kind" />
+                          <span class="tx-collab__item-name">{{ change.label }}</span>
+                          <span class="tx-collab__item-detail">{{ change.detail }}</span>
+                        </button>
+                      </li>
+                    }
+                  </ul>
+                }
+                @if (collab.status().changes.theirs.length > 0) {
+                  <p class="tx-collab__group">Just arrived</p>
+                  <ul class="tx-collab__items">
+                    @for (change of collab.status().changes.theirs; track change.id) {
+                      <li>
+                        <button type="button" class="tx-collab__change" (click)="openChange(change)">
+                          <tx-collab-kind-icon [kind]="change.kind" />
+                          <span class="tx-collab__item-name">{{ change.label }}</span>
+                          <span class="tx-collab__item-detail">{{ change.author || change.detail }}</span>
+                        </button>
+                      </li>
+                    }
+                  </ul>
+                }
+              }
+            </div>
+          }
+        }
+
+        @case ('workspaces') {
+          <tx-collab-workspaces-tab [repo]="repo" />
+        }
+
+        @case ('activity') {
+          @if (!collab.dockIsActiveRepo()) {
+            <ng-container [ngTemplateOutlet]="openFirst" [ngTemplateOutletContext]="{ $implicit: repo, what: 'activity' }" />
+          } @else {
+            <div class="tx-collab__toolbar">
+              <div class="tx-collab__segment" role="radiogroup" aria-label="Activity scope">
+                <button
+                  type="button"
+                  role="radio"
+                  [attr.aria-checked]="collab.activityScope() === 'workspace'"
+                  [class.is-on]="collab.activityScope() === 'workspace'"
+                  (click)="collab.activityScope.set('workspace')"
+                >
+                  This workspace
+                </button>
+                <button
+                  type="button"
+                  role="radio"
+                  [attr.aria-checked]="collab.activityScope() === 'repo'"
+                  [class.is-on]="collab.activityScope() === 'repo'"
+                  (click)="collab.activityScope.set('repo')"
+                >
+                  Whole repository
+                </button>
+              </div>
+            </div>
+            <div class="tx-collab__filters" role="radiogroup" aria-label="Activity filter">
+              @for (filter of filters; track filter.id) {
+                <button
+                  type="button"
+                  role="radio"
+                  [class.is-on]="collab.activityFilter() === filter.id"
+                  [attr.aria-checked]="collab.activityFilter() === filter.id"
+                  (click)="collab.activityFilter.set(filter.id)"
+                >
+                  {{ filter.label }}
+                </button>
+              }
+            </div>
+            @if (collab.activityDays().length === 0) {
+              <p class="tx-collab__quiet">Activity shows up after the next sync.</p>
+            } @else {
+              @for (day of collab.activityDays(); track day.label) {
+                <p class="tx-collab__group">{{ day.label }}</p>
+                <ul class="tx-collab__activity">
+                  @for (row of day.rows; track row.id) {
+                    <li>
+                      <button
+                        type="button"
+                        class="tx-collab__activity-row"
+                        [class.is-static]="!row.target"
+                        [disabled]="!row.target"
+                        (click)="openActivity(row)"
+                      >
+                        <span class="tx-collab__avatar" aria-hidden="true">{{ initials(row.author) }}</span>
+                        <span class="tx-collab__activity-body">
+                          <span class="tx-collab__item-name">{{ row.summary }}</span>
+                          <span class="tx-collab__activity-meta">
+                            @if (collab.activityScope() === 'repo' && row.workspaceName) {
+                              <span class="tx-collab__tag">{{ row.workspaceName }}</span>
+                            }
+                            <time>{{ when(row.at) }}</time>
+                          </span>
+                        </span>
+                      </button>
+                    </li>
+                  }
+                </ul>
+              }
+            }
+          }
+        }
+
+        @case ('people') {
+          @if (!collab.dockIsActiveRepo()) {
+            <ng-container [ngTemplateOutlet]="openFirst" [ngTemplateOutletContext]="{ $implicit: repo, what: 'who is here' }" />
+          } @else {
+            @if (collab.status().presenceMode === 'offline') {
+              <p class="tx-collab__notice">You appear offline to the team. Change this in Collab settings.</p>
+            }
+            @if (collab.status().presence.length === 0) {
+              <p class="tx-collab__quiet">Only you right now.</p>
+            } @else {
+              @if (collab.activePresence().length > 0) {
+                <p class="tx-collab__group">Active now</p>
+                <ul class="tx-collab__people">
+                  @for (person of collab.activePresence(); track person.deviceId) {
+                    <li>
+                      <span class="tx-collab__avatar is-active" aria-hidden="true">{{ initials(person.name) }}</span>
+                      <span class="tx-collab__item-name">{{ person.name }}{{ person.isYou ? ' (you)' : '' }}</span>
+                      @if (person.workspaceName) {
+                        <span class="tx-collab__item-detail">in {{ person.workspaceName }}</span>
+                      }
+                    </li>
+                  }
+                </ul>
+              }
+              @if (collab.awayPresence().length > 0) {
+                <p class="tx-collab__group">Away</p>
+                <ul class="tx-collab__people">
+                  @for (person of collab.awayPresence(); track person.deviceId) {
+                    <li>
+                      <span class="tx-collab__avatar" aria-hidden="true">{{ initials(person.name) }}</span>
+                      <span class="tx-collab__item-name">{{ person.name }}{{ person.isYou ? ' (you)' : '' }}</span>
+                      <span class="tx-collab__item-detail">
+                        @if (person.workspaceName) {
+                          in {{ person.workspaceName }} ·
+                        }
+                        {{ when(person.at) }}
+                      </span>
+                    </li>
+                  }
+                </ul>
+              }
+            }
+          }
+        }
+
+        @case ('runs') {
+          @if (!collab.dockIsActiveRepo()) {
+            <ng-container [ngTemplateOutlet]="openFirst" [ngTemplateOutletContext]="{ $implicit: repo, what: 'team runs' }" />
+          } @else {
+            @for (lock of collab.liveRuns(); track lock.packId) {
+              <div class="tx-collab__live">
+                <button type="button" class="tx-collab__live-open" (click)="openLock(lock)">
+                  <div class="tx-collab__live-head">
+                    <span class="tx-collab__item-name">{{ lock.packName }}</span>
+                    <span class="tx-collab__item-detail">{{ lock.owner }} · {{ lockProgress(lock) }}</span>
+                  </div>
+                  <div class="tx-collab__progress" role="presentation">
+                    <span [style.width.%]="progressPercent(lock)"></span>
+                  </div>
+                </button>
+                @if (!lock.isMine) {
+                  <button type="button" class="tx-collab__link" (click)="watch(lock)">Watch</button>
+                }
+              </div>
+            }
+            @for (lock of collab.staleLocks(); track lock.packId) {
+              <div class="tx-collab__live">
+                <button type="button" class="tx-collab__live-open" (click)="openLock(lock)">
+                  <div class="tx-collab__live-head">
+                    <span class="tx-collab__item-name">{{ lock.packName }}</span>
+                    <span class="tx-collab__item-detail">{{ lock.owner }} · stopped reporting</span>
+                  </div>
+                </button>
+                @if (!lock.isMine) {
+                  <button type="button" class="tx-collab__link" (click)="takeOver(lock)">Take over</button>
+                }
+              </div>
+            }
+            @if (collab.status().runs.length === 0 && collab.liveRuns().length === 0 && collab.staleLocks().length === 0) {
+              <p class="tx-collab__quiet">{{ runsEmptyCopy() }}</p>
+            } @else {
+              <ul class="tx-collab__runs">
+                @for (run of collab.status().runs; track run.id) {
+                  <li>
+                    <button type="button" class="tx-collab__run-open" (click)="openRun(run)">
+                      <span class="tx-collab__pill" [attr.data-status]="run.status">{{ runResult(run) }}</span>
+                      <span class="tx-collab__run-body">
+                        <span class="tx-collab__item-name">{{ run.packName }}</span>
+                        <span class="tx-collab__item-detail">{{ runLine(run) }}</span>
+                        @if (failedLine(run); as failed) {
+                          <span class="tx-collab__item-detail">{{ failed }}</span>
+                        }
+                      </span>
+                      <time>{{ when(run.finishedAt ?? run.startedAt) }}</time>
+                    </button>
+                  </li>
+                }
+              </ul>
+            }
+          }
+        }
+      }
+    </section>
+  }
+</div>
+
+<ng-template #openFirst let-repo let-what="what">
+  <div class="tx-collab__notice">
+    @if (firstLinked(repo); as linked) {
+      <p>Open a workspace from {{ repo.repoName }} to see {{ what }}.</p>
+      <tx-button variant="secondary" (clicked)="collab.openWorkspace(linked)">Open {{ linkedName(repo, linked) }}</tx-button>
+    } @else {
+      <p>No workspace from {{ repo.repoName }} is on this PC yet.</p>
+      <tx-button variant="secondary" (clicked)="collab.setTab('workspaces')">Choose workspaces</tx-button>
+    }
+  </div>
+</ng-template>

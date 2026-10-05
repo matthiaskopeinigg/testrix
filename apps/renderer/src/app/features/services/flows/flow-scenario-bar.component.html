@@ -1,0 +1,51 @@
+<div class="tx-flow-scenarios" role="tablist" aria-label="Scenarios">
+  @for (scenario of scenarios(); track scenario.id) {
+    <div
+      class="tx-flow-scenarios__chip"
+      role="tab"
+      [class.is-active]="activeId() === scenario.id"
+      [class.is-off]="!scenario.enabled"
+      [attr.aria-selected]="activeId() === scenario.id"
+      tabindex="0"
+      (click)="selected.emit(scenario.id)"
+      (keydown.enter)="selected.emit(scenario.id)"
+      (keydown.space)="selected.emit(scenario.id)"
+      (dblclick)="startRename(scenario.id)"
+      (contextmenu)="handleMenu(scenario.id, $event)"
+    >
+      @if (renamingId() === scenario.id) {
+        <input
+          class="tx-flow-scenarios__rename"
+          [value]="scenario.name"
+          autofocus
+          (click)="$event.stopPropagation()"
+          (keydown.enter)="commitRename(scenario.id, $event)"
+          (blur)="commitRename(scenario.id, $event)"
+        />
+      } @else {
+        <span class="tx-flow-scenarios__name">{{ scenario.name }}</span>
+        @if (rowCount(scenario) > 0) {
+          <span class="tx-flow-scenarios__rows">{{ rowCount(scenario) }}&times;</span>
+        }
+      }
+    </div>
+  }
+
+  <tx-hint label="New scenario" placement="bottom">
+    <button type="button" class="tx-flow-scenarios__add" aria-label="New scenario" (click)="added.emit()">+</button>
+  </tx-hint>
+</div>
+
+<ng-template #scenarioMenu>
+  @if (menu(); as menu) {
+    <div class="tx-menu tx-flow-scenarios__menu" role="menu">
+      <button type="button" class="tx-flow-scenarios__item" role="menuitem" (click)="menuAction('run')">Run scenario</button>
+      <button type="button" class="tx-flow-scenarios__item" role="menuitem" (click)="startRename(menu.id)">Rename</button>
+      <button type="button" class="tx-flow-scenarios__item" role="menuitem" (click)="menuAction('duplicate')">Duplicate</button>
+      <button type="button" class="tx-flow-scenarios__item" role="menuitem" (click)="menuAction('toggle')">Enable or skip</button>
+      @if (scenarios().length > 1) {
+        <button type="button" class="tx-flow-scenarios__item is-danger" role="menuitem" (click)="menuAction('delete')">Delete</button>
+      }
+    </div>
+  }
+</ng-template>

@@ -1,4 +1,21 @@
-/**
- * HTTP engine boundary. Request execution (undici) lands here in a later milestone.
- */
-export const HTTP_ENGINE_STUB = true;
+export { executeHttp } from './execute';
+export { openWebSocket, websocketHandshakeHeaders } from './websocket';
+export {
+  authorizeWithLoopback,
+  parseOAuthTokenPayload,
+  pollDeviceAuthorization,
+  refreshOAuthToken,
+  requestOAuthToken,
+  startDeviceAuthorization,
+  type DeviceAuthorizationState,
+} from './oauth';
+export {
+  buildAuthorizeUrl,
+  buildDeviceAuthorizationBody,
+  buildOAuthTokenBody,
+  buildRefreshTokenBody,
+  DEVICE_CODE_GRANT,
+} from './oauth-form';
+export { generatePkce, generatePkceVerifier, pkceChallengeS256 } from './pkce';
+export { runCollectionScript, runCollectionScripts } from './scripts';
+export { parseSetCookie } from './cookies';

@@ -13,6 +13,10 @@ export const TX_SIDEBAR_COLLAPSE_WIDTH = 148;
 /**
  * Clamps a sidebar width into the open range.
  */
-export function clampSidebarWidth(width: number): number {
-  return Math.round(Math.min(TX_SIDEBAR_MAX_WIDTH, Math.max(TX_SIDEBAR_MIN_WIDTH, width)));
+export function clampSidebarWidth(
+  width: number,
+  min = TX_SIDEBAR_MIN_WIDTH,
+  max = TX_SIDEBAR_MAX_WIDTH,
+): number {
+  return Math.round(Math.min(max, Math.max(min, width)));
 }

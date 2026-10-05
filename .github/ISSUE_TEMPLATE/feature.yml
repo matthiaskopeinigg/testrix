@@ -1,10 +1,23 @@
 name: Feature request
-description: Propose a Testrix 2.0 feature
+description: Propose a Testrix feature
 labels: [enhancement]
 body:
   - type: textarea
-    id: idea
+    id: problem
     attributes:
-      label: Idea
+      label: Problem
+      description: What is hard or missing today?
     validations:
       required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: Proposal
+      description: What should Testrix do instead?
+    validations:
+      required: true
+  - type: textarea
+    id: extras
+    attributes:
+      label: Notes
+      description: Optional. Workflows, mocks, or why this belongs in a local-first desktop app.

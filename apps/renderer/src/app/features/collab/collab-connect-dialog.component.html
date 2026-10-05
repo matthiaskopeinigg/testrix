@@ -1,0 +1,180 @@
+<tx-overlay labelledBy="collab-connect-title" size="md" (closed)="collab.closeConnect()">
+  <div class="tx-collab-connect">
+    @if (collab.connectStep() === 'address') {
+      <header>
+        <p class="tx-collab-connect__step">Step 1 of 2</p>
+        <h2 id="collab-connect-title">Connect a repository</h2>
+        <p>
+          One repository can hold every workspace your team shares. Connect it once, then pick which
+          workspaces to bring to this PC. Secrets, history, and cookies never leave this computer.
+        </p>
+      </header>
+
+      <tx-input
+        id="collab-remote"
+        label="Repository address"
+        placeholder="https://github.com/team/testing.git"
+        [value]="collab.remoteDraft()"
+        (valueChange)="collab.remoteDraft.set($event)"
+      />
+      @if (collab.remotePreview(); as preview) {
+        <p class="tx-collab-connect__preview">{{ preview }}</p>
+      }
+
+      @if (collab.needsToken()) {
+        <div class="tx-collab-connect__pair">
+          <tx-input
+            id="collab-user"
+            label="Username"
+            [value]="collab.userDraft()"
+            (valueChange)="collab.userDraft.set($event)"
+          />
+          <tx-input
+            id="collab-token"
+            label="Access token"
+            type="password"
+            [value]="collab.tokenDraft()"
+            (valueChange)="collab.tokenDraft.set($event)"
+          />
+        </div>
+        <p class="tx-collab-connect__hint">Stored encrypted on this PC. Leave both empty for a public repository.</p>
+      } @else if (collab.canConnect()) {
+        <p class="tx-collab-connect__hint">This PC signs in with your existing SSH key.</p>
+      }
+
+      <details [open]="collab.connectAdvanced()" (toggle)="handleAdvancedToggle($event)">
+        <summary>Advanced</summary>
+        <tx-input
+          id="collab-branch"
+          label="Branch"
+          [value]="collab.branchDraft()"
+          (valueChange)="collab.branchDraft.set($event)"
+        />
+      </details>
+
+      @if (collab.error(); as error) {
+        <p class="tx-collab-connect__error" role="alert">{{ error }}</p>
+      }
+
+      <footer>
+        <tx-button variant="ghost" [disabled]="collab.busy()" (clicked)="collab.closeConnect()">Cancel</tx-button>
+        <tx-button
+          variant="primary"
+          [disabled]="collab.busy() || !collab.canConnect()"
+          (clicked)="collab.connect()"
+        >
+          {{ collab.busy() ? 'Connecting…' : 'Continue' }}
+        </tx-button>
+      </footer>
+    } @else if (collab.connectStep() === 'token') {
+      <header>
+        <h2 id="collab-connect-title">Update access token</h2>
+        <p>
+          Stored encrypted on this PC. Sync uses the new username and token for
+          {{ collab.connectedRepo()?.repoName || 'this repository' }}.
+        </p>
+      </header>
+      <div class="tx-collab-connect__pair">
+        <tx-input
+          id="collab-update-user"
+          label="Username"
+          [value]="collab.userDraft()"
+          (valueChange)="collab.userDraft.set($event)"
+        />
+        <tx-input
+          id="collab-update-token"
+          label="Access token"
+          type="password"
+          [value]="collab.tokenDraft()"
+          (valueChange)="collab.tokenDraft.set($event)"
+        />
+      </div>
+      @if (collab.error(); as error) {
+        <p class="tx-collab-connect__error" role="alert">{{ error }}</p>
+      }
+      <footer>
+        <tx-button variant="ghost" [disabled]="collab.busy()" (clicked)="collab.closeConnect()">Cancel</tx-button>
+        <tx-button
+          variant="primary"
+          [disabled]="collab.busy() || !collab.userDraft().trim() || !collab.tokenDraft()"
+          (clicked)="collab.updateCredential()"
+        >
+          {{ collab.busy() ? 'Saving…' : 'Update token' }}
+        </tx-button>
+      </footer>
+    } @else if (collab.connectedRepo(); as repo) {
+      <header>
+        <p class="tx-collab-connect__step">Step 2 of 2</p>
+        <h2 id="collab-connect-title">Choose workspaces from {{ repo.repoName }}</h2>
+        <p>
+          @if (repo.workspaces.length === 0) {
+            This repository is empty. Publish a workspace to share it with your team.
+          } @else {
+            Pick what to add to this PC. You can add the others later from the Collab panel.
+          }
+        </p>
+      </header>
+
+      @if (repo.workspaces.length > 0) {
+        <ul class="tx-collab-connect__list" aria-label="Workspaces in this repository">
+          @for (entry of repo.workspaces; track entry.remoteId) {
+            <li>
+              @if (entry.localId) {
+                <tx-check
+                  variant="compact"
+                  [label]="entry.name"
+                  detail="Already on this PC"
+                  [checked]="true"
+                  [disabled]="true"
+                />
+              } @else {
+                <tx-check
+                  variant="compact"
+                  [label]="entry.name"
+                  [checked]="collab.pickedRemoteIds().has(entry.remoteId)"
+                  (checkedChange)="collab.togglePick(entry.remoteId, $event)"
+                />
+              }
+            </li>
+          }
+        </ul>
+      }
+
+      @if (publishable().length > 0) {
+        <div class="tx-collab-connect__publish">
+          <tx-check
+            variant="compact"
+            [label]="publishLabel()"
+            detail="Moves it into the repository so teammates can add it."
+            [checked]="collab.publishDraftId() !== null"
+            (checkedChange)="togglePublish($event)"
+          />
+          @if (collab.publishDraftId() !== null && publishable().length > 1) {
+            <tx-select
+              class="tx-collab-connect__publish-pick"
+              ariaLabel="Workspace to publish"
+              [options]="publishOptions()"
+              [value]="collab.publishDraftId() ?? ''"
+              (valueChange)="collab.publishDraftId.set($event)"
+            />
+          }
+        </div>
+      }
+
+      @if (collab.error(); as error) {
+        <p class="tx-collab-connect__error" role="alert">{{ error }}</p>
+      }
+
+      <footer>
+        <tx-button variant="ghost" [disabled]="collab.busy()" (clicked)="collab.skipPicking()">Not now</tx-button>
+        <tx-button
+          variant="primary"
+          [disabled]="collab.busy() || !collab.canFinishConnect()"
+          (clicked)="collab.finishConnect()"
+        >
+          {{ collab.busy() ? 'Working…' : finishLabel() }}
+        </tx-button>
+      </footer>
+    }
+  </div>
+</tx-overlay>

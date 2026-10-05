@@ -34,6 +34,7 @@ let hintUid = 0;
     '[class.tx-hint--inline]': 'variant() === "inline"',
     '[class.tx-hint--tooltip]': 'variant() === "tooltip"',
     '[class.tx-hint--stretch]': 'stretch()',
+    '[class.tx-hint--embed]': 'embed()',
   },
 })
 export class TxHintComponent {
@@ -51,6 +52,8 @@ export class TxHintComponent {
   readonly delayMs = input(200);
   /** Unwrap the host box so wrapping a list row does not change flex/grid layout. */
   readonly stretch = input(false, { transform: booleanAttribute });
+  /** Sit inside a text run without extra flex alignment. */
+  readonly embed = input(false, { transform: booleanAttribute });
   /** Hide the tooltip while a menu or overlay from this control is open. */
   readonly suppressed = input(false, { transform: booleanAttribute });
 

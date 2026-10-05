@@ -70,6 +70,7 @@ td {
   overflow: hidden;
   text-overflow: ellipsis;
   vertical-align: middle;
+  user-select: text;
 }
 
 thead th {
@@ -442,7 +443,7 @@ tr.is-deleted .tx-db-grid__index {
   height: 1px;
   padding: 0;
   overflow: hidden;
-  clip: rect(0, 0, 0, 0);
+  clip-path: inset(50%);
   white-space: nowrap;
   border: 0;
 }

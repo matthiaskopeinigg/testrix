@@ -1,0 +1,133 @@
+<span class="tx-flow-node-icon" [attr.aria-hidden]="true" [style.width.px]="size()" [style.height.px]="size()">
+  @switch (kind()) {
+    @case ('browser-open') {
+      <svg viewBox="0 0 16 16"><rect x="2" y="3" width="12" height="10" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.25"/><path d="M2 6h12" fill="none" stroke="currentColor" stroke-width="1.25"/><circle cx="4.2" cy="4.5" r="0.7" fill="currentColor"/></svg>
+    }
+    @case ('browser-click') {
+      <svg viewBox="0 0 16 16"><path d="M5 2.5v8.2l2-1.4 1.2 3.2 1.6-.6-1.2-3.1 3-.2L5 2.5z" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linejoin="round"/></svg>
+    }
+    @case ('browser-type') {
+      <svg viewBox="0 0 16 16"><rect x="2" y="4" width="12" height="8" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.25"/><path d="M5 10h6M8 6v4" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/></svg>
+    }
+    @case ('browser-select') {
+      <svg viewBox="0 0 16 16"><rect x="2" y="4" width="12" height="8" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.25"/><path d="M5.5 8h5M10 6.5 11.5 8 10 9.5" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    }
+    @case ('browser-hover') {
+      <svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="5" fill="none" stroke="currentColor" stroke-width="1.25"/><circle cx="8" cy="8" r="1.5" fill="currentColor"/></svg>
+    }
+    @case ('browser-press') {
+      <svg viewBox="0 0 16 16"><rect x="3" y="4" width="10" height="8" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.25"/><path d="M6 8h4" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/></svg>
+    }
+    @case ('browser-wait-for') {
+      <svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="5" fill="none" stroke="currentColor" stroke-width="1.25"/><path d="M8 5v3.2L10 10" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/></svg>
+    }
+    @case ('browser-screenshot') {
+      <svg viewBox="0 0 16 16"><rect x="2" y="4" width="12" height="9" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.25"/><circle cx="8" cy="8.5" r="2.2" fill="none" stroke="currentColor" stroke-width="1.25"/><path d="M5 4 6 2.5h4L11 4" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linejoin="round"/></svg>
+    }
+    @case ('device-start') {
+      <svg viewBox="0 0 16 16"><rect x="4" y="2.5" width="8" height="11" rx="1.4" fill="none" stroke="currentColor" stroke-width="1.25"/><path d="M7 6.2 10 8 7 9.8z" fill="currentColor"/><circle cx="8" cy="11.6" r="0.7" fill="currentColor"/></svg>
+    }
+    @case ('device-install') {
+      <svg viewBox="0 0 16 16"><rect x="4" y="2.5" width="8" height="11" rx="1.4" fill="none" stroke="currentColor" stroke-width="1.25"/><path d="M8 6v4M6.2 8.2 8 10l1.8-1.8" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    }
+    @case ('device-launch') {
+      <svg viewBox="0 0 16 16"><rect x="4" y="2.5" width="8" height="11" rx="1.4" fill="none" stroke="currentColor" stroke-width="1.25"/><path d="M7 6.2 10 8 7 9.8z" fill="currentColor"/></svg>
+    }
+    @case ('device-tap') {
+      <svg viewBox="0 0 16 16"><path d="M5 2.5v8.2l2-1.4 1.2 3.2 1.6-.6-1.2-3.1 3-.2L5 2.5z" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linejoin="round"/></svg>
+    }
+    @case ('device-type') {
+      <svg viewBox="0 0 16 16"><rect x="3" y="3" width="10" height="10" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.25"/><path d="M5.5 10h5M8 6v4" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/></svg>
+    }
+    @case ('device-press') {
+      <svg viewBox="0 0 16 16"><rect x="3.5" y="4" width="9" height="8" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.25"/><path d="M6.5 8h3" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/></svg>
+    }
+    @case ('device-swipe') {
+      <svg viewBox="0 0 16 16"><path d="M4 11c2-4 6-6 8-6" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/><path d="M10 3.5 12.5 5 10.8 7.2" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    }
+    @case ('device-wait-for') {
+      <svg viewBox="0 0 16 16"><rect x="4" y="2.5" width="8" height="11" rx="1.4" fill="none" stroke="currentColor" stroke-width="1.25"/><path d="M8 6v3.2L10 11" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/></svg>
+    }
+    @case ('device-screenshot') {
+      <svg viewBox="0 0 16 16"><rect x="4" y="2.5" width="8" height="11" rx="1.4" fill="none" stroke="currentColor" stroke-width="1.25"/><circle cx="8" cy="8.2" r="2" fill="none" stroke="currentColor" stroke-width="1.25"/></svg>
+    }
+    @case ('device-assert-text') {
+      <svg viewBox="0 0 16 16"><path d="M3.5 4h9M5 4v8M11 4v8M6.5 12h3" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/><path d="M10.5 9.5 12 11l2.5-3" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    }
+    @case ('device-assert-visible') {
+      <svg viewBox="0 0 16 16"><path d="M2.5 8s2.2-4 5.5-4 5.5 4 5.5 4-2.2 4-5.5 4-5.5-4-5.5-4z" fill="none" stroke="currentColor" stroke-width="1.25"/><circle cx="8" cy="8" r="1.6" fill="none" stroke="currentColor" stroke-width="1.25"/></svg>
+    }
+    @case ('browser-eval') {
+      <svg viewBox="0 0 16 16"><path d="M5 4 2.5 8 5 12M11 4l2.5 4L11 12M9 3.5 7 12.5" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    }
+    @case ('assert-text') {
+      <svg viewBox="0 0 16 16"><path d="M3.5 4h9M5 4v8M11 4v8M6.5 12h3" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/><path d="M10.5 9.5 12 11l2.5-3" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    }
+    @case ('assert-visible') {
+      <svg viewBox="0 0 16 16"><path d="M2.5 8s2.2-4 5.5-4 5.5 4 5.5 4-2.2 4-5.5 4-5.5-4-5.5-4z" fill="none" stroke="currentColor" stroke-width="1.25"/><circle cx="8" cy="8" r="1.6" fill="none" stroke="currentColor" stroke-width="1.25"/></svg>
+    }
+    @case ('assert-url') {
+      <svg viewBox="0 0 16 16"><path d="M6.5 9.5a3 3 0 0 1 0-4.2l1.4-1.4a3 3 0 0 1 4.2 4.2L11 9.3M9.5 6.5a3 3 0 0 1 0 4.2L8.1 12a3 3 0 1 1-4.2-4.2L5 6.7" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/></svg>
+    }
+    @case ('assert-status') {
+      <svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="5.2" fill="none" stroke="currentColor" stroke-width="1.25"/><path d="M5.5 8.2 7.2 10l3.5-4" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    }
+    @case ('http-validate') {
+      <svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="5.2" fill="none" stroke="currentColor" stroke-width="1.25"/><path d="M5.5 8.2 7.2 10l3.5-4" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 8h2M11 8h2" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/></svg>
+    }
+    @case ('assert-json') {
+      <svg viewBox="0 0 16 16"><path d="M5.5 3.5C4 3.5 3 4.7 3 6.2v3.6c0 1.5 1 2.7 2.5 2.7M10.5 3.5c1.5 0 2.5 1.2 2.5 2.7v3.6c0 1.5-1 2.7-2.5 2.7" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/></svg>
+    }
+    @case ('request') {
+      <svg viewBox="0 0 16 16"><path d="M3 8h8.5M9 4.5 12.5 8 9 11.5" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    }
+    @case ('database') {
+      <svg viewBox="0 0 16 16"><ellipse cx="8" cy="4.2" rx="5" ry="1.8" fill="none" stroke="currentColor" stroke-width="1.25"/><path d="M3 4.2v7.2c0 1 2.2 1.8 5 1.8s5-.8 5-1.8V4.2" fill="none" stroke="currentColor" stroke-width="1.25"/><path d="M3 8c0 1 2.2 1.8 5 1.8s5-.8 5-1.8" fill="none" stroke="currentColor" stroke-width="1.25"/></svg>
+    }
+    @case ('set-var') {
+      <svg viewBox="0 0 16 16"><path d="M4 11.5 7.2 4h1.6L12 11.5M5.2 9h5.6" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    }
+    @case ('capture') {
+      <svg viewBox="0 0 16 16"><path d="M3.5 5.5h4M3.5 8h9M3.5 10.5h6" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/><path d="M11 3.5v4M9 5.5h4" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/></svg>
+    }
+    @case ('cache') {
+      <svg viewBox="0 0 16 16"><rect x="3" y="3.5" width="10" height="9" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.25"/><path d="M3 7h10M6.5 3.5v9M9.5 3.5v9" fill="none" stroke="currentColor" stroke-width="1.25"/></svg>
+    }
+    @case ('http-listener') {
+      <svg viewBox="0 0 16 16"><path d="M3 8h2M11 8h2M5.5 5.5a3.5 3.5 0 0 1 5 0M6.8 7a1.8 1.8 0 0 1 2.4 0" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/><circle cx="8" cy="10" r="1" fill="currentColor"/></svg>
+    }
+    @case ('http-interceptor') {
+      <svg viewBox="0 0 16 16"><path d="M3 5h10M3 8h10M3 11h10M5.5 3.5v9M10.5 3.5v9" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/></svg>
+    }
+    @case ('if') {
+      <svg viewBox="0 0 16 16"><path d="M8 2.5 13 8 8 13.5 3 8z" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linejoin="round"/></svg>
+    }
+    @case ('for-each') {
+      <svg viewBox="0 0 16 16"><path d="M4 4h8M4 8h8M4 12h5" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/><path d="M11 10.5 13 12l-2 1.5" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    }
+    @case ('while') {
+      <svg viewBox="0 0 16 16"><path d="M4.5 6.5A4 4 0 1 1 4 9.2" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/><path d="M4.5 4v2.8H7" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    }
+    @case ('retry') {
+      <svg viewBox="0 0 16 16"><path d="M12.2 6.2A4.2 4.2 0 1 0 12 10" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/><path d="M12.2 3.8v2.8H9.4" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    }
+    @case ('group') {
+      <svg viewBox="0 0 16 16"><rect x="2.5" y="3.5" width="11" height="9" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.25" stroke-dasharray="2.2 1.6"/><path d="M5.5 7h5M5.5 9.5h3.5" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/></svg>
+    }
+    @case ('wait') {
+      <svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="5.2" fill="none" stroke="currentColor" stroke-width="1.25"/><path d="M8 5.2v3.2l2.2 1.4" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/></svg>
+    }
+    @case ('join') {
+      <svg viewBox="0 0 16 16"><path d="M3 4v8M13 4v8M3 8h10" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/></svg>
+    }
+    @case ('trigger') {
+      <svg viewBox="0 0 16 16"><path d="M7 2.5 4.5 9h3l-1 4.5L12 6.5H8.5L10 2.5z" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linejoin="round"/></svg>
+    }
+    @case ('manual') {
+      <svg viewBox="0 0 16 16"><circle cx="8" cy="5" r="2" fill="none" stroke="currentColor" stroke-width="1.25"/><path d="M4.5 13.2c.6-2.2 2-3.4 3.5-3.4s2.9 1.2 3.5 3.4" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/></svg>
+    }
+    @default {
+      <svg viewBox="0 0 16 16"><rect x="3" y="3" width="10" height="10" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.25"/><path d="M5.5 6.5h5M5.5 9.5h3.5" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/></svg>
+    }
+  }
+</span>

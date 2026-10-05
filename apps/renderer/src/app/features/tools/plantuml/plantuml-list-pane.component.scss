@@ -1,0 +1,291 @@
+@use 'mixins';
+
+:host {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.tx-plantuml-list {
+  position: relative;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.tx-plantuml-list__body {
+  @include mixins.tx-scrollbar;
+  flex: 1;
+  min-height: 0;
+  margin: 0 -4px;
+  padding: 0 4px 48px;
+  overflow: auto;
+}
+
+.tx-plantuml-list__content {
+  position: relative;
+  z-index: 0;
+  min-width: 0;
+  min-height: 100%;
+}
+
+.tx-plantuml-list__drag {
+  display: block;
+}
+
+.tx-plantuml-list__drag.is-drop-folder > .tx-plantuml-list__row {
+  outline: 1px dashed var(--tx-accent);
+  outline-offset: -2px;
+  background: color-mix(in srgb, var(--tx-accent) 10%, transparent);
+}
+
+.tx-plantuml-list__drag.is-just-moved > .tx-plantuml-list__row {
+  animation: tx-plantuml-settle calc(320ms * var(--tx-motion-scale, 1)) var(--tx-spring) both;
+}
+
+@keyframes tx-plantuml-settle {
+  from {
+    background: color-mix(in srgb, var(--tx-accent) 18%, transparent);
+  }
+
+  to {
+    background: transparent;
+  }
+}
+
+.tx-plantuml-list__row {
+  @include mixins.tx-hover-fill;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-height: 30px;
+  padding: 0 8px 0 calc(8px + (var(--tx-tree-depth, 0) * 14px));
+  border-radius: 8px;
+  color: var(--tx-text-primary);
+  cursor: grab;
+}
+
+.tx-plantuml-list__row.is-folder,
+.tx-plantuml-list__row.is-leaf {
+  @include mixins.tx-focus-ring;
+  cursor: pointer;
+}
+
+.tx-plantuml-list__row.is-open:not(.is-active):not(.is-selected) {
+  background: color-mix(in srgb, var(--tx-accent) 8%, transparent);
+}
+
+.tx-plantuml-list__row.is-selected:not(.is-active) {
+  background: color-mix(in srgb, var(--tx-accent) 12%, transparent);
+}
+
+.tx-plantuml-list__row.is-active {
+  @include mixins.tx-active-rail;
+  background: color-mix(in srgb, var(--tx-accent) 14%, transparent);
+}
+
+.tx-plantuml-list__row.is-renaming,
+.tx-plantuml-list__row.is-renaming:active {
+  cursor: text;
+}
+
+.tx-plantuml-list__indicator {
+  display: none;
+  position: absolute;
+  top: 0;
+  right: 8px;
+  z-index: 4;
+  height: 3px;
+  margin-top: -1px;
+  border-radius: 99px;
+  background: var(--tx-accent);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--tx-accent) 55%, transparent);
+  pointer-events: none;
+}
+
+.tx-plantuml-list__indicator::before {
+  content: '';
+  position: absolute;
+  top: -3px;
+  left: -3px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: inherit;
+  box-shadow: 0 0 8px color-mix(in srgb, var(--tx-accent) 60%, transparent);
+}
+
+.tx-plantuml-list__indicator.is-visible {
+  display: block;
+}
+
+.tx-plantuml-list__indicator.is-denied {
+  background: #ff6b7a;
+  box-shadow: 0 0 10px color-mix(in srgb, #ff6b7a 55%, transparent);
+}
+
+.tx-plantuml-list__live {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.tx-plantuml-list__chevron,
+.tx-plantuml-list__chevron-spacer {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.tx-plantuml-list__chevron {
+  @include mixins.tx-press;
+  @include mixins.tx-focus-ring;
+  @include mixins.tx-chevron;
+  border: 0;
+  padding: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--tx-text-faint);
+  cursor: pointer;
+}
+
+.tx-plantuml-list__chevron.is-expanded {
+  transform: rotate(90deg);
+}
+
+.tx-plantuml-list__icon {
+  display: grid;
+  place-items: center;
+  min-width: 28px;
+  color: var(--tx-text-muted);
+}
+
+.tx-plantuml-list__kind {
+  font-family: var(--tx-font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--tx-text-muted);
+
+  &[data-kind='sequence'] {
+    color: #6aa6ff;
+  }
+
+  &[data-kind='class'] {
+    color: #e0b445;
+  }
+
+  &[data-kind='activity'] {
+    color: #3ecf8e;
+  }
+
+  &[data-kind='template'] {
+    color: #c084fc;
+  }
+
+  &[data-kind='report'] {
+    color: #3ecf8e;
+  }
+}
+
+.tx-plantuml-list__name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 12px;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tx-plantuml-list__rename {
+  @include mixins.tx-input-focus;
+  flex: 1;
+  min-width: 0;
+  height: 22px;
+  padding: 0 6px;
+  border: 1px solid color-mix(in srgb, var(--tx-accent) 45%, var(--tx-border-subtle));
+  border-radius: 6px;
+  background: var(--tx-bg-canvas);
+  color: var(--tx-text-primary);
+  font: inherit;
+  font-size: 12px;
+}
+
+.tx-plantuml-preview {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 30px;
+  padding: 6px 10px;
+  border: 1px solid color-mix(in srgb, var(--tx-accent) 35%, var(--tx-border-subtle));
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--tx-bg-overlay) 97%, transparent);
+  box-shadow: var(--tx-shadow-2), var(--tx-glow);
+  color: var(--tx-text-primary);
+  font-size: 12px;
+  line-height: 1.2;
+  pointer-events: none;
+}
+
+.tx-plantuml-preview.is-denied {
+  border-color: color-mix(in srgb, #ff6b7a 65%, transparent);
+}
+
+.tx-plantuml-preview.is-into {
+  border-color: color-mix(in srgb, var(--tx-accent) 65%, transparent);
+}
+
+.tx-plantuml-preview__icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  color: var(--tx-text-muted);
+}
+
+.tx-plantuml-preview__name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tx-plantuml-preview__badge {
+  flex-shrink: 0;
+  padding: 2px 6px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.tx-plantuml-preview__badge:not(.is-deny):not(.is-into) {
+  min-width: 18px;
+  text-align: center;
+  background: color-mix(in srgb, var(--tx-accent) 18%, transparent);
+  color: var(--tx-accent);
+}
+
+.tx-plantuml-preview__badge.is-deny {
+  background: color-mix(in srgb, #ff6b7a 18%, transparent);
+  color: #ff6b7a;
+}
+
+.tx-plantuml-preview__badge.is-into {
+  background: color-mix(in srgb, var(--tx-accent) 18%, transparent);
+  color: var(--tx-accent);
+}

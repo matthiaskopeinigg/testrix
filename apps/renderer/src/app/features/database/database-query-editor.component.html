@@ -85,12 +85,12 @@
       </button>
     </tx-hint>
     @if (hasConsoleContent()) {
-      <tx-hint [label]="showConsole() ? 'Hide results' : 'Show results'" placement="bottom">
+      <tx-hint [label]="showConsole() ? 'Hide results' : 'Open results'" placement="bottom">
         <button
           type="button"
           class="tx-db-query__icon"
           (click)="toggleConsole()"
-          [attr.aria-label]="showConsole() ? 'Hide results' : 'Show results'"
+          [attr.aria-label]="showConsole() ? 'Hide results' : 'Open results'"
         >
           @if (showConsole()) {
             <svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true">
@@ -201,16 +201,139 @@
 
   @if (showConsole()) {
     <div
-      class="tx-db-query__sash"
-      role="separator"
-      aria-orientation="horizontal"
-      aria-label="Resize editor and results"
-      tabindex="0"
-      (pointerdown)="handleResizeStart($event)"
-      (dblclick)="hideConsole()"
-    ></div>
+      class="tx-db-query__console-stage"
+      animate.enter="tx-db-query-console-in"
+      animate.leave="tx-db-query-console-out"
+    >
+      <div class="tx-db-query__console-clip">
+        <div
+          class="tx-db-query__sash"
+          role="separator"
+          aria-orientation="horizontal"
+          aria-label="Resize editor and results"
+          tabindex="0"
+          (pointerdown)="handleResizeStart($event)"
+          (dblclick)="hideConsole()"
+        ></div>
 
-    <div class="tx-db-query__console" [style.flex]="'0 0 ' + consoleHeight() + 'px'">
+        <div class="tx-db-query__console" [style.flex]="'0 0 ' + consoleHeight() + 'px'">
+      <header class="tx-db-query__result-bar">
+        <div class="tx-db-query__clauses">
+          <label class="tx-db-query__clause" cdkOverlayOrigin #whereOrigin="cdkOverlayOrigin">
+            <span class="tx-db-query__clause-tag" aria-hidden="true">WHERE</span>
+            <span class="tx-db-query__clause-field">
+              @if (whereGhost(); as ghost) {
+                <span class="tx-db-query__clause-ghost" aria-hidden="true">
+                  <span class="tx-db-query__clause-ghost-pad">{{ ghost.pad }}</span><span class="tx-db-query__clause-ghost-rest">{{ ghost.rest }}</span>
+                </span>
+              }
+              <input
+                #resultWhereInput
+                type="text"
+                placeholder="id = 1"
+                spellcheck="false"
+                autocomplete="off"
+                aria-label="Filter result rows"
+                [attr.aria-expanded]="clauseMenu() === 'where' && clauseMenuOpen()"
+                [attr.aria-autocomplete]="'both'"
+                [value]="resultWhere()"
+                (input)="handleWhere($event)"
+                (focus)="handleClauseFocus('where')"
+                (blur)="handleClauseBlur()"
+                (click)="handleClauseFocus('where')"
+                (keyup)="handleWhere($event)"
+                (keydown)="handleClauseKey('where', $event)"
+              />
+            </span>
+          </label>
+          <ng-template
+            cdkConnectedOverlay
+            [cdkConnectedOverlayOrigin]="whereOrigin"
+            [cdkConnectedOverlayOpen]="clauseMenu() === 'where' && clauseMenuOpen()"
+            [cdkConnectedOverlayPositions]="clauseMenuPositions"
+            [cdkConnectedOverlayMinWidth]="240"
+            [cdkConnectedOverlayPush]="true"
+            [cdkConnectedOverlayViewportMargin]="8"
+          >
+            <div class="tx-db-query__clause-suggest tx-menu" role="listbox" aria-label="WHERE suggestions">
+              @for (item of clauseSuggestions(); track item.kind + item.value; let i = $index) {
+                <button
+                  type="button"
+                  class="tx-db-query__clause-suggest-item"
+                  role="option"
+                  [class.is-active]="i === clauseIndex()"
+                  (mousedown)="$event.preventDefault()"
+                  (click)="handleClauseSelect('where', item)"
+                  (pointerenter)="clauseIndex.set(i)"
+                >
+                  <span>{{ item.label }}</span>
+                  <span class="tx-db-query__clause-suggest-detail">{{ item.detail }}</span>
+                </button>
+              }
+            </div>
+          </ng-template>
+          <span class="tx-db-query__clause-rule" aria-hidden="true"></span>
+          <label class="tx-db-query__clause" cdkOverlayOrigin #orderOrigin="cdkOverlayOrigin">
+            <span class="tx-db-query__clause-tag" aria-hidden="true">ORDER BY</span>
+            <span class="tx-db-query__clause-field">
+              @if (orderGhost(); as ghost) {
+                <span class="tx-db-query__clause-ghost" aria-hidden="true">
+                  <span class="tx-db-query__clause-ghost-pad">{{ ghost.pad }}</span><span class="tx-db-query__clause-ghost-rest">{{ ghost.rest }}</span>
+                </span>
+              }
+              <input
+                #resultOrderInput
+                type="text"
+                placeholder="id DESC"
+                spellcheck="false"
+                autocomplete="off"
+                aria-label="Order result rows"
+                [attr.aria-expanded]="clauseMenu() === 'order' && clauseMenuOpen()"
+                [attr.aria-autocomplete]="'both'"
+                [value]="resultOrder()"
+                (input)="handleOrder($event)"
+                (focus)="handleClauseFocus('order')"
+                (blur)="handleClauseBlur()"
+                (click)="handleClauseFocus('order')"
+                (keyup)="handleOrder($event)"
+                (keydown)="handleClauseKey('order', $event)"
+              />
+            </span>
+          </label>
+          <ng-template
+            cdkConnectedOverlay
+            [cdkConnectedOverlayOrigin]="orderOrigin"
+            [cdkConnectedOverlayOpen]="clauseMenu() === 'order' && clauseMenuOpen()"
+            [cdkConnectedOverlayPositions]="clauseMenuPositions"
+            [cdkConnectedOverlayMinWidth]="240"
+            [cdkConnectedOverlayPush]="true"
+            [cdkConnectedOverlayViewportMargin]="8"
+          >
+            <div class="tx-db-query__clause-suggest tx-menu" role="listbox" aria-label="ORDER BY suggestions">
+              @for (item of clauseSuggestions(); track item.kind + item.value; let i = $index) {
+                <button
+                  type="button"
+                  class="tx-db-query__clause-suggest-item"
+                  role="option"
+                  [class.is-active]="i === clauseIndex()"
+                  (mousedown)="$event.preventDefault()"
+                  (click)="handleClauseSelect('order', item)"
+                  (pointerenter)="clauseIndex.set(i)"
+                >
+                  <span>{{ item.label }}</span>
+                  <span class="tx-db-query__clause-suggest-detail">{{ item.detail }}</span>
+                </button>
+              }
+            </div>
+          </ng-template>
+        </div>
+        <tx-hint label="Hide results" placement="left">
+          <button type="button" class="tx-db-query__text" (click)="hideConsole()" aria-label="Hide results">
+            Hide
+          </button>
+        </tx-hint>
+      </header>
+
       @if (error(); as message) {
         <div class="tx-db-query__error" role="alert">
           <p>{{ message }}</p>
@@ -225,17 +348,37 @@
       }
 
       <tx-database-result-grid
-        [table]="result()?.table ?? null"
+        [table]="displayTable()"
         [durationMs]="result()?.durationMs ?? null"
         [filter]="filter()"
         [pageSize]="pageSize()"
         [pageSizes]="pageSizes"
         [rolledBack]="rolledBack()"
         [busy]="running()"
-        [emptyLabel]="'No rows'"
+        [columnTypes]="columnTypes()"
+        [relations]="relations()"
+        emptyLabel="No rows"
         (filterChange)="filter.set($event)"
         (pageSizeChange)="handlePageSize($event)"
+        (relationJump)="handleRelationJump($event)"
       />
+        </div>
+      </div>
+    </div>
+  } @else if (hasConsoleContent()) {
+    <div
+      class="tx-db-query__dock-stage"
+      animate.enter="tx-db-query-dock-in"
+      animate.leave="tx-db-query-dock-out"
+    >
+      <div class="tx-db-query__console-clip">
+        <tx-hint class="tx-db-query__console-dock-hint" label="Open results" placement="top" stretch>
+          <button type="button" class="tx-db-query__console-dock" (click)="revealConsole()" aria-label="Open results">
+            <span>Results</span>
+            <span>Open</span>
+          </button>
+        </tx-hint>
+      </div>
     </div>
   }
 </div>

@@ -1,0 +1,88 @@
+.rg-run-timeline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 0 12px;
+}
+
+.rg-run-timeline__hint {
+  flex: 1 0 100%;
+  margin: 0 0 4px;
+  color: var(--tx-text-muted);
+  font-size: 11px;
+}
+
+.rg-run-timeline__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--tx-border-subtle);
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+}
+
+.rg-run-timeline__chip.is-active,
+.rg-run-timeline__chip.is-pinned {
+  border-color: color-mix(in srgb, var(--tx-accent) 45%, transparent);
+  background: color-mix(in srgb, var(--tx-accent) 12%, transparent);
+}
+
+.rg-run-timeline__chip.is-compare-a {
+  border-color: color-mix(in srgb, var(--tx-accent) 55%, transparent);
+}
+
+.rg-run-timeline__chip.is-compare-b {
+  border-color: color-mix(in srgb, var(--tx-warning, #e8a838) 55%, transparent);
+}
+
+.rg-run-timeline__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--tx-text-muted);
+}
+
+.rg-run-timeline__dot.is-pass {
+  background: var(--tx-success, #3dd68c);
+}
+
+.rg-run-timeline__dot.is-fail {
+  background: var(--tx-danger);
+}
+
+.rg-run-timeline__slot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.rg-run-timeline__slot.is-a {
+  background: color-mix(in srgb, var(--tx-accent) 22%, transparent);
+  color: var(--tx-accent);
+}
+
+.rg-run-timeline__slot.is-b {
+  background: color-mix(in srgb, var(--tx-warning, #e8a838) 22%, transparent);
+  color: var(--tx-warning, #e8a838);
+}
+
+.rg-run-timeline__pin {
+  color: var(--tx-accent);
+  font-size: 11px;
+}
+
+.rg-run-timeline__rate {
+  color: var(--tx-text-muted);
+  font-weight: 700;
+}

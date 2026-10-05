@@ -1,0 +1,58 @@
+<div class="tx-db-sql-field">
+  <div class="tx-db-sql-field__toolbar">
+    <span class="tx-db-sql-field__lang">{{ languageLabel() }}</span>
+    <tx-hint label="Format" placement="bottom">
+      <button type="button" class="tx-db-sql-field__ghost" (click)="handleFormat()" aria-label="Format query">Format</button>
+    </tx-hint>
+  </div>
+  <div class="tx-db-sql-field__pane">
+    <div class="tx-db-sql-field__gutter" #gutter aria-hidden="true">
+      @for (line of lineNumbers(); track line) {
+        <span>{{ line }}</span>
+      }
+    </div>
+    <div class="tx-db-sql-field__code">
+      <pre class="tx-db-sql-field__highlight" #highlight aria-hidden="true">@for (token of highlightTokens(); track $index) {<span [class]="'is-' + token.kind">{{ token.text }}</span>}</pre>
+      @if (ghost(); as ghostText) {
+        <pre class="tx-db-sql-field__ghost" #ghostPane aria-hidden="true"><span class="tx-db-sql-field__ghost-pad">{{ ghostText.pad }}</span><span class="tx-db-sql-field__ghost-rest">{{ ghostText.rest }}</span></pre>
+      }
+      <textarea
+        #editor
+        class="tx-db-sql-field__editor"
+        spellcheck="false"
+        [placeholder]="placeholder()"
+        (input)="handleInput($event)"
+        (scroll)="handleScroll($event)"
+        (click)="handleCaret($event)"
+        (keyup)="handleCaret($event)"
+        (keydown)="handleEditorKey($event)"
+        [attr.aria-label]="ariaLabel()"
+        [attr.aria-autocomplete]="'both'"
+      ></textarea>
+      @if (completeOpen() && suggestions().length > 0) {
+        <div
+          class="tx-db-sql-field__suggest tx-menu"
+          role="listbox"
+          aria-label="SQL suggestions"
+          [style.top.px]="suggestPos().top"
+          [style.left.px]="suggestPos().left"
+        >
+          @for (item of suggestions(); track item.kind + item.value; let i = $index) {
+            <button
+              type="button"
+              class="tx-db-sql-field__suggest-item"
+              role="option"
+              [class.is-active]="i === completeIndex()"
+              (mousedown)="$event.preventDefault()"
+              (click)="applySuggestion(item)"
+              (pointerenter)="completeIndex.set(i)"
+            >
+              <span>{{ item.label }}</span>
+              <span class="tx-db-sql-field__suggest-detail">{{ item.detail }}</span>
+            </button>
+          }
+        </div>
+      }
+    </div>
+  </div>
+</div>

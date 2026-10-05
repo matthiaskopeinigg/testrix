@@ -8,6 +8,7 @@ export const toolIdSchema = z.enum([
   'url-codec',
   'regex-builder',
   'password-generator',
+  'plantuml',
 ]);
 
 export type ToolId = z.infer<typeof toolIdSchema>;
@@ -56,6 +57,11 @@ export const DEFAULT_TOOLS: readonly ToolItem[] = [
     id: 'password-generator',
     label: 'Password Generator',
     description: 'Create a local secret from Web Crypto',
+  },
+  {
+    id: 'plantuml',
+    label: 'PlantUML',
+    description: 'Build UML diagrams visually, offline',
   },
 ];
 

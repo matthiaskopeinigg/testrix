@@ -1,0 +1,346 @@
+@if (rule(); as artifact) {
+  <section class="ix-tab" [class.is-running]="isRunning()" [attr.aria-label]="artifact.name">
+    <header class="ix-tab__chrome">
+      <div class="ix-tab__identity">
+        <div class="ix-tab__identity-main">
+          <span class="ix-tab__badge" aria-hidden="true">IX</span>
+          <tx-input
+            class="ix-tab__name"
+            [id]="'ix-name-' + artifact.id"
+            [value]="artifact.name"
+            ariaLabel="Intercept rule name"
+            (valueChange)="patchName($event)"
+          />
+          @if (artifact.tags.length) {
+            <ul class="ix-tab__tags" aria-label="Tags">
+              @for (tag of artifact.tags; track tag) {
+                <li>{{ tag }}</li>
+              }
+            </ul>
+          }
+        </div>
+
+        <div class="ix-tab__actions">
+          <span class="ix-tab__status" [class.is-live]="isRunning()" role="status">
+            {{ isRunning() ? 'Armed' : 'Idle' }}
+          </span>
+          @if (isRunning()) {
+            <tx-hint label="Stop intercept" detail="Disarms this rewrite rule" placement="bottom">
+              <button type="button" class="ix-tab__run is-cancel" aria-label="Stop intercept" (click)="stopRule()">
+                Stop
+              </button>
+            </tx-hint>
+          } @else {
+            <tx-hint
+              label="Start intercept"
+              detail="Browser opens a window; Device arms the selected emulator MITM"
+              placement="bottom"
+            >
+              <button type="button" class="ix-tab__run" aria-label="Start intercept" (click)="startRule()">
+                Start
+              </button>
+            </tx-hint>
+          }
+        </div>
+      </div>
+      @if (startError(); as err) {
+        <p class="ix-tab__error" role="alert">{{ err }}</p>
+      }
+
+      <div class="ix-tab__toolbar">
+        <tx-select
+          class="ix-tab__mode"
+          [value]="artifact.mode"
+          [options]="modeOptions"
+          ariaLabel="Intercept mode"
+          (valueChange)="patchMode($event)"
+        />
+        @if (artifact.mode === 'browser') {
+          <tx-token-field
+            class="ix-tab__start"
+            [id]="'ix-start-url-' + artifact.id"
+            label="Start URL"
+            [value]="artifact.startUrl"
+            [variables]="placeholderVariables()"
+            (valueChange)="patchField('startUrl', $event)"
+          />
+        } @else {
+          <tx-select
+            class="ix-tab__start"
+            [value]="artifact.deviceId"
+            [options]="deviceOptions()"
+            ariaLabel="Emulator device"
+            (valueChange)="patchField('deviceId', $event)"
+          />
+        }
+      </div>
+
+      <nav class="ix-tab__nav" role="tablist" aria-label="Intercept sections">
+        @for (item of sections; track item.id) {
+          <button
+            type="button"
+            class="ix-tab__nav-item"
+            role="tab"
+            [class.is-active]="section() === item.id"
+            [attr.aria-selected]="section() === item.id"
+            (click)="handleSection(item.id)"
+          >
+            {{ item.label }}
+          </button>
+        }
+      </nav>
+    </header>
+
+    <div class="ix-tab__split">
+      <div class="ix-tab__primary">
+        <div class="ix-tab__pane-stage">
+          @for (id of [section()]; track id) {
+            <div
+              class="ix-tab__pane"
+              (animate.enter)="handlePaneEnter($event)"
+              (animate.leave)="handlePaneLeave($event)"
+            >
+              @switch (id) {
+                @case ('match') {
+                  <div class="ix-tab__form">
+                    <div class="ix-tab__row">
+                      <tx-select
+                        [value]="artifact.stage"
+                        [options]="stageOptions"
+                        ariaLabel="Match stage"
+                        (valueChange)="patchStage($event)"
+                      />
+                      <tx-select
+                        [value]="artifact.method"
+                        [options]="methodOptions"
+                        ariaLabel="HTTP method"
+                        (valueChange)="patchField('method', $event)"
+                      />
+                      <tx-select
+                        [value]="artifact.match"
+                        [options]="matchOptions"
+                        ariaLabel="URL match mode"
+                        (valueChange)="patchField('match', $event)"
+                      />
+                    </div>
+
+                    <tx-token-field
+                      [id]="'ix-url-' + artifact.id"
+                      label="URL pattern"
+                      [value]="artifact.url"
+                      [variables]="placeholderVariables()"
+                      (valueChange)="patchField('url', $event)"
+                    />
+
+                    <div class="ix-tab__row">
+                      <tx-token-field
+                        [id]="'ix-header-name-' + artifact.id"
+                        label="Header name (optional)"
+                        [value]="artifact.headerName"
+                        [variables]="placeholderVariables()"
+                        (valueChange)="patchField('headerName', $event)"
+                      />
+                      <tx-token-field
+                        [id]="'ix-header-value-' + artifact.id"
+                        label="Header contains (optional)"
+                        [value]="artifact.headerValue"
+                        [variables]="placeholderVariables()"
+                        (valueChange)="patchField('headerValue', $event)"
+                      />
+                    </div>
+
+                    <tx-token-field
+                      [id]="'ix-body-contains-' + artifact.id"
+                      label="Body contains (optional)"
+                      [value]="artifact.bodyContains"
+                      [variables]="placeholderVariables()"
+                      (valueChange)="patchField('bodyContains', $event)"
+                    />
+                  </div>
+                }
+                @case ('action') {
+                  <div class="ix-tab__form">
+                    <tx-select
+                      [value]="artifact.action"
+                      [options]="actionOptions"
+                      ariaLabel="Intercept action"
+                      (valueChange)="patchAction($event)"
+                    />
+
+                    @if (artifact.action === 'passthrough' || artifact.action === 'mock') {
+                      <tx-request-kv-table
+                        label="Set headers"
+                        [headerComplete]="true"
+                        [showDescription]="false"
+                        [rows]="setHeaderRows()"
+                        [completeVariables]="placeholderVariables()"
+                        (rowsChange)="handleSetHeaders($event)"
+                      />
+                    }
+
+                    @if (artifact.action === 'passthrough') {
+                      <tx-request-kv-table
+                        label="Remove headers"
+                        [headerComplete]="true"
+                        [showDescription]="false"
+                        [rows]="removeHeaderRows()"
+                        [completeVariables]="placeholderVariables()"
+                        (rowsChange)="handleRemoveHeaders($event)"
+                      />
+
+                      <div class="ix-tab__body-toolbar">
+                        <div class="ix-tab__body-mode">
+                          <span class="ix-tab__field-label">Replace body</span>
+                          <tx-select
+                            [value]="artifact.bodyMode"
+                            [options]="bodyModeOptions"
+                            ariaLabel="Replace body mode"
+                            (valueChange)="patchField('bodyMode', $event)"
+                          />
+                        </div>
+                        @if (canFormatBody()) {
+                          <tx-hint label="Format document" keys="Shift Alt F" placement="bottom">
+                            <button type="button" class="ix-tab__ghost" (click)="handleFormatBody()">Format</button>
+                          </tx-hint>
+                        }
+                      </div>
+
+                      @if (artifact.bodyMode === 'none') {
+                        <tx-empty-state
+                          title="No body rewrite"
+                          body="Pick JSON, text, HTML, or XML to replace the body on passthrough."
+                        />
+                      } @else {
+                        <div class="ix-tab__body-editor">
+                          <tx-code-editor
+                            #bodyEditor
+                            [language]="bodyLanguage()"
+                            [value]="artifact.setBody"
+                            [variables]="placeholderVariables()"
+                            ariaLabel="Replace body"
+                            (valueChange)="patchField('setBody', $event)"
+                          />
+                        </div>
+                      }
+                    }
+
+                    @if (artifact.action === 'mock') {
+                      <tx-input
+                        [id]="'ix-mock-status-' + artifact.id"
+                        label="Mock status"
+                        [value]="'' + artifact.mockStatus"
+                        (valueChange)="patchNumber('mockStatus', $event, 200)"
+                      />
+
+                      <div class="ix-tab__body-toolbar">
+                        <div class="ix-tab__body-mode">
+                          <span class="ix-tab__field-label">Mock body</span>
+                          <tx-select
+                            [value]="artifact.bodyMode"
+                            [options]="bodyModeOptions"
+                            ariaLabel="Mock body mode"
+                            (valueChange)="patchField('bodyMode', $event)"
+                          />
+                        </div>
+                        @if (canFormatBody()) {
+                          <tx-hint label="Format document" keys="Shift Alt F" placement="bottom">
+                            <button type="button" class="ix-tab__ghost" (click)="handleFormatBody()">Format</button>
+                          </tx-hint>
+                        }
+                      </div>
+
+                      @if (artifact.bodyMode === 'none') {
+                        <tx-empty-state
+                          title="Empty mock body"
+                          body="Pick JSON, text, HTML, or XML for the mocked response body."
+                        />
+                      } @else {
+                        <div class="ix-tab__body-editor">
+                          <tx-code-editor
+                            #bodyEditor
+                            [language]="bodyLanguage()"
+                            [value]="artifact.mockBody"
+                            [variables]="placeholderVariables()"
+                            ariaLabel="Mock body"
+                            (valueChange)="patchField('mockBody', $event)"
+                          />
+                        </div>
+                      }
+                    }
+
+                    @if (artifact.action === 'block') {
+                      <tx-empty-state
+                        title="Block matched traffic"
+                        body="Matching requests or responses are dropped by the interceptor."
+                      />
+                    }
+                  </div>
+                }
+                @case ('activity') {
+                  <section class="ix-tab__hits" aria-label="Intercept activity">
+                    <div class="ix-tab__hits-head">
+                      <span class="ix-tab__hits-count">{{ activity().length }}</span>
+                      @if (activity().length > 0) {
+                        <tx-hint label="Clear activity" detail="Removes saved Activity hits from this rule" placement="bottom">
+                          <button
+                            type="button"
+                            class="ix-tab__clear"
+                            aria-label="Clear activity"
+                            (click)="clearActivity()"
+                          >
+                            Clear
+                          </button>
+                        </tx-hint>
+                      }
+                    </div>
+
+                    @if (activity().length === 0) {
+                      <tx-empty-state
+                        class="ix-tab__empty"
+                        title="No hits yet"
+                        body="Start the interceptor and generate matching traffic."
+                      />
+                    } @else {
+                      <ul class="ix-tab__hit-list" role="listbox" aria-label="Activity hits">
+                        @for (hit of activity(); track trackHit($index, hit)) {
+                          <li>
+                            <button
+                              type="button"
+                              class="ix-tab__hit"
+                              role="option"
+                              [class.is-selected]="selectedHitId() === hit.id"
+                              [attr.aria-selected]="selectedHitId() === hit.id"
+                              (click)="openHit(hit)"
+                            >
+                              <span class="ix-tab__hit-method" [attr.data-method]="hit.method">{{ hit.method }}</span>
+                              <span class="ix-tab__hit-action">{{ hit.action }}</span>
+                              <span class="ix-tab__hit-url">{{ hit.url }}</span>
+                              <span class="ix-tab__hit-status" [attr.data-tone]="statusTone(hit.status)">
+                                {{ hit.status || '—' }}
+                              </span>
+                              <span class="ix-tab__hit-time">{{ formatHitTime(hit.at) }}</span>
+                            </button>
+                          </li>
+                        }
+                      </ul>
+                    }
+                  </section>
+                }
+              }
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+  </section>
+
+  @if (selectedExchange(); as detail) {
+    <div txOverlayHost animate.enter="tx-overlay-enter" animate.leave="tx-overlay-leave">
+      <tx-overlay labelledBy="intercept-exchange-title" size="lg" (closed)="closeHit()">
+        <tx-flow-run-exchange [detail]="detail" title="Intercept exchange" headingId="intercept-exchange-title" />
+      </tx-overlay>
+    </div>
+  }
+} @else {
+  <tx-empty-state title="Intercept rule missing" body="This intercept rule was deleted or is not in the workspace." />
+}

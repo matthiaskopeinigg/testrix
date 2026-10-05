@@ -43,6 +43,7 @@ const pngTargets = [
   'build/icon.png',
   'apps/desktop/src/assets/icon.png',
   'apps/setup/src/assets/icon.png',
+  'apps/setup/build/icon.png',
 ];
 const icoTargets = [
   'assets/brand/icon.ico',

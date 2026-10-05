@@ -1,0 +1,36 @@
+@if (updates.whatsNewOpen()) {
+  <tx-overlay [labelledBy]="titleId" variant="dialog" (closed)="close()">
+    <div class="tx-whats-new" role="dialog" [attr.aria-labelledby]="titleId">
+      <header class="tx-whats-new__header">
+        <h2 class="tx-whats-new__title" [id]="titleId">What's new in Testrix {{ version() }}</h2>
+        @if (previous(); as from) {
+          <p class="tx-whats-new__from">Updated from {{ from }}</p>
+        }
+      </header>
+      <div class="tx-whats-new__body">
+        @for (block of blocks(); track $index) {
+          @switch (block.kind) {
+            @case ('heading') {
+              <h3>{{ block.text }}</h3>
+            }
+            @case ('list') {
+              <ul>
+                @for (item of block.items; track $index) {
+                  <li>{{ item }}</li>
+                }
+              </ul>
+            }
+            @default {
+              <p>{{ block.text }}</p>
+            }
+          }
+        } @empty {
+          <p class="tx-whats-new__empty">Testrix is up to date. The full list of changes is in the release notes on GitHub.</p>
+        }
+      </div>
+      <footer class="tx-whats-new__footer">
+        <tx-button (clicked)="close()">Got it</tx-button>
+      </footer>
+    </div>
+  </tx-overlay>
+}

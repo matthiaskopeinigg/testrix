@@ -17,7 +17,8 @@ if (devToolkit) {
 }
 
 const run = (script) =>
-  spawnSync(process.execPath, [path.join(root, script)], { stdio: 'inherit', cwd: root }).status ?? 1;
+  spawnSync(process.execPath, [path.join(root, script)], { stdio: 'inherit', cwd: root }).status ??
+  1;
 
 if (run('tooling/scripts/sync-brand-assets.mjs') !== 0) {
   process.exit(1);
@@ -47,7 +48,8 @@ const { result } = concurrently(
   ],
   {
     cwd: root,
-    killOthersOn: ['success', 'failure'],
+    // Closing the workbench stops ng serve and the Electron watcher with it.
+    killOthersOn: ['failure', 'success'],
   },
 );
 

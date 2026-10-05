@@ -1,5 +1,17 @@
 import { z } from 'zod';
 
+import { collectionFolderConfigSchema, parseCollectionFolderConfig, type CollectionFolderConfig } from './collection-folder';
+import {
+  collectionRequestConfigSchema,
+  parseCollectionRequestConfig,
+  type CollectionRequestConfig,
+} from './collection-request';
+import {
+  collectionWebSocketConfigSchema,
+  parseCollectionWebSocketConfig,
+  type CollectionWebSocketConfig,
+} from './collection-websocket';
+
 /** Supported HTTP methods for collection request nodes. */
 export const httpMethodSchema = z.enum([
   'GET',
@@ -32,6 +44,7 @@ export type CollectionFolderNode = {
   readonly name: string;
   readonly modifiedAt: string;
   readonly children: CollectionNode[];
+  readonly config?: CollectionFolderConfig;
 };
 
 export type CollectionHttpNode = {
@@ -41,6 +54,7 @@ export type CollectionHttpNode = {
   readonly modifiedAt: string;
   readonly method: HttpMethod;
   readonly status: number | null;
+  readonly config?: CollectionRequestConfig;
 };
 
 export type CollectionWebSocketNode = {
@@ -48,25 +62,50 @@ export type CollectionWebSocketNode = {
   readonly id: string;
   readonly name: string;
   readonly modifiedAt: string;
+  readonly config?: CollectionWebSocketConfig;
 };
 
 export type CollectionNode = CollectionFolderNode | CollectionHttpNode | CollectionWebSocketNode;
+
+function optionalRequestConfig(value: unknown): CollectionRequestConfig | undefined {
+  if (value === undefined || value === null)
+    return undefined;
+  const parsed = collectionRequestConfigSchema.safeParse(value);
+  return parsed.success ? parsed.data : parseCollectionRequestConfig(value);
+}
 
 export const collectionHttpNodeSchema = collectionNodeBaseSchema.extend({
   kind: z.literal('http'),
   method: httpMethodSchema,
   status: z.number().int().positive().nullable(),
+  config: z.preprocess(optionalRequestConfig, collectionRequestConfigSchema.optional()),
 });
+
+function optionalWebsocketConfig(value: unknown): CollectionWebSocketConfig | undefined {
+  if (value === undefined || value === null)
+    return undefined;
+  const parsed = collectionWebSocketConfigSchema.safeParse(value);
+  return parsed.success ? parsed.data : parseCollectionWebSocketConfig(value);
+}
 
 export const collectionWebSocketNodeSchema = collectionNodeBaseSchema.extend({
   kind: z.literal('websocket'),
+  config: z.preprocess(optionalWebsocketConfig, collectionWebSocketConfigSchema.optional()),
 });
+
+function optionalFolderConfig(value: unknown): CollectionFolderConfig | undefined {
+  if (value === undefined || value === null)
+    return undefined;
+  const parsed = collectionFolderConfigSchema.safeParse(value);
+  return parsed.success ? parsed.data : parseCollectionFolderConfig(value);
+}
 
 export const collectionNodeSchema: z.ZodType<CollectionNode> = z.lazy(() =>
   z.union([
     collectionNodeBaseSchema.extend({
       kind: z.literal('folder'),
       children: z.array(collectionNodeSchema),
+      config: z.preprocess(optionalFolderConfig, collectionFolderConfigSchema.optional()),
     }),
     collectionHttpNodeSchema,
     collectionWebSocketNodeSchema,
@@ -77,6 +116,7 @@ export const collectionFolderNodeSchema: z.ZodType<CollectionFolderNode> = z.laz
   collectionNodeBaseSchema.extend({
     kind: z.literal('folder'),
     children: z.array(collectionNodeSchema),
+    config: z.preprocess(optionalFolderConfig, collectionFolderConfigSchema.optional()),
   }),
 );
 

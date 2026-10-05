@@ -30,6 +30,8 @@ export class CollectionsTreeComponent {
   readonly parentId = input<string | null>(null);
   readonly depth = input(0);
   readonly renamingId = input<string | null>(null);
+  readonly openNodeIds = input<ReadonlySet<string>>(new Set());
+  readonly activeNodeId = input<string | null>(null);
   readonly nodeMenu = output<CollectionsMenuRequest>();
   readonly renameStart = output<string>();
   readonly renameInput = output<{ readonly id: string; readonly value: string }>();
@@ -61,6 +63,7 @@ export class CollectionsTreeComponent {
       return;
     }
     if (node.kind === 'folder') {
+      this.store.toggleExpanded(node.id);
       return;
     }
     this.workbench.openFromNode(node);
@@ -83,11 +86,11 @@ export class CollectionsTreeComponent {
   }
 
   isNodeOpen(nodeId: string): boolean {
-    return this.workbench.isOpen(nodeId);
+    return this.openNodeIds().has(nodeId);
   }
 
   isNodeActive(nodeId: string): boolean {
-    return this.workbench.isActive(nodeId);
+    return this.activeNodeId() === nodeId;
   }
 
   isExpanded(node: CollectionNode): boolean {

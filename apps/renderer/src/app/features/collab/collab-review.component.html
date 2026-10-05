@@ -1,0 +1,54 @@
+<div class="tx-collab-review">
+  @if (current(); as review) {
+    <article>
+      <header>
+        @if (reviews().length > 1) {
+          <div class="tx-collab-review__queue">
+            <p>{{ position() }}</p>
+            <div>
+              <tx-button variant="ghost" [disabled]="index() === 0" (clicked)="showPrevious()">Previous</tx-button>
+              <tx-button variant="ghost" [disabled]="index() >= reviews().length - 1" (clicked)="showNext()">Next</tx-button>
+            </div>
+          </div>
+        }
+        <h2>
+          <tx-collab-kind-icon [kind]="kind(review)" />
+          {{ review.author || 'Someone' }} also changed {{ review.label }}.
+        </h2>
+        @if (review.author || review.at) {
+          <p>{{ review.author || 'Someone' }}@if (review.at) { · {{ when(review.at) }} }</p>
+        }
+      </header>
+      <div class="tx-collab-review__cards">
+        <section tabindex="0">
+          <h3>Yours</h3>
+          <p class="tx-collab-review__name">{{ cardTitle(review.ours, review.label) }}</p>
+          <p>{{ removed(review.ours) ? 'Removed on this PC.' : review.summary || ('Changed in ' + review.file) }}</p>
+          @if (chips(review.ours).length > 0) {
+            <ul class="tx-collab-review__chips">
+              @for (chip of chips(review.ours); track chip.label) {
+                <li><span>{{ chip.label }}</span> {{ chip.value }}</li>
+              }
+            </ul>
+          }
+        </section>
+        <section tabindex="0">
+          <h3>Theirs</h3>
+          <p class="tx-collab-review__name">{{ cardTitle(review.theirs, review.label) }}</p>
+          <p>{{ removed(review.theirs) ? 'Removed on the other PC.' : review.summary || ('Changed in ' + review.file) }}</p>
+          @if (chips(review.theirs).length > 0) {
+            <ul class="tx-collab-review__chips">
+              @for (chip of chips(review.theirs); track chip.label) {
+                <li><span>{{ chip.label }}</span> {{ chip.value }}</li>
+              }
+            </ul>
+          }
+        </section>
+      </div>
+      <footer>
+        <tx-button variant="secondary" (clicked)="collab.resolve(review.id, 'theirs')">Keep theirs</tx-button>
+        <tx-button variant="primary" (clicked)="collab.resolve(review.id, 'ours')">Keep mine</tx-button>
+      </footer>
+    </article>
+  }
+</div>

@@ -1,4 +1,4 @@
-import { GlobalPositionStrategy, Overlay, OverlayRef } from '@angular/cdk/overlay';
+import { type GlobalPositionStrategy, Overlay, type OverlayRef } from '@angular/cdk/overlay';
 import { TemplatePortal } from '@angular/cdk/portal';
 import {
   afterNextRender,
@@ -16,9 +16,19 @@ import {
   ViewContainerRef,
   type TemplateRef,
 } from '@angular/core';
-import { TxEmptyStateComponent, playLeaveThen } from '@testrix/ui';
+import { TxButtonComponent, TxEmptyStateComponent, TxToastService, playLeaveThen } from '@testrix/ui';
 
 import { ConfirmDialogService } from '../../core/confirm-dialog.service';
+import {
+  isEditableKeyboardTarget,
+  isModKey,
+  shouldDeferToFlowCanvas,
+} from '../../core/selection-hotkeys';
+import {
+  collectOpenRequestVariableNames,
+  missingEnvironmentVariableNames,
+} from './open-request-variables';
+import { CollectionsStore } from '../collections/collections.store';
 import { WorkbenchStore } from '../workbench/workbench.store';
 import { EnvironmentsDndService } from './environments-dnd.service';
 import { EnvironmentsListComponent } from './environments-list.component';
@@ -34,7 +44,7 @@ interface EnvListMenu {
 @Component({
   selector: 'tx-environments-sidebar',
   standalone: true,
-  imports: [EnvironmentsToolbarComponent, EnvironmentsListComponent, TxEmptyStateComponent],
+  imports: [EnvironmentsToolbarComponent, EnvironmentsListComponent, TxButtonComponent, TxEmptyStateComponent],
   templateUrl: './environments-sidebar.component.html',
   styleUrl: './environments-sidebar.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -43,6 +53,7 @@ export class EnvironmentsSidebarComponent {
   readonly store = inject(EnvironmentsStore);
   readonly dnd = inject(EnvironmentsDndService);
   private readonly workbench = inject(WorkbenchStore);
+  private readonly collections = inject(CollectionsStore);
   private readonly confirm = inject(ConfirmDialogService);
   private readonly overlay = inject(Overlay);
   private readonly vcr = inject(ViewContainerRef);
@@ -56,7 +67,6 @@ export class EnvironmentsSidebarComponent {
 
   readonly menu = signal<EnvListMenu | null>(null);
   readonly renamingId = signal<string | null>(null);
-  readonly canDelete = computed(() => this.store.items().length > 1);
   readonly deleteLabel = computed(() => {
     const id = this.menu()?.id;
     const selected = this.store.selectedIds();
@@ -113,6 +123,26 @@ export class EnvironmentsSidebarComponent {
     this.startRename(item.id);
   }
 
+  handleScanOpenRequests(): void {
+    const referenced = collectOpenRequestVariableNames({
+      workbench: this.workbench,
+      nodeById: (id) => this.collections.nodeById(id),
+    });
+    let env =
+      (this.store.activeId() ? this.store.environmentById(this.store.activeId()!) : null) ??
+      this.store.items()[0] ??
+      null;
+    if (!env)
+      env = this.store.create();
+    const missing = missingEnvironmentVariableNames(env.variables, referenced);
+    if (missing.length === 0) {
+      this.workbench.openFromEnvironment(env);
+      return;
+    }
+    this.store.addMissingVariableKeys(env.id, missing);
+    this.workbench.openFromEnvironment(env);
+  }
+
   handleOpen(): void {
     const id = this.menu()?.id;
     this.closeMenu();
@@ -150,9 +180,14 @@ export class EnvironmentsSidebarComponent {
     const targetId = menu?.id;
     const ids =
       targetId && selected.includes(targetId) && selected.length > 1 ? [...selected] : targetId ? [targetId] : [];
-    if (ids.length === 0 || this.store.items().length <= 1) {
+    await this.deleteIds(ids);
+  }
+
+  private readonly toasts = inject(TxToastService);
+
+  private async deleteIds(ids: readonly string[]): Promise<void> {
+    if (ids.length === 0)
       return;
-    }
     const names = ids
       .map((id) => this.store.environmentById(id)?.name.trim() || 'Environment')
       .slice(0, 3);
@@ -165,11 +200,24 @@ export class EnvironmentsSidebarComponent {
           : `This removes ${names.join(', ')}${extra} from this workspace.`,
       confirmLabel: 'Delete',
     });
-    if (!ok) {
+    if (!ok)
       return;
-    }
-    const removed = this.store.remove(ids);
-    this.workbench.closeEnvironmentTabs(removed);
+    const deferred = this.store.removeDeferred(ids);
+    if (!deferred)
+      return;
+    this.workbench.closeEnvironmentTabs(deferred.removedIds);
+    const message =
+      ids.length === 1
+        ? `Deleted ${names[0] ?? 'environment'}`
+        : `Deleted ${ids.length} environments`;
+    this.toasts.show({
+      message,
+      action: {
+        label: 'Undo',
+        onClick: () => deferred.restore(),
+      },
+      onExpire: () => deferred.commit(),
+    });
   }
 
   startRename(id: string): void {
@@ -248,11 +296,48 @@ export class EnvironmentsSidebarComponent {
 
   @HostListener('document:keydown', ['$event'])
   handleDocumentKeydown(event: KeyboardEvent): void {
-    if (event.key !== 'Escape' || !this.menu()) {
+    if (event.key === 'Escape') {
+      if (this.menu()) {
+        event.preventDefault();
+        this.closeMenu();
+      }
       return;
     }
-    event.preventDefault();
-    this.closeMenu();
+
+    if (this.menu() || this.renamingId())
+      return;
+    if (isEditableKeyboardTarget(event.target))
+      return;
+    if (shouldDeferToFlowCanvas(event))
+      return;
+
+    if (event.key === 'Delete' || event.key === 'Backspace') {
+      const ids = [...this.store.selectedIds()];
+      if (ids.length === 0)
+        return;
+      event.preventDefault();
+      void this.deleteIds(ids);
+      return;
+    }
+
+    if (isModKey(event, 'a')) {
+      const ids = this.store.visibleEnvironments().map((item) => item.id);
+      if (ids.length === 0)
+        return;
+      event.preventDefault();
+      this.store.selectedIds.set(ids);
+      this.store.selectionAnchorId.set(ids[0] ?? null);
+      return;
+    }
+
+    if (isModKey(event, 'd')) {
+      const ids = [...this.store.selectedIds()];
+      if (ids.length === 0)
+        return;
+      event.preventDefault();
+      for (const id of ids)
+        this.store.duplicate(id);
+    }
   }
 
   private openMenu(event: MouseEvent, partial: EnvListMenu): void {

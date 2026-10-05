@@ -1,0 +1,235 @@
+<tx-overlay [labelledBy]="titleId" variant="dialog" (closed)="close()">
+  <div class="tx-import-workspace" [class.tx-import-workspace--blocked]="isUnsupported()">
+    <header class="tx-import-workspace__header">
+      <div class="tx-import-workspace__heading">
+        <h2 class="tx-import-workspace__title" [id]="titleId">Import workspace</h2>
+        <p class="tx-import-workspace__lede">Merge, replace, or import into a new workspace.</p>
+      </div>
+      <tx-hint label="Close" keys="Esc" placement="left">
+        <tx-button variant="ghost" [disabled]="applying()" (clicked)="close()">Close</tx-button>
+      </tx-hint>
+    </header>
+
+    <div class="tx-import-workspace__stage">
+      @switch (step()) {
+        @case ('format') {
+          <div
+            class="tx-import-workspace__pane"
+            [animate.enter]="paneSlideDir() ? 'tx-import-pane-in' : undefined"
+            (animate.enter)="paneEnter($event)"
+            (animate.leave)="paneLeave($event)"
+          >
+            <section class="tx-import-workspace__section" aria-labelledby="tx-import-format">
+              <div class="tx-import-workspace__source">
+                <div class="tx-import-workspace__source-top">
+                  <div class="tx-import-workspace__file">
+                    <span class="tx-import-workspace__file-name" [id]="titleId + '-file'">
+                      {{ sourceFileName() }}
+                    </span>
+                    @if (sourceDir(); as dir) {
+                      <span class="tx-import-workspace__file-dir">{{ dir }}</span>
+                    }
+                  </div>
+                  <span
+                    class="tx-import-workspace__format"
+                    [class.is-bad]="isUnsupported()"
+                    [class.is-ok]="!isUnsupported()"
+                  >
+                    {{ formatSummary() }}
+                  </span>
+                </div>
+                @if (isChecksumOk() !== null) {
+                  <p
+                    class="tx-import-workspace__checksum"
+                    [class.is-ok]="isChecksumOk()"
+                    [class.is-bad]="!isChecksumOk()"
+                  >
+                    Checksum {{ isChecksumOk() ? 'verified' : 'mismatch' }}
+                  </p>
+                }
+                @if (!isUnsupported()) {
+                  <p class="tx-import-workspace__remembered">
+                    Import mode:
+                    <strong>{{ rememberedModeLabel() }}</strong>
+                    <button type="button" class="tx-import-workspace__change" (click)="showModeStep()">Change…</button>
+                  </p>
+                }
+              </div>
+
+              @if (warningGroups().length > 0) {
+                <div
+                  class="tx-import-workspace__callout"
+                  [class.tx-import-workspace__callout--danger]="isUnsupported()"
+                  role="status"
+                >
+                  <span class="tx-import-workspace__callout-mark" aria-hidden="true">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                      <circle cx="8" cy="8" r="6.25" stroke="currentColor" stroke-width="1.4" />
+                      <path d="M8 5v3.5M8 11h.01" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+                    </svg>
+                  </span>
+                  <div class="tx-import-workspace__callout-body">
+                    <ul class="tx-import-workspace__warnings" aria-label="Import warnings">
+                      @for (group of warningGroups(); track group.summary) {
+                        <li>{{ group.summary }}</li>
+                      }
+                    </ul>
+                    @if (warningDetailCount() > 0) {
+                      <button
+                        type="button"
+                        class="tx-import-workspace__details-toggle"
+                        [attr.aria-expanded]="warningsExpanded()"
+                        (click)="warningsExpanded.set(!warningsExpanded())"
+                      >
+                        {{ warningsExpanded() ? 'Hide request names' : 'Show request names' }}
+                        <span class="tx-import-workspace__details-count">{{ warningDetailCount() }}</span>
+                      </button>
+                      @if (warningsExpanded()) {
+                        <ul class="tx-import-workspace__warning-details">
+                          @for (group of warningGroups(); track group.summary) {
+                            @for (detail of group.details; track detail) {
+                              <li>{{ detail }}</li>
+                            }
+                          }
+                        </ul>
+                      }
+                    }
+                  </div>
+                </div>
+              }
+            </section>
+            <footer class="tx-import-workspace__footer">
+              @if (isUnsupported()) {
+                <tx-button variant="primary" (clicked)="close()">Close</tx-button>
+              } @else {
+                <tx-button variant="primary" (clicked)="nextFromFormat()">Continue</tx-button>
+              }
+            </footer>
+          </div>
+        }
+        @case ('mode') {
+          <div
+            class="tx-import-workspace__pane"
+            [animate.enter]="paneSlideDir() ? 'tx-import-pane-in' : undefined"
+            (animate.enter)="paneEnter($event)"
+            (animate.leave)="paneLeave($event)"
+          >
+            <section class="tx-import-workspace__section" aria-labelledby="tx-import-mode">
+              <h3 id="tx-import-mode">Import mode</h3>
+              <div class="tx-import-workspace__modes">
+                <tx-check
+                  label="Merge into active workspace"
+                  detail="Keep existing items and add what’s missing."
+                  [checked]="mode() === 'merge'"
+                  (checkedChange)="$event && setMode('merge')"
+                />
+                <tx-check
+                  label="Replace matching categories"
+                  detail="Overwrite selected categories in the active workspace."
+                  [checked]="mode() === 'replace'"
+                  (checkedChange)="$event && setMode('replace')"
+                />
+                <tx-check
+                  label="Create new workspace"
+                  detail="Import into a brand-new workspace."
+                  [checked]="mode() === 'new'"
+                  (checkedChange)="$event && setMode('new')"
+                />
+              </div>
+              @if (mode() === 'new') {
+                <tx-input
+                  id="import-workspace-name"
+                  label="Workspace name"
+                  placeholder="Imported workspace"
+                  [value]="workspaceName()"
+                  (valueChange)="workspaceName.set($event)"
+                />
+              }
+            </section>
+            <footer class="tx-import-workspace__footer tx-import-workspace__footer--split">
+              <tx-button variant="ghost" (clicked)="backToFormat()">Back</tx-button>
+              <tx-button variant="primary" (clicked)="nextFromMode()">Continue</tx-button>
+            </footer>
+          </div>
+        }
+        @case ('selection') {
+          <div
+            class="tx-import-workspace__pane"
+            [animate.enter]="paneSlideDir() ? 'tx-import-pane-in' : undefined"
+            (animate.enter)="paneEnter($event)"
+            (animate.leave)="paneLeave($event)"
+          >
+            <div class="tx-import-workspace__scroll">
+              <section class="tx-import-workspace__section" aria-labelledby="tx-import-selection">
+                <h3 id="tx-import-selection">Selection</h3>
+                <div class="tx-import-workspace__categories">
+                  @for (option of visibleCategoryOptions(); track option.id) {
+                    <tx-check
+                      variant="inline"
+                      [label]="option.label"
+                      [checked]="isCategoryEnabled(option.id)"
+                      [disabled]="!isCategoryAvailable(option.id)"
+                      (checkedChange)="toggleCategory(option.id, $event)"
+                    />
+                  }
+                </div>
+              </section>
+
+              @if (showCollectionsTree()) {
+                <section class="tx-import-workspace__section" aria-labelledby="tx-import-collections">
+                  <h3 id="tx-import-collections">Collections</h3>
+                  <tx-pack-selection-tree
+                    [nodes]="importCollectionTree()"
+                    [selectedIds]="collectionIds()"
+                    [expandedIds]="collectionExpanded()"
+                    (selectedIdsChange)="collectionIds.set($event)"
+                    (expandedIdsChange)="collectionExpanded.set($event)"
+                  />
+                </section>
+              }
+
+              @if (showFlowsTree()) {
+                <section class="tx-import-workspace__section" aria-labelledby="tx-import-flows">
+                  <h3 id="tx-import-flows">Flows</h3>
+                  <tx-pack-selection-tree
+                    [nodes]="importFlowTree()"
+                    [selectedIds]="flowIds()"
+                    [expandedIds]="flowExpanded()"
+                    (selectedIdsChange)="flowIds.set($event)"
+                    (expandedIdsChange)="flowExpanded.set($event)"
+                  />
+                </section>
+              }
+
+              @if (showMocksTree()) {
+                <section class="tx-import-workspace__section" aria-labelledby="tx-import-mocks">
+                  <h3 id="tx-import-mocks">Mocks</h3>
+                  <tx-pack-selection-tree
+                    [nodes]="importMockTree()"
+                    [selectedIds]="mockIds()"
+                    [expandedIds]="mockExpanded()"
+                    (selectedIdsChange)="mockIds.set($event)"
+                    (expandedIdsChange)="mockExpanded.set($event)"
+                  />
+                </section>
+              }
+            </div>
+
+            <footer class="tx-import-workspace__footer tx-import-workspace__footer--split">
+              <tx-button variant="ghost" [disabled]="applying()" (clicked)="backToMode()">Back</tx-button>
+              <tx-hint label="Apply import to disk" placement="top">
+                <tx-button
+                  variant="primary"
+                  [disabled]="applying() || !desktop.hasDesktop || !canApply()"
+                  (clicked)="applyImport()"
+                >
+                  {{ applying() ? 'Applying…' : 'Apply import' }}
+                </tx-button>
+              </tx-hint>
+            </footer>
+          </div>
+        }
+      }
+    </div>
+  </div>
+</tx-overlay>

@@ -1,0 +1,22 @@
+<div class="lt-docs">
+  <section class="lt-docs__meta" aria-label="Summary">
+    <tx-input
+      id="lt-docs-description"
+      label="Description"
+      multiline
+      [rows]="2"
+      [value]="description()"
+      (valueChange)="handleDescription($event)"
+    />
+    <tx-tags-input id="lt-docs-tags" [tags]="tags()" (tagsChange)="handleTags($event)" />
+  </section>
+
+  <tx-docs-editor
+    [value]="docs()"
+    [mode]="docsMode()"
+    ariaLabel="Load test docs"
+    emptyBody="Write markdown for this load test."
+    (valueChange)="handleDocs($event)"
+    (modeChange)="handleDocsMode($event)"
+  />
+</div>

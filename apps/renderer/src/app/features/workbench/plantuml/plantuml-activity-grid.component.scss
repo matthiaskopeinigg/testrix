@@ -1,0 +1,254 @@
+:host {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.tx-act {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid var(--tx-border-subtle);
+  border-radius: 10px;
+  background: #171218;
+  touch-action: none;
+  user-select: none;
+  outline: none;
+}
+
+.tx-act.is-selecting {
+  cursor: crosshair;
+}
+
+.tx-act__marquee {
+  position: absolute;
+  z-index: 6;
+  border: 1px solid #ff00ff;
+  background: rgba(255, 0, 255, 0.12);
+  pointer-events: none;
+}
+
+.tx-act.is-panning {
+  cursor: grabbing;
+}
+
+.tx-act__stage {
+  position: absolute;
+  inset: 0;
+  transform-origin: 0 0;
+}
+
+.tx-act__flow {
+  position: absolute;
+  inset: 0;
+  width: 4000px;
+  height: 3000px;
+  overflow: visible;
+  pointer-events: none;
+
+  line {
+    stroke: #c4c7c5;
+    stroke-width: 1.4;
+  }
+
+  polygon {
+    fill: #c4c7c5;
+  }
+}
+
+.tx-act__title {
+  position: absolute;
+  top: 16px;
+  left: 40px;
+  z-index: 4;
+  width: 320px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #e8eaed;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  text-align: center;
+  cursor: pointer;
+
+  &.is-placeholder {
+    color: #5f6368;
+    font-weight: 500;
+  }
+}
+
+.tx-act__guide {
+  position: absolute;
+  left: 80px;
+  z-index: 2;
+  width: 240px;
+  height: 2px;
+  background: #ff00ff;
+  pointer-events: none;
+}
+
+.tx-act__step {
+  position: absolute;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 8px 16px;
+  border: 1px solid #8d8494;
+  background: #221c28;
+  color: #e8eaed;
+  font: inherit;
+  font-size: 13px;
+  line-height: 16px;
+  cursor: grab;
+  transition: top 180ms cubic-bezier(0.2, 0.8, 0.2, 1), left 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  &.is-dragging {
+    z-index: 5;
+    transition: none;
+    cursor: grabbing;
+  }
+
+  &.is-selected {
+    box-shadow: 0 0 0 2px #ff00ff;
+  }
+}
+
+.tx-act__label {
+  position: relative;
+  z-index: 1;
+  max-width: 100%;
+  white-space: pre-line;
+  text-align: center;
+}
+
+.tx-act__step--action {
+  border-radius: 12px;
+}
+
+.tx-act__step--if {
+  padding: 0 28px;
+  border: 0;
+  background: transparent;
+  overflow: visible;
+
+  .tx-act__label {
+    max-width: 92px;
+    font-size: 12px;
+    line-height: 15px;
+  }
+}
+
+.tx-act__diamond,
+.tx-act__merge {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+
+  polygon {
+    fill: #221c28;
+    stroke: #c4b8c8;
+    stroke-width: 1.6;
+  }
+}
+
+.tx-act__step.is-selected .tx-act__diamond polygon,
+.tx-act__step.is-selected .tx-act__merge polygon {
+  stroke: #ff00ff;
+}
+
+.tx-act__step--endif {
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.tx-act__step--start {
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: #e8eaed;
+}
+
+.tx-act__step--stop {
+  padding: 0;
+  border: 2px solid #e8eaed;
+  border-radius: 50%;
+  background: transparent;
+
+  &::after {
+    content: '';
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #e8eaed;
+  }
+}
+
+.tx-act__step--fork,
+.tx-act__step--endfork {
+  padding: 0;
+  border: 0;
+  border-radius: 1px;
+  background: #e8eaed;
+}
+
+.tx-act__backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.tx-act__menu {
+  position: absolute;
+  z-index: 7;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 168px;
+  padding: 6px;
+  border: 1px solid var(--tx-border-subtle);
+  border-radius: 10px;
+  background: var(--tx-bg-overlay);
+  box-shadow: var(--tx-shadow-2);
+}
+
+.tx-act__menu-item {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 30px;
+  margin: 0;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--tx-text-primary);
+  font: inherit;
+  font-size: 12px;
+  line-height: 16px;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--tx-bg-hover);
+  }
+
+  &.is-danger {
+    color: var(--tx-danger, #c44);
+  }
+}

@@ -16,10 +16,14 @@ import {
   TX_SIDEBAR_COLLAPSE_WIDTH,
   TX_SIDEBAR_DEFAULT_WIDTH,
   TX_SIDEBAR_MAX_WIDTH,
+  TX_SIDEBAR_MIN_WIDTH,
 } from './tx-sidebar.sizing';
 
+export type TxSidebarEdge = 'start' | 'end';
+
 /**
- * Collapsible workspace sidebar with a draggable right edge.
+ * Collapsible workspace sidebar with a draggable edge.
+ * `start` docks on the left (resize on the right); `end` docks on the right (resize on the left).
  */
 @Component({
   selector: 'tx-sidebar',
@@ -31,16 +35,25 @@ import {
   host: {
     '[class.is-collapsed]': 'collapsed()',
     '[class.is-resizing]': 'resizing()',
+    '[class.is-edge-end]': 'edge() === "end"',
     '[style.width.px]': 'hostWidth()',
     '[style.min-width.px]': 'hostWidth()',
+    // `title` is also a native HTML tooltip attribute — never reflect it on the host.
+    '[attr.title]': 'null',
   },
 })
 export class TxSidebarComponent {
   private readonly destroyRef = inject(DestroyRef);
 
   readonly title = input('Collections');
+  /** Optional hint on the title. Use this instead of a native `title` tooltip. */
+  readonly hint = input<string | null>(null);
   readonly collapsed = input(false);
+  readonly edge = input<TxSidebarEdge>('start');
   readonly width = input(TX_SIDEBAR_DEFAULT_WIDTH, { transform: numberAttribute });
+  /** Narrowest open width; dragging past it holds here until release collapses. */
+  readonly minWidth = input(TX_SIDEBAR_MIN_WIDTH, { transform: numberAttribute });
+  readonly maxWidth = input(TX_SIDEBAR_MAX_WIDTH, { transform: numberAttribute });
 
   readonly widthChange = output<number>();
   readonly collapse = output<void>();
@@ -48,10 +61,12 @@ export class TxSidebarComponent {
   readonly resizing = signal(false);
 
   readonly hostWidth = computed(() => (this.collapsed() ? 0 : this.width()));
+  readonly resizeHintPlacement = computed(() => (this.edge() === 'end' ? 'right' : 'left'));
 
   private dragStartX = 0;
   private dragStartWidth = TX_SIDEBAR_DEFAULT_WIDTH;
   private liveWidth = TX_SIDEBAR_DEFAULT_WIDTH;
+  private dragWidth = TX_SIDEBAR_DEFAULT_WIDTH;
   private listenersBound = false;
 
   constructor() {
@@ -67,6 +82,7 @@ export class TxSidebarComponent {
     this.dragStartX = event.clientX;
     this.dragStartWidth = this.width();
     this.liveWidth = this.dragStartWidth;
+    this.dragWidth = this.dragStartWidth;
     this.bindDrag();
   }
 
@@ -76,8 +92,15 @@ export class TxSidebarComponent {
     if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight')
       return;
     event.preventDefault();
-    const delta = event.key === 'ArrowRight' ? 16 : -16;
-    this.widthChange.emit(clampSidebarWidth(this.width() + delta));
+    const growRight = event.key === 'ArrowRight';
+    const delta = this.edge() === 'end'
+      ? (growRight ? -16 : 16)
+      : (growRight ? 16 : -16);
+    this.widthChange.emit(this.clamp(this.width() + delta));
+  }
+
+  private clamp(width: number): number {
+    return clampSidebarWidth(width, this.minWidth(), this.maxWidth());
   }
 
   private bindDrag(): void {
@@ -101,8 +124,14 @@ export class TxSidebarComponent {
   private readonly handleWindowMove = (event: PointerEvent): void => {
     if (!this.resizing())
       return;
-    const next = Math.round(this.dragStartWidth + (event.clientX - this.dragStartX));
-    this.liveWidth = Math.min(TX_SIDEBAR_MAX_WIDTH, Math.max(0, next));
+    const delta = this.edge() === 'end'
+      ? this.dragStartX - event.clientX
+      : event.clientX - this.dragStartX;
+    this.dragWidth = Math.round(this.dragStartWidth + delta);
+    const next = this.clamp(this.dragWidth);
+    if (next === this.liveWidth)
+      return;
+    this.liveWidth = next;
     this.widthChange.emit(this.liveWidth);
   };
 
@@ -111,11 +140,11 @@ export class TxSidebarComponent {
       return;
     this.unbindDrag();
     this.resizing.set(false);
-    if (this.liveWidth < TX_SIDEBAR_COLLAPSE_WIDTH) {
-      this.widthChange.emit(clampSidebarWidth(this.dragStartWidth));
+    if (this.dragWidth < TX_SIDEBAR_COLLAPSE_WIDTH) {
+      this.widthChange.emit(this.clamp(this.dragStartWidth));
       this.collapse.emit();
       return;
     }
-    this.widthChange.emit(clampSidebarWidth(this.liveWidth));
+    this.widthChange.emit(this.clamp(this.liveWidth));
   };
 }

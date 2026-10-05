@@ -21,6 +21,11 @@ yarn-error.log
 
 # Coverage and caches
 coverage/
+test-results/
+test/
+.tmp-update-preview/
+playwright-report/
+.tmp-*-ref/
 .sass-cache/
 *.tsbuildinfo
 
@@ -30,6 +35,7 @@ Thumbs.db
 
 # Secrets
 .env
+.secrets/
 .env.*
 !.env.example
 
@@ -47,3 +53,8 @@ apps/desktop/src/assets/icon.png
 apps/setup/src/assets/icon.ico
 apps/setup/src/assets/icon.png
 apps/setup/build/
+
+# Synced from @plantuml/core on prebuild / prestart
+apps/renderer/src/assets/plantuml/*
+!apps/renderer/src/assets/plantuml/.gitkeep
+

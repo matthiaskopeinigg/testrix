@@ -1,0 +1,476 @@
+<div class="tx-folder-editor">
+  <header class="tx-folder-editor__identity">
+    <span class="tx-folder-editor__icon" aria-hidden="true">
+      <svg width="16" height="16" viewBox="0 0 14 14">
+        <path
+          d="M2 3.5h3.2l1 1.2H12v6.3H2V3.5z"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.25"
+          stroke-linejoin="round"
+        />
+      </svg>
+    </span>
+    <div class="tx-folder-editor__titles">
+      <p class="tx-folder-editor__meta">
+        @if (pathLabel()) {
+          {{ pathLabel() }} ·
+        }
+        {{ childLabel() }}
+      </p>
+    </div>
+    @if (tags().length > 0) {
+      <ul class="tx-folder-editor__chips" aria-label="Tags">
+        @for (tag of tags(); track tag) {
+          <li>{{ tag }}</li>
+        }
+      </ul>
+    }
+    @if (isManualSave() && dirty()) {
+      <span class="tx-folder-editor__identity-spacer" aria-hidden="true"></span>
+      <div class="tx-folder-editor__save-group">
+        <tx-hint label="Discard changes" detail="Revert to the last saved folder" placement="bottom">
+          <button type="button" class="tx-folder-editor__save is-cancel" (click)="discardDraft()" aria-label="Discard unsaved changes">
+            Discard
+          </button>
+        </tx-hint>
+        <tx-hint label="Save" detail="Ctrl+S — write the folder to the collection" placement="bottom">
+          <button type="button" class="tx-folder-editor__save" (click)="saveDraft()" aria-label="Save folder">
+            Save
+          </button>
+        </tx-hint>
+      </div>
+    }
+  </header>
+
+  <div class="tx-folder-editor__head" role="tablist" aria-label="Folder sections">
+    @for (item of sections; track item.id) {
+      <button
+        type="button"
+        class="tx-folder-editor__tab"
+        role="tab"
+        [class.is-active]="section() === item.id"
+        [attr.aria-selected]="section() === item.id"
+        (click)="handleSection(item.id)"
+      >
+        <span class="tx-folder-editor__tab-icon" aria-hidden="true">
+          @switch (item.id) {
+            @case ('overview') {
+              <svg width="14" height="14" viewBox="0 0 14 14">
+                <circle cx="7" cy="7" r="4.4" fill="none" stroke="currentColor" stroke-width="1.2" />
+                <path d="M7 6.2V10M7 4.4h.01" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" />
+              </svg>
+            }
+            @case ('variables') {
+              <svg width="14" height="14" viewBox="0 0 14 14">
+                <path d="M4.2 3.4 2.4 7l1.8 3.6M9.8 3.4 11.6 7l-1.8 3.6M6.2 9.2h1.6" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" />
+              </svg>
+            }
+            @case ('headers') {
+              <svg width="14" height="14" viewBox="0 0 14 14">
+                <path d="M3 4.2h8M3 7h8M3 9.8h5.2" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" />
+              </svg>
+            }
+            @case ('auth') {
+              <svg width="14" height="14" viewBox="0 0 14 14">
+                <circle cx="5" cy="7" r="2.1" fill="none" stroke="currentColor" stroke-width="1.2" />
+                <path d="M7 7h4.2M9.6 7v2.1" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" />
+              </svg>
+            }
+            @case ('scripts') {
+              <svg width="14" height="14" viewBox="0 0 14 14">
+                <path d="M4 4.4 6.4 7 4 9.6M7.6 9.6H10.4" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            }
+            @case ('settings') {
+              <svg width="14" height="14" viewBox="0 0 14 14">
+                <circle cx="7" cy="7" r="2" fill="none" stroke="currentColor" stroke-width="1.2" />
+                <path d="M7 2.6v1.4M7 10v1.4M2.6 7h1.4M10 7h1.4M3.8 3.8l1 1M9.2 9.2l1 1M10.2 3.8l-1 1M4.8 9.2l-1 1" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" />
+              </svg>
+            }
+            @case ('docs') {
+              <svg width="14" height="14" viewBox="0 0 14 14">
+                <path d="M4 2.6h4.2L10.6 5v6.4H4V2.6z" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round" />
+                <path d="M8.2 2.6V5h2.4" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round" />
+              </svg>
+            }
+          }
+        </span>
+        {{ item.label }}
+        @if (sectionCount(item.id) > 0) {
+          <span class="tx-folder-editor__count">{{ sectionCount(item.id) }}</span>
+        }
+      </button>
+    }
+  </div>
+
+  <div class="tx-folder-editor__pane" role="tabpanel">
+    <div class="tx-folder-editor__pane-stage" [attr.data-slide]="sectionSlideDir()">
+    @for (id of [section()]; track id) {
+      <div
+        class="tx-folder-editor__pane-body"
+        [animate.enter]="sectionPaneEnter()"
+        animate.leave="tx-folder-pane-out"
+      >
+        @switch (id) {
+      @case ('overview') {
+        <div class="tx-folder-editor__section tx-folder-editor__section--narrow">
+          <dl class="tx-folder-editor__stats">
+            <div>
+              <dt>Auth</dt>
+              <dd>{{ authLabel() }}</dd>
+            </div>
+            <div>
+              <dt>Headers</dt>
+              <dd>{{ headerCount() }}</dd>
+            </div>
+            <div>
+              <dt>Scripts</dt>
+              <dd>{{ scriptCount() }}</dd>
+            </div>
+            <div>
+              <dt>Docs</dt>
+              <dd>{{ docsWords() ? docsWords() + ' words' : 'None' }}</dd>
+            </div>
+          </dl>
+          <p class="tx-folder-editor__hint">
+            Nested requests inherit this folder's variables, headers, auth, scripts, and settings unless they override them. Query parameters stay on each request.
+          </p>
+          <tx-tags-input
+            id="folder-tags"
+            [tags]="tags()"
+            (tagsChange)="handleTagsChange($event)"
+          />
+          <tx-input
+            id="folder-description"
+            label="Description"
+            multiline
+            [rows]="8"
+            [value]="description()"
+            (valueChange)="handleDescription($event)"
+          />
+        </div>
+      }
+      @case ('variables') {
+        <div class="tx-folder-editor__section">
+          <p class="tx-folder-editor__hint">Use <code>{{ variableToken }}</code> in URLs, headers, and scripts. Child folders and the active environment can override the same key.</p>
+          <tx-request-kv-table
+            label="Folder variables"
+            inheritedKind="variables"
+            [inherited]="inheritedVariables()"
+            [completeVariables]="completeVariables()"
+            [rows]="variables()"
+            (rowsChange)="handleVariables($event)"
+            (inheritedActivate)="handleInherited($event, 'variables')"
+          />
+        </div>
+      }
+      @case ('headers') {
+        <div class="tx-folder-editor__section">
+          <p class="tx-folder-editor__hint">Enabled headers are sent with every nested request. A request header with the same name wins.</p>
+          <tx-request-kv-table
+            label="Folder headers"
+            inheritedKind="headers"
+            [inherited]="inheritedHeaders()"
+            [completeVariables]="completeVariables()"
+            [headerComplete]="true"
+            [extraHeaderNames]="apiKeyHeaderNames()"
+            [rows]="headers()"
+            (rowsChange)="handleHeaders($event)"
+            (inheritedActivate)="handleInherited($event, 'headers')"
+          />
+        </div>
+      }
+      @case ('auth') {
+        <div class="tx-folder-editor__section tx-folder-editor__section--narrow">
+          <p class="tx-folder-editor__hint">Requests set to Inherit folder pick up the nearest non-empty auth on the path to this folder.</p>
+          <div class="tx-folder-editor__field">
+            <span class="tx-folder-editor__label">Type</span>
+            <tx-select [value]="auth().type" [options]="authOptions" ariaLabel="Auth type" (valueChange)="handleAuthType($event)" />
+          </div>
+          @if (auth().type === 'oauth2') {
+            <div class="tx-folder-editor__field">
+              <span class="tx-folder-editor__label">Grant</span>
+              <tx-select [value]="auth().grantType" [options]="grantOptions" ariaLabel="OAuth grant" (valueChange)="handleGrantType($event)" />
+            </div>
+          }
+          <div class="tx-folder-editor__auth-stage" [attr.data-slide]="authSlideDir()">
+            @for (key of [authSlideKey()]; track key) {
+              <div
+                class="tx-folder-editor__auth-body"
+                [animate.enter]="authPaneEnter()"
+                animate.leave="tx-folder-pane-out"
+              >
+          @if (auth().type === 'bearer') {
+            <tx-token-field id="folder-token" label="Token" [type]="secretType()" [value]="auth().token" [variables]="completeVariables()" (valueChange)="handleAuthField('token', $event)" />
+          }
+          @if (auth().type === 'basic' || auth().type === 'digest' || (auth().type === 'oauth2' && auth().grantType === 'password')) {
+            <tx-token-field id="folder-user" label="Username" [value]="auth().username" [variables]="completeVariables()" (valueChange)="handleAuthField('username', $event)" />
+            <tx-token-field id="folder-pass" label="Password" [type]="secretType()" [value]="auth().password" [variables]="completeVariables()" (valueChange)="handleAuthField('password', $event)" />
+          }
+          @if (auth().type === 'digest') {
+            <tx-token-field id="folder-realm" label="Realm" [value]="auth().realm" [variables]="completeVariables()" (valueChange)="handleAuthField('realm', $event)" />
+          }
+          @if (auth().type === 'apikey') {
+            <tx-token-field id="folder-apikey" label="Key" [type]="secretType()" [value]="auth().apiKey" [variables]="completeVariables()" (valueChange)="handleAuthField('apiKey', $event)" />
+            <tx-token-field id="folder-apikey-name" label="Header or param name" [value]="auth().apiKeyHeader" [variables]="completeVariables()" (valueChange)="handleAuthField('apiKeyHeader', $event)" />
+            <div class="tx-folder-editor__field">
+              <span class="tx-folder-editor__label">Add to</span>
+              <tx-select [value]="auth().apiKeyIn" [options]="apiKeyInOptions" ariaLabel="API key location" (valueChange)="handleApiKeyIn($event)" />
+            </div>
+          }
+          @if (auth().type === 'oauth2') {
+            @if (auth().grantType === 'authorization_code') {
+              <tx-token-field id="folder-auth-url" label="Authorization URL" [value]="auth().authUrl" [variables]="completeVariables()" (valueChange)="handleAuthField('authUrl', $event)" />
+              <tx-check variant="inline" label="PKCE (S256)" [checked]="auth().pkce" (checkedChange)="handlePkce($event)" />
+            }
+            @if (auth().grantType === 'device_code') {
+              <tx-token-field id="folder-device-url" label="Device authorization URL" [value]="auth().deviceAuthUrl" [variables]="completeVariables()" (valueChange)="handleAuthField('deviceAuthUrl', $event)" />
+            }
+            <tx-token-field id="folder-token-url" label="Token URL" [value]="auth().tokenUrl" [variables]="completeVariables()" (valueChange)="handleAuthField('tokenUrl', $event)" />
+            <tx-token-field id="folder-client-id" label="Client ID" [value]="auth().clientId" [variables]="completeVariables()" (valueChange)="handleAuthField('clientId', $event)" />
+            <tx-token-field id="folder-client-secret" label="Client secret" [type]="secretType()" [value]="auth().clientSecret" [variables]="completeVariables()" (valueChange)="handleAuthField('clientSecret', $event)" />
+            <tx-token-field id="folder-scope" label="Scope" [value]="auth().scope" [variables]="completeVariables()" (valueChange)="handleAuthField('scope', $event)" />
+            <tx-token-field id="folder-audience" label="Audience" [value]="auth().audience" [variables]="completeVariables()" (valueChange)="handleAuthField('audience', $event)" />
+            <div class="tx-folder-editor__actions">
+              <tx-hint label="Get token from the authorization server" placement="bottom">
+                <tx-button variant="primary" [disabled]="oauthBusy()" (clicked)="handleGetToken()">
+                  {{ oauthBusy() ? 'Working' : 'Get token' }}
+                </tx-button>
+              </tx-hint>
+              @if (auth().refreshToken.trim()) {
+                <tx-hint label="Refresh the stored access token" placement="bottom">
+                  <tx-button [disabled]="oauthBusy()" (clicked)="handleRefreshToken()">Refresh token</tx-button>
+                </tx-hint>
+              }
+              <tx-button variant="ghost" (clicked)="handleToggleSecrets()">{{ showSecrets() ? 'Hide secrets' : 'Show secrets' }}</tx-button>
+            </div>
+            @if (device(); as device) {
+              <div class="tx-folder-editor__device">
+                <p class="tx-folder-editor__device-code">{{ device.userCode }}</p>
+                <p class="tx-folder-editor__hint">{{ device.verificationUri }}</p>
+                <div class="tx-folder-editor__actions">
+                  <tx-button variant="ghost" (clicked)="handleCopyDeviceCode()">Copy</tx-button>
+                  <tx-button variant="ghost" (clicked)="handleOpenDeviceUri()">Open</tx-button>
+                  <tx-button variant="ghost" (clicked)="handleCancelDevice()">Cancel</tx-button>
+                </div>
+              </div>
+            }
+            <tx-token-field id="folder-access" label="Access token" [type]="secretType()" [value]="auth().accessToken" [variables]="completeVariables()" (valueChange)="handleAuthField('accessToken', $event)" />
+            <tx-token-field id="folder-refresh" label="Refresh token" [type]="secretType()" [value]="auth().refreshToken" [variables]="completeVariables()" (valueChange)="handleAuthField('refreshToken', $event)" />
+            @if (expiryLabel()) {
+              <p class="tx-folder-editor__hint">{{ expiryLabel() }}</p>
+            }
+          }
+          @if (auth().type !== 'none' && auth().type !== 'oauth2') {
+            <div class="tx-folder-editor__actions">
+              <tx-button variant="ghost" (clicked)="handleToggleSecrets()">{{ showSecrets() ? 'Hide secrets' : 'Show secrets' }}</tx-button>
+            </div>
+          }
+              </div>
+            }
+          </div>
+          @if (oauthMessage()) {
+            <p class="tx-folder-editor__hint">{{ oauthMessage() }}</p>
+          }
+        </div>
+      }
+      @case ('scripts') {
+        <div class="tx-folder-editor__scripts">
+          <div class="tx-folder-editor__script-main">
+            <div class="tx-folder-editor__subhead">
+              <div class="tx-folder-editor__docs-head" role="tablist" aria-label="Script event">
+                <button type="button" class="tx-folder-editor__tab" role="tab" [class.is-active]="scriptPane() === 'pre'" [attr.aria-selected]="scriptPane() === 'pre'" (click)="handleScriptPane('pre')">
+                  Pre-request
+                </button>
+                <button type="button" class="tx-folder-editor__tab" role="tab" [class.is-active]="scriptPane() === 'post'" [attr.aria-selected]="scriptPane() === 'post'" (click)="handleScriptPane('post')">
+                  Tests
+                </button>
+              </div>
+              <tx-hint label="Clear this script" placement="bottom">
+                <button type="button" class="tx-folder-editor__ghost" (click)="handleClearScript()">Clear</button>
+              </tx-hint>
+            </div>
+            <div class="tx-folder-editor__script-stage" [attr.data-slide]="scriptSlideDir()">
+              @for (pane of [scriptPane()]; track pane) {
+                <div
+                  class="tx-folder-editor__script-body"
+                  [animate.enter]="scriptPaneEnter()"
+                  animate.leave="tx-folder-pane-out"
+                >
+            <div class="tx-folder-editor__code">
+              <pre #scriptGutter class="tx-folder-editor__gutter" aria-hidden="true">{{ scriptLineNumbers().join('\n') }}</pre>
+              <div class="tx-folder-editor__code-field">
+                <textarea
+                  #scriptArea
+                  class="tx-folder-editor__code-input"
+                  [class.has-tokens]="scriptHasTokens()"
+                  [value]="scriptValue()"
+                  (input)="handleScriptInput($event)"
+                  (keydown)="handleScriptKey($event)"
+                  (scroll)="handleScriptScroll($event)"
+                  spellcheck="false"
+                  wrap="off"
+                  [attr.aria-label]="pane === 'pre' ? 'Pre-request script' : 'Test script'"
+                  [placeholder]="scriptPlaceholder()"
+                ></textarea>
+                <tx-placeholder-highlight
+                  [value]="scriptValue()"
+                  [variables]="completeVariables()"
+                  [multiline]="true"
+                />
+              </div>
+            </div>
+            <footer class="tx-folder-editor__code-foot">
+              <span>JavaScript</span>
+              <span>{{ scriptLines() }} {{ scriptLines() === 1 ? 'line' : 'lines' }}</span>
+              <span>{{ scriptHint() }}</span>
+            </footer>
+                </div>
+              }
+            </div>
+          </div>
+          <aside class="tx-folder-editor__snippets" aria-label="Script snippets">
+            <h2>Snippets</h2>
+            <p>Click to insert at the cursor. <code>pm</code> is an alias for <code>tx</code>.</p>
+            <ul>
+              @for (snippet of snippets(); track snippet.id) {
+                <li>
+                  <button type="button" (click)="handleInsertSnippet(snippet)">
+                    <span>{{ snippet.label }}</span>
+                    <code>{{ snippet.detail }}</code>
+                  </button>
+                </li>
+              }
+            </ul>
+          </aside>
+        </div>
+      }
+      @case ('settings') {
+        <div class="tx-folder-editor__section tx-folder-editor__section--narrow">
+          <section class="tx-folder-editor__card">
+            <h2 class="tx-folder-editor__subtitle">Request</h2>
+            <div class="tx-folder-editor__flags">
+              <tx-check variant="block" label="Follow redirects" [checked]="followRedirects()" (checkedChange)="handleFollowRedirects($event)" />
+              <tx-check
+                variant="block"
+                label="Use workspace TLS default"
+                [checked]="verifyTlsInherit()"
+                (checkedChange)="handleVerifyTlsInherit($event)"
+              />
+              @if (!verifyTlsInherit()) {
+                <tx-check variant="block" label="Verify TLS" [checked]="verifyTls()" (checkedChange)="handleVerifyTls($event)" />
+              }
+            </div>
+            <p class="tx-folder-editor__hint">Workspace default lives in Settings → Certificates.</p>
+            <tx-input id="folder-timeout" label="Timeout (ms)" [value]="timeoutMs()" (valueChange)="handleTimeout($event)" />
+          </section>
+          <section class="tx-folder-editor__card">
+            <h2 class="tx-folder-editor__subtitle">Cookies</h2>
+            <p class="tx-folder-editor__hint">Cookies live in cookies.json for this workspace. These flags control whether requests send and save that jar.</p>
+            <div class="tx-folder-editor__flags">
+              <tx-check variant="block" label="Send cookies from the workspace jar" [checked]="sendCookies()" (checkedChange)="handleSendCookies($event)" />
+              <tx-check variant="block" label="Save response cookies to the workspace jar" [checked]="storeCookies()" (checkedChange)="handleStoreCookies($event)" />
+            </div>
+          </section>
+        </div>
+      }
+      @case ('docs') {
+        <div class="tx-folder-editor__docs-shell">
+          <div class="tx-folder-editor__docs-toolbar">
+            <div class="tx-folder-editor__docs-head" role="tablist" aria-label="Docs mode">
+              <button type="button" class="tx-folder-editor__tab" role="tab" [class.is-active]="docsMode() === 'write'" [attr.aria-selected]="docsMode() === 'write'" (click)="handleDocsMode('write')">Write</button>
+              <button type="button" class="tx-folder-editor__tab" role="tab" [class.is-active]="docsMode() === 'split'" [attr.aria-selected]="docsMode() === 'split'" (click)="handleDocsMode('split')">Split</button>
+              <button type="button" class="tx-folder-editor__tab" role="tab" [class.is-active]="docsMode() === 'preview'" [attr.aria-selected]="docsMode() === 'preview'" (click)="handleDocsMode('preview')">Preview</button>
+            </div>
+            @if (docsMode() !== 'preview') {
+              <div class="tx-folder-editor__format" role="toolbar" aria-label="Markdown">
+                <tx-hint label="Heading 1" placement="bottom">
+                  <button type="button" class="tx-folder-editor__format-btn" (click)="handleDocsHeading(1)">H1</button>
+                </tx-hint>
+                <tx-hint label="Heading 2" placement="bottom">
+                  <button type="button" class="tx-folder-editor__format-btn" (click)="handleDocsHeading(2)">H2</button>
+                </tx-hint>
+                <tx-hint label="Bold" placement="bottom">
+                  <button type="button" class="tx-folder-editor__format-btn" (click)="handleDocsWrap('**', '**', 'bold')">B</button>
+                </tx-hint>
+                <tx-hint label="Italic" placement="bottom">
+                  <button type="button" class="tx-folder-editor__format-btn" (click)="handleDocsWrap('*', '*', 'italic')"><em>I</em></button>
+                </tx-hint>
+                <tx-hint label="Inline code" placement="bottom">
+                  <button type="button" class="tx-folder-editor__format-btn" (click)="handleDocsWrap('`', '`', 'code')">&lt;/&gt;</button>
+                </tx-hint>
+                <tx-hint label="Code block" placement="bottom">
+                  <button type="button" class="tx-folder-editor__format-btn" (click)="handleDocsInsert('```\n\n```\n')">Block</button>
+                </tx-hint>
+                <tx-hint label="Bulleted list" placement="bottom">
+                  <button type="button" class="tx-folder-editor__format-btn" (click)="handleDocsInsert('- Item\n')">List</button>
+                </tx-hint>
+                <tx-hint label="Quote" placement="bottom">
+                  <button type="button" class="tx-folder-editor__format-btn" (click)="handleDocsInsert('> Note\n')">Quote</button>
+                </tx-hint>
+                <tx-hint label="Link" placement="bottom">
+                  <button type="button" class="tx-folder-editor__format-btn" (click)="handleDocsWrap('[', '](https://)', 'label')">Link</button>
+                </tx-hint>
+                <tx-hint label="Table" placement="bottom">
+                  <button type="button" class="tx-folder-editor__format-btn" (click)="handleDocsInsert('| Column | Column |\n| --- | --- |\n|  |  |\n')">Table</button>
+                </tx-hint>
+                <tx-hint label="Horizontal rule" placement="bottom">
+                  <button type="button" class="tx-folder-editor__format-btn" (click)="handleDocsInsert('\n---\n')">HR</button>
+                </tx-hint>
+                <tx-hint label="Insert a starter outline" placement="bottom">
+                  <button type="button" class="tx-folder-editor__format-btn" (click)="handleDocsTemplate()">Template</button>
+                </tx-hint>
+              </div>
+            }
+          </div>
+          <div class="tx-folder-editor__docs-stage" [attr.data-slide]="docsSlideDir()">
+            @for (mode of [docsMode()]; track mode) {
+              <div
+                class="tx-folder-editor__docs-slide"
+                [animate.enter]="docsPaneEnter()"
+                animate.leave="tx-folder-pane-out"
+              >
+          <div class="tx-folder-editor__docs-body" [class.is-split]="mode === 'split'">
+            @if (mode !== 'preview') {
+              <div class="tx-folder-editor__code tx-folder-editor__code--docs">
+                <pre #docsGutter class="tx-folder-editor__gutter" aria-hidden="true">{{ docsLineNumbers().join('\n') }}</pre>
+                <textarea
+                  #docsArea
+                  class="tx-folder-editor__code-input"
+                  [value]="docs()"
+                  (input)="handleDocsInput($event)"
+                  (keydown)="handleDocsKey($event)"
+                  (scroll)="handleDocsScroll($event)"
+                  spellcheck="false"
+                  aria-label="Folder docs"
+                  placeholder="# What this folder covers"
+                ></textarea>
+              </div>
+            }
+            @if (mode !== 'write') {
+              <div class="tx-folder-editor__preview" [class.is-empty]="!docs().trim()">
+                @if (docs().trim()) {
+                  <tx-folder-docs-preview [source]="docs()" />
+                } @else {
+                  <tx-empty-state title="No docs yet" body="Write markdown on the left, or insert a template from the toolbar." />
+                }
+              </div>
+            }
+          </div>
+          <footer class="tx-folder-editor__code-foot">
+            <span>Markdown</span>
+            <span>{{ docsWords() }} {{ docsWords() === 1 ? 'word' : 'words' }}</span>
+            <span>{{ docs().length }} characters</span>
+          </footer>
+              </div>
+            }
+          </div>
+        </div>
+      }
+        }
+      </div>
+    }
+    </div>
+  </div>
+</div>

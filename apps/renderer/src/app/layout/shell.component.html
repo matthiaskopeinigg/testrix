@@ -2,27 +2,90 @@
   class="tx-shell"
   [class.tx-shell--scene-a]="shell.sceneNonce() > 0 && shell.sceneNonce() % 2 === 1"
   [class.tx-shell--scene-b]="shell.sceneNonce() > 0 && shell.sceneNonce() % 2 === 0"
+  (dragenter)="handleDragEnter($event)"
+  (dragover)="handleDragOver($event)"
+  (dragleave)="handleDragLeave($event)"
+  (drop)="handleDrop($event)"
 >
+  @if (isDropHover()) {
+    <div
+      class="tx-shell__drop-scrim"
+      [class.tx-shell__drop-scrim--invalid]="dropImportValid() === false"
+      [class.tx-shell__drop-scrim--valid]="dropImportValid() === true"
+      [class.tx-shell__drop-scrim--unknown]="dropImportValid() === null"
+      role="status"
+      aria-live="polite"
+      animate.enter="tx-shell-drop-enter"
+      animate.leave="tx-shell-drop-leave"
+    >
+      <div class="tx-shell__drop-panel">
+        <div class="tx-shell__drop-mark" aria-hidden="true">
+          @if (dropImportValid() === false) {
+            <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+              <circle cx="14" cy="14" r="12" stroke="currentColor" stroke-width="1.6" />
+              <path d="M10 10l8 8M18 10l-8 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+            </svg>
+          } @else {
+            <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+              <path
+                d="M14 5v12M14 17l-4.5-4.5M14 17l4.5-4.5"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+              <path d="M7 22h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+            </svg>
+          }
+        </div>
+        @if (dropImportValid() === false) {
+          <p class="tx-shell__drop-title">Can't import this</p>
+          @if (dropImportLabel(); as label) {
+            <p class="tx-shell__drop-file">{{ label }}</p>
+          }
+          <p class="tx-shell__drop-lede">
+            Drop a .testrix pack, Postman or OpenAPI file, .bru, or a Bruno folder
+          </p>
+        } @else {
+          <p class="tx-shell__drop-title">Drop to import</p>
+          @if (dropImportLabel(); as label) {
+            <p class="tx-shell__drop-file">{{ label }}</p>
+          }
+          <p class="tx-shell__drop-lede">
+            .testrix · Postman · Bruno · OpenAPI
+          </p>
+        }
+      </div>
+    </div>
+  }
   <tx-window-titlebar
     [logoSrc]="'assets/logo.svg'"
     [productName]="'Testrix'"
     [platform]="desktop.platform()"
     [isMaximized]="desktop.isMaximized()"
-    (minimize)="desktop.api.window.minimize()"
-    (maximize)="desktop.api.window.maximize()"
-    (close)="desktop.api.window.close()"
+    [collabState]="collab.railState()"
+    [collabDetail]="collab.statusLine()"
+    [collabOpen]="shell.collabDockOpen()"
+    [settingsNotice]="updateNotice()"
+    (minimize)="handleWindowMinimize()"
+    (maximize)="handleWindowMaximize()"
+    (close)="handleWindowClose()"
     (openSettings)="shell.openSettings()"
+    (toggleCollab)="collab.toggleDock()"
   >
     <tx-workspace-switcher txTitlebarStart />
+    <tx-dirty-status-strip txTitlebarStart />
     <tx-environment-switcher />
   </tx-window-titlebar>
+  <tx-collab-attention />
   <div class="tx-shell__body">
     <tx-activity-rail
       [activeId]="shell.activeRail()"
+      [softHighlightId]="shell.softRailHighlight()"
       [collapsed]="shell.sidebarCollapsed()"
       [helpOpen]="shell.helpOpen()"
       (selectItem)="handleRail($event)"
-      (openHelp)="shell.toggleHelp()"
+      (openHelp)="handleOpenHelp()"
     />
     <tx-sidebar
       [title]="sidebarTitle()"
@@ -38,6 +101,10 @@
           <tx-database-sidebar [animate.enter]="sidebarPaneEnter()" animate.leave="tx-sidebar-pane-out" />
         } @else if (shell.activeRail() === 'environments') {
           <tx-environments-sidebar [animate.enter]="sidebarPaneEnter()" animate.leave="tx-sidebar-pane-out" />
+        } @else if (shell.activeRail() === 'services') {
+          <tx-services-sidebar [animate.enter]="sidebarPaneEnter()" animate.leave="tx-sidebar-pane-out" />
+        } @else if (shell.activeRail() === 'history') {
+          <tx-history-sidebar [animate.enter]="sidebarPaneEnter()" animate.leave="tx-sidebar-pane-out" />
         } @else if (shell.activeRail() === 'tools') {
           <tx-tools-sidebar [animate.enter]="sidebarPaneEnter()" animate.leave="tx-sidebar-pane-out" />
         } @else {
@@ -50,11 +117,29 @@
     <main class="tx-shell__canvas" id="main" (pointerdown)="handleOutsideSidebar($event)">
       <tx-workbench />
     </main>
+    <tx-sidebar
+      class="tx-shell__collab-dock"
+      edge="end"
+      title="Collab"
+      hint="Team sync, reviews, and runs"
+      [collapsed]="!shell.collabDockOpen()"
+      [width]="shell.collabDockWidth()"
+      [minWidth]="collabDockMinWidth"
+      [maxWidth]="collabDockMaxWidth"
+      (widthChange)="shell.setCollabDockWidth($event)"
+      (collapse)="shell.collabDockOpen.set(false)"
+    >
+      <tx-collab-panel />
+    </tx-sidebar>
   </div>
 </div>
 @if (shell.paletteOpen()) {
   <tx-command-palette animate.enter="tx-overlay-enter" animate.leave="tx-overlay-leave" />
 }
+@if (collectionHealth.issues(); as _issues) {
+  <tx-collection-health-dialog animate.enter="tx-overlay-enter" animate.leave="tx-overlay-leave" />
+}
+<tx-whats-new-dialog animate.enter="tx-overlay-enter" animate.leave="tx-overlay-leave" />
 @if (shell.settingsOpen()) {
   <tx-settings-overlay animate.enter="tx-overlay-enter" animate.leave="tx-overlay-leave" />
 }
@@ -63,6 +148,9 @@
 }
 @if (shell.workspaceManagerOpen()) {
   <tx-workspace-manager animate.enter="tx-overlay-enter" animate.leave="tx-overlay-leave" (closed)="shell.closeOverlays()" />
+}
+@if (collab.connectOpen()) {
+  <tx-collab-connect-dialog animate.enter="tx-overlay-enter" animate.leave="tx-overlay-leave" />
 }
 @if (confirm.request(); as request) {
   <tx-confirm-dialog
@@ -76,5 +164,32 @@
     (cancelled)="confirm.complete(false)"
   />
 }
+@if (prompt.request(); as request) {
+  <tx-prompt-dialog
+    animate.enter="tx-overlay-enter"
+    animate.leave="tx-overlay-leave"
+    [title]="request.title"
+    [body]="request.body"
+    [inputLabel]="request.inputLabel"
+    [placeholder]="request.placeholder"
+    [initialValue]="request.initialValue"
+    [multiline]="request.multiline"
+    [rows]="request.rows"
+    [confirmLabel]="request.confirmLabel"
+    [cancelLabel]="request.cancelLabel"
+    (submitted)="prompt.complete($event)"
+    (cancelled)="prompt.complete(null)"
+  />
+}
+@if (cookieAuth.open()) {
+  <tx-cookie-auth-dialog animate.enter="tx-overlay-enter" animate.leave="tx-overlay-leave" />
+}
+@if (exportWorkspace.open()) {
+  <tx-export-workspace-dialog animate.enter="tx-overlay-enter" animate.leave="tx-overlay-leave" />
+}
+@if (importWorkspace.open()) {
+  <tx-import-workspace-dialog animate.enter="tx-overlay-enter" animate.leave="tx-overlay-leave" />
+}
 <tx-drag-layer />
 <tx-hint-layer />
+<tx-toast-layer />

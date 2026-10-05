@@ -1,6 +1,6 @@
 {
   "name": "@testrix/ui",
-  "version": "2.0.0-beta.1",
+  "version": "2.0.0",
   "private": true,
   "type": "module",
   "main": "./src/index.ts",
@@ -13,7 +13,6 @@
     "@angular/core": "^22.1.0"
   },
   "dependencies": {
-    "@testrix/contracts": "2.0.0-beta.1",
-    "@testrix/motion": "2.0.0-beta.1"
+    "@testrix/contracts": "2.0.0"
   }
 }

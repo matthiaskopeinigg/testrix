@@ -1,0 +1,41 @@
+:host {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+}
+
+.tx-code-editor__host,
+:host ::ng-deep .cm-editor {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  height: 100%;
+}
+
+:host ::ng-deep .cm-editor,
+:host ::ng-deep .cm-content {
+  user-select: text;
+}
+
+:host ::ng-deep .tx-code-ph {
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--tx-accent) 16%, transparent);
+  color: var(--tx-accent) !important;
+}
+
+:host ::ng-deep .tx-code-ph.is-var {
+  background: color-mix(in srgb, var(--tx-accent) 12%, transparent);
+}
+
+:host ::ng-deep .tx-code-ph.is-unknown {
+  background: color-mix(in srgb, var(--tx-accent) 8%, transparent);
+  color: var(--tx-accent) !important;
+  opacity: 0.78;
+}
+
+:host ::ng-deep .tx-code-ph.is-link {
+  cursor: pointer;
+}

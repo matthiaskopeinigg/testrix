@@ -14,6 +14,21 @@ export const SETUP_APP_ID = 'dev.testrix.app.setup';
 export const PRODUCT_NAME = 'Testrix';
 
 /**
+ * FileDescription / package description written into packaged executables.
+ */
+export const PRODUCT_DESCRIPTION = 'Testrix — local-first desktop API workbench';
+
+/**
+ * Publisher / creator written into installers, version resources, and Add/Remove Programs.
+ */
+export const PUBLISHER_NAME = 'Matthias Kopeinigg';
+
+/**
+ * Copyright line for electron-builder and Windows version resources.
+ */
+export const COPYRIGHT = `Copyright © 2026 ${PUBLISHER_NAME}`;
+
+/**
  * Main process executable name on Windows.
  */
 export const MAIN_EXECUTABLE = 'Testrix.exe';

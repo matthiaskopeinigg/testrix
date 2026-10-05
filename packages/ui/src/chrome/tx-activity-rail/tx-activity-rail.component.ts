@@ -31,6 +31,7 @@ export class TxActivityRailComponent {
   private readonly host = inject(ElementRef<HTMLElement>);
   readonly items = input<readonly TxRailItem[]>(DEFAULT_RAIL_ITEMS);
   readonly activeId = input<TxRailItemId>('collections');
+  readonly softHighlightId = input<TxRailItemId | null>(null);
   readonly collapsed = input(false);
   readonly helpOpen = input(false);
   readonly selectItem = output<TxRailItemId>();
@@ -38,6 +39,13 @@ export class TxActivityRailComponent {
   readonly buttons = viewChildren<ElementRef<HTMLButtonElement>>('railBtn');
   private readonly pendingId = signal<TxRailItemId | null>(null);
   readonly selectedId = computed(() => this.pendingId() ?? this.activeId());
+
+  isSoftHighlight(id: TxRailItemId): boolean {
+    return this.collapsed() && this.softHighlightId() === id;
+  }
+
+  readonly primaryItems = computed(() => this.items().filter((item) => item.id !== 'history'));
+  readonly historyItem = computed(() => this.items().find((item) => item.id === 'history') ?? null);
 
   constructor() {
     afterNextRender(() => {
@@ -78,7 +86,7 @@ export class TxActivityRailComponent {
     if (instant) {
       pill.style.transition = 'none';
       pill.style.transform = `translateY(${top}px)`;
-      pill.offsetHeight;
+      void pill.offsetHeight; // forces reflow so the next transform animates
       pill.style.transition = '';
       return;
     }

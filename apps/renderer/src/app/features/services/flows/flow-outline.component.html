@@ -1,0 +1,39 @@
+<div class="tx-flow-outline">
+  <header class="tx-flow-outline__head">
+    <h2>Run order</h2>
+    <span>{{ rows().length }}</span>
+  </header>
+
+  <ul class="tx-flow-outline__list">
+    @for (row of rows(); track row.node.id) {
+      <li>
+        <button
+          type="button"
+          class="tx-flow-outline__row"
+          [class.is-active]="isSelected(row.node.id)"
+          [class.is-off]="!row.node.enabled"
+          [attr.data-status]="status(row.node.id)"
+          [style.--depth]="row.depth"
+          (click)="selected.emit(row.node.id)"
+          (contextmenu)="handleMenu(row.node.id, $event)"
+        >
+          <span class="tx-flow-outline__order">{{ row.order || '–' }}</span>
+          <span class="tx-flow-outline__chip">{{ row.chip }}</span>
+          <span class="tx-flow-outline__copy">
+            <span class="tx-flow-outline__name">{{ row.label }}</span>
+            @if (row.subtitle) {
+              <span class="tx-flow-outline__sub">{{ row.subtitle }}</span>
+            }
+          </span>
+          @if (row.parallel) {
+            <tx-hint label="Runs at the same time as its siblings" placement="right">
+              <span class="tx-flow-outline__tag" aria-label="Parallel">||</span>
+            </tx-hint>
+          }
+        </button>
+      </li>
+    } @empty {
+      <li class="tx-flow-outline__empty">No nodes yet.</li>
+    }
+  </ul>
+</div>

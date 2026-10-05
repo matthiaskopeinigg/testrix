@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
-import { CONFIG_SCHEMA_VERSION } from './settings';
+import { newEntityId } from './entity-id';
+import { CONFIG_SCHEMA_VERSION } from './config-schema-version';
 
 export const DATABASE_TYPE_IDS = [
   'redis',
@@ -69,6 +70,8 @@ export const databaseConnectionSchema = z.object({
   database: z.string().optional(),
   filePath: z.string().optional(),
   clientPath: z.string().optional(),
+  /** When true, connect with the JavaScript driver and skip Oracle Instant Client. */
+  oracleThin: z.boolean().optional(),
   useSid: z.boolean().optional(),
   selectedSchemas: z.array(z.string().min(1).max(256)).max(500).optional(),
   tls: z.boolean().optional(),
@@ -524,19 +527,26 @@ function parseKeyValueConnectionString(raw: string): ParsedDatabaseConnectionStr
   };
 }
 
-export function createDefaultDatabaseConnection(
-  type: DatabaseType = 'postgresql',
-  now = new Date().toISOString(),
-): DatabaseConnection {
+export function createDefaultDatabaseConnection(type: DatabaseType = 'postgresql'): DatabaseConnection {
   return {
-    id: globalThis.crypto.randomUUID(),
+    id: newEntityId(),
     kind: 'connection',
     name: DATABASE_TYPE_LABELS[type],
     type,
     host: type === 'sqlite' ? '' : 'localhost',
     port: DATABASE_DEFAULT_PORTS[type],
     connectOnBoot: false,
+    ...(type === 'oracle' ? { oracleThin: true } : {}),
   };
+}
+
+/** True when this Oracle connection should stay on the thin driver. */
+export function usesOracleThin(connection: { oracleThin?: boolean; clientPath?: string }): boolean {
+  if (connection.oracleThin === true)
+    return true;
+  if (connection.oracleThin === false)
+    return false;
+  return !connection.clientPath?.trim();
 }
 
 export function createDefaultSavedQuery(
@@ -544,7 +554,7 @@ export function createDefaultSavedQuery(
   now = new Date().toISOString(),
 ): SavedDatabaseQuery {
   return {
-    id: globalThis.crypto.randomUUID(),
+    id: newEntityId(),
     kind: 'query',
     name: 'New query',
     connectionId,
@@ -555,7 +565,7 @@ export function createDefaultSavedQuery(
 
 export function createDatabaseFolder(name = 'New folder', now = new Date().toISOString()): DatabaseConnectionFolder {
   return {
-    id: globalThis.crypto.randomUUID(),
+    id: newEntityId(),
     kind: 'folder',
     name,
     children: [],
@@ -565,7 +575,7 @@ export function createDatabaseFolder(name = 'New folder', now = new Date().toISO
 
 export function createQueryFolder(name = 'New folder', now = new Date().toISOString()): SavedQueryFolder {
   return {
-    id: globalThis.crypto.randomUUID(),
+    id: newEntityId(),
     kind: 'folder',
     name,
     children: [],

@@ -29,9 +29,28 @@ export class TxHintLayerService {
     this.active.set(state);
   }
 
+  showFor(id: string, text: string, target: HTMLElement, placement: TxHintPlacement = 'top'): void {
+    const size = estimateHintSize(text, 0);
+    const point = placeHint(placement, target.getBoundingClientRect(), size.width, size.height);
+    this.show({
+      id,
+      text,
+      keys: [],
+      placement,
+      x: point.x,
+      y: point.y,
+    });
+  }
+
   hide(id: string): void {
     if (this.active()?.id === id)
       this.active.set(null);
+  }
+
+  /** Dismiss whatever hint is visible (e.g. when opening a panel). */
+  clear(): void {
+    this.clearFlashTimer();
+    this.active.set(null);
   }
 
   /**

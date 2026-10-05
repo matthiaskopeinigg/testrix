@@ -106,7 +106,7 @@
 }
 
 .tx-environments-item__rename {
-  @include mixins.tx-focus-ring;
+  @include mixins.tx-input-focus;
   flex: 1;
   min-width: 0;
   height: 22px;

@@ -6,6 +6,10 @@
 >
   @if (tab().kind === 'http') {
     <tx-request-editor [tab]="tab()" />
+  } @else if (tab().kind === 'history') {
+    <tx-history-viewer [entryId]="tab().nodeId" />
+  } @else if (tab().kind === 'collection-folder') {
+    <tx-collection-folder-editor [tab]="tab()" />
   } @else if (tab().kind === 'websocket') {
     <tx-websocket-editor [tab]="tab()" />
   } @else if (tab().kind === 'tool') {
@@ -32,6 +36,8 @@
         <tx-uuid-generator-editor [tab]="tab()" />
       }
     }
+  } @else if (tab().kind === 'plantuml') {
+    <tx-workbench-panel-deferred kind="plantuml" [tab]="tab()" />
   } @else if (tab().kind === 'database-connection') {
     <tx-database-connection-editor [tab]="tab()" />
   } @else if (tab().kind === 'database-query') {
@@ -40,7 +46,27 @@
     <tx-database-table-editor [tab]="tab()" />
   } @else if (tab().kind === 'database-diagram') {
     <tx-database-erd [tab]="tab()" />
-  } @else {
+  } @else if (tab().kind === 'service') {
+    <tx-service-editor [tab]="tab()" />
+  } @else if (tab().kind === 'flow') {
+    <tx-workbench-panel-deferred kind="flow" [tab]="tab()" />
+  } @else if (tab().kind === 'flow-template') {
+    <tx-workbench-panel-deferred kind="flow-template" [tab]="tab()" />
+  } @else if (tab().kind === 'load') {
+    <tx-load-editor [tab]="tab()" />
+  } @else if (tab().kind === 'regression') {
+    <tx-regression-editor [tab]="tab()" />
+  } @else if (tab().kind === 'emulator') {
+    <tx-emulator-device-editor [tab]="tab()" />
+  } @else if (tab().kind === 'mock-endpoint') {
+    <tx-mock-editor [tab]="tab()" />
+  } @else if (tab().kind === 'listener-session') {
+    <tx-listener-editor [tab]="tab()" />
+  } @else if (tab().kind === 'intercept-rule') {
+    <tx-intercept-editor [tab]="tab()" />
+  } @else if (tab().kind === 'collab-review') {
+    <tx-collab-review />
+  } @else if (tab().kind === 'environment') {
     <tx-environment-editor [tab]="tab()" />
   }
 </section>

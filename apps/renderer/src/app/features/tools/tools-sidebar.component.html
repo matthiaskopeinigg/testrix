@@ -1,21 +1,71 @@
 <div class="tx-tools" #root (contextmenu)="$event.preventDefault()">
-  <div class="tx-tools__body" #scroller (click)="handleChromeClick($event)">
-    <div class="tx-tools__content">
-      @if (store.hasItems()) {
-        <tx-tools-list />
-      } @else {
-        <tx-empty-state title="No tools" body="Development utilities will appear here." />
-      }
+  <div class="tx-tools__stage" [attr.data-slide]="store.paneSlideDir()">
+    @if (!store.drillId()) {
+      <div class="tx-tools__hub" [animate.enter]="paneEnter()" animate.leave="tx-sidebar-pane-out">
+        <div class="tx-tools__body" #scroller (click)="handleChromeClick($event)">
+          <div class="tx-tools__content">
+            @if (store.hasItems()) {
+              <tx-tools-list />
+            } @else {
+              <tx-empty-state title="No tools" body="Development utilities will appear here." />
+            }
 
-      @if (dnd.isIndicatorVisible()) {
-        <div
-          class="tx-tools__indicator"
-          [style.left.px]="dnd.indicatorLeft()"
-          [style.transform]="'translate3d(0, ' + dnd.indicatorY() + 'px, 0)'"
-          aria-hidden="true"
-        ></div>
+            @if (dnd.isIndicatorVisible()) {
+              <div
+                class="tx-tools__indicator"
+                [style.left.px]="dnd.indicatorLeft()"
+                [style.transform]="'translate3d(0, ' + dnd.indicatorY() + 'px, 0)'"
+                aria-hidden="true"
+              ></div>
+            }
+          </div>
+        </div>
+        <p class="tx-tools__live" role="status" aria-live="polite">{{ dnd.announcement() }}</p>
+      </div>
+    } @else {
+      <div class="tx-tools__drill" [animate.enter]="paneEnter()" animate.leave="tx-sidebar-pane-out">
+        <div class="tx-tools__back">
+          <tx-hint label="Back to tools" placement="right">
+            <button type="button" class="tx-tools__back-btn" aria-label="Back to Tools" (click)="store.back()">
+              <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+                <path d="M8.5 3 4.5 7l4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+              Tools
+            </button>
+          </tx-hint>
+          <span class="tx-tools__drill-title">PlantUML</span>
+        </div>
+        <tx-plantuml-list-pane (menu)="handlePlantumlMenu($event)" />
+      </div>
+    }
+  </div>
+</div>
+
+<ng-template #plantumlMenu>
+  @if (menu(); as menu) {
+    <div class="tx-menu tx-tools__menu" role="menu">
+      @if (menu.target.kind === 'root' || menu.target.kind === 'folder') {
+        <button type="button" class="tx-tools-menu__item" role="menuitem" (click)="handleMenuNewDiagram('sequence')">
+          New sequence
+        </button>
+        <button type="button" class="tx-tools-menu__item" role="menuitem" (click)="handleMenuNewDiagram('class')">
+          New class
+        </button>
+        <button type="button" class="tx-tools-menu__item" role="menuitem" (click)="handleMenuNewDiagram('activity')">
+          New activity
+        </button>
+        <button type="button" class="tx-tools-menu__item" role="menuitem" (click)="handleMenuNew('folder')">
+          New folder
+        </button>
+      }
+      @if (menu.target.kind === 'artifact') {
+        <button type="button" class="tx-tools-menu__item" role="menuitem" (click)="handleMenuOpen()">Open</button>
+      }
+      @if (menu.target.kind === 'folder' || menu.target.kind === 'artifact') {
+        <button type="button" class="tx-tools-menu__item" role="menuitem" (click)="handleMenuRename()">Rename</button>
+        <button type="button" class="tx-tools-menu__item" role="menuitem" (click)="handleMenuDuplicate()">Duplicate</button>
+        <button type="button" class="tx-tools-menu__item is-danger" role="menuitem" (click)="handleMenuDelete()">Delete</button>
       }
     </div>
-  </div>
-  <p class="tx-tools__live" role="status" aria-live="polite">{{ dnd.announcement() }}</p>
-</div>
+  }
+</ng-template>

@@ -1,0 +1,263 @@
+<div class="tx-flow-editor tx-flow-template-editor">
+  <header class="tx-flow-editor__identity">
+    <span class="tx-flow-editor__icon" aria-hidden="true">
+      <tx-service-icon serviceId="flows" />
+    </span>
+    <span class="tx-flow-template-editor__badge">Template</span>
+    <span class="tx-flow-editor__identity-spacer" aria-hidden="true"></span>
+    @if (runSummary(); as summary) {
+      <div class="tx-flow-editor__run-meta" [attr.data-status]="summary.label.toLowerCase()">
+        <span>{{ summary.label }}</span>
+        @if (!summary.running) {
+          <span>{{ summary.passed }} passed · {{ summary.failed }} failed</span>
+        }
+      </div>
+    }
+    <div class="tx-flow-editor__run-group">
+      @if (store.flowRunning()) {
+        <tx-hint label="Cancel run" detail="Stops the current template run" placement="bottom">
+          <button
+            type="button"
+            class="tx-flow-editor__run is-cancel"
+            aria-label="Cancel run"
+            (click)="cancelRun()"
+          >
+            Cancel
+          </button>
+        </tx-hint>
+      } @else {
+        <tx-hint
+          label="Run template"
+          [detail]="
+            canRun()
+              ? 'Dry-run this graph without saving'
+              : 'Connect Start to End before running'
+          "
+          placement="bottom"
+        >
+          <button
+            type="button"
+            class="tx-flow-editor__run"
+            aria-label="Run template"
+            [disabled]="!source() || !canRun()"
+            (click)="runTemplate()"
+          >
+            Run
+          </button>
+        </tx-hint>
+      }
+      <tx-hint label="Save template" detail="Ctrl+S — writes this graph to the Templates library" placement="bottom">
+        <button
+          type="button"
+          class="tx-flow-editor__run"
+          [disabled]="!source() || saving() || !dirty() || store.flowRunning()"
+          (click)="save()"
+        >
+          {{ saving() ? 'Saving…' : 'Save' }}
+        </button>
+      </tx-hint>
+    </div>
+  </header>
+
+  @if (!source()) {
+    <div class="tx-flow-template-editor__missing">
+      <p>This template is no longer available.</p>
+    </div>
+  } @else {
+    <div class="tx-flow-template-editor__meta">
+      <tx-input
+        id="flow-template-name"
+        label="Name"
+        [value]="name()"
+        (valueChange)="setName($event)"
+      />
+      <tx-input
+        id="flow-template-hint"
+        label="Hint"
+        [value]="hint()"
+        placeholder="Short description shown in the sidebar"
+        (valueChange)="setHint($event)"
+      />
+      <tx-tags-input
+        id="flow-template-tags"
+        [tags]="tags()"
+        (tagsChange)="setTags($event)"
+      />
+    </div>
+
+    <div class="tx-flow-editor__pane">
+      <div class="tx-flow-editor__pane-body is-design">
+        <div class="tx-flow-editor__design">
+          @if (outlineOpen()) {
+            <div class="tx-flow-editor__slide tx-flow-editor__slide--left">
+              <div class="tx-flow-editor__slide-body">
+                <tx-flow-outline
+                  [scenario]="graph()"
+                  [selectedIds]="selectedIds()"
+                  (selected)="focusNode($event)"
+                  (menu)="handleNodeMenu($event)"
+                />
+              </div>
+            </div>
+          }
+
+          <tx-flow-canvas
+            [scenario]="graph()"
+            [selectedIds]="selectedIds()"
+            [selectedEdgeIds]="selectedEdgeIds()"
+            [statuses]="statuses()"
+            [errorMessages]="errorMessages()"
+            [exchanges]="store.flowStepExchanges()"
+            [pulses]="store.flowStepPulse()"
+            [runOrder]="runOrder()"
+            [flowRunning]="store.flowRunning()"
+            [fitToken]="fitToken()"
+            [viewportInsetLeft]="canvasInsetLeft()"
+            [viewportInsetRight]="canvasInsetRight()"
+            (selectionChange)="handleSelection($event)"
+            (edgeSelectionChange)="handleEdgeSelection($event)"
+            (nodesMoved)="handleMove($event)"
+            (frameResized)="handleFrameResized($event)"
+            (connected)="handleConnect($event)"
+            (connectDropped)="handleConnectDropped($event)"
+            (nodeMenu)="handleNodeMenu($event)"
+            (edgeMenu)="handleEdgeMenu($event)"
+            (canvasMenu)="handleCanvasMenu($event)"
+            (nodeOpened)="focusNode($event)"
+            (viewExchange)="openExchangeViewer($event)"
+            (deleteRequested)="deleteSelection()"
+            (duplicateRequested)="duplicateSelection()"
+            (copyRequested)="copySelection()"
+            (cutRequested)="cutSelection()"
+            (pasteRequested)="pasteClipboard()"
+            (autoLayoutRequested)="autoLayout()"
+          />
+
+          @if (selectedEdge(); as edge) {
+            <div class="tx-flow-editor__slide tx-flow-editor__slide--right">
+              <div class="tx-flow-editor__slide-body">
+                <div class="tx-flow-edge-inspector">
+                  <header class="tx-flow-edge-inspector__head">
+                    <div>
+                      <p class="tx-flow-edge-inspector__kicker">Link</p>
+                      <p class="tx-flow-edge-inspector__title">{{ edge.name?.trim() || edge.fromPort }}</p>
+                    </div>
+                    <button type="button" class="tx-flow-edge-inspector__remove" (click)="deleteEdge()">Remove</button>
+                  </header>
+                  <p class="tx-flow-edge-inspector__hint">Port {{ edge.fromPort }}</p>
+                  <tx-input
+                    id="flow-template-edge-name"
+                    label="Name"
+                    [value]="edge.name ?? ''"
+                    placeholder="Optional label on the wire"
+                    (valueChange)="patchSelectedEdgeName($event)"
+                  />
+                </div>
+              </div>
+            </div>
+          } @else if (selectedNode(); as node) {
+            <div class="tx-flow-editor__slide tx-flow-editor__slide--right">
+              <div class="tx-flow-editor__slide-body">
+                <tx-flow-inspector
+                  [node]="node"
+                  [selectionCount]="selectedIds().length"
+                  [connectionOptions]="connectionOptions()"
+                  [flowOptions]="flowOptions()"
+                  [variables]="placeholderVariables()"
+                  [pickingSelector]="pickingSelector()"
+                  [pickingDeviceSelector]="pickingDeviceSelector()"
+                  [devicePickError]="devicePickError()"
+                  (patch)="patchSelected($event)"
+                  (configPatch)="patchSelectedConfig($event)"
+                  (removed)="deleteSelection()"
+                  (pickSelector)="pickSelectorOnPage()"
+                  (pickDeviceSelector)="pickDeviceSelectorOnDevice($event)"
+                />
+              </div>
+            </div>
+          }
+        </div>
+
+        <footer class="tx-flow-editor__status">
+          <tx-hint [label]="outlineOpen() ? 'Hide run order' : 'Show run order'" placement="top">
+            <button type="button" (click)="toggleOutline()">
+              {{ outlineOpen() ? 'Hide outline' : 'Show outline' }}
+            </button>
+          </tx-hint>
+          <span>{{ nodeCount() }} nodes</span>
+          @if (dirty()) {
+            <span class="tx-flow-template-editor__dirty">Unsaved changes</span>
+          }
+          <span class="tx-flow-editor__tip">
+            Run to verify, then Save. Start and End stay on the canvas edges; step layout is what you save.
+          </span>
+        </footer>
+      </div>
+    </div>
+  }
+</div>
+
+@if (picker()) {
+  <div txOverlayHost animate.enter="tx-overlay-enter" animate.leave="tx-overlay-leave">
+    <tx-overlay labelledBy="flow-template-add-title" size="lg" (closed)="closePicker()">
+      <div class="tx-flow-add">
+        <header class="tx-flow-add__head">
+          <h2 id="flow-template-add-title">Add node</h2>
+          <p>Pick a step to place on the template canvas. Escape or click outside to cancel.</p>
+        </header>
+        <div class="tx-flow-add__body">
+          @for (group of nodeGroups; track group.id) {
+            <section>
+              @if (group.id !== 'canvas') {
+                <h3>{{ group.label }}</h3>
+              }
+              <div class="tx-flow-add__grid">
+                @for (item of group.nodes; track item.kind) {
+                  <button type="button" (click)="pickKind(item.kind)">
+                    <span class="tx-flow-add__title">
+                      <tx-flow-node-icon [kind]="item.kind" />
+                      @if (group.id !== 'canvas') {
+                        <span class="tx-flow-add__chip">{{ item.chip }}</span>
+                      }
+                    </span>
+                    <span class="tx-flow-add__name">{{ item.label }}</span>
+                    <small>{{ item.hint }}</small>
+                  </button>
+                }
+              </div>
+            </section>
+          }
+        </div>
+      </div>
+    </tx-overlay>
+  </div>
+}
+
+<ng-template #templateMenu>
+  @if (menu(); as menu) {
+    <div class="tx-menu tx-flow-editor__menu" role="menu" (pointerdown)="$event.stopPropagation()">
+      @if (menu.kind === 'node') {
+        <button type="button" class="tx-flow-editor__item" role="menuitem" (click)="menuDuplicate()">
+          Duplicate
+        </button>
+        <button type="button" class="tx-flow-editor__item is-danger" role="menuitem" (click)="menuDelete()">
+          Delete
+        </button>
+      } @else {
+        <button type="button" class="tx-flow-editor__item is-danger" role="menuitem" (click)="menuDelete()">
+          Delete link
+        </button>
+      }
+    </div>
+  }
+</ng-template>
+
+@if (exchangeViewer(); as viewer) {
+  <div txOverlayHost animate.enter="tx-overlay-enter" animate.leave="tx-overlay-leave">
+    @if (exchangeDetail(); as detail) {
+      <tx-overlay labelledBy="flow-exchange-title" size="lg" (closed)="closeExchangeViewer()">
+        <tx-flow-run-exchange [detail]="detail" [title]="viewer.title" />
+      </tx-overlay>
+    }
+  </div>
+}

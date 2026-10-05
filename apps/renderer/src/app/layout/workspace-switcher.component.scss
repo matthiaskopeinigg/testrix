@@ -6,6 +6,13 @@
   -webkit-app-region: no-drag;
 }
 
+.tx-ws-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
 .tx-ws-switch__trigger {
   @include mixins.tx-press;
   @include mixins.tx-focus-ring;
@@ -46,6 +53,52 @@
 .tx-ws-switch__chevron {
   flex-shrink: 0;
   color: var(--tx-text-faint);
+}
+
+.tx-ws-switch__peers {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.tx-ws-switch__avatar {
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  color: #111;
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.tx-ws-switch__sync {
+  @include mixins.tx-press;
+  @include mixins.tx-focus-ring;
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  padding: 0 8px;
+  border: 1px solid color-mix(in srgb, var(--tx-accent) 45%, var(--tx-border-subtle));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--tx-accent) 12%, transparent);
+  color: var(--tx-accent);
+  font: inherit;
+  font-size: 10px;
+  font-weight: 650;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.tx-ws-switch__sync:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+
+.tx-ws-switch__sync[data-health='error'],
+.tx-ws-switch__sync[data-health='conflicts'] {
+  border-color: color-mix(in srgb, var(--tx-danger, #e26) 45%, var(--tx-border-subtle));
+  color: var(--tx-danger, #e26);
 }
 
 .tx-ws-switch__menu {
@@ -96,9 +149,78 @@
 }
 
 .tx-ws-switch__list {
-  margin: 0;
-  padding: 0;
-  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: min(60vh, 420px);
+  overflow-y: auto;
+}
+
+.tx-ws-switch__group {
+  display: flex;
+  flex-direction: column;
+}
+
+.tx-ws-switch__group-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 6px 10px 2px;
+  color: var(--tx-text-faint);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.tx-ws-switch__group-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tx-ws-switch__dot {
+  flex-shrink: 0;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--tx-success, var(--tx-accent));
+}
+
+.tx-ws-switch__dot[data-state='syncing'] {
+  background: var(--tx-accent);
+}
+
+.tx-ws-switch__dot[data-state='paused'],
+.tx-ws-switch__dot[data-state='offline'] {
+  background: var(--tx-text-faint);
+}
+
+.tx-ws-switch__dot[data-state='attention'] {
+  background: var(--tx-danger, #e26);
+}
+
+.tx-ws-switch__add {
+  @include mixins.tx-press;
+  @include mixins.tx-focus-ring;
+  width: 100%;
+  min-height: 28px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--tx-accent);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.tx-ws-switch__add:hover {
+  background: var(--tx-bg-hover);
 }
 
 .tx-ws-switch__option {
@@ -120,9 +242,54 @@
   cursor: pointer;
 }
 
+.tx-ws-switch__option-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.tx-ws-switch__badge {
+  flex-shrink: 0;
+  padding: 1px 5px;
+  border: 1px solid color-mix(in srgb, var(--tx-accent) 35%, var(--tx-border-subtle));
+  border-radius: 999px;
+  color: var(--tx-accent);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
 .tx-ws-switch__option:hover,
 .tx-ws-switch__option[aria-selected='true'] {
   background: color-mix(in srgb, var(--tx-accent) 14%, transparent);
+}
+
+.tx-ws-switch__shared {
+  flex-shrink: 0;
+  color: var(--tx-text-muted);
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.tx-ws-switch__glyph {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  color: var(--tx-text-secondary);
+  transition: opacity 120ms ease;
+}
+
+.tx-ws-switch__attention {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--tx-danger, var(--tx-accent));
 }
 
 .tx-ws-switch__check {

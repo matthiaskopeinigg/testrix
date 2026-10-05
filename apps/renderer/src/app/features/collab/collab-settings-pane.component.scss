@@ -1,0 +1,168 @@
+// Mirrors the settings-overlay pref rows, which are scoped to that component.
+.tx-pref {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 4px 4px 4px 8px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--tx-bg-overlay) 72%, transparent);
+  list-style: none;
+}
+
+.tx-pref__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  min-height: 64px;
+  padding: 12px 14px;
+  border-radius: 10px;
+}
+
+.tx-pref__row + .tx-pref__row {
+  border-top: 1px solid var(--tx-border-subtle);
+}
+
+.tx-pref__copy {
+  min-width: 0;
+}
+
+.tx-pref__copy h3 {
+  margin: 0;
+  font-size: var(--tx-type-ui);
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.tx-pref__copy p {
+  margin: 3px 0 0;
+  color: var(--tx-text-muted);
+  font-size: var(--tx-type-chrome);
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.tx-collab-settings__pair,
+.tx-collab-settings__identity {
+  display: flex;
+  flex-shrink: 0;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.tx-collab-settings__identity {
+  flex-wrap: wrap;
+  max-width: 360px;
+}
+
+.tx-collab-settings__repos {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.tx-collab-settings__repos-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0 6px;
+}
+
+.tx-collab-settings__repos-head h3 {
+  margin: 0;
+  font-size: var(--tx-type-ui);
+  font-weight: 650;
+}
+
+.tx-collab-settings__repos-head p {
+  margin: 3px 0 0;
+  color: var(--tx-text-muted);
+  font-size: var(--tx-type-chrome);
+  line-height: 1.45;
+}
+
+.tx-collab-settings__repo {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--tx-bg-overlay) 72%, transparent);
+}
+
+.tx-collab-settings__repo-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.tx-collab-settings__repo-copy {
+  flex: 1;
+  min-width: 0;
+}
+
+.tx-collab-settings__repo-copy h4 {
+  margin: 0;
+  font-size: var(--tx-type-ui);
+  font-weight: 650;
+}
+
+.tx-collab-settings__repo-copy p {
+  margin: 2px 0 0;
+  color: var(--tx-text-muted);
+  font-size: var(--tx-type-chrome);
+}
+
+.tx-collab-settings__dot {
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--tx-success, #3fb950);
+}
+
+.tx-collab-settings__dot[data-state='syncing'] {
+  background: var(--tx-accent);
+}
+
+.tx-collab-settings__dot[data-state='offline'],
+.tx-collab-settings__dot[data-state='paused'] {
+  background: var(--tx-text-muted);
+}
+
+.tx-collab-settings__dot[data-state='attention'] {
+  background: var(--tx-warning, #d29922);
+}
+
+.tx-collab-settings__repo-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: 10px;
+  align-items: end;
+}
+
+.tx-collab-settings__repo-foot {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.tx-collab-settings__repo-foot tx-button:last-child {
+  margin-left: auto;
+}
+
+.tx-collab-settings__note {
+  flex: 1;
+  margin: 0;
+  color: var(--tx-text-muted);
+  font-size: 12px;
+}
+
+.tx-collab-settings__error {
+  margin: 0;
+  color: var(--tx-danger, var(--tx-text-primary));
+  font-size: 12px;
+}

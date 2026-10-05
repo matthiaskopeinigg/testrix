@@ -1,18 +1,30 @@
 {
   "name": "@testrix/desktop",
-  "version": "2.0.0-beta.1",
+  "productName": "Testrix",
+  "version": "2.0.0",
+  "description": "Testrix — local-first desktop API workbench",
+  "author": {
+    "name": "Matthias Kopeinigg"
+  },
+  "copyright": "Copyright © 2026 Matthias Kopeinigg",
   "private": true,
   "main": "dist/main.cjs",
   "dependencies": {
-    "@testrix/contracts": "2.0.0-beta.1",
-    "@testrix/electron-core": "2.0.0-beta.1",
+    "@testrix/contracts": "2.0.0",
+    "@testrix/electron-core": "2.0.0",
+    "@testrix/http-engine": "2.0.0",
     "better-sqlite3": "^12.11.1",
+    "fflate": "^0.8.3",
     "ioredis": "^5.11.1",
+    "isomorphic-git": "^1.42.2",
+    "mockttp": "^4.6.3",
     "mongodb": "^7.5.0",
     "mssql": "^12.7.0",
     "mysql2": "^3.23.3",
     "oracledb": "^7.0.1",
-    "pg": "^8.23.0"
+    "pg": "^8.23.0",
+    "yaml": "^2.9.1",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@electron/rebuild": "^4.0.1",
@@ -23,6 +35,7 @@
   },
   "scripts": {
     "build": "node ../../tooling/scripts/bundle-electron.mjs",
-    "rebuild:native": "electron-rebuild -f -w better-sqlite3,oracledb"
+    "rebuild:native": "electron-rebuild -f -w better-sqlite3,oracledb",
+    "test": "vitest run --config ../../vitest.config.mts"
   }
 }

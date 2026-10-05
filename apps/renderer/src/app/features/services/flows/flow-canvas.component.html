@@ -1,0 +1,121 @@
+<div
+  class="tx-flow-canvas"
+  #viewport
+  tabindex="0"
+  role="listbox"
+  aria-multiselectable="true"
+  aria-label="Flow graph canvas"
+  [class.is-panning]="drag()?.mode === 'pan'"
+  (wheel)="handleWheel($event)"
+  (pointerdown)="handlePointerDown($event)"
+  (pointermove)="handlePointerMove($event)"
+  (pointerup)="handlePointerUp($event)"
+  (pointercancel)="handlePointerUp($event)"
+  (auxclick)="handleAuxClick($event)"
+  (dblclick)="handleDoubleClick($event)"
+  (contextmenu)="handleContextMenu($event)"
+  (keydown)="handleKeydown($event)"
+>
+  <div class="tx-flow-canvas__world" [style.transform]="transform()">
+    @for (item of nodeViews(); track item.node.id) {
+      <tx-flow-node-card
+        [node]="item.node"
+        [placement]="item.placement"
+        [selected]="isSelected(item.node.id)"
+        [active]="keyboardFocusId() === item.node.id"
+        [status]="status(item.node.id)"
+        [errorMessage]="stepError(item.node.id)"
+        [statusMessage]="stepMessage(item.node.id)"
+        [pulse]="stepPulse(item.node.id)"
+        [order]="order(item.node.id)"
+        [exchange]="stepExchange(item.node.id)"
+        (resizeStart)="handleFrameResizeStart($event)"
+        (viewExchange)="viewExchange.emit($event)"
+      />
+    }
+
+    <svg
+      class="tx-flow-canvas__edges"
+      [attr.width]="layout().width"
+      [attr.height]="layout().height"
+      aria-hidden="true"
+    >
+      @for (edge of layout().edges; track edge.id) {
+        <g
+          class="tx-flow-canvas__edge"
+          [class.is-selected]="isEdgeSelected(edge.id)"
+          [attr.data-edge-id]="edge.id"
+          [attr.data-port]="edge.fromPort"
+          [attr.data-status]="edgeStatus(edge.from, edge.to)"
+        >
+          <path class="tx-flow-canvas__edge-hit" [attr.d]="edge.path" />
+          <path class="tx-flow-canvas__edge-line" [attr.d]="edge.path" />
+          <path class="tx-flow-canvas__edge-flow" [attr.d]="edge.path" />
+        </g>
+      }
+      @if (ghostPath(); as ghost) {
+        <path class="tx-flow-canvas__ghost" [attr.d]="ghost" />
+      }
+    </svg>
+
+    @for (edge of layout().edges; track edge.id) {
+      @if (edge.name; as name) {
+        <span
+          class="tx-flow-canvas__edge-label is-named"
+          [class.is-selected]="isEdgeSelected(edge.id)"
+          [attr.data-edge-id]="edge.id"
+          [style.left.px]="edge.labelX"
+          [style.top.px]="edge.labelY"
+          (pointerdown)="handleEdgeLabelPointerDown($event)"
+          (click)="handleEdgeLabelClick($event, edge.id)"
+          (dblclick)="$event.stopPropagation(); edgeRenameRequested.emit(edge.id)"
+          >{{ name }}</span
+        >
+      } @else if (edge.fromPort !== 'next') {
+        <span
+          class="tx-flow-canvas__edge-label"
+          [class.is-selected]="isEdgeSelected(edge.id)"
+          [attr.data-edge-id]="edge.id"
+          [style.left.px]="edge.labelX"
+          [style.top.px]="edge.labelY"
+          (pointerdown)="handleEdgeLabelPointerDown($event)"
+          (click)="handleEdgeLabelClick($event, edge.id)"
+          >{{ edge.fromPort }}</span
+        >
+      }
+    }
+
+    @if (marquee(); as rect) {
+      <div
+        class="tx-flow-canvas__marquee"
+        [style.left.px]="rect.width < 0 ? rect.x + rect.width : rect.x"
+        [style.top.px]="rect.height < 0 ? rect.y + rect.height : rect.y"
+        [style.width.px]="rect.width < 0 ? -rect.width : rect.width"
+        [style.height.px]="rect.height < 0 ? -rect.height : rect.height"
+      ></div>
+    }
+  </div>
+
+  @if (isEmpty()) {
+    <div class="tx-flow-canvas__empty">
+      <p class="tx-flow-canvas__empty-title">Add your first step</p>
+      <p class="tx-flow-canvas__empty-body">{{ emptyCanvasHint }}</p>
+    </div>
+  }
+
+  <div class="visually-hidden" aria-live="polite" aria-atomic="true">{{ selectionLive() }}</div>
+
+  @if (!isEmpty()) {
+    <div class="tx-flow-canvas__minimap" (pointerdown)="handleMinimapClick($event)" aria-hidden="true">
+      @for (node of minimap().nodes; track node.id) {
+        <span
+          [class.is-selected]="isSelected(node.id)"
+          [style.left.px]="node.x"
+          [style.top.px]="node.y"
+          [style.width.px]="node.width"
+          [style.height.px]="node.height"
+        ></span>
+      }
+    </div>
+  }
+</div>

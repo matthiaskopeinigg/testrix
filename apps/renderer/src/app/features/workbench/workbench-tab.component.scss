@@ -128,6 +128,15 @@
   width: auto;
 }
 
+.tx-workbench-tab__dot {
+  flex-shrink: 0;
+  width: 6px;
+  height: 6px;
+  border-radius: 99px;
+  background: var(--tx-accent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--tx-bg-canvas) 70%, transparent);
+}
+
 .tx-workbench-tab__title {
   overflow: hidden;
   font-size: 12px;

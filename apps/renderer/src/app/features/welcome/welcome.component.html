@@ -15,76 +15,288 @@
       <p class="tx-welcome__eyebrow">Local workbench</p>
       <h1 id="welcome-title" class="tx-welcome__title">Testrix</h1>
       <p class="tx-welcome__pitch">
-        Build and send API requests without a cloud account. Collections, environments, and tests stay
-        on this PC.
+        Requests, flows, and database tables — one offline workbench. Collections and connections stay on this PC.
       </p>
 
+      <ul class="tx-welcome__features">
+        <li>
+          <span class="tx-welcome__feature-mark is-request" aria-hidden="true"></span>
+          <span>Send and inspect HTTP without a cloud account</span>
+        </li>
+        <li>
+          <span class="tx-welcome__feature-mark is-flow" aria-hidden="true"></span>
+          <span>Compose browser and API steps on a flow canvas</span>
+        </li>
+        <li>
+          <span class="tx-welcome__feature-mark is-table" aria-hidden="true"></span>
+          <span>Browse and edit local database tables</span>
+        </li>
+      </ul>
+
       <div class="tx-welcome__cta">
-        <tx-button variant="primary" (clicked)="handleBrowseCollections()">Open a collection</tx-button>
+        @if (showSampleFlowCta()) {
+          <tx-button variant="primary" (clicked)="handleOpenSampleFlow()">Open sample Flow</tx-button>
+        } @else {
+          <tx-button variant="primary" (clicked)="handleBrowseCollections()">Open a collection</tx-button>
+        }
         <tx-button variant="ghost" (clicked)="shell.openPalette()">Command palette</tx-button>
       </div>
+
+      @if (showResumeHub()) {
+        <div class="tx-welcome__resume" aria-label="Resume work">
+          <p class="tx-welcome__resume-label">Pick up where you left off</p>
+          <ul class="tx-welcome__resume-chips">
+            @if (lastClosedLabel(); as closed) {
+              <li>
+                <button type="button" class="tx-welcome__resume-chip" (click)="handleReopenLastClosed()">
+                  {{ closed }}
+                </button>
+              </li>
+            }
+            @if (lastHistoryLabel(); as history) {
+              <li>
+                <button type="button" class="tx-welcome__resume-chip" (click)="handleOpenLastHistory()">
+                  {{ history }}
+                </button>
+              </li>
+            }
+            @for (workspace of recentWorkspaces(); track workspace.id) {
+              <li>
+                <button
+                  type="button"
+                  class="tx-welcome__resume-chip"
+                  (click)="handleSwitchWorkspace(workspace.id)"
+                >
+                  {{ workspace.name }}
+                </button>
+              </li>
+            }
+          </ul>
+        </div>
+      }
 
       <tx-hint class="tx-welcome__hint" variant="inline" keys="Ctrl K" label="anywhere" />
     </div>
 
-    <div class="tx-welcome__preview" aria-hidden="true">
-      <div class="tx-welcome__preview-frame">
-        <div class="tx-welcome__preview-tabs">
-          <span class="tx-welcome__preview-tab is-active">
-            <span class="tx-welcome__preview-method" data-method="GET">GET</span>
-            Health check
-          </span>
-          <span class="tx-welcome__preview-tab">
-            <span class="tx-welcome__preview-method" data-method="POST">POST</span>
-            Create user
-          </span>
-        </div>
+    <div class="tx-welcome__preview" (pointerenter)="pauseCycle()" (pointerleave)="resumeCycle()">
+      <div class="tx-welcome__surfaces" role="tablist" aria-label="Workbench preview">
+        @for (id of surfaces; track id) {
+          <button
+            type="button"
+            class="tx-welcome__surface"
+            role="tab"
+            [class.is-active]="surface() === id"
+            [attr.aria-selected]="surface() === id"
+            (click)="selectSurface(id)"
+          >
+            {{ surfaceLabel(id) }}
+            @if (surface() === id) {
+              <span class="tx-welcome__surface-progress" aria-hidden="true"></span>
+            }
+          </button>
+        }
+      </div>
+      @for (_ of [surface()]; track _) {
+        <p class="tx-welcome__blurb">{{ surfaceBlurb() }}</p>
+      }
 
-        <div class="tx-welcome__preview-urlbar">
-          <span class="tx-welcome__preview-method is-chip" data-method="GET">GET</span>
-          <span class="tx-welcome__preview-url">https://api.local/health-check</span>
-          <span class="tx-welcome__preview-send">Send</span>
-        </div>
-
-        <div class="tx-welcome__preview-body">
-          <div class="tx-welcome__preview-req">
-            <div class="tx-welcome__preview-subtabs">
-              <span class="is-active">Params</span>
-              <span>Headers</span>
-              <span>Body</span>
-              <span>Auth</span>
-            </div>
-            <div class="tx-welcome__preview-rows">
-              <div class="tx-welcome__preview-row">
-                <span>limit</span>
-                <span>25</span>
+      <div class="tx-welcome__stage" aria-hidden="true">
+        @switch (surface()) {
+          @case ('request') {
+            <div class="tx-welcome__frame" animate.enter="tx-welcome-frame-in" animate.leave="tx-welcome-frame-out">
+              <div class="tx-welcome__identity">
+                <span class="tx-welcome__identity-path">Collections / Health / check</span>
+                <ul class="tx-welcome__chips">
+                  <li>api</li>
+                  <li>smoke</li>
+                </ul>
               </div>
-              <div class="tx-welcome__preview-row">
-                <span>q</span>
-                <span>health-check</span>
-              </div>
-              <div class="tx-welcome__preview-row is-faint">
-                <span>cursor</span>
-                <span></span>
-              </div>
-            </div>
-          </div>
 
-          <div class="tx-welcome__preview-sash"></div>
+              <div class="tx-welcome__urlbar">
+                <span class="tx-welcome__method is-chip">GET</span>
+                <span class="tx-welcome__url">https://api.local/health-check</span>
+                <span class="tx-welcome__ghost-btn">Preview</span>
+                <span class="tx-welcome__ghost-btn">Code</span>
+                <span class="tx-welcome__send">Send</span>
+              </div>
 
-          <div class="tx-welcome__preview-res">
-            <div class="tx-welcome__preview-meta">
-              <span class="tx-welcome__preview-status">200 OK</span>
-              <span>48 ms</span>
-              <span>214 B</span>
-            </div>
-            <pre class="tx-welcome__preview-code">&#123;
+              <div class="tx-welcome__sections">
+                <span>Overview</span>
+                <span class="is-active">Params<span class="tx-welcome__count">2</span></span>
+                <span>Headers<span class="tx-welcome__count">3</span></span>
+                <span>Body</span>
+                <span>Auth</span>
+                <span>Scripts</span>
+              </div>
+
+              <div class="tx-welcome__split">
+                <div class="tx-welcome__pane">
+                  <div class="tx-welcome__kv">
+                    <div class="tx-welcome__kv-row"><span>limit</span><span>25</span></div>
+                    <div class="tx-welcome__kv-row"><span>q</span><span>health-check</span></div>
+                    <div class="tx-welcome__kv-row is-faint"><span>cursor</span><span></span></div>
+                  </div>
+                </div>
+                <div class="tx-welcome__sash"></div>
+                <div class="tx-welcome__pane tx-welcome__pane--res">
+                  <div class="tx-welcome__meta">
+                    <span class="tx-welcome__status">200 OK</span>
+                    <span>48 ms</span>
+                    <span>214 B</span>
+                    <span>application/json</span>
+                  </div>
+                  <pre class="tx-welcome__code">&#123;
   "ok": true,
   "status": 200,
   "data": &#123; "id": "health-01" &#125;
 &#125;</pre>
-          </div>
-        </div>
+                </div>
+              </div>
+            </div>
+          }
+
+          @case ('flow') {
+            <div class="tx-welcome__frame" animate.enter="tx-welcome-frame-in" animate.leave="tx-welcome-frame-out">
+              <div class="tx-welcome__identity">
+                <ul class="tx-welcome__chips">
+                  <li>checkout</li>
+                  <li>e2e</li>
+                </ul>
+                <span class="tx-welcome__spacer"></span>
+                <span class="tx-welcome__run-meta">Passed</span>
+                <span class="tx-welcome__send">Run current</span>
+              </div>
+
+              <div class="tx-welcome__sections">
+                <span class="is-active">Design</span>
+                <span>Data</span>
+                <span>Runs</span>
+                <span>Settings</span>
+              </div>
+
+              <div class="tx-welcome__scenarios">
+                <span class="is-active">Main</span>
+                <span>Guest</span>
+              </div>
+
+              <div class="tx-welcome__canvas">
+                <div class="tx-welcome__chain">
+                  <div class="tx-welcome__terminal is-start">
+                    <span class="tx-welcome__dot"></span>
+                    <span class="tx-welcome__terminal-label">Start</span>
+                  </div>
+                  <span class="tx-welcome__edge" aria-hidden="true"></span>
+                  <div class="tx-welcome__node">
+                    <div class="tx-welcome__node-head">
+                      <span class="tx-welcome__node-order">1</span>
+                      <span class="tx-welcome__chip-mini">OPEN</span>
+                      <span class="tx-welcome__node-title">Open store</span>
+                    </div>
+                    <p class="tx-welcome__node-sub">/shop</p>
+                    <span class="tx-welcome__port is-in"></span>
+                    <span class="tx-welcome__port is-out"></span>
+                  </div>
+                  <span class="tx-welcome__edge" aria-hidden="true"></span>
+                  <div class="tx-welcome__node">
+                    <div class="tx-welcome__node-head">
+                      <span class="tx-welcome__node-order">2</span>
+                      <span class="tx-welcome__chip-mini is-http">HTTP</span>
+                      <span class="tx-welcome__node-title">Create cart</span>
+                    </div>
+                    <p class="tx-welcome__node-sub">POST /carts</p>
+                    <span class="tx-welcome__port is-in"></span>
+                    <span class="tx-welcome__port is-out"></span>
+                  </div>
+                  <span class="tx-welcome__edge" aria-hidden="true"></span>
+                  <div class="tx-welcome__terminal is-end">
+                    <span class="tx-welcome__dot"></span>
+                    <span class="tx-welcome__terminal-label">End</span>
+                  </div>
+                </div>
+
+                <div class="tx-welcome__node is-string">
+                  <div class="tx-welcome__node-head">
+                    <span class="tx-welcome__chip-mini is-str">STR</span>
+                    <span class="tx-welcome__node-title">Happy path</span>
+                  </div>
+                  <p class="tx-welcome__node-sub">Guest checkout</p>
+                </div>
+              </div>
+
+              <footer class="tx-welcome__flow-foot">
+                <span>3 nodes</span>
+                <span class="tx-welcome__tip">Drag a port to connect</span>
+              </footer>
+            </div>
+          }
+
+          @case ('table') {
+            <div class="tx-welcome__frame" animate.enter="tx-welcome-frame-in" animate.leave="tx-welcome-frame-out">
+              <div class="tx-welcome__identity">
+                <span class="tx-welcome__identity-path">local · public · orders</span>
+                <span class="tx-welcome__spacer"></span>
+                <span class="tx-welcome__page">1–25 of 128</span>
+              </div>
+
+              <div class="tx-welcome__clauses">
+                <span class="tx-welcome__clause">
+                  <span class="tx-welcome__clause-tag">WHERE</span>
+                  <span class="tx-welcome__clause-val">status = 'paid'</span>
+                </span>
+                <span class="tx-welcome__clause-rule"></span>
+                <span class="tx-welcome__clause">
+                  <span class="tx-welcome__clause-tag">ORDER BY</span>
+                  <span class="tx-welcome__clause-val">created_at DESC</span>
+                </span>
+              </div>
+
+              <div class="tx-welcome__grid">
+                <div class="tx-welcome__grid-head">
+                  <span class="tx-welcome__grid-ix">#</span>
+                  <span>id</span>
+                  <span>status</span>
+                  <span>total</span>
+                  <span>created_at</span>
+                </div>
+                <div class="tx-welcome__grid-row is-active">
+                  <span class="tx-welcome__grid-ix">1</span>
+                  <span>1042</span>
+                  <span class="is-ok">paid</span>
+                  <span>48.00</span>
+                  <span>2026-03-12</span>
+                </div>
+                <div class="tx-welcome__grid-row">
+                  <span class="tx-welcome__grid-ix">2</span>
+                  <span>1041</span>
+                  <span class="is-ok">paid</span>
+                  <span>19.50</span>
+                  <span>2026-03-11</span>
+                </div>
+                <div class="tx-welcome__grid-row">
+                  <span class="tx-welcome__grid-ix">3</span>
+                  <span>1039</span>
+                  <span class="is-ok">paid</span>
+                  <span>112.00</span>
+                  <span>2026-03-10</span>
+                </div>
+                <div class="tx-welcome__grid-row is-faint">
+                  <span class="tx-welcome__grid-ix">4</span>
+                  <span>1038</span>
+                  <span class="is-ok">paid</span>
+                  <span>7.25</span>
+                  <span>2026-03-09</span>
+                </div>
+                <div class="tx-welcome__grid-row is-faint">
+                  <span class="tx-welcome__grid-ix">5</span>
+                  <span>1035</span>
+                  <span class="is-ok">paid</span>
+                  <span>64.10</span>
+                  <span>2026-03-08</span>
+                </div>
+              </div>
+            </div>
+          }
+        }
       </div>
     </div>
   </div>

@@ -1,0 +1,65 @@
+<label class="tx-token-field" [attr.for]="id() || null">
+  @if (label()) {
+    <span class="tx-token-field__label">{{ label() }}</span>
+  }
+  <span class="tx-token-field__shell">
+    @if (hasTokens()) {
+      <tx-placeholder-highlight [value]="value()" [variables]="variables()" [pathParams]="pathParams()" [multiline]="multiline()" />
+    }
+    @if (multiline()) {
+      <textarea
+        class="tx-token-field__input"
+        [class.has-tokens]="hasTokens()"
+        [id]="id() || null"
+        [value]="value()"
+        [placeholder]="placeholder()"
+        [attr.rows]="rows()"
+        [attr.aria-label]="controlAria()"
+        [readOnly]="readonly()"
+        spellcheck="false"
+        wrap="off"
+        autocomplete="off"
+        (input)="handleInput($event)"
+        (keydown)="handleKey($event)"
+        (pointerdown)="handlePointerDown($event)"
+        (pointermove)="handlePointerMove($event)"
+        (pointerleave)="handlePointerLeave()"
+        (click)="handleClick($event)"
+        (blur)="handleBlur()"
+        (scroll)="handleScroll($event)"
+      ></textarea>
+    } @else {
+      <input
+        class="tx-token-field__input"
+        [class.has-tokens]="hasTokens()"
+        [id]="id() || null"
+        [attr.type]="type()"
+        [value]="value()"
+        [placeholder]="placeholder()"
+        [attr.aria-label]="controlAria()"
+        [readOnly]="readonly()"
+        spellcheck="false"
+        autocomplete="off"
+        (input)="handleInput($event)"
+        (keydown)="handleKey($event)"
+        (pointerdown)="handlePointerDown($event)"
+        (pointermove)="handlePointerMove($event)"
+        (pointerleave)="handlePointerLeave()"
+        (click)="handleClick($event)"
+        (blur)="handleBlur()"
+      />
+    }
+  </span>
+</label>
+
+<ng-template
+  cdkConnectedOverlay
+  [cdkConnectedOverlayOrigin]="completeOriginEl()"
+  [cdkConnectedOverlayOpen]="completeOpen()"
+  [cdkConnectedOverlayPositions]="completePositions"
+  [cdkConnectedOverlayMinWidth]="240"
+  [cdkConnectedOverlayPush]="true"
+  [cdkConnectedOverlayViewportMargin]="8"
+>
+  <tx-placeholder-suggest [items]="completeItems()" [index]="completeIndex()" (pick)="handleCompletePick($event)" />
+</ng-template>

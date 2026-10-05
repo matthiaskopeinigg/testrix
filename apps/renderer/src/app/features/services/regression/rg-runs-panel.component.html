@@ -1,0 +1,482 @@
+<section class="rg-runs" aria-label="Regression results">
+  <header
+    class="rg-runs__head"
+    (pointerdown)="resizeStart.emit($event)"
+    (dblclick)="hide.emit()"
+  >
+    <div class="rg-runs__meta">
+      <span class="rg-runs__status" [class.is-running]="running()" [attr.data-status]="statusLabel().toLowerCase()">
+        {{ statusLabel() }}
+      </span>
+      @if (displayRun(); as run) {
+        <span class="rg-runs__chip" data-tone="time">{{ formatDuration(run.durationMs) }}</span>
+        <span class="rg-runs__chip" data-tone="size">{{ run.passed }}/{{ run.passed + run.failed + run.skipped }}</span>
+      } @else if (running()) {
+        <span class="rg-runs__status is-pending">Running</span>
+      } @else {
+        <span class="rg-runs__stat">Results</span>
+      }
+    </div>
+
+    <div class="rg-runs__actions" (pointerdown)="$event.stopPropagation()">
+      @if (exportFeedback()) {
+        <span class="rg-runs__feedback" role="status">{{ exportFeedback() }}</span>
+      }
+      <tx-hint label="Copy report" detail="Copy a plain-text summary of this run" placement="bottom">
+        <button type="button" class="rg-runs__ghost" [disabled]="!displayRun()" (click)="exportReport()">Report</button>
+      </tx-hint>
+      <tx-hint label="Download HTML" detail="Download a standalone HTML report" placement="bottom">
+        <button type="button" class="rg-runs__ghost" [disabled]="!displayRun()" (click)="exportHtml()">HTML</button>
+      </tx-hint>
+      <tx-hint label="Export JSON" detail="Download the selected run as JSON" placement="bottom">
+        <button type="button" class="rg-runs__ghost" [disabled]="!displayRun()" (click)="exportJson()">JSON</button>
+      </tx-hint>
+      @if (canRerunFailed()) {
+        <tx-hint label="Rerun failed" detail="Run only entries that failed in the last suite" placement="bottom">
+          <button type="button" class="rg-runs__ghost" (click)="rerunFailed.emit()">Rerun failed</button>
+        </tx-hint>
+      }
+      @if (runs().length) {
+        <tx-hint label="Clear history" placement="bottom">
+          <button type="button" class="rg-runs__ghost" (click)="clearHistory.emit()">Clear</button>
+        </tx-hint>
+      }
+      <tx-hint label="Hide results" placement="bottom">
+        <button type="button" class="rg-runs__ghost" (click)="hide.emit()" aria-label="Hide results">Hide</button>
+      </tx-hint>
+    </div>
+
+    <div class="rg-runs__tabs" role="tablist" aria-label="Results view" (pointerdown)="$event.stopPropagation()">
+      <button
+        type="button"
+        class="rg-runs__tab"
+        role="tab"
+        [class.is-active]="resultsView() === 'live'"
+        [attr.aria-selected]="resultsView() === 'live'"
+        (click)="handleViewChange('live')"
+      >
+        Live
+      </button>
+      <button
+        type="button"
+        class="rg-runs__tab"
+        role="tab"
+        [class.is-active]="resultsView() === 'history'"
+        [attr.aria-selected]="resultsView() === 'history'"
+        (click)="handleViewChange('history')"
+      >
+        History
+        @if (runs().length) {
+          <span class="rg-runs__count">{{ runs().length }}</span>
+        }
+      </button>
+      <button
+        type="button"
+        class="rg-runs__tab"
+        role="tab"
+        [class.is-active]="resultsView() === 'compare'"
+        [attr.aria-selected]="resultsView() === 'compare'"
+        [disabled]="!canCompare()"
+        (click)="handleViewChange('compare')"
+      >
+        Compare
+      </button>
+    </div>
+  </header>
+
+  <div class="rg-runs__view-stage">
+    @for (view of [resultsView()]; track view) {
+      <div
+        class="rg-runs__scroll"
+        (animate.enter)="handleViewEnter($event)"
+        (animate.leave)="handleViewLeave($event)"
+      >
+    <!-- LIVE DASHBOARD -->
+    @if (isLiveRunning()) {
+      <section class="rg-runs__section">
+        <button type="button" class="rg-runs__section-header" (click)="handleToggleSection('live')">
+          <span>{{ isCollapsed('live') ? '▸' : '▾' }}</span>
+          <h3>Live metrics</h3>
+        </button>
+        @if (!isCollapsed('live')) {
+          <div class="rg-runs__stats">
+            <tx-rg-stat-card
+              label="Pass rate"
+              [value]="liveStats().passRate"
+              [tone]="liveStats().failed > 0 ? 'error' : 'success'"
+            />
+            <tx-rg-stat-card label="Passed" [value]="'' + liveStats().passed" tone="success" />
+            <tx-rg-stat-card label="Failed" [value]="'' + liveStats().failed" [tone]="liveStats().failed > 0 ? 'error' : 'default'" />
+            <tx-rg-stat-card label="Skipped" [value]="'' + liveStats().skipped" tone="warning" />
+            <tx-rg-stat-card label="Parallelism" [value]="'' + liveStats().parallelism" />
+            <tx-rg-stat-card label="Elapsed" [value]="liveStats().elapsed" />
+            <tx-rg-stat-card
+              label="Progress"
+              [value]="liveStats().completed + ' / ' + (liveStats().total || '…')"
+            />
+          </div>
+        }
+      </section>
+
+      @if (hasLiveSamples()) {
+        <section class="rg-runs__section">
+          <button type="button" class="rg-runs__section-header" (click)="handleToggleSection('charts')">
+            <span>{{ isCollapsed('charts') ? '▸' : '▾' }}</span>
+            <h3>Live charts</h3>
+          </button>
+          @if (!isCollapsed('charts')) {
+            <div class="rg-runs__charts">
+              <tx-rg-line-chart title="Pass rate" unit="%" [values]="livePassRateSeries()" />
+              <tx-rg-line-chart
+                title="Avg entry duration"
+                unit="ms"
+                strokeColor="var(--tx-warning, #e8a838)"
+                [values]="liveAvgDurationSeries()"
+              />
+              <tx-rg-line-chart
+                title="Parallelism"
+                unit=""
+                strokeColor="var(--tx-accent)"
+                [values]="liveParallelismSeries()"
+              />
+            </div>
+          }
+        </section>
+      }
+
+      <section class="rg-runs__section">
+        <button type="button" class="rg-runs__section-header" (click)="handleToggleSection('timeline')">
+          <span>{{ isCollapsed('timeline') ? '▸' : '▾' }}</span>
+          <h3>Flow timeline</h3>
+        </button>
+        @if (!isCollapsed('timeline')) {
+          <tx-rg-gantt-chart
+            [timeline]="liveTimeline()"
+            [totalDurationMs]="liveGanttTotalMs()"
+            [selectedFlowId]="selectedFlowId()"
+            (flowSelected)="handleFlowSelected($event)"
+          />
+        }
+      </section>
+
+      <section class="rg-runs__section">
+        <div class="rg-runs__detail-head">
+          <div><h3>Entries</h3></div>
+        </div>
+        <table class="rg-runs__table">
+          <thead>
+            <tr>
+              <th>Flow</th>
+              <th>Scenario</th>
+              <th>Status</th>
+              <th>Duration</th>
+              <th>Error</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of liveEntries(); track row.flowId + row.scenarioId + $index) {
+              <tr [attr.data-status]="row.status">
+                <td>{{ row.flowName }}</td>
+                <td>{{ row.scenarioName }}</td>
+                <td>{{ row.status }}</td>
+                <td>{{ formatDuration(row.durationMs) }}</td>
+                <td>{{ row.error || '—' }}</td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="5">Waiting for the first entry to finish…</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </section>
+    }
+
+    <!-- COMPARE PICKER -->
+    @if (resultsView() === 'compare' && canCompare()) {
+      <section class="rg-runs__compare-picker" aria-label="Choose runs to compare">
+        <tx-select
+          ariaLabel="Run A baseline"
+          [value]="compareSelection()?.a ?? ''"
+          [options]="runOptions()"
+          (valueChange)="handleCompareRunA($event)"
+        />
+        <tx-button variant="ghost" (clicked)="handleSwapCompare()">Swap</tx-button>
+        <tx-select
+          ariaLabel="Run B comparison"
+          [value]="compareSelection()?.b ?? ''"
+          [options]="runOptions()"
+          (valueChange)="handleCompareRunB($event)"
+        />
+      </section>
+    }
+
+    <!-- HISTORY TRENDS -->
+    @if (resultsView() === 'history' && runs().length >= 2) {
+      <div class="rg-runs__charts">
+        <tx-rg-line-chart
+          title="Pass rate history"
+          unit="%"
+          [values]="historyPassRateSeries()"
+          [pointIds]="historyPointIds()"
+          [selectedPointId]="selectedRun().id"
+          (pointSelected)="handleSelectedRunChange($event)"
+        />
+        <tx-rg-line-chart
+          title="Duration history"
+          unit="ms"
+          strokeColor="var(--tx-warning, #e8a838)"
+          [values]="historyDurationSeries()"
+          [pointIds]="historyPointIds()"
+          [selectedPointId]="selectedRun().id"
+          (pointSelected)="handleSelectedRunChange($event)"
+        />
+        @if (hasP95History()) {
+          <tx-rg-line-chart
+            title="p95 entry history"
+            unit="ms"
+            strokeColor="var(--tx-accent)"
+            [values]="historyP95Series()"
+            [pointIds]="historyPointIds()"
+            [selectedPointId]="selectedRun().id"
+            (pointSelected)="handleSelectedRunChange($event)"
+          />
+        }
+      </div>
+    }
+
+    <!-- RUN TIMELINE (navigation) -->
+    @if (runs().length && !isLiveRunning()) {
+      <tx-rg-run-timeline
+        [runs]="runs()"
+        [selectedId]="selectedRun().id"
+        [pinnedId]="goldenRunId()"
+        [compareMode]="resultsView() === 'compare'"
+        [compareSelection]="compareSelection()"
+        (selectedIdChange)="handleSelectedRunChange($event)"
+        (compareRuns)="handleCompareSelection($event)"
+        (pinRun)="handlePinRun($event)"
+      />
+    }
+
+    @if (!runs().length && !running()) {
+      <tx-empty-state title="No results yet" body="Run this pack to populate pass rates, entry results, and history." />
+    }
+
+    <!-- COMPARE DETAIL -->
+    @if (resultsView() === 'compare' && compareRuns()) {
+      @if (compareDeltas().length) {
+        <section class="rg-runs__section">
+          <button type="button" class="rg-runs__section-header" (click)="handleToggleSection('compare')">
+            <span>{{ isCollapsed('compare') ? '▸' : '▾' }}</span>
+            <h3>Summary deltas</h3>
+          </button>
+          @if (!isCollapsed('compare')) {
+            <ul class="rg-runs__deltas">
+              @for (delta of compareDeltas(); track delta.label) {
+                <li [attr.data-direction]="delta.direction">
+                  <span>{{ delta.label }}</span>
+                  <strong>{{ delta.aValue }} → {{ delta.bValue }} ({{ delta.delta }})</strong>
+                </li>
+              }
+            </ul>
+          }
+        </section>
+      }
+
+      <section class="rg-runs__section">
+        <button type="button" class="rg-runs__section-header" (click)="handleToggleSection('compareTimeline')">
+          <span>{{ isCollapsed('compareTimeline') ? '▸' : '▾' }}</span>
+          <h3>Timeline (B vs A ghost)</h3>
+        </button>
+        @if (!isCollapsed('compareTimeline')) {
+          <tx-rg-gantt-chart
+            [timeline]="compareGanttTimeline()"
+            [compareTimeline]="compareGhostTimeline()"
+            [totalDurationMs]="compareGanttTotalMs()"
+            [selectedFlowId]="selectedFlowId()"
+            (flowSelected)="handleFlowSelected($event)"
+          />
+        }
+      </section>
+
+      <section class="rg-runs__section">
+        <button type="button" class="rg-runs__section-header" (click)="handleToggleSection('compareEntries')">
+          <span>{{ isCollapsed('compareEntries') ? '▸' : '▾' }}</span>
+          <h3>Entry status</h3>
+        </button>
+        @if (!isCollapsed('compareEntries')) {
+          <table class="rg-runs__table">
+            <thead>
+              <tr>
+                <th>Entry</th>
+                <th>A</th>
+                <th>B</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of entryDiffRows(); track row.key) {
+                <tr [class.is-changed]="row.changed">
+                  <td>{{ row.label }}</td>
+                  <td>{{ row.aStatus }}</td>
+                  <td>{{ row.bStatus }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        }
+      </section>
+    }
+
+    <!-- RUN DETAIL (history / latest) -->
+    @if (showRunDetail()) {
+      @if (displayRun(); as run) {
+        @if (baselineDeltas().length) {
+          <section class="rg-runs__section">
+            <button type="button" class="rg-runs__section-header" (click)="handleToggleSection('baseline')">
+              <span>{{ isCollapsed('baseline') ? '▸' : '▾' }}</span>
+              <h3>Vs golden</h3>
+            </button>
+            @if (!isCollapsed('baseline')) {
+              <ul class="rg-runs__deltas">
+                @for (delta of baselineDeltas(); track delta.label) {
+                  <li [attr.data-direction]="delta.direction">
+                    <span>{{ delta.label }}</span>
+                    <strong>{{ delta.aValue }} → {{ delta.bValue }} ({{ delta.delta }})</strong>
+                  </li>
+                }
+              </ul>
+            }
+          </section>
+        }
+
+        <section class="rg-runs__section">
+          <button type="button" class="rg-runs__section-header" (click)="handleToggleSection('stats')">
+            <span>{{ isCollapsed('stats') ? '▸' : '▾' }}</span>
+            <h3>Statistics</h3>
+          </button>
+          @if (!isCollapsed('stats')) {
+            <div class="rg-runs__stats">
+              <tx-rg-stat-card
+                label="Pass rate"
+                [value]="passRate(run)"
+                [tone]="run.failed > 0 ? 'error' : 'success'"
+              />
+              <tx-rg-stat-card label="Passed" [value]="'' + run.passed" tone="success" />
+              <tx-rg-stat-card label="Failed" [value]="'' + run.failed" [tone]="run.failed > 0 ? 'error' : 'default'" />
+              <tx-rg-stat-card label="Skipped" [value]="'' + run.skipped" tone="warning" />
+              <tx-rg-stat-card label="Duration" [value]="formatDuration(run.durationMs)" />
+              @if (run.p95DurationMs !== undefined) {
+                <tx-rg-stat-card label="p95 entry" [value]="formatDuration(run.p95DurationMs)" />
+              }
+              <tx-rg-stat-card label="Entries" [value]="'' + run.entries.length" />
+            </div>
+          }
+        </section>
+
+        @if (hasSelectedTimeline()) {
+          <section class="rg-runs__section">
+            <button type="button" class="rg-runs__section-header" (click)="handleToggleSection('timeline')">
+              <span>{{ isCollapsed('timeline') ? '▸' : '▾' }}</span>
+              <h3>Flow timeline</h3>
+            </button>
+            @if (!isCollapsed('timeline')) {
+              <tx-rg-gantt-chart
+                [timeline]="selectedGanttTimeline()"
+                [totalDurationMs]="selectedGanttTotalMs()"
+                [selectedFlowId]="selectedFlowId()"
+                (flowSelected)="handleFlowSelected($event)"
+              />
+            }
+          </section>
+        }
+
+        @if (hasSelectedSamples()) {
+          <section class="rg-runs__section">
+            <button type="button" class="rg-runs__section-header" (click)="handleToggleSection('runcharts')">
+              <span>{{ isCollapsed('runcharts') ? '▸' : '▾' }}</span>
+              <h3>Run charts</h3>
+            </button>
+            @if (!isCollapsed('runcharts')) {
+              <div class="rg-runs__charts">
+                <tx-rg-line-chart title="Pass rate" unit="%" [values]="selectedPassRateSamples()" />
+                <tx-rg-line-chart
+                  title="Avg entry duration"
+                  unit="ms"
+                  strokeColor="var(--tx-warning, #e8a838)"
+                  [values]="selectedAvgDurationSamples()"
+                />
+              </div>
+            }
+          </section>
+        }
+
+        <section class="rg-runs__section">
+          <button type="button" class="rg-runs__section-header" (click)="handleToggleSection('durations')">
+            <span>{{ isCollapsed('durations') ? '▸' : '▾' }}</span>
+            <h3>Entry durations</h3>
+          </button>
+          @if (!isCollapsed('durations')) {
+            <tx-rg-duration-bars [entries]="run.entries" />
+          }
+        </section>
+
+        <section class="rg-runs__section">
+          <div class="rg-runs__detail-head">
+            <div>
+              <h3>{{ run.status }} · {{ formatWhen(run.at) }}</h3>
+              @if (run.error) {
+                <p class="rg-runs__error">{{ run.error }}</p>
+              }
+            </div>
+            <div class="rg-runs__detail-actions">
+              <tx-hint label="Promote to golden" detail="Use this run as the comparison baseline" placement="bottom">
+                <tx-button variant="ghost" (clicked)="promoteGolden.emit(run.id)">Promote golden</tx-button>
+              </tx-hint>
+              <tx-button variant="primary" [disabled]="running()" (clicked)="rerun.emit()">Re-run</tx-button>
+            </div>
+          </div>
+          <table class="rg-runs__table">
+            <thead>
+              <tr>
+                <th>Flow</th>
+                <th>Scenario</th>
+                <th>Status</th>
+                <th>Duration</th>
+                <th>Error</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of run.entries; track row.flowId + row.scenarioId + $index) {
+                <tr
+                  [attr.data-status]="row.status"
+                  [class.is-selected]="selectedFlowId() === row.flowId"
+                  (click)="handleFlowSelected(row.flowId)"
+                >
+                  <td>{{ row.flowName }}</td>
+                  <td>{{ row.scenarioName }}</td>
+                  <td>{{ row.status }}</td>
+                  <td>{{ formatDuration(row.durationMs) }}</td>
+                  <td>{{ row.error || '—' }}</td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="5">No per-entry detail.</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </section>
+      }
+    }
+  </div>
+    }
+  </div>
+
+  @if (running()) {
+    <footer class="rg-runs__footer" aria-live="polite">
+      {{ liveStats().completed }} / {{ liveStats().total || '…' }} entries
+    </footer>
+  }
+</section>
+

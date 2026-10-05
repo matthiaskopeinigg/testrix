@@ -1,19 +1,31 @@
 import { BrowserWindow } from 'electron';
 
-import { bundledPath, sandboxedWebPreferences, splashWindowDefaults, windowIconOption } from '@testrix/electron-core';
+import {
+  applyWindowIcon,
+  bundledPath,
+  resolveExtraResource,
+  sandboxedWebPreferences,
+  splashWindowDefaults,
+  windowIconOption,
+} from '@testrix/electron-core';
+
+import { guardWorkbenchContents } from './web-contents-guard';
 
 export interface SplashWindowOptions {
   readonly preview?: boolean;
 }
 
 export function resolveSplashHtmlPath(): string {
-  if (process.env.TESTRIX_SPLASH_HTML) {
-    return process.env.TESTRIX_SPLASH_HTML;
+  if (process.env['TESTRIX_SPLASH_HTML']) {
+    return process.env['TESTRIX_SPLASH_HTML'];
   }
-  return bundledPath('../src/splash/splash.html');
+  return resolveExtraResource('splash/splash.html', bundledPath('../src/splash/splash.html'));
 }
 
-export function createSplashWindow(version: string, options: SplashWindowOptions = {}): BrowserWindow {
+export function createSplashWindow(
+  version: string,
+  options: SplashWindowOptions = {},
+): BrowserWindow {
   const preview = Boolean(options.preview);
   const win = new BrowserWindow({
     ...splashWindowDefaults,
@@ -25,12 +37,14 @@ export function createSplashWindow(version: string, options: SplashWindowOptions
       ...sandboxedWebPreferences,
     },
   });
+  applyWindowIcon(win);
+  guardWorkbenchContents(win.webContents);
   win.center();
   win.show();
   win.focus();
   const query: Record<string, string> = { version };
   if (preview) {
-    query.preview = '1';
+    query['preview'] = '1';
   }
   void win.loadFile(resolveSplashHtmlPath(), { query });
   return win;

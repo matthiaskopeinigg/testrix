@@ -8,36 +8,63 @@
       </svg>
       <span class="visually-hidden">Search commands</span>
       <input
+        #searchInput
         type="search"
+        role="combobox"
+        aria-controls="palette-listbox"
+        aria-expanded="true"
+        aria-autocomplete="list"
+        [attr.aria-activedescendant]="activeOptionId()"
         autofocus
         placeholder="Search commands…"
+        autocomplete="off"
+        spellcheck="false"
         [value]="query()"
         (input)="handleInput($event)"
+        (keydown)="handleSearchKeydown($event)"
       />
     </label>
-    <ul class="tx-palette__list" role="listbox" aria-label="Commands">
-      @for (command of filtered(); track command.id; let first = $first) {
-        <li>
-          <button
-            type="button"
-            class="tx-palette__item"
-            [class.is-active]="first"
-            role="option"
-            [attr.aria-selected]="first"
-            (click)="command.run()"
-          >
-            <span class="tx-palette__copy">
-              <span class="tx-palette__label">{{ command.label }}</span>
-              <span class="tx-palette__desc">{{ command.hint }}</span>
-            </span>
-            @if (command.shortcut) {
-              <tx-hint variant="inline" [keys]="command.shortcut" />
+    <div class="tx-palette__list-stage">
+      @for (paneKey of [listPaneKey()]; track paneKey) {
+        <ul
+          id="palette-listbox"
+          class="tx-palette__list"
+          role="listbox"
+          aria-label="Commands"
+          animate.enter="tx-palette-list-in"
+          animate.leave="tx-palette-list-out"
+        >
+          @for (row of paletteRows(); track row.kind === 'header' ? row.id : row.command.id) {
+            @if (row.kind === 'header') {
+              <li class="tx-palette__section" role="presentation">{{ row.label }}</li>
+            } @else {
+              @let index = commandRowIndex(row);
+              <li role="presentation">
+                <button
+                  type="button"
+                  class="tx-palette__item"
+                  [class.is-active]="isActive(index)"
+                  role="option"
+                  [id]="'palette-option-' + row.command.id"
+                  [attr.aria-selected]="isActive(index)"
+                  (click)="row.command.run()"
+                  (mouseenter)="activeIndex.set(index)"
+                >
+                  <span class="tx-palette__copy">
+                    <span class="tx-palette__label">{{ row.command.label }}</span>
+                    <span class="tx-palette__desc">{{ row.command.hint }}</span>
+                  </span>
+                  @if (row.command.shortcut) {
+                    <tx-hint variant="inline" [keys]="row.command.shortcut" />
+                  }
+                </button>
+              </li>
             }
-          </button>
-        </li>
-      } @empty {
-        <li class="tx-palette__empty">No matching commands</li>
+          } @empty {
+            <li class="tx-palette__empty">No matching commands</li>
+          }
+        </ul>
       }
-    </ul>
+    </div>
   </div>
 </tx-overlay>

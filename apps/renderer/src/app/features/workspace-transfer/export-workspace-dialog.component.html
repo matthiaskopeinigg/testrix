@@ -1,0 +1,172 @@
+<tx-overlay [labelledBy]="titleId" variant="dialog" (closed)="close()">
+  <div class="tx-export-workspace">
+    <header class="tx-export-workspace__header">
+      <div class="tx-export-workspace__heading">
+        <h2 class="tx-export-workspace__title" [id]="titleId">Export workspace</h2>
+        <p class="tx-export-workspace__lede">
+          {{ workspaceName() }}
+          <span class="tx-export-workspace__meta-badge">.testrix</span>
+        </p>
+      </div>
+      <tx-hint label="Close" keys="Esc" placement="left">
+        <tx-button variant="ghost" [disabled]="exporting()" (clicked)="close()">Close</tx-button>
+      </tx-hint>
+    </header>
+
+    <section class="tx-export-workspace__section" aria-labelledby="tx-export-categories">
+      <div class="tx-export-workspace__section-head">
+        <h3 id="tx-export-categories">Categories</h3>
+        <div class="tx-export-workspace__actions">
+          <tx-hint label="Select every category" placement="bottom">
+            <tx-button
+              variant="ghost"
+              [disabled]="enabledCategories().size === categoryOptions.length"
+              (clicked)="selectAllCategories()"
+            >
+              All
+            </tx-button>
+          </tx-hint>
+          <tx-hint label="Clear all categories" placement="bottom">
+            <tx-button
+              variant="ghost"
+              [disabled]="enabledCategories().size === 0"
+              (clicked)="clearCategories()"
+            >
+              None
+            </tx-button>
+          </tx-hint>
+        </div>
+      </div>
+      <div class="tx-export-workspace__categories" role="group" aria-label="Export categories">
+        @for (option of categoryOptions; track option.id) {
+          <button
+            type="button"
+            class="tx-export-workspace__cat"
+            [class.is-on]="isCategoryEnabled(option.id)"
+            [attr.aria-pressed]="isCategoryEnabled(option.id)"
+            (click)="toggleCategory(option.id, !isCategoryEnabled(option.id))"
+          >
+            <span class="tx-export-workspace__cat-icon">
+              <tx-pack-category-icon [id]="option.id" />
+            </span>
+            <span class="tx-export-workspace__cat-label">{{ option.label }}</span>
+            <span class="tx-export-workspace__cat-box" aria-hidden="true">
+              <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+                <path
+                  d="M3.7 8.2 6.6 11.1 12.4 4.8"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+            </span>
+          </button>
+        }
+      </div>
+    </section>
+
+    @if (secretReport().total > 0) {
+      <div class="tx-export-workspace__secrets" role="status">
+        <span class="tx-export-workspace__secrets-mark" aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path
+              d="M8 2.8 12.8 4.6v4c0 2.9-2 4.7-4.8 5.6-2.8-.9-4.8-2.7-4.8-5.6v-4L8 2.8z"
+              stroke="currentColor"
+              stroke-width="1.35"
+              stroke-linejoin="round"
+            />
+            <path
+              d="M6.1 8.1 7.4 9.4 10 6.6"
+              stroke="currentColor"
+              stroke-width="1.35"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+        </span>
+        <div class="tx-export-workspace__secrets-body">
+          <p class="tx-export-workspace__secrets-title">
+            {{ secretReport().total }} potential
+            {{ secretReport().total === 1 ? 'secret' : 'secrets' }} detected
+          </p>
+          <p class="tx-export-workspace__secrets-lede">
+            Env secrets, auth, cookies, and DB passwords can leave with this pack.
+          </p>
+          <button
+            type="button"
+            class="tx-export-workspace__details-toggle"
+            [attr.aria-expanded]="secretsExpanded()"
+            (click)="secretsExpanded.set(!secretsExpanded())"
+          >
+            {{ secretsExpanded() ? 'Hide details' : 'Show details' }}
+          </button>
+          @if (secretsExpanded()) {
+            <tx-secret-audit [report]="secretReport()" [omitSecrets]="omitSecrets()" />
+          }
+          <tx-check
+            variant="inline"
+            label="Omit secret values from this pack"
+            detail="Clears secrets in the export only — workspace files stay unchanged."
+            [checked]="omitSecrets()"
+            (checkedChange)="omitSecrets.set($event)"
+          />
+        </div>
+      </div>
+    } @else if (enabledCategories().size > 0) {
+      <p class="tx-export-workspace__secrets-ok" role="status">
+        <span aria-hidden="true">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+            <circle cx="8" cy="8" r="5.2" stroke="currentColor" stroke-width="1.35" />
+            <path
+              d="M5.6 8.1 7.2 9.7 10.4 6.4"
+              stroke="currentColor"
+              stroke-width="1.35"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+        </span>
+        No secrets detected
+      </p>
+    }
+
+    @if (showItemSelection()) {
+      <section class="tx-export-workspace__section" aria-labelledby="tx-export-items">
+        <div class="tx-export-workspace__section-head">
+          <h3 id="tx-export-items">Item selection</h3>
+        </div>
+
+        @for (section of exportTreeSections(); track section.category) {
+          <div class="tx-export-workspace__tree-block">
+            <h4>{{ section.label }}</h4>
+            <tx-pack-selection-tree
+              [nodes]="section.nodes"
+              [selectedIds]="selectedIdsFor(section.category)"
+              [expandedIds]="expandedIdsFor(section.category)"
+              (selectedIdsChange)="setSelectedIds(section.category, $event)"
+              (expandedIdsChange)="setExpandedIds(section.category, $event)"
+            />
+          </div>
+        }
+      </section>
+    }
+
+    <footer class="tx-export-workspace__footer">
+      @if (!desktop.hasDesktop) {
+        <p class="tx-export-workspace__note">Export requires the desktop app.</p>
+      } @else {
+        <p class="tx-export-workspace__summary">{{ selectionSummary() }}</p>
+      }
+      <tx-hint label="Write pack to disk" placement="top">
+        <tx-button
+          variant="primary"
+          [disabled]="exporting() || !desktop.hasDesktop || enabledCategories().size === 0"
+          (clicked)="confirmExport()"
+        >
+          {{ exporting() ? 'Exporting…' : 'Export pack…' }}
+        </tx-button>
+      </tx-hint>
+    </footer>
+  </div>
+</tx-overlay>

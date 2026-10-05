@@ -32,7 +32,7 @@
   background: var(--tx-bg-chrome);
 }
 
-:host(:not(.is-collapsed)) .tx-sidebar {
+:host(:not(.is-collapsed):not(.is-edge-end)) .tx-sidebar {
   background:
     linear-gradient(
       90deg,
@@ -42,12 +42,41 @@
     );
 }
 
-:host(:not(.is-collapsed)) .tx-sidebar::after {
+:host(:not(.is-collapsed).is-edge-end) .tx-sidebar {
+  background:
+    linear-gradient(
+      270deg,
+      color-mix(in srgb, var(--tx-bg-app) 48%, var(--tx-bg-chrome)) 0%,
+      var(--tx-bg-chrome) 36px,
+      var(--tx-bg-chrome) 100%
+    );
+}
+
+:host(:not(.is-collapsed):not(.is-edge-end)) .tx-sidebar::after {
   content: '';
   position: absolute;
   top: 10px;
   bottom: 10px;
   left: 0;
+  z-index: 1;
+  width: 1px;
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    transparent,
+    color-mix(in srgb, var(--tx-border-subtle) 80%, transparent) 16%,
+    color-mix(in srgb, var(--tx-border-subtle) 80%, transparent) 84%,
+    transparent
+  );
+}
+
+:host(:not(.is-collapsed).is-edge-end) .tx-sidebar::after {
+  content: '';
+  position: absolute;
+  top: 10px;
+  bottom: 10px;
+  right: 0;
+  left: auto;
   z-index: 1;
   width: 1px;
   pointer-events: none;
@@ -98,6 +127,11 @@
   display: block;
   width: 8px;
   max-width: none;
+}
+
+:host(.is-edge-end) .tx-sidebar__resize-hint {
+  right: auto;
+  left: -4px;
 }
 
 :host ::ng-deep .tx-sidebar__resize-hint .tx-hint__trigger {

@@ -1,0 +1,238 @@
+<div class="tx-ws-editor">
+  <header class="tx-folder-editor__identity">
+    <span class="tx-folder-editor__icon" aria-hidden="true">
+      <svg width="16" height="16" viewBox="0 0 14 14">
+        <path d="M3.2 4.2 1.8 7l1.4 2.8M10.8 4.2 12.2 7l-1.4 2.8M5.4 9.2h3.2" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" />
+      </svg>
+    </span>
+    <div class="tx-folder-editor__titles">
+      <p class="tx-folder-editor__meta">{{ pathLabel() }}</p>
+    </div>
+    @if (tags().length > 0) {
+      <ul class="tx-folder-editor__chips" aria-label="Tags">
+        @for (tag of tags(); track tag) {
+          <li>{{ tag }}</li>
+        }
+      </ul>
+    }
+  </header>
+
+  <header class="tx-ws-editor__urlbar" aria-label="WebSocket URL">
+    <span class="tx-ws-editor__badge">WS</span>
+    <tx-token-field
+      class="tx-ws-editor__url-field"
+      ariaLabel="WebSocket URL"
+      placeholder="wss://example.com/{{ '{{path}}' }}"
+      [value]="url()"
+      [variables]="completeVariables()"
+      (valueChange)="handleUrlChange($event)"
+    />
+    <span
+      class="tx-ws-editor__status"
+      [class.is-connected]="connectState() === 'open'"
+      [class.is-error]="!!connectError()"
+      aria-live="polite"
+    >
+      {{ statusLabel() }}
+    </span>
+    @if (isManualSave() && dirty()) {
+      <tx-hint label="Discard changes" detail="Revert to the last saved socket" placement="bottom">
+        <button type="button" class="tx-ws-editor__ghost" (click)="discardDraft()" aria-label="Discard unsaved changes">
+          Discard
+        </button>
+      </tx-hint>
+      <tx-hint label="Save" detail="Ctrl+S — write the socket to the collection" placement="bottom">
+        <button type="button" class="tx-ws-editor__connect" (click)="saveDraft()" aria-label="Save WebSocket">
+          Save
+        </button>
+      </tx-hint>
+    }
+    <tx-hint [label]="connectLabel()" placement="bottom">
+      <button
+        type="button"
+        class="tx-ws-editor__connect"
+        [class.is-connected]="connectState() === 'open'"
+        [disabled]="connectState() === 'connecting'"
+        (click)="handleConnectToggle()"
+        [attr.aria-label]="connectLabel()"
+      >
+        {{ connectLabel() }}
+      </button>
+    </tx-hint>
+  </header>
+
+  <div class="tx-folder-editor__head" role="tablist" aria-label="WebSocket sections">
+    @for (item of sections; track item.id) {
+      <button
+        type="button"
+        class="tx-folder-editor__tab"
+        role="tab"
+        [class.is-active]="section() === item.id"
+        [attr.aria-selected]="section() === item.id"
+        (click)="handleSection(item.id)"
+      >
+        {{ item.label }}
+        @if (sectionCount(item.id) > 0) {
+          <span class="tx-folder-editor__count">{{ sectionCount(item.id) }}</span>
+        }
+      </button>
+    }
+  </div>
+
+  <div class="tx-folder-editor__pane" role="tabpanel">
+    <div class="tx-folder-editor__pane-stage" [attr.data-slide]="sectionSlideDir()">
+      @for (id of [section()]; track id) {
+        <div
+          class="tx-folder-editor__pane-body"
+          [animate.enter]="sectionPaneEnter()"
+          animate.leave="tx-folder-pane-out"
+        >
+          @switch (id) {
+            @case ('messages') {
+              <div class="tx-folder-editor__section tx-ws-editor__messages-pane">
+                <div class="tx-ws-editor__stream-head">
+                  <h2 class="tx-folder-editor__subtitle">Stream</h2>
+                  <tx-hint label="Clear log" placement="bottom">
+                    <button type="button" class="tx-ws-editor__ghost" (click)="handleClearLog()" [disabled]="messages().length === 0">
+                      Clear
+                    </button>
+                  </tx-hint>
+                </div>
+                <div class="tx-ws-editor__stream" aria-label="Message stream">
+                  @if (messages().length === 0) {
+                    <tx-empty-state title="No messages" body="Connect, then send a frame. Incoming messages land here." />
+                  } @else {
+                    <ul class="tx-ws-editor__messages">
+                      @for (message of messages(); track message.id) {
+                        <li class="tx-ws-editor__message" [attr.data-kind]="message.kind">
+                          <span class="tx-ws-editor__direction" aria-hidden="true">
+                            {{ message.kind === 'out' ? '↑' : message.kind === 'message' ? '↓' : '·' }}
+                          </span>
+                          <span class="tx-ws-editor__time">{{ message.at }}</span>
+                          <code class="tx-ws-editor__body">{{ message.body }}</code>
+                        </li>
+                      }
+                    </ul>
+                  }
+                </div>
+                <footer class="tx-ws-editor__composer">
+                  <tx-token-field
+                    class="tx-ws-editor__composer-field"
+                    ariaLabel="Message"
+                    [multiline]="true"
+                    [rows]="3"
+                    [value]="composer()"
+                    [variables]="completeVariables()"
+                    (valueChange)="handleComposerChange($event)"
+                  />
+                  <tx-hint label="Send message" keys="Ctrl Enter" placement="top">
+                    <button
+                      type="button"
+                      class="tx-ws-editor__send"
+                      (click)="handleSend()"
+                      [disabled]="connectState() !== 'open'"
+                      aria-label="Send message"
+                    >
+                      Send
+                    </button>
+                  </tx-hint>
+                </footer>
+              </div>
+            }
+            @case ('params') {
+              <div class="tx-folder-editor__section">
+                <p class="tx-folder-editor__hint">Query rows are appended on Connect. Folder params apply first; a socket row with the same name wins.</p>
+                <tx-request-kv-table
+                  label="Query"
+                  inheritedKind="params"
+                  [inherited]="inheritedParams()"
+                  [completeVariables]="completeVariables()"
+                  [rows]="queryParams()"
+                  (rowsChange)="handleQuery($event)"
+                  (inheritedActivate)="handleInheritedParams($event)"
+                />
+              </div>
+            }
+            @case ('headers') {
+              <div class="tx-folder-editor__section">
+                <p class="tx-folder-editor__hint">Handshake headers are sent from the desktop host. A socket header with the same name wins over folder and Settings defaults.</p>
+                <tx-request-kv-table
+                  label="Headers"
+                  inheritedKind="headers"
+                  [inherited]="inheritedHeaders()"
+                  [completeVariables]="completeVariables()"
+                  [headerComplete]="true"
+                  [rows]="headers()"
+                  (rowsChange)="handleHeaders($event)"
+                  (inheritedActivate)="handleInherited($event, 'headers')"
+                />
+              </div>
+            }
+            @case ('auth') {
+              <div class="tx-folder-editor__section tx-folder-editor__section--narrow">
+                <tx-select [value]="authMode()" [options]="authModeOptions" ariaLabel="Auth type" (valueChange)="handleAuthMode($event)" />
+                @if (authMode() === 'inherit') {
+                  <button type="button" class="tx-ws-editor__jump" (click)="handleInheritedAuth()">Open folder auth</button>
+                  <p class="tx-folder-editor__hint">Uses the nearest folder auth on the path to this socket. Click to open that folder.</p>
+                }
+                @if (authMode() === 'none') {
+                  <p class="tx-folder-editor__hint">This socket sends no Authorization header of its own.</p>
+                }
+                @if (authMode() === 'bearer') {
+                  <tx-token-field id="ws-token" label="Token" [value]="auth().token" [variables]="completeVariables()" (valueChange)="handleAuthField('token', $event)" />
+                }
+                @if (authMode() === 'basic') {
+                  <tx-token-field id="ws-user" label="Username" [value]="auth().username" [variables]="completeVariables()" (valueChange)="handleAuthField('username', $event)" />
+                  <tx-token-field id="ws-pass" label="Password" [value]="auth().password" [variables]="completeVariables()" (valueChange)="handleAuthField('password', $event)" />
+                }
+                @if (authMode() === 'apikey') {
+                  <tx-token-field id="ws-apikey" label="Key" [value]="auth().apiKey" [variables]="completeVariables()" (valueChange)="handleAuthField('apiKey', $event)" />
+                  <tx-token-field id="ws-apikey-name" label="Header or param name" [value]="auth().apiKeyHeader" [variables]="completeVariables()" (valueChange)="handleAuthField('apiKeyHeader', $event)" />
+                }
+              </div>
+            }
+            @case ('settings') {
+              <div class="tx-folder-editor__section tx-folder-editor__section--narrow">
+                <section class="tx-folder-editor__card">
+                  <h2 class="tx-folder-editor__subtitle">Handshake</h2>
+                  <tx-token-field
+                    id="ws-protocols"
+                    label="Subprotocols"
+                    placeholder="json, chat"
+                    [value]="protocols()"
+                    [variables]="completeVariables()"
+                    (valueChange)="handleProtocols($event)"
+                  />
+                  <p class="tx-folder-editor__hint">Comma-separated Sec-WebSocket-Protocol values.</p>
+                  <div class="tx-folder-editor__flags">
+                    <tx-check
+                      variant="block"
+                      label="Use workspace TLS default"
+                      [checked]="verifyTlsInherit()"
+                      (checkedChange)="handleVerifyTlsInherit($event)"
+                    />
+                    @if (!verifyTlsInherit()) {
+                      <tx-check variant="block" label="Verify TLS" [checked]="verifyTls()" (checkedChange)="handleVerifyTls($event)" />
+                    }
+                  </div>
+                  <p class="tx-folder-editor__hint">Workspace default lives in Settings → Certificates.</p>
+                  <tx-input id="ws-timeout" label="Timeout (ms)" [value]="timeoutMs()" (valueChange)="handleTimeout($event)" />
+                </section>
+              </div>
+            }
+            @case ('docs') {
+              <tx-docs-editor
+                [value]="docs()"
+                [mode]="docsMode()"
+                ariaLabel="Socket docs"
+                emptyBody="Write markdown for this WebSocket."
+                (valueChange)="handleDocsValue($event)"
+                (modeChange)="handleDocsMode($event)"
+              />
+            }
+          }
+        </div>
+      }
+    </div>
+  </div>
+</div>

@@ -1,0 +1,240 @@
+@if (mock(); as artifact) {
+  <section class="mk-tab" [attr.aria-label]="artifact.name">
+    <header class="mk-tab__chrome">
+      <div class="mk-tab__identity">
+        <div class="mk-tab__identity-main">
+          <span class="mk-tab__badge" aria-hidden="true">MK</span>
+          <tx-input
+            class="mk-tab__name"
+            [id]="'mk-name-' + artifact.id"
+            [value]="artifact.name"
+            ariaLabel="Mock name"
+            (valueChange)="patchName($event)"
+          />
+          @if (artifact.tags.length) {
+            <ul class="mk-tab__tags" aria-label="Tags">
+              @for (tag of artifact.tags; track tag) {
+                <li>{{ tag }}</li>
+              }
+            </ul>
+          }
+        </div>
+      </div>
+
+      <nav class="mk-tab__nav" role="tablist" aria-label="Mock sections">
+        @for (item of sections; track item.id) {
+          <button
+            type="button"
+            class="mk-tab__nav-item"
+            role="tab"
+            [class.is-active]="section() === item.id"
+            [attr.aria-selected]="section() === item.id"
+            (click)="handleSection(item.id)"
+          >
+            {{ item.label }}
+          </button>
+        }
+      </nav>
+    </header>
+
+    <div class="mk-tab__split">
+      <div class="mk-tab__primary">
+        <div class="mk-tab__pane-stage">
+          @for (id of [section()]; track id) {
+            <div
+              class="mk-tab__pane"
+              (animate.enter)="handlePaneEnter($event)"
+              (animate.leave)="handlePaneLeave($event)"
+            >
+              @switch (id) {
+                @case ('matchers') {
+                  <div class="mk-tab__form">
+                    <tx-check
+                      label="Enabled"
+                      [checked]="artifact.enabled"
+                      (checkedChange)="patchField('enabled', $event)"
+                    />
+
+                    <div class="mk-tab__row">
+                      <tx-select
+                        [value]="artifact.method"
+                        [options]="methodOptions"
+                        ariaLabel="HTTP method"
+                        (valueChange)="patchField('method', $event)"
+                      />
+                      <tx-select
+                        [value]="artifact.match"
+                        [options]="matchOptions"
+                        ariaLabel="URL match mode"
+                        (valueChange)="patchField('match', $event)"
+                      />
+                    </div>
+
+                    <tx-token-field
+                      [id]="'mk-path-' + artifact.id"
+                      label="Path / URL pattern"
+                      [value]="artifact.path"
+                      [variables]="placeholderVariables()"
+                      (valueChange)="patchField('path', $event)"
+                    />
+
+                    <div class="mk-tab__row">
+                      <tx-token-field
+                        [id]="'mk-header-name-' + artifact.id"
+                        label="Header name (optional)"
+                        [value]="artifact.headerName"
+                        [variables]="placeholderVariables()"
+                        (valueChange)="patchField('headerName', $event)"
+                      />
+                      <tx-token-field
+                        [id]="'mk-header-value-' + artifact.id"
+                        label="Header contains (optional)"
+                        [value]="artifact.headerValue"
+                        [variables]="placeholderVariables()"
+                        (valueChange)="patchField('headerValue', $event)"
+                      />
+                    </div>
+
+                    <tx-token-field
+                      [id]="'mk-body-contains-' + artifact.id"
+                      label="Body contains (optional)"
+                      [value]="artifact.bodyContains"
+                      [variables]="placeholderVariables()"
+                      (valueChange)="patchField('bodyContains', $event)"
+                    />
+                  </div>
+                }
+                @case ('response') {
+                  <div class="mk-tab__form">
+                    <div class="mk-tab__row">
+                      <tx-input
+                        [id]="'mk-status-' + artifact.id"
+                        label="Status"
+                        [value]="'' + artifact.statusCode"
+                        (valueChange)="patchNumber('statusCode', $event, 200)"
+                      />
+                      <tx-input
+                        [id]="'mk-delay-' + artifact.id"
+                        label="Delay (ms)"
+                        [value]="'' + artifact.delayMs"
+                        (valueChange)="patchNumber('delayMs', $event, 0)"
+                      />
+                    </div>
+
+                    <tx-request-kv-table
+                      label="Response headers"
+                      [headerComplete]="true"
+                      [showDescription]="false"
+                      [rows]="headerRows()"
+                      [completeVariables]="placeholderVariables()"
+                      (rowsChange)="handleHeaders($event)"
+                    />
+
+                    <div class="mk-tab__body-toolbar">
+                      <div class="mk-tab__body-mode">
+                        <span class="mk-tab__field-label">Body</span>
+                        <tx-select
+                          [value]="artifact.bodyMode"
+                          [options]="bodyModeOptions"
+                          ariaLabel="Body mode"
+                          (valueChange)="patchField('bodyMode', $event)"
+                        />
+                      </div>
+                      @if (canFormatBody()) {
+                        <tx-hint label="Format document" keys="Shift Alt F" placement="bottom">
+                          <button type="button" class="mk-tab__ghost" (click)="handleFormatBody()">Format</button>
+                        </tx-hint>
+                      }
+                    </div>
+
+                    <div class="mk-tab__body-editor">
+                      <tx-code-editor
+                        #bodyEditor
+                        [language]="bodyLanguage()"
+                        [value]="artifact.body"
+                        [variables]="placeholderVariables()"
+                        ariaLabel="Mock response body"
+                        (valueChange)="patchField('body', $event)"
+                      />
+                    </div>
+                  </div>
+                }
+                @case ('advanced') {
+                  <div class="mk-tab__form">
+                    <tx-input
+                      [id]="'mk-priority-' + artifact.id"
+                      label="Priority"
+                      [value]="'' + artifact.priority"
+                      (valueChange)="patchNumber('priority', $event, 0)"
+                    />
+                    <tx-token-field
+                      [id]="'mk-desc-' + artifact.id"
+                      label="Description"
+                      multiline
+                      [rows]="3"
+                      [value]="artifact.description"
+                      [variables]="placeholderVariables()"
+                      (valueChange)="patchField('description', $event)"
+                    />
+                  </div>
+                }
+                @case ('activity') {
+                  <div class="mk-tab__activity-pane">
+                    <section class="mk-tab__activity" aria-label="Matched requests">
+                      <div class="mk-tab__activity-head">
+                        <h3 class="mk-tab__section-title">Hits</h3>
+                        <span class="mk-tab__activity-count">{{ endpointActivity().length }}</span>
+                      </div>
+                      @if (endpointActivity().length === 0) {
+                        <tx-empty-state
+                          title="No matches yet"
+                          body="Start the mock server from the Mock sidebar and send a request that matches this endpoint."
+                        />
+                      } @else {
+                        <ul class="mk-tab__hit-list" role="listbox" aria-label="Matched requests">
+                          @for (row of endpointActivity(); track row.key) {
+                            <li>
+                              <button
+                                type="button"
+                                class="mk-tab__hit"
+                                role="option"
+                                [class.is-selected]="selectedActivity()?.key === row.key"
+                                [attr.aria-selected]="selectedActivity()?.key === row.key"
+                                [attr.data-kind]="row.event.kind"
+                                (click)="selectActivity(row.key)"
+                              >
+                                <span class="mk-tab__hit-method" [attr.data-method]="row.event.method">
+                                  {{ row.event.method }}
+                                </span>
+                                <span class="mk-tab__hit-url">{{ row.event.url }}</span>
+                                <span class="mk-tab__hit-status" data-tone="ok">{{ row.event.status }}</span>
+                                <span class="mk-tab__hit-time">{{ formatActivityTime(row.event.at) }}</span>
+                              </button>
+                            </li>
+                          }
+                        </ul>
+                      }
+                    </section>
+
+                    <section class="mk-tab__exchange" aria-label="Request and response">
+                      @if (selectedExchange(); as detail) {
+                        <tx-flow-run-exchange [detail]="detail" title="Matched exchange" />
+                      } @else {
+                        <tx-empty-state
+                          title="Select a hit"
+                          body="Choose a matched request to inspect headers and bodies."
+                        />
+                      }
+                    </section>
+                  </div>
+                }
+              }
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+  </section>
+} @else {
+  <tx-empty-state title="Mock missing" body="This mock endpoint was deleted or is not in the workspace." />
+}

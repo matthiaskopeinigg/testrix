@@ -1,6 +1,12 @@
 <aside class="tx-sidebar" [attr.aria-hidden]="collapsed()">
   <header class="tx-sidebar__header">
-    <h2 class="tx-sidebar__title">{{ title() }}</h2>
+    @if (hint(); as hint) {
+      <tx-hint [label]="title()" [detail]="hint" placement="left">
+        <h2 class="tx-sidebar__title">{{ title() }}</h2>
+      </tx-hint>
+    } @else {
+      <h2 class="tx-sidebar__title">{{ title() }}</h2>
+    }
   </header>
   <div class="tx-sidebar__body">
     <ng-content />
@@ -9,7 +15,7 @@
     <tx-hint
       class="tx-sidebar__resize-hint"
       label="Resize sidebar"
-      placement="left"
+      [placement]="resizeHintPlacement()"
       [suppressed]="resizing()"
     >
       <div

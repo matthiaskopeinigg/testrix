@@ -1,0 +1,163 @@
+<table class="tx-kv" [class.is-compact]="!showDescription()" [attr.aria-label]="label()">
+  <thead>
+    <tr>
+      <th scope="col" class="tx-kv__check"></th>
+      <th scope="col">Key</th>
+      <th scope="col">Value</th>
+      @if (showDescription()) {
+        <th scope="col">Description</th>
+      }
+    </tr>
+  </thead>
+  <tbody>
+    @for (row of inherited(); track trackRow($index, row)) {
+      <tr
+        class="is-inherited"
+        [class.is-link]="canOpenInherited(row)"
+        [attr.tabindex]="canOpenInherited(row) ? 0 : null"
+        [attr.role]="canOpenInherited(row) ? 'link' : null"
+        [attr.aria-label]="openInheritedLabel(row)"
+        (click)="handleInheritedActivate(row)"
+        (keydown)="handleInheritedKey($event, row)"
+      >
+        <td class="tx-kv__check"></td>
+        <td>
+          <div class="tx-kv__field">
+            <input
+              class="tx-kv__cell"
+              type="text"
+              [class.has-tokens]="hasTokens(row.key)"
+              [value]="row.key"
+              readonly
+              tabindex="-1"
+            />
+            <tx-placeholder-highlight [value]="row.key" [variables]="completeVariables()" />
+          </div>
+        </td>
+        <td>
+          <div class="tx-kv__field">
+            <input
+              class="tx-kv__cell"
+              type="text"
+              [class.has-tokens]="hasTokens(row.value)"
+              [value]="row.value"
+              readonly
+              tabindex="-1"
+              [attr.aria-label]="sourceLabel(row)"
+            />
+            <tx-placeholder-highlight [value]="row.value" [variables]="completeVariables()" />
+          </div>
+        </td>
+        @if (showDescription()) {
+          <td>
+            <tx-hint stretch [label]="openInheritedLabel(row)" placement="left" [suppressed]="!canOpenInherited(row)">
+              <input
+                class="tx-kv__cell tx-kv__cell--desc"
+                type="text"
+                [value]="row.description || sourceLabel(row)"
+                readonly
+                tabindex="-1"
+                [attr.aria-label]="'From ' + sourceLabel(row)"
+              />
+            </tx-hint>
+          </td>
+        }
+      </tr>
+    }
+    @for (row of rows(); track trackRow($index, row)) {
+      <tr [class.is-disabled]="!row.enabled">
+        <td class="tx-kv__check">
+          <tx-hint [label]="enableLabel(row)" placement="right">
+            <tx-check
+              variant="compact"
+              [checked]="row.enabled"
+              [label]="'Enable ' + (row.key || 'row')"
+              (checkedChange)="handleEnabled($index, $event)"
+            />
+          </tx-hint>
+        </td>
+        <td>
+          <div class="tx-kv__field">
+            <input
+              class="tx-kv__cell"
+              type="text"
+              [class.has-tokens]="hasTokens(row.key)"
+              [value]="row.key"
+              placeholder="Key"
+              spellcheck="false"
+              autocomplete="off"
+              [attr.data-kv-row]="row.id"
+              data-kv-col="key"
+              (input)="handleKey($index, $event)"
+              (focus)="handleCellFocus($index, $event, 'key')"
+              (keydown)="handleCellKey($event, $index, 'key')"
+            />
+            <tx-placeholder-highlight [value]="row.key" [variables]="completeVariables()" />
+            @if (ghostFor(row.id, 'key'); as ghost) {
+              <span class="tx-kv__ghost" aria-hidden="true"
+                ><span class="tx-kv__ghost-pad">{{ ghost.pad }}</span
+                ><span class="tx-kv__ghost-rest">{{ ghost.rest }}</span></span
+              >
+            }
+          </div>
+        </td>
+        <td>
+          <div class="tx-kv__field">
+            <input
+              class="tx-kv__cell"
+              type="text"
+              [class.has-tokens]="hasTokens(row.value)"
+              [value]="row.value"
+              placeholder="Value"
+              spellcheck="false"
+              autocomplete="off"
+              [attr.data-kv-row]="row.id"
+              data-kv-col="value"
+              (input)="handleValue($index, $event)"
+              (focus)="handleCellFocus($index, $event, 'value')"
+              (keydown)="handleCellKey($event, $index, 'value')"
+            />
+            <tx-placeholder-highlight [value]="row.value" [variables]="completeVariables()" />
+            @if (ghostFor(row.id, 'value'); as ghost) {
+              <span class="tx-kv__ghost" aria-hidden="true"
+                ><span class="tx-kv__ghost-pad">{{ ghost.pad }}</span
+                ><span class="tx-kv__ghost-rest">{{ ghost.rest }}</span></span
+              >
+            }
+          </div>
+        </td>
+        @if (showDescription()) {
+          <td>
+            <input
+              class="tx-kv__cell tx-kv__cell--desc"
+              type="text"
+              [value]="row.description"
+              placeholder="Description"
+              autocomplete="off"
+              [attr.data-kv-row]="row.id"
+              data-kv-col="description"
+              (input)="handleDescription($index, $event)"
+              (keydown)="handleCellKey($event, $index, 'description')"
+            />
+          </td>
+        }
+      </tr>
+    }
+  </tbody>
+</table>
+
+<ng-template
+  cdkConnectedOverlay
+  [cdkConnectedOverlayOrigin]="completeOriginEl()"
+  [cdkConnectedOverlayOpen]="completeOpen()"
+  [cdkConnectedOverlayPositions]="completePositions"
+  [cdkConnectedOverlayMinWidth]="240"
+  [cdkConnectedOverlayPush]="true"
+  [cdkConnectedOverlayViewportMargin]="8"
+>
+  <tx-placeholder-suggest
+    [items]="completeItems()"
+    [index]="completeIndex()"
+    (pick)="handleCompletePick($event)"
+  />
+</ng-template>

@@ -5,7 +5,8 @@
   [class.is-selected]="selected()"
   [class.is-just-opened]="justOpened()"
   [class.is-environment]="tab().kind === 'environment'"
-  [class.is-tool]="tab().kind === 'tool'"
+  [class.is-tool]="tab().kind === 'tool' || tab().kind === 'plantuml'"
+  [class.is-service]="tab().kind === 'service' || serviceIconId()"
   [attr.aria-selected]="active()"
   [attr.aria-controls]="'workbench-panel-' + tab().id"
   [attr.id]="'workbench-tab-' + tab().id"
@@ -15,8 +16,39 @@
   (contextmenu)="handleContextMenu($event)"
   (keydown)="handleKeydown($event)"
 >
-  @if (tab().kind === 'http') {
+  @if (tab().kind === 'collab-review') {
+    <span class="tx-workbench-tab__kind" aria-hidden="true">
+      <svg width="14" height="14" viewBox="0 0 14 14">
+        <rect x="1.6" y="3.2" width="6.4" height="6.4" rx="1.4" fill="none" stroke="currentColor" stroke-width="1.2" />
+        <rect x="5.8" y="4.4" width="6.4" height="6.4" rx="1.4" fill="none" stroke="currentColor" stroke-width="1.2" />
+      </svg>
+    </span>
+  } @else if (tab().kind === 'history') {
+    <span class="tx-workbench-tab__kind" aria-hidden="true">
+      <svg width="14" height="14" viewBox="0 0 14 14">
+        <circle cx="7" cy="7" r="4.8" fill="none" stroke="currentColor" stroke-width="1.25" />
+        <path d="M7 4.4V7l1.9 1.2" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" />
+      </svg>
+    </span>
     <span class="tx-workbench-tab__method" [attr.data-method]="tab().method">{{ methodLabel() }}</span>
+  } @else if (tab().kind === 'http') {
+    <span class="tx-workbench-tab__method" [attr.data-method]="tab().method">{{ methodLabel() }}</span>
+  } @else if (tab().kind === 'service' || serviceIconId()) {
+    <span class="tx-workbench-tab__kind" aria-hidden="true">
+      <tx-service-icon [serviceId]="serviceIconId() || tab().nodeId" />
+    </span>
+  } @else if (tab().kind === 'collection-folder') {
+    <span class="tx-workbench-tab__kind" aria-hidden="true">
+      <svg width="14" height="14" viewBox="0 0 14 14">
+        <path
+          d="M2 3.5h3.2l1 1.2H12v6.3H2V3.5z"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.25"
+          stroke-linejoin="round"
+        />
+      </svg>
+    </span>
   } @else if (tab().kind === 'environment') {
     <span class="tx-workbench-tab__kind" aria-hidden="true">
       <svg width="14" height="14" viewBox="0 0 24 24">
@@ -30,9 +62,9 @@
         />
       </svg>
     </span>
-  } @else if (tab().kind === 'tool') {
+  } @else if (tab().kind === 'tool' || tab().kind === 'plantuml') {
     <span class="tx-workbench-tab__kind" aria-hidden="true">
-      <tx-tool-icon [toolId]="tab().nodeId" />
+      <tx-tool-icon [toolId]="tab().kind === 'plantuml' ? 'plantuml' : tab().nodeId" />
     </span>
   } @else if (tab().kind === 'database-connection' || tab().kind === 'database-query' || tab().kind === 'database-table' || tab().kind === 'database-diagram') {
     <span class="tx-workbench-tab__kind" aria-hidden="true">
@@ -63,6 +95,9 @@
   <tx-hint class="tx-workbench-tab__title-hint" label="Shift+click range" detail="Ctrl+click add" placement="bottom">
     <span class="tx-workbench-tab__title">{{ tab().title }}</span>
   </tx-hint>
+  @if (showUnsavedDot()) {
+    <span class="tx-workbench-tab__dot" aria-hidden="true"></span>
+  }
   <tx-hint class="tx-workbench-tab__close-hint" label="Close tab" placement="bottom">
     <button
       type="button"

@@ -13,6 +13,8 @@ import { lockOverlayWindowDrag, unlockOverlayWindowDrag } from '../overlay-windo
 export class TxOverlayComponent {
   readonly labelledBy = input.required<string>();
   readonly variant = input<'dialog' | 'palette' | 'settings' | 'confirm'>('dialog');
+  /** Widens the dialog panel for dense pickers (node catalogs, etc.). */
+  readonly size = input<'md' | 'wide' | 'lg'>('md');
   readonly closed = output<void>();
 
   constructor() {

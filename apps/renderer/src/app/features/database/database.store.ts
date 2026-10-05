@@ -428,6 +428,23 @@ export class DatabaseStore {
     }
   }
 
+  visibleIds(section: DatabaseNavSection): readonly string[] {
+    const tree =
+      section === 'connections' ? this.visibleConnectionTree() : this.visibleQueryTree();
+    return this.flattenNav(tree).map((node) => node.id);
+  }
+
+  selectAllVisible(section: DatabaseNavSection): void {
+    const ids = this.visibleIds(section);
+    if (section === 'connections') {
+      this.connectionSelectedIds.set(ids);
+      this.connectionAnchorId.set(ids[0] ?? null);
+      return;
+    }
+    this.querySelectedIds.set(ids);
+    this.queryAnchorId.set(ids[0] ?? null);
+  }
+
   applyPointerSelect(
     id: string,
     section: DatabaseNavSection,

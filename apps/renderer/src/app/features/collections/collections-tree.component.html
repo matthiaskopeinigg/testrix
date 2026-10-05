@@ -45,6 +45,8 @@
                 [parentId]="folder.id"
                 [depth]="depth() + 1"
                 [renamingId]="renamingId()"
+                [openNodeIds]="openNodeIds()"
+                [activeNodeId]="activeNodeId()"
                 (nodeMenu)="nodeMenu.emit($event)"
                 (renameStart)="renameStart.emit($event)"
                 (renameInput)="renameInput.emit($event)"

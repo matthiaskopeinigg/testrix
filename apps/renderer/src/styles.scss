@@ -25,6 +25,12 @@ select {
   font: inherit;
 }
 
+input:focus,
+textarea:focus,
+select:focus {
+  outline: none;
+}
+
 * {
   box-sizing: border-box;
   @include mixins.tx-scrollbar-colors;
@@ -37,7 +43,8 @@ select,
 pre,
 code,
 .tx-path {
-  user-select: text;
+  -webkit-user-select: text !important;
+  user-select: text !important;
 }
 
 ::selection {
@@ -71,6 +78,7 @@ html[data-motion='none'] *::after {
   transition-delay: 0s !important;
 }
 
+html[data-motion-leave='none'] .tx-shell-drop-leave,
 html[data-motion-leave='none'] .tx-overlay-leave,
 html[data-motion-leave='none'] .tx-overlay-leave *,
 html[data-motion-leave='none'] .tx-popover-leave,
@@ -78,6 +86,23 @@ html[data-motion-leave='none'] .tx-sidebar-pane-out,
 html[data-motion-leave='none'] .tx-hint-leave,
 html[data-motion-leave='none'] .tx-leave,
 html[data-motion-leave='none'] .tx-tree-collapse,
+html[data-motion-leave='none'] .tx-db-query-console-out,
+html[data-motion-leave='none'] .tx-db-query-dock-out,
+html[data-motion-leave='none'] .tx-request-console-out,
+html[data-motion-leave='none'] .tx-request-response-out,
+html[data-motion-leave='none'] .tx-results-panel-out,
+html[data-motion-leave='none'] .tx-folder-pane-out,
+html[data-motion-leave='none'] .tx-docs-leave-left,
+html[data-motion-leave='none'] .tx-docs-leave-right,
+html[data-motion-leave='none'] .tx-pane-leave-left,
+html[data-motion-leave='none'] .tx-pane-leave-right,
+html[data-motion-leave='none'] .tx-flow-slide-out-left,
+html[data-motion-leave='none'] .tx-flow-slide-out-right,
+html[data-motion-leave='none'] .tx-welcome-frame-out,
+html[data-motion-leave='none'] .tx-workbench-tab-out,
+html[data-motion-leave='none'] .tx-workbench-panel-out,
+html[data-motion-leave='none'] .tx-dirty-strip-out,
+html[data-motion-leave='none'] .tx-palette-list-out,
 html[data-motion-leave='none'] .is-leaving {
   animation-duration: 0s !important;
   animation-delay: 0s !important;
@@ -118,20 +143,19 @@ body.tx-dnd-dragging * {
   transform-origin: center;
 }
 
-html.tx-overlay-open,
-html.tx-overlay-open * {
+html.tx-overlay-open .tx-titlebar__drag,
+html.tx-overlay-open .tx-titlebar__name {
   -webkit-app-region: no-drag !important;
 }
 
 .cdk-overlay-container {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
+  inset: 0;
+  width: auto;
+  height: auto;
+  overflow: hidden;
   z-index: 1000;
   pointer-events: none;
-  -webkit-app-region: no-drag;
 }
 
 .cdk-overlay-pane {
@@ -143,6 +167,7 @@ html.tx-overlay-open * {
   max-width: 100%;
   max-height: 100%;
   font-family: var(--tx-font);
+  -webkit-app-region: no-drag;
 }
 
 .tx-overlay-host {
@@ -150,6 +175,12 @@ html.tx-overlay-open * {
   inset: 0;
   z-index: var(--tx-z-overlay);
   display: block;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.tx-overlay-host > * {
+  pointer-events: auto;
   -webkit-app-region: no-drag;
 }
 
@@ -196,8 +227,8 @@ html.tx-overlay-open * {
 }
 
 .cdk-overlay-pane.tx-overlay-menu {
-  max-width: none;
-  max-height: none;
+  max-width: min(100%, 360px);
+  max-height: calc(100% - 16px);
   width: max-content;
   height: max-content;
 }
@@ -210,3 +241,82 @@ html.tx-overlay-open * {
   min-width: 1px;
   min-height: 1px;
 }
+
+/* Global pane/docs slides — self-contained classes (no parent data-slide dependency). */
+.tx-pane-enter-right,
+.tx-docs-enter-right {
+  animation: tx-global-pane-in-right calc(420ms * var(--tx-motion-scale, 1)) var(--tx-spring) both !important;
+}
+
+.tx-pane-enter-left,
+.tx-docs-enter-left {
+  animation: tx-global-pane-in-left calc(420ms * var(--tx-motion-scale, 1)) var(--tx-spring) both !important;
+}
+
+.tx-pane-leave-left,
+.tx-pane-leave-right,
+.tx-docs-leave-left,
+.tx-docs-leave-right {
+  position: absolute !important;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background: var(--tx-bg-canvas);
+}
+
+.tx-pane-leave-left,
+.tx-docs-leave-left {
+  animation: tx-global-pane-out-left
+    calc(280ms * var(--tx-motion-leave-scale, var(--tx-motion-scale, 1))) var(--tx-ease-in-out) both !important;
+}
+
+.tx-pane-leave-right,
+.tx-docs-leave-right {
+  animation: tx-global-pane-out-right
+    calc(280ms * var(--tx-motion-leave-scale, var(--tx-motion-scale, 1))) var(--tx-ease-in-out) both !important;
+}
+
+@keyframes tx-global-pane-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes tx-global-pane-in-left {
+  from {
+    opacity: 0;
+    transform: translateX(-14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes tx-global-pane-out-left {
+  from {
+    opacity: 1;
+    transform: none;
+  }
+  to {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+}
+
+@keyframes tx-global-pane-out-right {
+  from {
+    opacity: 1;
+    transform: none;
+  }
+  to {
+    opacity: 0;
+    transform: translateX(10px);
+  }
+}
+

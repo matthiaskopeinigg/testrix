@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   createDefaultDatabaseConnection,
+  usesOracleThin,
   formatDatabaseConnectionString,
   parseDatabaseConnectionString,
   parseDatabasePrefs,
@@ -47,6 +48,19 @@ describe('parseDatabasesFile', () => {
     });
     expect(file.nodes).toHaveLength(1);
     expect(file.nodes[0]?.id).toBe('pg');
+  });
+});
+
+describe('Oracle thin mode', () => {
+  it('starts new Oracle connections on the thin driver', () => {
+    expect(createDefaultDatabaseConnection('oracle').oracleThin).toBe(true);
+    expect(usesOracleThin(createDefaultDatabaseConnection('oracle'))).toBe(true);
+  });
+
+  it('keeps a saved client path on the thick driver until thin is chosen', () => {
+    expect(usesOracleThin({ clientPath: 'C:/instantclient' })).toBe(false);
+    expect(usesOracleThin({ oracleThin: true, clientPath: 'C:/instantclient' })).toBe(true);
+    expect(usesOracleThin({ oracleThin: false })).toBe(false);
   });
 });
 

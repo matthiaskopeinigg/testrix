@@ -16,6 +16,7 @@ describe('orderTools', () => {
       'url-codec',
       'regex-builder',
       'password-generator',
+      'plantuml',
     ]);
   });
 
@@ -28,6 +29,7 @@ describe('orderTools', () => {
       'cron-builder',
       'url-codec',
       'regex-builder',
+      'plantuml',
     ]);
   });
 });
@@ -35,12 +37,8 @@ describe('orderTools', () => {
 describe('isToolId', () => {
   it('accepts catalog ids', () => {
     expect(isToolId('uuid-generator')).toBe(true);
-    expect(isToolId('base64')).toBe(true);
-    expect(isToolId('jwt-toolkit')).toBe(true);
-    expect(isToolId('cron-builder')).toBe(true);
-    expect(isToolId('url-codec')).toBe(true);
-    expect(isToolId('regex-builder')).toBe(true);
-    expect(isToolId('password-generator')).toBe(true);
+    expect(isToolId('plantuml')).toBe(true);
+    expect(isToolId('drawio')).toBe(false);
     expect(isToolId('http-login')).toBe(false);
   });
 });

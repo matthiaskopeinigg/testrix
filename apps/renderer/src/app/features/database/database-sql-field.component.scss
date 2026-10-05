@@ -1,0 +1,221 @@
+@use 'mixins';
+
+:host {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.tx-db-sql-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.tx-db-sql-field__toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.tx-db-sql-field__lang {
+  color: var(--tx-text-muted);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.tx-db-sql-field__ghost {
+  @include mixins.tx-press;
+  @include mixins.tx-hover-fill;
+  min-height: 26px;
+  padding: 0 10px;
+  border: 1px solid var(--tx-border-subtle);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--tx-text-secondary);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.tx-db-sql-field__pane {
+  display: flex;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  min-height: 180px;
+  overflow: hidden;
+  border: 1px solid var(--tx-border-subtle);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--tx-bg-canvas) 88%, transparent);
+}
+
+.tx-db-sql-field__gutter {
+  @include mixins.tx-scrollbar;
+  flex-shrink: 0;
+  width: 32px;
+  padding: 8px 0;
+  overflow: hidden;
+  border-right: 1px solid var(--tx-border-subtle);
+  color: var(--tx-text-faint);
+  font-family: var(--tx-font-mono);
+  font-size: 11px;
+  line-height: 18px;
+  text-align: right;
+}
+
+.tx-db-sql-field__gutter span {
+  display: block;
+  padding-right: 6px;
+}
+
+.tx-db-sql-field__code {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  min-height: 180px;
+}
+
+.tx-db-sql-field__highlight,
+.tx-db-sql-field__ghost,
+.tx-db-sql-field__editor {
+  box-sizing: border-box;
+  display: block;
+  margin: 0;
+  padding: 8px 10px;
+  border: 0;
+  outline: none;
+  font-family: var(--tx-font-mono);
+  font-size: 12px;
+  font-weight: 400;
+  font-style: normal;
+  font-variant-ligatures: none;
+  line-height: 18px;
+  letter-spacing: 0;
+  tab-size: 4;
+  white-space: pre;
+  overflow-wrap: normal;
+}
+
+.tx-db-sql-field__highlight,
+.tx-db-sql-field__ghost {
+  @include mixins.tx-scrollbar;
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.tx-db-sql-field__highlight {
+  color: var(--tx-text-primary);
+}
+
+.tx-db-sql-field__highlight .is-keyword {
+  color: var(--tx-syntax-keyword);
+}
+
+.tx-db-sql-field__highlight .is-string {
+  color: var(--tx-syntax-string);
+}
+
+.tx-db-sql-field__highlight .is-comment {
+  color: var(--tx-syntax-comment);
+  font-style: italic;
+}
+
+.tx-db-sql-field__highlight .is-number {
+  color: var(--tx-syntax-number);
+}
+
+.tx-db-sql-field__ghost {
+  color: transparent;
+}
+
+.tx-db-sql-field__ghost-pad {
+  color: transparent;
+}
+
+.tx-db-sql-field__ghost-rest {
+  color: color-mix(in srgb, var(--tx-text-faint) 88%, transparent);
+}
+
+.tx-db-sql-field__editor {
+  @include mixins.tx-scrollbar;
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  min-height: 180px;
+  resize: none;
+  overflow: auto;
+  background: transparent;
+  color: transparent;
+  caret-color: var(--tx-text-primary);
+  box-shadow: none;
+}
+
+.tx-db-sql-field__editor:focus,
+.tx-db-sql-field__editor:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
+.tx-db-sql-field__editor::placeholder {
+  color: var(--tx-text-faint);
+}
+
+.tx-db-sql-field__editor::selection {
+  color: transparent;
+  background: color-mix(in srgb, var(--tx-accent) 28%, transparent);
+}
+
+.tx-db-sql-field__suggest {
+  @include mixins.tx-scrollbar;
+  position: absolute;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  width: 260px;
+  max-height: 200px;
+  overflow: auto;
+  padding: 6px;
+  border: 1px solid var(--tx-border-subtle);
+  border-radius: 10px;
+  background: var(--tx-bg-overlay);
+  box-shadow: var(--tx-shadow-2);
+}
+
+.tx-db-sql-field__suggest-item {
+  @include mixins.tx-hover-fill;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 30px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.tx-db-sql-field__suggest-item.is-active {
+  background: color-mix(in srgb, var(--tx-accent) 14%, transparent);
+}
+
+.tx-db-sql-field__suggest-detail {
+  color: var(--tx-text-faint);
+  font-size: 11px;
+}

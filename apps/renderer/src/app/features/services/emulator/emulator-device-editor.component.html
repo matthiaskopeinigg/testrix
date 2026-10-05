@@ -1,0 +1,151 @@
+@if (device(); as device) {
+  <div class="tx-emu-device">
+    <header class="tx-emu-device__chrome">
+      <div class="tx-emu-device__title">
+        <div class="tx-emu-device__identity">
+          <h1>{{ device.name }}</h1>
+          @if (isRunning()) {
+            <span class="tx-emu-device__badge is-live">Running</span>
+          }
+        </div>
+        <p>{{ profileLabel() }} · {{ statusLabel() }}</p>
+      </div>
+      <div class="tx-emu-device__actions">
+        @if (!isRunning()) {
+          <tx-hint label="Quick boot from the last snapshot. Installs Android tools first when they are missing.">
+            <tx-button variant="primary" [disabled]="busy() || status().busy" (clicked)="start()">Start</tx-button>
+          </tx-hint>
+          <tx-hint label="Start without the saved snapshot">
+            <tx-button variant="ghost" [disabled]="busy() || status().busy" (clicked)="start(true)">Cold boot</tx-button>
+          </tx-hint>
+        }
+        @if (isRunning()) {
+          <tx-hint label="Stop the emulator window">
+            <tx-button variant="ghost" [disabled]="busy() || status().busy" (clicked)="stop()">Stop</tx-button>
+          </tx-hint>
+        }
+        <tx-hint label="Rescan adb devices">
+          <tx-button variant="ghost" [disabled]="busy()" (clicked)="refreshLive()">Refresh</tx-button>
+        </tx-hint>
+      </div>
+    </header>
+
+    <div class="tx-emu-device__scroll">
+      @if (message()) {
+        <p class="tx-emu-device__banner">{{ message() }}</p>
+      }
+      @if (status().error) {
+        <p class="tx-emu-device__banner is-warn">{{ status().error }}</p>
+      }
+      @if (status().hypervisor.state === 'missing') {
+        <p class="tx-emu-device__banner is-warn">{{ status().hypervisor.hint || status().hypervisor.detail }}</p>
+      }
+
+      @if (showLicense()) {
+        <section class="tx-emu-device__panel" aria-label="Android SDK license">
+          <header class="tx-emu-device__panel-head">
+            <h2>Android SDK license</h2>
+          </header>
+          <p class="tx-emu-device__hint tx-emu-device__license">{{ licenseSummary }}</p>
+          <div class="tx-emu-device__panel-actions">
+            <tx-button variant="ghost" [disabled]="busy()" (clicked)="cancelLicense()">Cancel</tx-button>
+            <tx-button variant="primary" [disabled]="busy()" (clicked)="acceptLicense()">Accept and install</tx-button>
+          </div>
+        </section>
+      }
+
+      @if (progress(); as current) {
+        <div class="tx-emu-device__progress" [class.is-error]="current.phase === 'error'" role="status">
+          <div class="tx-emu-device__progress-meta">
+            <span>{{ current.message }}</span>
+            <span>{{ current.percent }}%</span>
+          </div>
+          <div class="tx-emu-device__progress-track" aria-hidden="true">
+            <div class="tx-emu-device__progress-bar" [style.width.%]="current.percent"></div>
+          </div>
+        </div>
+      }
+
+      <section class="tx-emu-device__strip" aria-label="Versions">
+        @if (!isAvdDevice()) {
+          <div class="tx-emu-device__strip-image">
+            <span>API</span>
+            <tx-select
+              variant="bare"
+              ariaLabel="Android API level"
+              [value]="imageApi()"
+              [options]="apiOptions"
+              (valueChange)="setImageApi($event)"
+            />
+          </div>
+          <div class="tx-emu-device__strip-image">
+            <span>Image</span>
+            <tx-select
+              variant="bare"
+              ariaLabel="System image"
+              [value]="imageTag()"
+              [options]="imageOptions"
+              (valueChange)="setImageTag($event)"
+            />
+          </div>
+          <div>
+            <span>ABI</span>
+            <strong>{{ status().systemImageAbi ?? '—' }}</strong>
+          </div>
+        }
+        <div>
+          <span>AVD</span>
+          <strong>{{ device.avdName || status().avdName || '—' }}</strong>
+        </div>
+        <div class="tx-emu-device__strip-wide">
+          <span>Hypervisor</span>
+          <strong>{{ status().hypervisor.state }}</strong>
+        </div>
+      </section>
+
+      <div class="tx-emu-device__grid">
+        <section class="tx-emu-device__panel">
+          <header class="tx-emu-device__panel-head">
+            <h2>Device</h2>
+          </header>
+          <div class="tx-emu-device__fields">
+            <tx-input id="emu-device-name" label="Name" [value]="device.name" (valueChange)="setName($event)" />
+            @if (!isAvdDevice()) {
+              <tx-select
+                [value]="device.profile"
+                [options]="profileOptions()"
+                ariaLabel="Device profile"
+                (valueChange)="setProfile($event)"
+              />
+            } @else {
+              <p class="tx-emu-device__hint">
+                This device uses the Android Studio AVD
+                <strong>{{ device.avdName }}</strong>. Profile and system image are managed outside Testrix.
+              </p>
+            }
+          </div>
+          <tx-check
+            label="Open home screen on start"
+            [checked]="device.openHome"
+            (checkedChange)="setOpenHome($event)"
+          />
+          <p class="tx-emu-device__hint">Warm reuse only — fresh boots already open Home.</p>
+          <tx-hint stretch [label]="status().sdkRoot || 'Not resolved'" placement="bottom">
+            <p class="tx-emu-device__path">SDK · {{ status().sdkRoot || 'Not resolved' }}</p>
+          </tx-hint>
+          @if (isAvdDevice() && device.avdHome) {
+            <tx-hint stretch [label]="device.avdHome" placement="bottom">
+              <p class="tx-emu-device__path">AVD home · {{ device.avdHome }}</p>
+            </tx-hint>
+          }
+        </section>
+      </div>
+    </div>
+  </div>
+} @else {
+  <div class="tx-emu-device">
+    <div class="tx-emu-device__scroll">
+      <tx-empty-state title="Device removed" body="This emulator profile is no longer in the sidebar." />
+    </div>
+  </div>
+}

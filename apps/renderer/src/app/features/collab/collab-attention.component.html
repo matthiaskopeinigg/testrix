@@ -1,0 +1,12 @@
+@if (visible()) {
+  <div class="tx-collab-banner" role="status">
+    <p>{{ message() }}</p>
+    @if (collab.status().attention === 'review') {
+      <tx-button variant="ghost" (clicked)="collab.openReview()">Review</tx-button>
+    } @else if (collab.status().attention === 'auth') {
+      <tx-button variant="ghost" (clicked)="collab.openUpdateToken()">Update access token</tx-button>
+    } @else {
+      <tx-button variant="ghost" (clicked)="collab.openDock()">Open Collab</tx-button>
+    }
+  </div>
+}

@@ -1,5 +1,5 @@
-import { CDK_DRAG_CONFIG, CdkDragDrop, DragDropModule } from '@angular/cdk/drag-drop';
-import { GlobalPositionStrategy, Overlay, OverlayRef } from '@angular/cdk/overlay';
+import { CDK_DRAG_CONFIG, type CdkDragDrop, DragDropModule } from '@angular/cdk/drag-drop';
+import { type GlobalPositionStrategy, Overlay, type OverlayRef } from '@angular/cdk/overlay';
 import { TemplatePortal } from '@angular/cdk/portal';
 import {
   ChangeDetectionStrategy,
@@ -19,14 +19,18 @@ import {
 import { playLeaveThen } from '@testrix/ui';
 
 import { DatabaseTabCloseService } from '../database/database-tab-close.service';
+import { ServiceIconComponent } from '../services/service-icon.component';
 import { ToolIconComponent } from '../tools/tool-icon.component';
+import { DirtyTabsRegistry } from '../../core/dirty-tabs.registry';
+import { DesktopApiService } from '../../core/desktop-api.service';
+import { isManualSaveMode } from '../../core/save-mode';
 import { WorkbenchStore, type WorkbenchTab } from './workbench.store';
 import { WorkbenchTabComponent, httpMethodLabel } from './workbench-tab.component';
 
 @Component({
   selector: 'tx-workbench-tablist',
   standalone: true,
-  imports: [DragDropModule, ToolIconComponent, WorkbenchTabComponent],
+  imports: [DragDropModule, ToolIconComponent, ServiceIconComponent, WorkbenchTabComponent],
   templateUrl: './workbench-tablist.component.html',
   styleUrl: './workbench-tablist.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -47,6 +51,8 @@ export class WorkbenchTablistComponent {
   private readonly overlay = inject(Overlay);
   private readonly vcr = inject(ViewContainerRef);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly dirtyTabs = inject(DirtyTabsRegistry);
+  private readonly desktop = inject(DesktopApiService);
   private readonly menuTemplate = viewChild.required<TemplateRef<unknown>>('tabMenu');
 
   readonly groupId = input.required<string>();
@@ -81,6 +87,12 @@ export class WorkbenchTablistComponent {
     const tabs = this.tabs();
     const index = tabs.findIndex((item) => item.id === tab.id);
     return index >= 0 && index < tabs.length - 1;
+  });
+  readonly menuTabUnsaved = computed(() => {
+    const tab = this.menuTab();
+    if (!tab || !isManualSaveMode(this.desktop.settings()))
+      return false;
+    return this.dirtyTabs.isDirty(tab.id);
   });
 
   /** Stable mutable array reference for CDK (avoid reallocating mid-drag). */

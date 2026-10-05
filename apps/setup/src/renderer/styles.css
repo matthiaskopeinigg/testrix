@@ -16,7 +16,7 @@
   --tx-success: #3dd68c;
   --tx-radius-control: 8px;
   --tx-radius-card: 16px;
-  --tx-font: 'Segoe UI Variable', 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+  --tx-font: Tahoma, Geneva, Verdana, sans-serif;
   --tx-scrim: rgba(6, 4, 8, 0.62);
   --tx-shadow-2: 0 24px 60px rgba(0, 0, 0, 0.55);
   --tx-glow: 0 0 80px rgba(225, 29, 116, 0.22);
@@ -105,7 +105,10 @@ body {
   color: var(--tx-text-primary);
   font-family: var(--tx-font);
   font-size: 13px;
-  -webkit-font-smoothing: antialiased;
+  font-synthesis: none;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-rendering: auto;
 }
 
 .hidden {
@@ -140,8 +143,7 @@ body {
 
 .titlebar__title {
   font-size: 12px;
-  font-weight: 650;
-  letter-spacing: 0.01em;
+  font-weight: 600;
   pointer-events: none;
 }
 
@@ -231,8 +233,8 @@ body {
   margin: 0 0 4px;
   color: var(--tx-accent);
   font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.16em;
+  font-weight: 600;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
 }
 
@@ -240,7 +242,8 @@ h1,
 h2 {
   margin: 0;
   font-size: 20px;
-  letter-spacing: -0.03em;
+  font-weight: 600;
+  letter-spacing: -0.02em;
 }
 
 .subtitle {
@@ -278,7 +281,7 @@ h2 {
   display: block;
   margin: 0 0 8px;
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--tx-text-faint);
@@ -472,22 +475,71 @@ input[type='text']:focus {
 .progress-head {
   display: flex;
   justify-content: space-between;
+  gap: 12px;
+  align-items: baseline;
+}
+
+.progress-head p {
+  margin: 0;
+}
+
+#progress-percent {
+  flex-shrink: 0;
+  min-width: 3.2ch;
+  color: var(--tx-text-muted);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  text-align: right;
+}
+
+.progress-meta {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 12px;
+}
+
+.progress-hint {
+  display: none;
+  margin: 0;
+  color: var(--tx-text-faint);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.progress-elapsed {
+  flex-shrink: 0;
+  margin: 0;
+  color: var(--tx-text-muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.progress-elapsed:empty {
+  display: none;
 }
 
 .track {
   height: 6px;
   overflow: hidden;
-  margin-top: 8px;
+  margin-top: 10px;
   border-radius: 99px;
   background: var(--tx-bg-hover);
 }
 
 .fill {
   height: 100%;
-  width: 8%;
+  width: 0;
   background: var(--tx-accent);
-  box-shadow: 0 0 12px color-mix(in srgb, var(--tx-accent) 55%, transparent);
   transition: width 160ms ease;
+}
+
+.track.is-indeterminate .fill {
+  width: 34%;
+  transition: none;
+  animation: indeterminate 1.15s ease-in-out infinite;
 }
 
 .error {
@@ -545,13 +597,138 @@ input[type='text']:focus {
   color: var(--tx-text-primary);
 }
 
+.setup.is-update {
+  background: var(--tx-bg-app);
+}
+
+.setup.is-update .body {
+  justify-content: center;
+  overflow: visible;
+  padding: 12px 36px 32px;
+  gap: 28px;
+}
+
+.setup.is-update .hero {
+  flex-direction: column;
+  text-align: center;
+  gap: 16px;
+}
+
+.setup.is-update .hero__mark {
+  width: 64px;
+  height: 64px;
+}
+
+.setup.is-update .hero__glow {
+  width: 88px;
+  height: 88px;
+}
+
+.setup.is-update .logo {
+  width: 40px;
+  height: 40px;
+}
+
+.setup.is-update .hero__copy {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.setup.is-update h1 {
+  font-size: 22px;
+}
+
+.setup.is-update .subtitle {
+  display: none;
+}
+
+.setup.is-update .sheet {
+  flex: 0 0 auto;
+  width: 100%;
+  max-width: 360px;
+  align-self: center;
+  overflow: visible;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  animation: none;
+}
+
+.setup.is-update .sheet__body {
+  padding: 0;
+  overflow: visible;
+}
+
+.setup.is-update .sheet__body--stage {
+  min-height: auto;
+  justify-content: flex-start;
+}
+
+.setup.is-update .progress-head {
+  justify-content: space-between;
+  text-align: left;
+}
+
+.setup.is-update .progress-head #progress-label {
+  min-width: 0;
+  padding: 0;
+  overflow: visible;
+  font-weight: 600;
+}
+
+#progress-percent:empty {
+  display: none;
+}
+
+.setup.is-update .track {
+  height: 5px;
+  margin-top: 12px;
+  background: color-mix(in srgb, var(--tx-text-primary) 12%, transparent);
+}
+
+.setup.is-update .progress-hint {
+  display: block;
+  text-align: left;
+}
+
+.setup.is-update .error {
+  margin-top: 14px;
+  font-size: 13px;
+  line-height: 1.45;
+  user-select: text;
+  text-align: left;
+}
+
+.setup.is-update.is-update-error .progress-hint,
+.setup.is-update.is-update-done .progress-hint {
+  display: none;
+}
+
+.setup.is-update #btn-primary,
+.setup.is-update #btn-open {
+  display: none;
+}
+
+.setup.is-update .footer {
+  display: flex;
+  border: 0;
+  background: transparent;
+  padding: 8px 0 0;
+}
+
+.setup.is-update #btn-help,
+.setup.is-update #btn-cancel {
+  display: inline-flex;
+}
+
 .btn {
   min-height: 36px;
   padding: 0 14px;
   border-radius: var(--tx-radius-control);
   border: 1px solid transparent;
   cursor: pointer;
-  font-weight: 650;
+  font-weight: 600;
   transition:
     background-color var(--tx-motion-base) var(--tx-ease-out),
     border-color var(--tx-motion-base) var(--tx-ease-out),
@@ -648,6 +825,16 @@ input[type='text']:focus {
 @keyframes draw {
   to {
     stroke-dashoffset: 0;
+  }
+}
+
+@keyframes indeterminate {
+  0% {
+    transform: translateX(-120%);
+  }
+
+  100% {
+    transform: translateX(280%);
   }
 }
 

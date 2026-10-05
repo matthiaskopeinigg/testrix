@@ -1,0 +1,37 @@
+<div class="lt-thresholds">
+  <header class="lt-thresholds__header">
+    <div>
+      <h2 class="lt-thresholds__title">Thresholds</h2>
+      <p class="lt-thresholds__hint">Fail the run when error rate, latency, success rate, or throughput miss these limits. Set optional fields to 0 to disable.</p>
+    </div>
+  </header>
+
+  <section class="lt-thresholds__card" aria-label="Pass criteria">
+    <tx-input
+      id="lt-max-err"
+      label="Max error rate (%)"
+      [value]="'' + maxErrorRate()"
+      (valueChange)="handleNumber('maxErrorRate', $event)"
+    />
+    <tx-input
+      id="lt-max-p95"
+      label="Max p95 latency (ms)"
+      [value]="'' + maxP95Ms()"
+      (valueChange)="handleNumber('maxP95Ms', $event)"
+    />
+    <tx-input
+      id="lt-min-success"
+      label="Min success rate (%)"
+      [value]="'' + minSuccessRate()"
+      (valueChange)="handleNumber('minSuccessRate', $event)"
+    />
+    <tx-input
+      id="lt-min-rps"
+      label="Min RPS"
+      [value]="'' + minRps()"
+      (valueChange)="handleNumber('minRps', $event)"
+    />
+  </section>
+
+  <p class="lt-thresholds__hint">Manage the description, tags, and notes for this load test on the Docs tab.</p>
+</div>

@@ -1,4 +1,4 @@
-import { Overlay, OverlayRef, type GlobalPositionStrategy } from '@angular/cdk/overlay';
+import { Overlay, type OverlayRef, type GlobalPositionStrategy } from '@angular/cdk/overlay';
 import { ComponentPortal, TemplatePortal } from '@angular/cdk/portal';
 import {
   ChangeDetectionStrategy,
@@ -95,6 +95,10 @@ type GridMenu = GridCellMenu | GridEmptyMenu;
     '[class.is-resizing]': 'resizeColumn() !== null',
     '[class.is-range-selecting]': 'rangeDragging',
     '(window:resize)': 'handleWindowResize()',
+    '(document:keydown)': 'handleCopyKey($event)',
+    '(keydown)': 'handleGridKey($event)',
+    tabindex: '0',
+    role: 'grid',
   },
 })
 export class DatabaseResultGridComponent {
@@ -131,6 +135,7 @@ export class DatabaseResultGridComponent {
   readonly relationJump = output<{ readonly row: number; readonly column: string }>();
 
   readonly selected = signal<{ row: number; col: number } | null>(null);
+  readonly gridLive = signal('');
   readonly selectedRows = signal<readonly number[]>([]);
   readonly editing = signal<{ row: number; col: number } | null>(null);
   readonly columnWidths = signal<Readonly<Record<string, number>>>({});
@@ -298,8 +303,6 @@ export class DatabaseResultGridComponent {
   }
 
   handleEdit(row: number, col: number): void {
-    if (!this.canEditCell(row))
-      return;
     this.editing.set({ row, col });
   }
 
@@ -310,8 +313,10 @@ export class DatabaseResultGridComponent {
     const target = event.target;
     if (!(target instanceof HTMLInputElement))
       return;
-    const kind = this.kindOf(column, target.value);
-    this.emitValue(row, column, normalizeEditedCell(kind, target.value));
+    if (this.canEditCell(row)) {
+      const kind = this.kindOf(column, target.value);
+      this.emitValue(row, column, normalizeEditedCell(kind, target.value));
+    }
     this.editing.set(null);
   }
 
@@ -625,10 +630,78 @@ export class DatabaseResultGridComponent {
   }
 
   handleCopy(): void {
+    const selected = this.copySelectionText();
+    if (selected) {
+      void navigator.clipboard?.writeText(selected);
+      return;
+    }
     const table = this.table();
     if (!table)
       return;
     void navigator.clipboard?.writeText(formatDatabaseQueryResult(table, 'tsv'));
+  }
+
+  handleGridKey(event: KeyboardEvent): void {
+    const target = event.target;
+    if (target instanceof HTMLElement) {
+      const tag = target.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target.isContentEditable)
+        return;
+    }
+    const table = this.table();
+    const rows = this.filteredRows();
+    if (!table || rows.length === 0)
+      return;
+    const colCount = table.columns.length;
+    if (colCount === 0)
+      return;
+    const current = this.selected() ?? { row: rows[0]!.index, col: 0 };
+    let row = current.row;
+    let col = current.col;
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      const pos = rows.findIndex((entry) => entry.index === row);
+      if (pos >= 0 && pos < rows.length - 1)
+        row = rows[pos + 1]!.index;
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      const pos = rows.findIndex((entry) => entry.index === row);
+      if (pos > 0)
+        row = rows[pos - 1]!.index;
+    } else if (event.key === 'ArrowRight') {
+      event.preventDefault();
+      col = Math.min(colCount - 1, col + 1);
+    } else if (event.key === 'ArrowLeft') {
+      event.preventDefault();
+      col = Math.max(0, col - 1);
+    } else if (event.key === 'Enter') {
+      event.preventDefault();
+      this.handleEdit(row, col);
+      return;
+    } else {
+      return;
+    }
+    this.selected.set({ row, col });
+    const column = table.columns[col] ?? '';
+    this.gridLive.set(`Row ${this.offset() + row + 1}, column ${column}`);
+  }
+
+  handleCopyKey(event: KeyboardEvent): void {
+    if (!(event.ctrlKey || event.metaKey) || event.key.toLowerCase() !== 'c' || event.altKey || event.shiftKey)
+      return;
+    if (this.editing())
+      return;
+    const target = event.target;
+    if (!(target instanceof Node) || !this.host.nativeElement.contains(target))
+      return;
+    const native = window.getSelection()?.toString();
+    if (native)
+      return;
+    const text = this.copySelectionText();
+    if (!text)
+      return;
+    event.preventDefault();
+    void navigator.clipboard?.writeText(text);
   }
 
   handleExport(format: DatabaseQueryExportFormat): void {
@@ -647,6 +720,25 @@ export class DatabaseResultGridComponent {
 
   cellText(value: DatabaseQueryCell): string {
     return value === null ? 'NULL' : String(value);
+  }
+
+  private copySelectionText(): string | null {
+    const table = this.table();
+    if (!table)
+      return null;
+    const rows = this.selectedRows();
+    if (rows.length > 1) {
+      const lines = rows
+        .map((row) => table.rows[row])
+        .filter((row): row is readonly DatabaseQueryCell[] => !!row)
+        .map((row) => row.map((cell) => this.cellText(cell ?? null)).join('\t'));
+      return lines.length ? lines.join('\n') : null;
+    }
+    const selected = this.selected();
+    if (!selected)
+      return null;
+    const value = table.rows[selected.row]?.[selected.col];
+    return value === undefined ? null : this.cellText(value ?? null);
   }
 
   editValue(value: DatabaseQueryCell): string {

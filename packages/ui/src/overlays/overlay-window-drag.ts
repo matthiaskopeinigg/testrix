@@ -5,8 +5,8 @@ const OVERLAY_NO_DRAG_STYLE_ID = 'tx-overlay-no-drag';
 let overlayOpenCount = 0;
 
 const NO_DRAG_CSS = `
-html.tx-overlay-open,
-html.tx-overlay-open * {
+html.tx-overlay-open .tx-titlebar__drag,
+html.tx-overlay-open .tx-titlebar__name {
   -webkit-app-region: no-drag !important;
 }
 `;
@@ -27,6 +27,19 @@ export function unlockOverlayWindowDrag(): void {
   applyWindowDragLock(false);
 }
 
+/** Clears a stuck overlay drag lock (e.g. before forcing a window close). */
+export function resetOverlayWindowDrag(): void {
+  overlayOpenCount = 0;
+  document.documentElement.classList.remove(OVERLAY_OPEN_CLASS);
+  applyWindowDragLock(false);
+}
+
+/** Re-enables frameless drag and caption buttons after a stuck overlay or pointer capture. */
+export function ensureWindowChrome(): void {
+  resetOverlayWindowDrag();
+  void window.testrix?.window.setMovable?.(true);
+}
+
 function applyWindowDragLock(locked: boolean): void {
   if (locked)
     ensureNoDragStylesheet();
@@ -41,7 +54,8 @@ function applyWindowDragLock(locked: boolean): void {
   }
 
   refreshNativeDragRegions();
-  void window.testrix?.window.setMovable?.(!locked);
+  // Do not call setMovable(false): on Windows it can strand frameless windows so
+  // caption / HTML controls stop responding until a full process restart.
 }
 
 function ensureNoDragStylesheet(): void {
@@ -54,7 +68,9 @@ function ensureNoDragStylesheet(): void {
 }
 
 function dragRegionElements(): HTMLElement[] {
-  return [...document.querySelectorAll<HTMLElement>('.tx-titlebar, .tx-titlebar__drag')];
+  return [
+    ...document.querySelectorAll<HTMLElement>('.tx-titlebar__drag, .tx-titlebar__name'),
+  ];
 }
 
 function refreshNativeDragRegions(): void {

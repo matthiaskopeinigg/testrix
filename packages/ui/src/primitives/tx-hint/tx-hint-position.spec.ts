@@ -36,4 +36,14 @@ describe('placeHint', () => {
     expect(point.x).toBe(trigger.left + trigger.width / 2 - 42);
     expect(point.y).toBe(trigger.bottom + 10);
   });
+
+  it('keeps a long titlebar hint inside the viewport', () => {
+    const trigger = rect(1860, 8, 34, 30);
+    const text = 'Settings — Testrix 99.0.0 is ready to install';
+    const size = estimateHintSize(text, 2, 1920);
+    const point = placeHint('bottom', trigger, size.width, size.height, 1920, 1080);
+    expect(size.width).toBeGreaterThan(220);
+    expect(point.x).toBeGreaterThanOrEqual(8);
+    expect(point.x + size.width).toBeLessThanOrEqual(1912);
+  });
 });

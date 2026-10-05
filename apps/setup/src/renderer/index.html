@@ -35,7 +35,7 @@
             <img class="logo" src="./assets/logo.svg" width="52" height="52" alt="" />
           </div>
           <div class="hero__copy">
-            <p class="eyebrow">Local workbench</p>
+            <p class="eyebrow" id="hero-eyebrow">Local workbench</p>
             <h1 id="hero-title">Install Testrix</h1>
             <p class="subtitle">
               <span id="meta-version">—</span>
@@ -99,8 +99,12 @@
               <p id="progress-label">Installing files…</p>
               <p id="progress-percent">0%</p>
             </div>
-            <div class="track" role="progressbar" aria-valuemin="0" aria-valuemax="100">
+            <div id="progress-track" class="track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
               <div id="progress-fill" class="fill"></div>
+            </div>
+            <div class="progress-meta">
+              <p id="progress-hint" class="progress-hint">Keep this window open. Testrix opens when the update finishes.</p>
+              <p id="progress-elapsed" class="progress-elapsed" aria-live="polite"></p>
             </div>
             <p id="progress-error" class="error hidden"></p>
           </section>

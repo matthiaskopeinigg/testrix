@@ -21,6 +21,7 @@ export class TxInputComponent {
   readonly ariaLabel = input<string | null>(null);
   readonly multiline = input(false, { transform: booleanAttribute });
   readonly rows = input(3);
+  readonly readonly = input(false, { transform: booleanAttribute });
   readonly valueChange = output<string>();
 
   handleInput(event: Event): void {

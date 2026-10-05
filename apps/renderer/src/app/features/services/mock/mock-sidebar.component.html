@@ -1,0 +1,82 @@
+<div class="tx-mock-side" [class.is-running]="isRunning()">
+  <header class="tx-mock-side__server" aria-label="Mock server">
+    <div class="tx-mock-side__row">
+      <div class="tx-mock-side__status">
+        <span class="tx-mock-side__dot" [class.is-live]="isRunning()" aria-hidden="true"></span>
+        <span class="tx-mock-side__label" role="status">{{ statusLabel() }}</span>
+      </div>
+      @if (isRunning()) {
+        <tx-hint label="Stop mock server" detail="Stops the local mock HTTP server" placement="right">
+          <button type="button" class="tx-mock-side__run is-cancel" aria-label="Stop mock server" (click)="stopServer()">
+            Stop
+          </button>
+        </tx-hint>
+      } @else {
+        <tx-hint label="Start mock server" detail="Serves enabled mock endpoints locally" placement="right">
+          <button type="button" class="tx-mock-side__run" aria-label="Start mock server" (click)="startServer()">
+            Start
+          </button>
+        </tx-hint>
+      }
+    </div>
+
+    @if (statusError(); as error) {
+      <p class="tx-mock-side__error" role="status">{{ error }}</p>
+    }
+
+    <button
+      type="button"
+      class="tx-mock-side__toggle"
+      [attr.aria-expanded]="optionsOpen()"
+      (click)="toggleOptions()"
+    >
+      Server options
+      <span aria-hidden="true">{{ optionsOpen() ? '▾' : '▸' }}</span>
+    </button>
+
+    @if (optionsOpen()) {
+      <div class="tx-mock-side__options">
+        <tx-input
+          id="mk-side-host"
+          label="Host"
+          [value]="options().host"
+          (valueChange)="patchHost($event)"
+        />
+        <div class="tx-mock-side__pair">
+          <tx-input
+            id="mk-side-port"
+            label="Port"
+            [value]="'' + options().port"
+            (valueChange)="patchPort($event)"
+          />
+          <tx-input
+            id="mk-side-delay"
+            label="Global delay (ms)"
+            [value]="'' + options().delayMs"
+            (valueChange)="patchDelay($event)"
+          />
+        </div>
+        <div class="tx-mock-side__checks">
+          <tx-check label="CORS" [checked]="options().cors" (checkedChange)="patchCors($event)" />
+          <tx-check
+            label="Auto-start on launch"
+            [checked]="options().autoStartOnLaunch"
+            (checkedChange)="patchAutoStart($event)"
+          />
+        </div>
+      </div>
+    }
+  </header>
+
+  <tx-service-list-pane
+    class="tx-mock-side__list"
+    serviceId="mocks"
+    [store]="store"
+    noun="endpoint"
+    [renamingId]="renamingId()"
+    (emptyMenu)="emptyMenu.emit($event)"
+    (menu)="menu.emit($event)"
+    (rename)="rename.emit($event)"
+    (renameDone)="renameDone.emit()"
+  />
+</div>

@@ -1,0 +1,133 @@
+<div class="lt-target">
+  <header class="lt-target__header">
+    <div>
+      <h2 class="lt-target__title">Target</h2>
+      <p class="lt-target__hint">Hit a collection request or define a manual HTTP call. Variables resolve from the selected environment.</p>
+    </div>
+  </header>
+
+  <div class="lt-target__controls">
+    <tx-select
+      ariaLabel="Target source"
+      [value]="targetSource()"
+      [options]="sourceOptions"
+      (valueChange)="handleSource($event)"
+    />
+    <tx-select
+      ariaLabel="Environment"
+      [value]="environmentId() ?? ''"
+      [options]="envOptions()"
+      (valueChange)="handleEnv($event)"
+    />
+  </div>
+
+  @if (targetSource() === 'collection') {
+    <div class="lt-target__collection">
+      <div class="lt-target__toolbar">
+        <tx-input
+          id="lt-target-search"
+          label="Search requests"
+          [value]="search()"
+          (valueChange)="handleSearch($event)"
+        />
+        <tx-button variant="ghost" (clicked)="handleExpandAll(true)">Expand</tx-button>
+        <tx-button variant="ghost" (clicked)="handleExpandAll(false)">Collapse</tx-button>
+      </div>
+      @if (selectedRequestName(); as name) {
+        <p class="lt-target__selected">Linked: {{ name }} · {{ method() }} {{ url() }}</p>
+      }
+      <div class="lt-target__tree" role="tree" aria-label="Collection requests">
+        @if (rows().length === 0) {
+          <tx-empty-state title="No requests" body="Create an HTTP request in Collections, then link it here." />
+        } @else {
+          @for (row of rows(); track row.id) {
+            <div class="lt-target__row" [style.--depth]="row.depth" role="treeitem">
+              @if (row.kind === 'folder') {
+                <button
+                  type="button"
+                  class="lt-target__twist"
+                  [attr.aria-label]="(isExpanded(row.id) ? 'Collapse ' : 'Expand ') + row.name"
+                  (click)="handleToggleExpand(row.id)"
+                >
+                  {{ isExpanded(row.id) ? '▾' : '▸' }}
+                </button>
+                <span class="lt-target__folder">{{ row.name }}</span>
+              } @else {
+                <span class="lt-target__twist-spacer" aria-hidden="true"></span>
+                <button
+                  type="button"
+                  class="lt-target__pick"
+                  [class.is-selected]="targetRequestId() === row.id"
+                  (click)="handleSelectRequest(row)"
+                >
+                  <span class="lt-target__method">{{ row.method }}</span>
+                  <span>{{ row.name }}</span>
+                </button>
+              }
+            </div>
+          }
+        }
+      </div>
+    </div>
+  } @else {
+    <div class="lt-target__manual">
+      <div class="lt-target__url-row">
+        <tx-select
+          ariaLabel="Method"
+          [value]="method()"
+          [options]="methodOptions"
+          (valueChange)="handleMethod($event)"
+        />
+        <tx-input id="lt-url" label="URL" [value]="url()" (valueChange)="handleUrl($event)" />
+      </div>
+
+      <section class="lt-target__block" aria-label="Headers">
+        <div class="lt-target__block-head">
+          <h3>Headers</h3>
+          <tx-button variant="ghost" (clicked)="handleAddHeader()">Add</tx-button>
+        </div>
+        @if (headers().length === 0) {
+          <p class="lt-target__empty">No headers.</p>
+        } @else {
+          <ul class="lt-target__headers">
+            @for (row of headers(); track $index) {
+              <li>
+                <label class="lt-target__enable">
+                  <input
+                    type="checkbox"
+                    [checked]="row.enabled"
+                    (change)="handleHeaderEnabled($index, $any($event.target).checked)"
+                  />
+                </label>
+                <input
+                  class="lt-target__cell"
+                  [value]="row.key"
+                  placeholder="Header"
+                  aria-label="Header name"
+                  (input)="handleHeaderKey($index, $any($event.target).value)"
+                />
+                <input
+                  class="lt-target__cell"
+                  [value]="row.value"
+                  placeholder="Value"
+                  aria-label="Header value"
+                  (input)="handleHeaderValue($index, $any($event.target).value)"
+                />
+                <button type="button" aria-label="Remove header" (click)="handleRemoveHeader($index)">×</button>
+              </li>
+            }
+          </ul>
+        }
+      </section>
+
+      <tx-input
+        id="lt-body"
+        label="Body"
+        multiline
+        [rows]="8"
+        [value]="body()"
+        (valueChange)="handleBody($event)"
+      />
+    </div>
+  }
+</div>

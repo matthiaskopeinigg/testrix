@@ -1,17 +1,22 @@
 {
   "name": "@testrix/contracts",
-  "version": "2.0.0-beta.1",
+  "version": "2.0.0",
   "private": true,
   "type": "module",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./ipc-channels": "./src/ipc-channels.ts",
+    "./preload-api": "./src/preload-api.ts",
+    "./setup-api": "./src/setup-api.ts",
+    "./ui-zoom": "./src/ui-zoom.ts"
   },
   "scripts": {
-    "test": "vitest run --config ../../vitest.config.ts"
+    "test": "vitest run --config ../../vitest.config.mts"
   },
   "dependencies": {
+    "yaml": "^2.9.1",
     "zod": "^4.1.5"
   }
 }

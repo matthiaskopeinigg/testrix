@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { newEntityId } from './entity-id';
+
 export const proxyModeSchema = z.enum(['system', 'none', 'http', 'socks5']);
 
 export type ProxyMode = z.infer<typeof proxyModeSchema>;
@@ -16,7 +18,7 @@ export const certFileKindSchema = z.enum(['ca', 'cert', 'key']);
 
 export type CertFileKind = z.infer<typeof certFileKindSchema>;
 
-export const chooseFileKindSchema = z.enum(['ca', 'cert', 'key', 'sqlite', 'oracle-client']);
+export const chooseFileKindSchema = z.enum(['ca', 'cert', 'key', 'sqlite', 'oracle-client', 'apk']);
 
 export type ChooseFileKind = z.infer<typeof chooseFileKindSchema>;
 
@@ -81,7 +83,7 @@ export const DEFAULT_CERTIFICATE_SETTINGS: CertificateSettings = {
  */
 export function createClientCertificate(): ClientCertificate {
   return {
-    id: crypto.randomUUID(),
+    id: newEntityId(),
     host: '',
     certPath: '',
     keyPath: '',

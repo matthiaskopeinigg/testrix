@@ -1,0 +1,63 @@
+:host {
+  display: block;
+}
+
+.lt-latency-bars__empty {
+  margin: 0;
+  color: var(--tx-muted);
+  font-size: 0.78rem;
+}
+
+.lt-latency-bars__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.lt-latency-bars__row {
+  display: grid;
+  grid-template-columns: 3.5rem 1fr 4rem;
+  align-items: center;
+  gap: 0.55rem;
+
+  &[data-health='good'] .lt-latency-bars__fill {
+    background: var(--tx-success, #3dd68c);
+  }
+
+  &[data-health='ok'] .lt-latency-bars__fill {
+    background: var(--tx-warning, #e6b800);
+  }
+
+  &[data-health='bad'] .lt-latency-bars__fill {
+    background: var(--tx-danger, #e5484d);
+  }
+}
+
+.lt-latency-bars__label {
+  font-size: 0.76rem;
+  color: var(--tx-muted);
+}
+
+.lt-latency-bars__track {
+  height: 0.5rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--tx-border) 60%, transparent);
+  overflow: hidden;
+}
+
+.lt-latency-bars__fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--tx-accent);
+  transition: width 0.3s ease;
+}
+
+.lt-latency-bars__value {
+  font-size: 0.76rem;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}

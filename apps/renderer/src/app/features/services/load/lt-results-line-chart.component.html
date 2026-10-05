@@ -1,0 +1,92 @@
+<figure class="lt-line-chart">
+  <figcaption class="lt-line-chart__caption">
+    <span class="lt-line-chart__title">{{ title() }}</span>
+    @if (stats(); as s) {
+      <span class="lt-line-chart__latest">{{ formatValue(s.latest) }} {{ unit() }}</span>
+    }
+  </figcaption>
+
+  @if (stats(); as s) {
+    <div class="lt-line-chart__legend" aria-label="Chart legend">
+      <div class="lt-line-chart__legend-row">
+        <span class="lt-line-chart__legend-item">
+          <span class="lt-line-chart__legend-swatch" [style.background]="strokeColor()"></span>
+          <span class="lt-line-chart__legend-label">{{ primaryLabel() }}</span>
+        </span>
+        <span class="lt-line-chart__legend-stat">Low {{ formatValue(s.min) }}</span>
+        <span class="lt-line-chart__legend-stat">Avg {{ formatValue(s.avg) }}</span>
+        <span class="lt-line-chart__legend-stat">High {{ formatValue(s.max) }}</span>
+      </div>
+      @if (secondaryStats(); as sec) {
+        <div class="lt-line-chart__legend-row">
+          <span class="lt-line-chart__legend-item">
+            <span
+              class="lt-line-chart__legend-swatch lt-line-chart__legend-swatch--dashed"
+              [style.--lt-swatch-color]="secondaryStrokeColor()"
+            ></span>
+            <span class="lt-line-chart__legend-label">{{ secondaryLabel() }}</span>
+          </span>
+          <span class="lt-line-chart__legend-stat">Low {{ formatValue(sec.min) }}</span>
+          <span class="lt-line-chart__legend-stat">Avg {{ formatValue(sec.avg) }}</span>
+          <span class="lt-line-chart__legend-stat">High {{ formatValue(sec.max) }}</span>
+        </div>
+      }
+    </div>
+  }
+
+  <div class="lt-line-chart__plot">
+    @if (yAxisTickLabels(); as ticks) {
+      <div class="lt-line-chart__y-axis" aria-hidden="true">
+        <span>{{ ticks[0] }}</span>
+        <span>{{ ticks[1] }}</span>
+        <span>{{ ticks[2] }}</span>
+      </div>
+    }
+
+    <svg
+      class="lt-line-chart__svg"
+      viewBox="0 0 100 44"
+      preserveAspectRatio="none"
+      role="img"
+      [attr.aria-label]="chartAriaLabel()"
+    >
+      <defs>
+        <linearGradient [attr.id]="gradientId()" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" [attr.stop-color]="strokeColor()" stop-opacity="0.28" />
+          <stop offset="100%" [attr.stop-color]="strokeColor()" stop-opacity="0.02" />
+        </linearGradient>
+      </defs>
+      @if (hasData()) {
+        @for (line of gridLines(); track line) {
+          <line class="lt-line-chart__grid" x1="0" [attr.y1]="line" x2="100" [attr.y2]="line" />
+        }
+        <polygon
+          class="lt-line-chart__area"
+          [attr.points]="areaPoints()"
+          [attr.fill]="'url(#' + gradientId() + ')'"
+        />
+        <polyline
+          class="lt-line-chart__line"
+          [attr.points]="linePoints()"
+          [attr.stroke]="strokeColor()"
+        />
+        @if (secondaryLinePoints()) {
+          <polyline
+            class="lt-line-chart__line lt-line-chart__line--secondary"
+            [attr.points]="secondaryLinePoints()"
+            [attr.stroke]="secondaryStrokeColor()"
+          />
+        }
+      } @else {
+        <line class="lt-line-chart__baseline" x1="0" y1="42" x2="100" y2="42" />
+      }
+    </svg>
+  </div>
+
+  @if (hasData()) {
+    <div class="lt-line-chart__x-axis" aria-hidden="true">
+      <span>0s</span>
+      <span>{{ timeAxisLabel() }}</span>
+    </div>
+  }
+</figure>

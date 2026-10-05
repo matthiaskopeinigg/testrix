@@ -1,0 +1,37 @@
+<section class="lt-health-overview" [attr.data-health]="overview().level" aria-label="Run health overview">
+  <div class="lt-health-overview__ring-wrap" aria-hidden="true">
+    <svg class="lt-health-overview__ring" viewBox="0 0 72 72">
+      <circle class="lt-health-overview__ring-track" cx="36" cy="36" r="30" />
+      <circle
+        class="lt-health-overview__ring-value"
+        cx="36"
+        cy="36"
+        r="30"
+        [attr.stroke-dasharray]="ringCircumference"
+        [attr.stroke-dashoffset]="ringOffset()"
+      />
+    </svg>
+    <div class="lt-health-overview__score">
+      <strong>{{ overview().score }}</strong>
+      <span>score</span>
+    </div>
+  </div>
+
+  <div class="lt-health-overview__copy">
+    <div class="lt-health-overview__title-row">
+      <h3 class="lt-health-overview__title">Run health</h3>
+      <span class="lt-health-overview__tag" [attr.data-tone]="tone()">{{ overview().label }}</span>
+    </div>
+    <p class="lt-health-overview__summary">{{ overview().summary }}</p>
+    @if (healthChips().length) {
+      <ul class="lt-health-overview__chips">
+        @for (chip of healthChips(); track chip.label) {
+          <li class="lt-health-chip" [attr.data-health]="chip.level">
+            <span class="lt-health-chip__dot" aria-hidden="true"></span>
+            <span>{{ chip.label }}</span>
+          </li>
+        }
+      </ul>
+    }
+  </div>
+</section>

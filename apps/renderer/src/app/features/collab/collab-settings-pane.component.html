@@ -1,0 +1,125 @@
+<div class="tx-pref">
+  <div class="tx-pref__row">
+    <div class="tx-pref__copy">
+      <h3>Your name on changes</h3>
+      <p>Teammates see this beside anything you change. Commits use the name and email below.</p>
+    </div>
+    <div class="tx-collab-settings__identity">
+      <tx-input
+        id="collab-identity-name"
+        ariaLabel="Your name"
+        [value]="name()"
+        (valueChange)="nameDraft.set($event)"
+      />
+      <tx-input
+        id="collab-identity-email"
+        ariaLabel="Commit email"
+        placeholder="Optional commit email"
+        [value]="email()"
+        (valueChange)="emailDraft.set($event)"
+      />
+      <tx-button variant="secondary" (clicked)="saveIdentity()">Save</tx-button>
+    </div>
+  </div>
+
+  <div class="tx-pref__row">
+    <div class="tx-pref__copy">
+      <h3>Appear offline</h3>
+      <p>Stops sharing that you are around, in every repository. Your changes still sync.</p>
+    </div>
+    <tx-check
+      variant="compact"
+      label="Appear offline"
+      [checked]="collab.status().presenceMode === 'offline'"
+      (checkedChange)="toggleInvisible($event)"
+    />
+  </div>
+
+  <div class="tx-pref__row">
+    <div class="tx-pref__copy">
+      <h3>Share regression results</h3>
+      <p>Publishes pass and fail counts so the team can see run outcomes. Logs stay on this PC.</p>
+    </div>
+    <tx-check
+      variant="compact"
+      label="Share regression results"
+      [checked]="collab.status().shareRuns"
+      (checkedChange)="collab.setShareRuns($event)"
+    />
+  </div>
+</div>
+
+<section class="tx-collab-settings__repos" aria-labelledby="collab-settings-repos">
+  <header class="tx-collab-settings__repos-head">
+    <div>
+      <h3 id="collab-settings-repos">Repositories</h3>
+      <p>Each repository can hold many workspaces. Pause, switch branch, or disconnect one without touching the others.</p>
+    </div>
+    <tx-button variant="primary" (clicked)="collab.openConnect()">Connect a repository</tx-button>
+  </header>
+
+  @if (collab.repos().length === 0) {
+    <p class="tx-collab-settings__note">No repository is connected. Every workspace is only on this PC.</p>
+  }
+
+  @for (repo of collab.repos(); track repo.id) {
+    <article class="tx-collab-settings__repo" [attr.aria-label]="repo.repoName">
+      <div class="tx-collab-settings__repo-head">
+        <span class="tx-collab-settings__dot" [attr.data-state]="repo.state" aria-hidden="true"></span>
+        <div class="tx-collab-settings__repo-copy">
+          <h4>{{ repo.repoName }}</h4>
+          <p>
+            {{ repo.label }} · {{ statusLine(repo) }} ·
+            {{ onPcCount(repo) }} of {{ repo.workspaces.length }} workspaces on this PC
+          </p>
+        </div>
+        <tx-button variant="ghost" (clicked)="collab.syncNow(repo.id)">Sync now</tx-button>
+      </div>
+
+      <div class="tx-collab-settings__repo-grid">
+        <div class="tx-collab-settings__pair">
+          <tx-input
+            [id]="'collab-remote-' + repo.id"
+            label="Repository address"
+            [value]="repo.remoteUrl"
+            readonly
+          />
+          <tx-button variant="ghost" (clicked)="collab.copyRemote(repo.id)">Copy</tx-button>
+        </div>
+        <div class="tx-collab-settings__pair" (focusout)="handleBranchBlur(repo, $event)">
+          <tx-input
+            [id]="'collab-branch-' + repo.id"
+            label="Branch"
+            [value]="branchFor(repo)"
+            (valueChange)="setBranchDraft(repo.id, $event)"
+          />
+          <tx-button variant="secondary" [disabled]="!isBranchDirty(repo)" (clicked)="saveBranch(repo)">
+            {{ isBranchDirty(repo) ? 'Save' : 'Saved' }}
+          </tx-button>
+        </div>
+      </div>
+
+      <div class="tx-collab-settings__repo-foot">
+        <tx-check
+          variant="compact"
+          label="Pause sync"
+          [checked]="repo.sync === 'paused'"
+          (checkedChange)="togglePause(repo, $event)"
+        />
+        @if (repo.transport === 'https') {
+          <tx-button variant="ghost" (clicked)="collab.openUpdateToken(repo.id)">Update access token</tx-button>
+        }
+        @if (repo.hasCredential) {
+          <tx-button variant="ghost" (clicked)="collab.forgetCredential(repo.id)">Forget access token</tx-button>
+        }
+        @if (repo.transport === 'ssh') {
+          <span class="tx-collab-settings__note">Uses the system Git binary and your SSH keys.</span>
+        }
+        <tx-button variant="danger" [disabled]="collab.busy()" (clicked)="disconnect(repo)">Disconnect</tx-button>
+      </div>
+      @if (repo.lastError) {
+        <p class="tx-collab-settings__error" role="alert">{{ repo.lastError }}</p>
+      }
+    </article>
+  }
+</section>

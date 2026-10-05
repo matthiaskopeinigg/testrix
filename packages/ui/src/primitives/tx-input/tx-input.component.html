@@ -11,6 +11,7 @@
         [placeholder]="placeholder()"
         [attr.rows]="rows()"
         [attr.aria-label]="ariaLabel()"
+        [attr.readonly]="readonly() ? '' : null"
         spellcheck="false"
         (input)="handleInput($event)"
       ></textarea>
@@ -23,6 +24,7 @@
         [placeholder]="placeholder()"
         [attr.autocomplete]="autocomplete()"
         [attr.aria-label]="ariaLabel()"
+        [attr.readonly]="readonly() ? '' : null"
         spellcheck="false"
         (input)="handleInput($event)"
       />

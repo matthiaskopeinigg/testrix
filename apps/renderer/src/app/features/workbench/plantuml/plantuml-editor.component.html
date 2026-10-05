@@ -1,0 +1,275 @@
+<section class="tx-tool tx-plantuml" [attr.aria-label]="tab().title">
+  <header class="tx-tool__head tx-plantuml__head">
+    <div class="tx-tool__title">
+      <h1>{{ tab().title }}</h1>
+      <p>Edit diagrams visually. Changes save to this workspace.</p>
+    </div>
+    <div class="tx-plantuml__head-actions">
+      <div class="tx-tool__modes" role="tablist" aria-label="Editor mode">
+        <button
+          type="button"
+          class="tx-tool__mode"
+          role="tab"
+          [class.is-active]="viewMode() === 'grid'"
+          [attr.aria-selected]="viewMode() === 'grid'"
+          (click)="setViewMode('grid')"
+        >
+          Grid
+        </button>
+        <button
+          type="button"
+          class="tx-tool__mode"
+          role="tab"
+          [class.is-active]="viewMode() === 'source'"
+          [attr.aria-selected]="viewMode() === 'source'"
+          (click)="setViewMode('source')"
+        >
+          Source
+        </button>
+      </div>
+      <span class="tx-plantuml__kind-badge">{{ kindLabel() }}</span>
+    </div>
+  </header>
+
+  <div
+    class="tx-tool__split tx-plantuml__split"
+    [class.is-collapsed]="builderCollapsed()"
+    [class.is-grid-mode]="viewMode() === 'grid'"
+  >
+    @if (viewMode() === 'grid') {
+      <div class="tx-tool__pane tx-plantuml__matrix-pane">
+        @if (sequenceModel(); as seq) {
+          <tx-plantuml-sequence-grid
+            [model]="seq"
+            [savedCamera]="gridCamera()"
+            (cameraChange)="rememberGridCamera($event)"
+            (addParticipant)="addParticipant($event)"
+            (removeParticipant)="removeParticipant($event)"
+            (participantChange)="setParticipantValue($event.id, $event.field, $event.value)"
+            (addSection)="addGridSection($event)"
+            (addMessage)="addGridMessage($event)"
+            (addAlt)="addGridAlt($event)"
+            (addBlock)="addGridBlock($event)"
+            (frameEdit)="editGridFrame($event)"
+            (stepMove)="moveGridStep($event)"
+            (titleChange)="setTitleValue($event)"
+            (reorderParticipants)="reorderParticipants($event.fromIndex, $event.toIndex)"
+            (sectionChange)="setSectionValue($event.id, $event.field, $event.value)"
+            (removeSection)="removeStep($event)"
+            (stepChange)="applyGridStep($event)"
+            (removeSteps)="removeGridSteps($event)"
+          />
+        } @else if (canvasModel(); as diagram) {
+          <tx-plantuml-graph-grid
+            [model]="diagram"
+            [savedCamera]="gridCamera()"
+            (cameraChange)="rememberGridCamera($event)"
+            (modelChange)="replaceDiagram($event)"
+            (titleChange)="setTitleValue($event)"
+          />
+        } @else if (activityModel(); as activity) {
+          <tx-plantuml-activity-grid
+            [model]="activity"
+            [savedCamera]="gridCamera()"
+            (cameraChange)="rememberGridCamera($event)"
+            (modelChange)="replaceDiagram($event)"
+            (titleChange)="setTitleValue($event)"
+          />
+        } @else {
+          <div class="tx-plantuml__grid-empty">
+            <tx-empty-state
+              title="This source stays in Source"
+              body="The text does not match a diagram the grid can edit."
+            />
+            <button type="button" class="tx-tool__btn tx-tool__btn--accent" (click)="setViewMode('source')">
+              Open Source
+            </button>
+          </div>
+        }
+      </div>
+    } @else {
+    <div
+      class="tx-tool__pane tx-plantuml__builder"
+      [class.is-hidden]="builderCollapsed()"
+      [style.flex-basis.px]="builderCollapsed() ? 0 : builderWidth()"
+    >
+      <div class="tx-plantuml__pane-bar">
+        <div class="tx-tool__pane-label">Source</div>
+        <div class="tx-plantuml__pane-bar-actions">
+          @if (viewMode() === 'source') {
+            <tx-hint label="Copy PlantUML source" placement="bottom">
+              <button type="button" class="tx-tool__btn" aria-label="Copy source" (click)="copySource($event)">
+                Copy source
+              </button>
+            </tx-hint>
+            <tx-hint label="Copy SVG markup" placement="bottom">
+              <button
+                type="button"
+                class="tx-tool__btn"
+                [disabled]="!svgRaw()"
+                aria-label="Copy SVG"
+                (click)="copySvg($event)"
+              >
+                Copy SVG
+              </button>
+            </tx-hint>
+            <tx-hint label="Download SVG file" placement="bottom">
+              <button
+                type="button"
+                class="tx-tool__btn tx-tool__btn--accent"
+                [disabled]="!svgRaw()"
+                aria-label="Download SVG"
+                (click)="downloadSvg()"
+              >
+                Download SVG
+              </button>
+            </tx-hint>
+          }
+          <tx-hint [label]="builderCollapsed() ? 'Show panel' : 'Hide panel'" placement="bottom">
+            <button
+              type="button"
+              class="tx-tool__icon-btn"
+              [attr.aria-label]="builderCollapsed() ? 'Show panel' : 'Hide panel'"
+              (click)="toggleBuilder()"
+            >
+              ‹
+            </button>
+          </tx-hint>
+        </div>
+      </div>
+
+      <div class="tx-tool__body tx-plantuml__builder-body">
+          <div class="tx-plantuml__source-shell">
+            @if (importBanner(); as banner) {
+              <div class="tx-plantuml__banner">
+                <p>{{ banner }}</p>
+                <button type="button" class="tx-tool__btn tx-tool__btn--accent" (click)="continueInBuilder()">
+                  Continue in grid
+                </button>
+              </div>
+            }
+            <label class="tx-tool__field tx-plantuml__title-field">
+              <span class="tx-tool__field-label">Title</span>
+              <input
+                class="tx-tool__input"
+                type="text"
+                [value]="plantField(model().title)"
+                spellcheck="false"
+                autocomplete="off"
+                aria-label="Diagram title"
+                (input)="setTitle($event)"
+              />
+            </label>
+            <textarea
+              class="tx-tool__textarea tx-plantuml__source-area"
+              [value]="source()"
+              spellcheck="false"
+              aria-label="PlantUML source"
+              (input)="handleSourceEdit($event)"
+            ></textarea>
+          </div>
+      </div>
+    </div>
+    }
+
+    @if (viewMode() !== 'grid') {
+    <div
+      class="tx-plantuml__splitter"
+      [class.is-disabled]="builderCollapsed()"
+      role="separator"
+      aria-orientation="vertical"
+      aria-label="Resize source"
+      (pointerdown)="startResize($event)"
+      (pointermove)="moveResize($event)"
+      (pointerup)="endResize($event)"
+      (pointercancel)="endResize($event)"
+    ></div>
+
+    <div class="tx-tool__pane tx-plantuml__preview">
+      <div class="tx-plantuml__preview-head">
+        <div class="tx-tool__pane-label">Preview</div>
+        <div class="tx-plantuml__preview-actions">
+          @if (builderCollapsed()) {
+            <tx-hint label="Show source" placement="bottom">
+              <button type="button" class="tx-tool__btn" (click)="toggleBuilder()">Source</button>
+            </tx-hint>
+          }
+          @if (viewMode() === 'source' && builderCollapsed()) {
+            <tx-hint label="Copy PlantUML source" placement="bottom">
+              <button type="button" class="tx-tool__btn" aria-label="Copy source" (click)="copySource($event)">
+                Copy source
+              </button>
+            </tx-hint>
+            <tx-hint label="Copy SVG markup" placement="bottom">
+              <button
+                type="button"
+                class="tx-tool__btn"
+                [disabled]="!svgRaw()"
+                aria-label="Copy SVG"
+                (click)="copySvg($event)"
+              >
+                Copy SVG
+              </button>
+            </tx-hint>
+            <tx-hint label="Download SVG file" placement="bottom">
+              <button
+                type="button"
+                class="tx-tool__btn tx-tool__btn--accent"
+                [disabled]="!svgRaw()"
+                aria-label="Download SVG"
+                (click)="downloadSvg()"
+              >
+                Download SVG
+              </button>
+            </tx-hint>
+          }
+          @if (rendering()) {
+            <span class="tx-plantuml__pulse">Rendering…</span>
+          }
+        </div>
+      </div>
+      @if (renderError(); as message) {
+        <p class="tx-tool__error tx-plantuml__error">{{ message }}</p>
+      }
+      <div
+        #previewHost
+        class="tx-plantuml__canvas"
+        (wheel)="handleWheel($event)"
+        (pointerdown)="startPan($event)"
+        (pointermove)="movePan($event)"
+        (pointerup)="endPan($event)"
+        (pointercancel)="endPan($event)"
+      >
+        @if (!svgHtml() && !renderError() && !rendering()) {
+          <div class="tx-plantuml__empty">
+            <p>Diagram preview</p>
+            <span>Edit the diagram to render it offline.</span>
+          </div>
+        }
+        <div
+          class="tx-plantuml__svg"
+          [style.transform]="'translate(' + pan().x + 'px, ' + pan().y + 'px) scale(' + zoom() + ')'"
+          [innerHTML]="svgHtml()"
+        ></div>
+        <div class="tx-plantuml__hud" role="toolbar" aria-label="Preview controls" (pointerdown)="$event.stopPropagation()">
+          <tx-hint label="Zoom out" detail="Ctrl -" placement="top">
+            <button type="button" class="tx-plantuml__hud-btn" aria-label="Zoom out" (click)="zoomOut()">−</button>
+          </tx-hint>
+          <tx-hint label="Reset view" detail="Ctrl 0" placement="top">
+            <button type="button" class="tx-plantuml__hud-btn tx-plantuml__hud-label" aria-label="Fit preview" (click)="fitPreview()">
+              {{ zoomLabel() }}
+            </button>
+          </tx-hint>
+          <tx-hint label="Zoom in" detail="Ctrl =" placement="top">
+            <button type="button" class="tx-plantuml__hud-btn" aria-label="Zoom in" (click)="zoomIn()">+</button>
+          </tx-hint>
+          <span class="tx-plantuml__hud-sep" aria-hidden="true"></span>
+          <tx-hint label="Fit diagram" placement="top">
+            <button type="button" class="tx-plantuml__hud-btn" aria-label="Fit" (click)="fitPreview()">Fit</button>
+          </tx-hint>
+        </div>
+      </div>
+    </div>
+    }
+  </div>
+</section>

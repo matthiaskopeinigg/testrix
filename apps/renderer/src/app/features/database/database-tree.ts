@@ -3,6 +3,7 @@ import {
   createDefaultDatabaseConnection,
   createDefaultSavedQuery,
   createQueryFolder,
+  newEntityId,
   isDatabaseConnectionFolder,
   isSavedQueryFolder,
   type DatabaseConnection,
@@ -372,9 +373,6 @@ function compareQuery(left: SavedQueryTreeItem, right: SavedQueryTreeItem, mode:
   return left.updatedAt.localeCompare(right.updatedAt);
 }
 
-function nextId(used: Set<string>, prefix: string): string {
-  let n = 1;
-  while (used.has(`${prefix}_${n}`))
-    n += 1;
-  return `${prefix}_${n}`;
+function nextId(_used: Set<string>, _prefix: string): string {
+  return newEntityId();
 }

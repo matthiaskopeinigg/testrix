@@ -1,0 +1,10 @@
+node_modules
+dist
+out
+coverage
+release
+.angular
+package-lock.json
+apps/renderer/public
+apps/setup/src/renderer/vendor
+**/*.min.*

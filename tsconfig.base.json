@@ -6,10 +6,8 @@
     "paths": {
       "@testrix/contracts": ["packages/contracts/src/index.ts"],
       "@testrix/design-tokens": ["packages/design-tokens/src/index.ts"],
-      "@testrix/motion": ["packages/motion/src/index.ts"],
       "@testrix/ui": ["packages/ui/src/index.ts"],
       "@testrix/electron-core": ["packages/electron-core/src/index.ts"],
-      "@testrix/persistence": ["packages/persistence/src/index.ts"],
       "@testrix/http-engine": ["packages/http-engine/src/index.ts"]
     },
     "noImplicitOverride": true,

@@ -1,0 +1,813 @@
+@if (!node()) {
+  <div class="tx-flow-inspector__empty">
+    @if (selectionCount() > 1) {
+      <tx-empty-state
+        title="{{ selectionCount() }} nodes selected"
+        body="Pick a single node to edit it, or right-click the canvas for bulk actions."
+      />
+    } @else {
+      <tx-empty-state title="No node selected" body="Click a node on the canvas, or right-click empty canvas to add one." />
+    }
+  </div>
+} @else if (node(); as node) {
+  <header class="tx-flow-inspector__head">
+    <div class="tx-flow-inspector__ident">
+      <p class="tx-flow-inspector__kicker">{{ descriptor()?.chip }}</p>
+      <p class="tx-flow-inspector__kind">{{ descriptor()?.label }}</p>
+    </div>
+    @if (!isTerminal()) {
+      <button type="button" class="tx-flow-inspector__remove" (click)="removed.emit()">Remove</button>
+    }
+  </header>
+
+  <p class="tx-flow-inspector__hint" [class.is-compact]="node.kind === 'request'">{{ descriptor()?.hint }}</p>
+
+  @if (isTerminal()) {
+    <p class="tx-flow-inspector__hint">
+      {{ node.kind === 'start' ? 'Every path begins here. Connect Start to the first step(s).' : 'Every path finishes here. Connect leaf steps to End.' }}
+    </p>
+  } @else {
+  @if (node.kind === 'request') {
+    <div class="tx-flow-inspector__meta-row">
+      <tx-input
+        id="flow-node-name"
+        label="Name"
+        [placeholder]="descriptor()?.label ?? ''"
+        [value]="node.name"
+        (valueChange)="patch.emit({ name: $event })"
+      />
+      <tx-check label="Enabled" [checked]="node.enabled" (checkedChange)="patch.emit({ enabled: $event })" />
+    </div>
+  } @else {
+    <tx-input
+      id="flow-node-name"
+      label="Name"
+      [placeholder]="descriptor()?.label ?? ''"
+      [value]="node.name"
+      (valueChange)="patch.emit({ name: $event })"
+    />
+    <tx-check label="Enabled" [checked]="node.enabled" (checkedChange)="patch.emit({ enabled: $event })" />
+  }
+
+  @switch (node.kind) {
+    @case ('browser-open') {
+      <tx-token-field
+        id="flow-url"
+        label="URL"
+        [value]="text('url')"
+        [variables]="variables()"
+        (valueChange)="setText('url', $event)"
+        (valueCommit)="commitUrl($event)"
+      />
+      <div class="tx-flow-inspector__row">
+        <tx-input id="flow-w" label="Width" [value]="num('width', 1100)" (valueChange)="setNumber('width', $event, 1100)" />
+        <tx-input id="flow-h" label="Height" [value]="num('height', 800)" (valueChange)="setNumber('height', $event, 800)" />
+      </div>
+    }
+    @case ('browser-click') {
+      <ng-container *ngTemplateOutlet="selectorField" />
+    }
+    @case ('browser-hover') {
+      <ng-container *ngTemplateOutlet="selectorField" />
+    }
+    @case ('browser-type') {
+      <ng-container *ngTemplateOutlet="selectorField" />
+      <tx-token-field id="flow-text" label="Text" [value]="text('text')" [variables]="variables()" (valueChange)="setText('text', $event)" />
+      <tx-check label="Clear first" [checked]="flag('clearFirst', true)" (checkedChange)="setFlag('clearFirst', $event)" />
+    }
+    @case ('browser-select') {
+      <ng-container *ngTemplateOutlet="selectorField" />
+      <tx-token-field id="flow-val" label="Option value" [value]="text('value')" [variables]="variables()" (valueChange)="setText('value', $event)" />
+    }
+    @case ('browser-press') {
+      <ng-container *ngTemplateOutlet="selectorField" />
+      <tx-input id="flow-key" label="Key" [value]="text('key', 'Enter')" (valueChange)="setText('key', $event)" />
+    }
+    @case ('browser-wait-for') {
+      <ng-container *ngTemplateOutlet="selectorField" />
+      <tx-input id="flow-timeout" label="Timeout (ms)" [value]="num('timeoutMs', 5000)" (valueChange)="setNumber('timeoutMs', $event, 5000)" />
+    }
+    @case ('browser-screenshot') {
+      <tx-token-field id="flow-shot" label="Label" [value]="text('name')" [variables]="variables()" (valueChange)="setText('name', $event)" />
+    }
+    @case ('browser-eval') {
+      <tx-token-field id="flow-script" label="Script" multiline [rows]="6" [value]="text('script')" [variables]="variables()" (valueChange)="setText('script', $event)" />
+    }
+    @case ('device-start') {
+      <tx-select
+        [value]="text('deviceId')"
+        [options]="deviceOptions()"
+        ariaLabel="Device"
+        (valueChange)="setDevice($event)"
+      />
+      <tx-check
+        label="Open home screen"
+        [checked]="flag('openHome')"
+        (checkedChange)="setFlag('openHome', $event)"
+      />
+      <tx-input id="flow-dev-start-timeout" label="Timeout (ms)" [value]="num('timeoutMs', 90000)" (valueChange)="setNumber('timeoutMs', $event, 90000)" />
+      <p class="tx-flow-inspector__hint">Starts the selected Emulator device or reuses it when already online. Waits until Android finishes booting (not only until adb lists the device). Fresh boots always open Home. Check Open home screen to press Home when reusing a warm device. The run stops the emulator only when this step started it. Timeout is how long to wait for the device to become ready.</p>
+    }
+    @case ('device-launch') {
+      <tx-token-field id="flow-pkg" label="Package or Play URL" [value]="text('packageName')" [variables]="variables()" (valueChange)="setText('packageName', $event)" />
+      <tx-token-field id="flow-act" label="Activity" [value]="text('activity')" [variables]="variables()" (valueChange)="setText('activity', $event)" />
+      <tx-check
+        label="Clear previous session"
+        [checked]="flag('clearSession')"
+        (checkedChange)="setFlag('clearSession', $event)"
+      />
+      <tx-check label="Clear data" [checked]="flag('clearData')" (checkedChange)="setFlag('clearData', $event)" />
+      <tx-input id="flow-dev-launch-timeout" label="Timeout (ms)" [value]="num('timeoutMs', 15000)" (valueChange)="setNumber('timeoutMs', $event, 15000)" />
+      <p class="tx-flow-inspector__hint">Clear previous session force-stops the package before launch. Clear data runs pm clear (wipes the profile). Timeout bounds the launch ADB call.</p>
+    }
+    @case ('device-tap') {
+      <ng-container *ngTemplateOutlet="deviceSelectorField" />
+      <tx-input id="flow-dev-tap-timeout" label="Timeout (ms)" [value]="num('timeoutMs', 8000)" (valueChange)="setNumber('timeoutMs', $event, 8000)" />
+    }
+    @case ('device-type') {
+      <ng-container *ngTemplateOutlet="deviceSelectorField" />
+      <tx-token-field id="flow-dev-text" label="Text" [value]="text('text')" [variables]="variables()" (valueChange)="setText('text', $event)" />
+      <tx-check label="Clear first" [checked]="flag('clearFirst', true)" (checkedChange)="setFlag('clearFirst', $event)" />
+      <tx-input id="flow-dev-type-timeout" label="Timeout (ms)" [value]="num('timeoutMs', 8000)" (valueChange)="setNumber('timeoutMs', $event, 8000)" />
+    }
+    @case ('device-press') {
+      <tx-input id="flow-dev-key" label="Key" [value]="text('key', 'BACK')" (valueChange)="setText('key', $event)" />
+      <tx-input id="flow-dev-press-timeout" label="Timeout (ms)" [value]="num('timeoutMs', 5000)" (valueChange)="setNumber('timeoutMs', $event, 5000)" />
+    }
+    @case ('device-swipe') {
+      <div class="tx-flow-inspector__row">
+        <tx-input id="flow-x1" label="X1" [value]="num('x1', 200)" (valueChange)="setNumber('x1', $event, 200)" />
+        <tx-input id="flow-y1" label="Y1" [value]="num('y1', 800)" (valueChange)="setNumber('y1', $event, 800)" />
+      </div>
+      <div class="tx-flow-inspector__row">
+        <tx-input id="flow-x2" label="X2" [value]="num('x2', 200)" (valueChange)="setNumber('x2', $event, 200)" />
+        <tx-input id="flow-y2" label="Y2" [value]="num('y2', 200)" (valueChange)="setNumber('y2', $event, 200)" />
+      </div>
+      <tx-input id="flow-swipe-ms" label="Duration (ms)" [value]="num('durationMs', 300)" (valueChange)="setNumber('durationMs', $event, 300)" />
+      <tx-input id="flow-dev-swipe-timeout" label="Timeout (ms)" [value]="num('timeoutMs', 5000)" (valueChange)="setNumber('timeoutMs', $event, 5000)" />
+    }
+    @case ('device-wait-for') {
+      <ng-container *ngTemplateOutlet="deviceSelectorField" />
+      <tx-input id="flow-dev-timeout" label="Timeout (ms)" [value]="num('timeoutMs', 8000)" (valueChange)="setNumber('timeoutMs', $event, 8000)" />
+    }
+    @case ('device-screenshot') {
+      <tx-token-field id="flow-dev-shot" label="Label" [value]="text('name')" [variables]="variables()" (valueChange)="setText('name', $event)" />
+      <tx-input id="flow-dev-shot-timeout" label="Timeout (ms)" [value]="num('timeoutMs', 15000)" (valueChange)="setNumber('timeoutMs', $event, 15000)" />
+    }
+    @case ('device-assert-text') {
+      <ng-container *ngTemplateOutlet="deviceSelectorField" />
+      <tx-select [value]="text('match', 'contains')" [options]="matchOptions" ariaLabel="Match mode" (valueChange)="setText('match', $event)" />
+      <tx-token-field id="flow-dev-expected" label="Expected text" [value]="text('expected')" [variables]="variables()" (valueChange)="setText('expected', $event)" />
+      <tx-input id="flow-dev-assert-text-timeout" label="Timeout (ms)" [value]="num('timeoutMs', 8000)" (valueChange)="setNumber('timeoutMs', $event, 8000)" />
+    }
+    @case ('device-assert-visible') {
+      <ng-container *ngTemplateOutlet="deviceSelectorField" />
+      <tx-input id="flow-dev-assert-vis-timeout" label="Timeout (ms)" [value]="num('timeoutMs', 8000)" (valueChange)="setNumber('timeoutMs', $event, 8000)" />
+    }
+    @case ('assert-text') {
+      <ng-container *ngTemplateOutlet="selectorField" />
+      <tx-select [value]="text('match', 'contains')" [options]="matchOptions" ariaLabel="Match mode" (valueChange)="setText('match', $event)" />
+      <tx-token-field id="flow-expected" label="Expected text" [value]="text('expected')" [variables]="variables()" (valueChange)="setText('expected', $event)" />
+    }
+    @case ('assert-visible') {
+      <ng-container *ngTemplateOutlet="selectorField" />
+    }
+    @case ('assert-url') {
+      <tx-select [value]="text('match', 'contains')" [options]="matchOptions" ariaLabel="Match mode" (valueChange)="setText('match', $event)" />
+      <tx-token-field id="flow-expected" label="Expected URL" [value]="text('expected')" [variables]="variables()" (valueChange)="setText('expected', $event)" />
+      <tx-input id="flow-url-timeout" label="Timeout (ms)" [value]="num('timeoutMs', 5000)" (valueChange)="setNumber('timeoutMs', $event, 5000)" />
+      <p class="tx-flow-inspector__hint">Validates the previous connected page step’s URL (useful after redirects). Use 0 to check once.</p>
+    }
+    @case ('assert-status') {
+      <tx-input id="flow-status" label="Expected status" [value]="num('expected', 200)" (valueChange)="setNumber('expected', $event, 200)" />
+      <p class="tx-flow-inspector__hint">Validates the previous connected node. After Listen or Intercept, waits for that request first.</p>
+    }
+    @case ('http-validate') {
+      <tx-input id="flow-http-validate" label="Expected status" [value]="num('expected', 200)" (valueChange)="setNumber('expected', $event, 200)" />
+      <p class="tx-flow-inspector__hint">
+        Same as Validate status: asserts the previous connected Listen, Intercept, or Request. Wire it directly after the node you want to check.
+      </p>
+    }
+    @case ('assert-json') {
+      <tx-token-field id="flow-expr" label="Condition" [value]="text('expression')" [variables]="variables()" (valueChange)="setText('expression', $event)" />
+      <p class="tx-flow-inspector__hint">Validates the previous connected node (for example <code>status == 200</code>). After Listen/Intercept, waits for that hit first.</p>
+    }
+    @case ('request') {
+      <div class="tx-flow-inspector__request-bar">
+        <div class="tx-flow-inspector__method-wrap">
+          <tx-select
+            class="tx-flow-inspector__method"
+            variant="bare"
+            [tone]="text('method', 'GET')"
+            [value]="text('method', 'GET')"
+            [options]="methodOptions"
+            ariaLabel="HTTP method"
+            (valueChange)="setText('method', $event)"
+          />
+        </div>
+        <tx-token-field
+          id="flow-url"
+          label="URL"
+          [value]="text('url')"
+          [variables]="variables()"
+          (valueChange)="setRequestUrl($event)"
+          (valueCommit)="commitRequestUrl($event)"
+        />
+      </div>
+      <div class="tx-flow-inspector__req-tabs" role="tablist" aria-label="Request sections">
+        @for (section of requestSections; track section) {
+          <button
+            type="button"
+            class="tx-flow-inspector__req-tab"
+            role="tab"
+            [class.is-active]="requestSection() === section"
+            [attr.aria-selected]="requestSection() === section"
+            (click)="setRequestSection(section)"
+          >
+            {{ section === 'params' ? 'Params' : section === 'headers' ? 'Headers' : 'Body' }}
+            @if (requestSectionCount(section) > 0) {
+              <span class="tx-flow-inspector__req-count">{{ requestSectionCount(section) }}</span>
+            }
+          </button>
+        }
+      </div>
+      <div class="tx-flow-inspector__req-pane" [attr.data-slide]="requestSlideDir()">
+        @switch (requestSection()) {
+          @case ('params') {
+            <tx-request-kv-table
+              label="Path params"
+              [showDescription]="false"
+              [rows]="pathParamRows()"
+              [completeVariables]="variables()"
+              (rowsChange)="setRequestKvRows('pathParams', $event)"
+            />
+            <tx-request-kv-table
+              label="Query"
+              [showDescription]="false"
+              [rows]="queryParamRows()"
+              [completeVariables]="variables()"
+              (rowsChange)="setRequestKvRows('queryParams', $event)"
+            />
+          }
+          @case ('headers') {
+            <tx-request-kv-table
+              label="Headers"
+              [headerComplete]="true"
+              [showDescription]="false"
+              [rows]="headerRows()"
+              [completeVariables]="variables()"
+              (rowsChange)="setRequestKvRows('headers', $event)"
+            />
+          }
+          @case ('body') {
+            <div class="tx-flow-inspector__body-toolbar">
+              <div class="tx-flow-inspector__body-mode">
+                <span class="tx-flow-inspector__field-label">Mode</span>
+                <tx-select
+                  [value]="requestBodyMode()"
+                  [options]="bodyModeOptions"
+                  ariaLabel="Body mode"
+                  (valueChange)="setRequestBodyMode($event)"
+                />
+              </div>
+              @if (canFormatBody() && requestBodyMode() !== 'none') {
+                <tx-hint label="Format document" keys="Shift Alt F" placement="bottom">
+                  <button type="button" class="tx-flow-inspector__ghost" (click)="handleFormatBody()">Format</button>
+                </tx-hint>
+              }
+            </div>
+            @if (requestBodyMode() === 'none') {
+              <tx-empty-state title="No body" body="Pick JSON, text, form, GraphQL, or binary." />
+            } @else if (requestBodyMode() === 'graphql') {
+              <div class="tx-flow-inspector__gql">
+                <div class="tx-flow-inspector__gql-pane">
+                  <span class="tx-flow-inspector__field-label">Query</span>
+                  <div class="tx-flow-inspector__body-editor">
+                    <tx-code-editor
+                      #gqlQueryEditor
+                      language="graphql"
+                      [value]="text('graphqlQuery')"
+                      [variables]="variables()"
+                      ariaLabel="GraphQL query"
+                      (valueChange)="setText('graphqlQuery', $event)"
+                    />
+                  </div>
+                </div>
+                <div class="tx-flow-inspector__gql-pane">
+                  <span class="tx-flow-inspector__field-label">Variables</span>
+                  <div class="tx-flow-inspector__body-editor">
+                    <tx-code-editor
+                      #gqlVarsEditor
+                      language="json"
+                      [value]="text('graphqlVariables', '{\n}\n')"
+                      [variables]="variables()"
+                      ariaLabel="GraphQL variables"
+                      (valueChange)="setText('graphqlVariables', $event)"
+                    />
+                  </div>
+                </div>
+                <tx-token-field
+                  id="flow-gql-op"
+                  label="Operation name"
+                  [value]="text('graphqlOperation')"
+                  [variables]="variables()"
+                  (valueChange)="setText('graphqlOperation', $event)"
+                />
+              </div>
+            } @else if (requestBodyMode() === 'form-data' || requestBodyMode() === 'urlencoded') {
+              <tx-request-kv-table
+                [label]="requestBodyMode() === 'form-data' ? 'Form data' : 'URL encoded'"
+                [showDescription]="false"
+                [rows]="formKvRows()"
+                [completeVariables]="variables()"
+                (rowsChange)="setRequestFormKvRows($event)"
+              />
+            } @else if (requestBodyMode() === 'binary') {
+              <tx-token-field
+                id="flow-bin-name"
+                label="File name"
+                [value]="text('binaryName')"
+                [variables]="variables()"
+                (valueChange)="setText('binaryName', $event)"
+              />
+              <tx-token-field
+                id="flow-bin-type"
+                label="Content-Type"
+                [value]="text('binaryType', 'application/octet-stream')"
+                [variables]="variables()"
+                (valueChange)="setText('binaryType', $event)"
+              />
+              <tx-token-field
+                id="flow-bin-b64"
+                label="Base64"
+                multiline
+                [rows]="8"
+                [value]="text('binaryBase64')"
+                [variables]="variables()"
+                (valueChange)="setText('binaryBase64', $event)"
+              />
+            } @else {
+              <div class="tx-flow-inspector__body-editor">
+                <tx-code-editor
+                  #bodyEditor
+                  [language]="requestBodyLanguage()"
+                  [value]="text('body')"
+                  [variables]="variables()"
+                  [ariaLabel]="requestBodyMode() + ' body'"
+                  (valueChange)="setText('body', $event)"
+                />
+              </div>
+            }
+          }
+        }
+      </div>
+    }
+    @case ('database') {
+      @if (dbConnectionOptions().length > 0) {
+        <tx-select
+          [value]="text('connectionId')"
+          [options]="dbConnectionOptions()"
+          ariaLabel="Database connection"
+          (valueChange)="setDatabaseConnection($event)"
+        />
+      } @else {
+        <tx-empty-state title="No connections" body="Add a connection in Database, then pick it here." />
+      }
+      @if (dbSchemaOptions().length > 0) {
+        <tx-select
+          [value]="text('schema')"
+          [options]="dbSchemaOptions()"
+          ariaLabel="Schema"
+          (valueChange)="setText('schema', $event)"
+        />
+      }
+      <tx-database-sql-field
+        [value]="text('query', 'SELECT 1')"
+        [connectionId]="text('connectionId')"
+        [schema]="text('schema')"
+        [connectionType]="dbConnection()?.type ?? null"
+        ariaLabel="Database query"
+        (valueChange)="setText('query', $event)"
+      />
+      <p class="tx-flow-inspector__hint">
+        Results land in <code>status</code>, <code>body</code>, <code>rowCount</code>, and first-row columns as
+        <code>{{ '{{' }}name{{ '}}' }}</code>. Assert with <code>rowCount == 1</code> or Capture
+        <code>0.id</code>.
+      </p>
+    }
+    @case ('set-var') {
+      <tx-input id="flow-var" label="Variable" [value]="text('name')" (valueChange)="setText('name', $event)" />
+      <tx-token-field id="flow-val" label="Value" [value]="text('value')" [variables]="variables()" (valueChange)="setText('value', $event)" />
+    }
+    @case ('capture') {
+      <p class="tx-flow-inspector__hint">
+        Reads the last HTTP exchange (request or listener). Example JSON path
+        <code>replicas[0].entries[0].otp</code>; header <code>authorization</code> → <code>token</code>.
+      </p>
+      @for (rule of captureRules(); track $index) {
+        <div class="tx-flow-inspector__capture-rule">
+          <tx-select
+            [value]="rule.kind"
+            [options]="captureKindOptions"
+            ariaLabel="Capture kind"
+            (valueChange)="patchCaptureRule($index, { kind: $event })"
+          />
+          @if (captureNeedsPath(rule.kind)) {
+            <tx-input
+              [id]="'flow-cap-path-' + $index"
+              [label]="capturePathLabel(rule.kind)"
+              [value]="rule.path"
+              (valueChange)="patchCaptureRule($index, { path: $event })"
+            />
+          }
+          <tx-input
+            [id]="'flow-cap-name-' + $index"
+            label="Variable"
+            [value]="rule.name"
+            (valueChange)="patchCaptureRule($index, { name: $event })"
+          />
+          <button type="button" class="tx-flow-inspector__remove" (click)="removeCaptureRule($index)">Remove rule</button>
+        </div>
+      }
+      <button type="button" class="tx-flow-inspector__add-rule" (click)="addCaptureRule()">Add rule</button>
+    }
+    @case ('cache') {
+      <tx-token-field id="flow-key" label="Cache key" [value]="text('key')" [variables]="variables()" (valueChange)="setText('key', $event)" />
+      <p class="tx-flow-inspector__hint">Nodes after this one run only the first time the key is seen.</p>
+    }
+    @case ('http-listener') {
+      <p class="tx-flow-inspector__section-label">Matching</p>
+      <tx-select
+        [value]="text('stage', 'response')"
+        [options]="httpStageOptions"
+        ariaLabel="Match stage"
+        (valueChange)="setText('stage', $event)"
+      />
+      <tx-select
+        [value]="text('method', '*')"
+        [options]="listenMethodOptions"
+        ariaLabel="HTTP method"
+        (valueChange)="setText('method', $event)"
+      />
+      <tx-select
+        [value]="text('match', 'contains')"
+        [options]="listenMatchOptions"
+        ariaLabel="URL match mode"
+        (valueChange)="setText('match', $event)"
+      />
+      <tx-token-field
+        id="flow-url"
+        [label]="listenPatternLabel()"
+        [value]="text('url')"
+        [variables]="variables()"
+        (valueChange)="setText('url', $event)"
+      />
+      <tx-token-field
+        id="flow-listen-header-name"
+        label="Header name (optional)"
+        [value]="text('headerName')"
+        [variables]="variables()"
+        (valueChange)="setText('headerName', $event)"
+      />
+      <tx-token-field
+        id="flow-listen-header-value"
+        label="Header contains (optional)"
+        [value]="text('headerValue')"
+        [variables]="variables()"
+        (valueChange)="setText('headerValue', $event)"
+      />
+      <tx-token-field
+        id="flow-listen-body"
+        label="Body contains (optional)"
+        [value]="text('bodyContains')"
+        [variables]="variables()"
+        (valueChange)="setText('bodyContains', $event)"
+      />
+      <tx-input id="flow-wait" label="Wait for hit (ms)" [value]="num('waitMs', 10000)" (valueChange)="setNumber('waitMs', $event, 10000)" />
+      <p class="tx-flow-inspector__hint">
+        Observe only — does not change traffic. On Device flows, matches emulator HTTPS via the local MITM proxy (apps with certificate pinning will not decrypt). Browser CDP is used when no device session is active. Wire Validate after this node.
+      </p>
+    }
+    @case ('http-interceptor') {
+      <p class="tx-flow-inspector__section-label">Matching</p>
+      <tx-select
+        [value]="text('stage', 'request')"
+        [options]="httpStageOptions"
+        ariaLabel="Match stage"
+        (valueChange)="setText('stage', $event)"
+      />
+      <tx-select
+        [value]="text('method', '*')"
+        [options]="listenMethodOptions"
+        ariaLabel="HTTP method"
+        (valueChange)="setText('method', $event)"
+      />
+      <tx-select
+        [value]="text('match', 'contains')"
+        [options]="listenMatchOptions"
+        ariaLabel="URL match mode"
+        (valueChange)="setText('match', $event)"
+      />
+      <tx-token-field
+        id="flow-url"
+        [label]="listenPatternLabel()"
+        [value]="text('url')"
+        [variables]="variables()"
+        (valueChange)="setText('url', $event)"
+      />
+      <tx-token-field
+        id="flow-intercept-header-name"
+        label="Header name (optional)"
+        [value]="text('headerName')"
+        [variables]="variables()"
+        (valueChange)="setText('headerName', $event)"
+      />
+      <tx-token-field
+        id="flow-intercept-header-value"
+        label="Header contains (optional)"
+        [value]="text('headerValue')"
+        [variables]="variables()"
+        (valueChange)="setText('headerValue', $event)"
+      />
+      <tx-token-field
+        id="flow-intercept-body"
+        label="Body contains (optional)"
+        [value]="text('bodyContains')"
+        [variables]="variables()"
+        (valueChange)="setText('bodyContains', $event)"
+      />
+      <tx-input id="flow-wait" label="Wait for hit (ms)" [value]="num('waitMs', 10000)" (valueChange)="setNumber('waitMs', $event, 10000)" />
+      <p class="tx-flow-inspector__section-label">Manipulate</p>
+      <tx-select
+        [value]="text('action', 'passthrough')"
+        [options]="interceptActionOptions"
+        ariaLabel="Intercept action"
+        (valueChange)="setText('action', $event)"
+      />
+      @if (text('action', 'passthrough') === 'passthrough' || text('action', 'passthrough') === 'mock') {
+        <tx-request-kv-table
+          label="Set headers"
+          [headerComplete]="true"
+          [showDescription]="false"
+          [rows]="interceptSetHeaderRows()"
+          [completeVariables]="variables()"
+          (rowsChange)="setInterceptKvRows('setHeaders', $event)"
+        />
+      }
+      @if (text('action', 'passthrough') === 'passthrough') {
+        <tx-request-kv-table
+          label="Remove headers"
+          [headerComplete]="true"
+          [showDescription]="false"
+          [rows]="interceptRemoveHeaderRows()"
+          [completeVariables]="variables()"
+          (rowsChange)="setInterceptKvRows('removeHeaders', $event)"
+        />
+        <div class="tx-flow-inspector__body-toolbar">
+          <div class="tx-flow-inspector__body-mode">
+            <span class="tx-flow-inspector__field-label">Body</span>
+            <tx-select
+              [value]="interceptBodyMode()"
+              [options]="interceptBodyModeOptions"
+              ariaLabel="Replace body mode"
+              (valueChange)="setInterceptBodyMode($event)"
+            />
+          </div>
+          @if (canFormatInterceptBody() && interceptBodyMode() !== 'none') {
+            <tx-hint label="Format document" keys="Shift Alt F" placement="bottom">
+              <button type="button" class="tx-flow-inspector__ghost" (click)="handleFormatInterceptBody()">Format</button>
+            </tx-hint>
+          }
+        </div>
+        @if (interceptBodyMode() === 'none') {
+          <tx-empty-state title="No body rewrite" body="Pick JSON, text, HTML, or XML to replace the body on passthrough." />
+        } @else {
+          <div class="tx-flow-inspector__body-editor">
+            <tx-code-editor
+              #interceptBodyEditor
+              [language]="interceptBodyLanguage()"
+              [value]="text('setBody')"
+              [variables]="variables()"
+              ariaLabel="Replace body"
+              (valueChange)="setText('setBody', $event)"
+            />
+          </div>
+        }
+      }
+      @if (text('action', 'passthrough') === 'mock') {
+        <tx-input
+          id="flow-intercept-mock-status"
+          label="Mock status"
+          [value]="num('mockStatus', 200)"
+          (valueChange)="setNumber('mockStatus', $event, 200)"
+        />
+        <div class="tx-flow-inspector__body-toolbar">
+          <div class="tx-flow-inspector__body-mode">
+            <span class="tx-flow-inspector__field-label">Body</span>
+            <tx-select
+              [value]="interceptBodyMode()"
+              [options]="interceptBodyModeOptions"
+              ariaLabel="Mock body mode"
+              (valueChange)="setInterceptBodyMode($event)"
+            />
+          </div>
+          @if (canFormatInterceptBody() && interceptBodyMode() !== 'none') {
+            <tx-hint label="Format document" keys="Shift Alt F" placement="bottom">
+              <button type="button" class="tx-flow-inspector__ghost" (click)="handleFormatInterceptBody()">Format</button>
+            </tx-hint>
+          }
+        </div>
+        @if (interceptBodyMode() === 'none') {
+          <tx-empty-state title="Empty mock body" body="Pick JSON, text, HTML, or XML for the mocked response body." />
+        } @else {
+          <div class="tx-flow-inspector__body-editor">
+            <tx-code-editor
+              #interceptBodyEditor
+              [language]="interceptBodyLanguage()"
+              [value]="text('mockBody', '{\n}\n')"
+              [variables]="variables()"
+              ariaLabel="Mock body"
+              (valueChange)="setText('mockBody', $event)"
+            />
+          </div>
+        }
+      }
+      <p class="tx-flow-inspector__hint">
+        Match then passthrough (edit), mock, or block on the emulator MITM proxy. Certificate-pinned apps will not decrypt. Wire Validate after this node.
+      </p>
+    }
+    @case ('if') {
+      <tx-token-field id="flow-cond" label="Condition" [value]="text('condition')" [variables]="variables()" (valueChange)="setText('condition', $event)" />
+      <p class="tx-flow-inspector__hint">Then and Else are separate ports on the node. Only the matching side runs.</p>
+    }
+    @case ('for-each') {
+      <tx-input id="flow-items" label="Items variable" [value]="text('items', 'items')" (valueChange)="setText('items', $event)" />
+      <p class="tx-flow-inspector__hint">Body nodes run once per item. Done fires after the last pass.</p>
+    }
+    @case ('while') {
+      <tx-token-field id="flow-cond" label="Condition" [value]="text('condition')" [variables]="variables()" (valueChange)="setText('condition', $event)" />
+      <tx-input id="flow-max" label="Max iterations" [value]="num('maxIterations', 10)" (valueChange)="setNumber('maxIterations', $event, 10)" />
+    }
+    @case ('retry') {
+      <tx-input id="flow-attempts" label="Attempts" [value]="num('attempts', 3)" (valueChange)="setNumber('attempts', $event, 3)" />
+    }
+    @case ('group') {
+      <tx-token-field id="flow-group-note" label="Description" multiline [rows]="3" [value]="text('text')" [variables]="variables()" (valueChange)="setText('text', $event)" />
+      <tx-input id="flow-group-w" label="Width" [value]="num('width', frameDefaultWidth)" (valueChange)="setNumber('width', $event, frameDefaultWidth)" />
+      <tx-input id="flow-group-h" label="Height" [value]="num('height', frameDefaultHeight)" (valueChange)="setNumber('height', $event, frameDefaultHeight)" />
+    }
+    @case ('wait') {
+      <tx-input id="flow-wait" label="Wait (ms)" [value]="num('waitMs', 250)" (valueChange)="setNumber('waitMs', $event, 250)" />
+    }
+    @case ('join') {
+      <p class="tx-flow-inspector__hint">Waits for every incoming branch, then continues once.</p>
+    }
+    @case ('trigger') {
+      @if (flowOptions().length > 0) {
+        <tx-select
+          [value]="text('flowId')"
+          [options]="flowOptions()"
+          ariaLabel="Flow"
+          (valueChange)="setText('flowId', $event)"
+        />
+      } @else {
+        <tx-input id="flow-target" label="Flow id" [value]="text('flowId')" (valueChange)="setText('flowId', $event)" />
+      }
+    }
+    @case ('manual') {
+      <tx-token-field
+        id="flow-prompt"
+        label="Prompt"
+        multiline
+        [rows]="4"
+        [value]="text('prompt', 'Enter a value to continue')"
+        [variables]="variables()"
+        (valueChange)="setText('prompt', $event)"
+      />
+      <tx-input
+        id="flow-manual-var"
+        label="Variable"
+        [value]="text('variable', 'manual')"
+        (valueChange)="setText('variable', $event)"
+      />
+      <tx-token-field
+        id="flow-manual-ph"
+        label="Placeholder"
+        [value]="text('placeholder')"
+        [variables]="variables()"
+        (valueChange)="setText('placeholder', $event)"
+      />
+      <p class="tx-flow-inspector__hint">
+        Run pauses until the user enters text. The value is stored as
+        <code>{{ '{{' }}{{ text('variable', 'manual') || 'manual' }}{{ '}}' }}</code>
+        for later steps.
+      </p>
+    }
+    @case ('note') {
+      <tx-token-field id="flow-note" label="Text" multiline [rows]="6" [value]="text('text')" [variables]="variables()" (valueChange)="setText('text', $event)" />
+    }
+  }
+
+  @if (isContainer()) {
+    <p class="tx-flow-inspector__hint">Drop nodes inside the frame on the canvas to build the body.</p>
+  }
+  @if (isFrame()) {
+    <p class="tx-flow-inspector__hint">Documentation only — no ports and no run logic. Nest steps inside; wire them on the outer path as usual.</p>
+  }
+  }
+}
+
+<ng-template #deviceSelectorField>
+  <div class="tx-flow-inspector__selector" [class.is-disabled]="!emulatorRunning()">
+    <tx-token-field
+      id="flow-dev-sel"
+      label="Selector"
+      [value]="text('selector')"
+      [variables]="variables()"
+      (valueChange)="setText('selector', $event)"
+    />
+    <div class="tx-flow-inspector__selector-actions">
+      <tx-hint
+        [label]="runPreviousDeviceSteps() ? 'Previous steps on' : 'Previous steps off'"
+        detail="When on, Pick runs earlier steps on the path from Start to this node (Launch, Tap, Type, Wait, …). Empty selectors and disconnected branches are skipped. Never boots or presses Home."
+        placement="left"
+      >
+        <button
+          type="button"
+          class="tx-flow-inspector__pick"
+          [class.is-on]="runPreviousDeviceSteps()"
+          [disabled]="!emulatorRunning() || pickingDeviceSelector() || pickingSelector()"
+          [attr.aria-pressed]="runPreviousDeviceSteps()"
+          aria-label="Toggle run previous device steps before pick"
+          (click)="toggleRunPreviousDeviceSteps()"
+        >
+          Previous
+        </button>
+      </tx-hint>
+      <tx-hint
+        [label]="
+          !emulatorRunning()
+            ? 'Emulator not running'
+            : pickingDeviceSelector()
+              ? 'Click a control on the emulator…'
+              : 'Pick on device'
+        "
+        [detail]="
+          !emulatorRunning()
+            ? 'Start the emulator in Services → Emulator, then Pick again'
+              : runPreviousDeviceSteps()
+              ? 'Runs earlier device steps (no boot), then opens the overlay'
+              : 'Opens an overlay on the current screen — does not press Home or re-run steps'
+        "
+        placement="left"
+      >
+        <button
+          type="button"
+          class="tx-flow-inspector__pick"
+          [disabled]="!emulatorRunning() || pickingDeviceSelector() || pickingSelector()"
+          [attr.aria-label]="
+            !emulatorRunning()
+              ? 'Pick unavailable — start the emulator'
+              : pickingDeviceSelector()
+                ? 'Picking device selector'
+                : 'Pick selector on device'
+          "
+          (click)="emitPickDeviceSelector()"
+        >
+          {{ pickingDeviceSelector() ? 'Picking…' : 'Pick' }}
+        </button>
+      </tx-hint>
+    </div>
+  </div>
+  @if (devicePickError(); as pickError) {
+    <p class="tx-flow-inspector__hint is-error" role="alert">{{ pickError }}</p>
+  }
+  <p class="tx-flow-inspector__hint">Use <code>text=Save</code>, <code>id=org.app:id/ok</code>, <code>org.app:id/ok</code>, <code>desc=Close</code>, or <code>class=android.widget.EditText;index=1</code> for the second match.</p>
+</ng-template>
+
+<ng-template #selectorField>
+  <div class="tx-flow-inspector__selector">
+    <tx-token-field
+      id="flow-sel"
+      label="Selector"
+      [value]="text('selector')"
+      [variables]="variables()"
+      (valueChange)="setText('selector', $event)"
+    />
+    <tx-hint
+      [label]="pickingSelector() ? 'Click an element in the E2E window…' : 'Pick on page'"
+      detail="Opens the E2E browser so you can click the target element"
+      placement="left"
+    >
+      <button
+        type="button"
+        class="tx-flow-inspector__pick"
+        [disabled]="pickingSelector()"
+        [attr.aria-label]="pickingSelector() ? 'Picking selector' : 'Pick selector on page'"
+        (click)="pickSelector.emit()"
+      >
+        {{ pickingSelector() ? 'Picking…' : 'Pick' }}
+      </button>
+    </tx-hint>
+  </div>
+</ng-template>

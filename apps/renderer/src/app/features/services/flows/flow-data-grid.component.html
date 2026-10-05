@@ -1,0 +1,165 @@
+<div class="tx-flow-data">
+  <header class="tx-flow-data__head">
+    <div>
+      <h2>Data rows</h2>
+      <p>
+        {{ scenarioName() }} runs {{ runCount() }} time{{ runCount() === 1 ? '' : 's' }}. Columns become
+        <code ngNonBindable>{{column}}</code> placeholders — type <code ngNonBindable>{{</code> for suggestions.
+      </p>
+    </div>
+    <tx-check label="Run once per row" [checked]="data().enabled" (checkedChange)="setEnabled($event)" />
+  </header>
+
+  <div class="tx-flow-data__toolbar" role="toolbar" aria-label="Data grid controls">
+    <div class="tx-flow-data__group">
+      <span class="tx-flow-data__group-label">Rows</span>
+      <tx-hint label="Insert row above" detail="Needs a selected row" placement="bottom">
+        <button
+          type="button"
+          class="tx-flow-data__btn"
+          [disabled]="!hasRowSelection() || !canAddRow()"
+          (click)="insertRowAbove()"
+        >
+          Insert above
+        </button>
+      </tx-hint>
+      <tx-hint label="Add row" detail="Inserts below the selection, or at the end" placement="bottom">
+        <button type="button" class="tx-flow-data__btn" [disabled]="!canAddRow()" (click)="addRow()">
+          Add row
+        </button>
+      </tx-hint>
+      <tx-hint label="Duplicate row" detail="Copy the selected row" placement="bottom">
+        <button
+          type="button"
+          class="tx-flow-data__btn"
+          [disabled]="!hasRowSelection() || !canAddRow()"
+          (click)="duplicateSelectedRow()"
+        >
+          Duplicate
+        </button>
+      </tx-hint>
+      <tx-hint label="Clear row" detail="Empty all cells in the selected row" placement="bottom">
+        <button type="button" class="tx-flow-data__btn" [disabled]="!hasRowSelection()" (click)="clearSelectedRow()">
+          Clear
+        </button>
+      </tx-hint>
+      <tx-hint label="Delete row" detail="Remove the selected row" placement="bottom">
+        <button
+          type="button"
+          class="tx-flow-data__btn is-danger"
+          [disabled]="!hasRowSelection()"
+          (click)="removeSelectedRow()"
+        >
+          Delete
+        </button>
+      </tx-hint>
+    </div>
+
+    <div class="tx-flow-data__sep" aria-hidden="true"></div>
+
+    <div class="tx-flow-data__group">
+      <span class="tx-flow-data__group-label">Columns</span>
+      <tx-hint label="Insert column left" detail="Needs a selected column" placement="bottom">
+        <button type="button" class="tx-flow-data__btn" [disabled]="!hasColumnSelection()" (click)="insertColumnBefore()">
+          Insert left
+        </button>
+      </tx-hint>
+      <tx-hint label="Add column" detail="Inserts after the selection, or at the end" placement="bottom">
+        <button type="button" class="tx-flow-data__btn" (click)="addColumn()">Add column</button>
+      </tx-hint>
+      <tx-hint label="Delete column" detail="Remove the selected column" placement="bottom">
+        <button
+          type="button"
+          class="tx-flow-data__btn is-danger"
+          [disabled]="!hasColumnSelection()"
+          (click)="removeSelectedColumn()"
+        >
+          Delete
+        </button>
+      </tx-hint>
+    </div>
+
+    <span class="tx-flow-data__sel">{{ selectionHint() }}</span>
+  </div>
+
+  @if (data().columns.length === 0) {
+    <tx-empty-state title="No columns yet" body="Use Add column above, or paste CSV / JSON below." />
+  } @else {
+    <div class="tx-flow-data__scroll">
+      <table class="tx-flow-data__table">
+        <thead>
+          <tr>
+            <th class="tx-flow-data__index" scope="col">#</th>
+            @for (column of data().columns; track column) {
+              <th
+                scope="col"
+                [class.is-selected]="selectedColumn() === column"
+                (click)="selectColumn(column, $event)"
+              >
+                <div class="tx-flow-data__col-head">
+                  <input
+                    class="tx-flow-data__column"
+                    [value]="column"
+                    [attr.aria-label]="'Column ' + column"
+                    (focus)="selectColumn(column)"
+                    (click)="$event.stopPropagation()"
+                    (change)="renameColumn(column, $any($event.target).value)"
+                  />
+                </div>
+              </th>
+            }
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of data().rows; track $index) {
+            <tr [class.is-selected]="selectedRow() === $index">
+              <th
+                class="tx-flow-data__index"
+                scope="row"
+                [class.is-selected]="selectedRow() === $index"
+                (click)="selectRow($index, $event)"
+              >
+                {{ $index + 1 }}
+              </th>
+              @for (column of data().columns; track column) {
+                <td
+                  [class.is-selected]="selectedRow() === $index || selectedColumn() === column"
+                  [class.is-active]="selectedRow() === $index && selectedColumn() === column"
+                  (mousedown)="selectCell($index, column)"
+                >
+                  <tx-token-field
+                    variant="cell"
+                    [value]="cell($index, column)"
+                    [ariaLabel]="column + ' row ' + ($index + 1)"
+                    [variables]="cellVariables()"
+                    (valueChange)="setCell($index, column, $event)"
+                  />
+                </td>
+              }
+            </tr>
+          } @empty {
+            <tr>
+              <td class="tx-flow-data__none" [attr.colspan]="data().columns.length + 1">
+                No rows yet — use Add row above.
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+
+  <tx-input
+    id="flow-data-import"
+    label="Import CSV or JSON"
+    multiline
+    [rows]="5"
+    placeholder="email,password&#10;admin@example.com,secret"
+    [value]="importText()"
+    (valueChange)="handleImport($event)"
+  />
+  <p class="tx-flow-data__hint">
+    Paste a CSV header row or a JSON array of objects. Importing replaces the table. Click a row number or column header to
+    target toolbar actions.
+  </p>
+</div>

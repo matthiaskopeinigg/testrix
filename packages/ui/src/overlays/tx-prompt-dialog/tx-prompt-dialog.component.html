@@ -1,0 +1,32 @@
+<tx-overlay [labelledBy]="titleId" variant="confirm" (closed)="cancelled.emit()">
+  <div class="tx-prompt" (keydown)="handleFieldKey($event)">
+    <h2 class="tx-prompt__title" [id]="titleId">{{ title() }}</h2>
+    <p class="tx-prompt__body">{{ body() }}</p>
+    <tx-input
+      [id]="fieldId"
+      [label]="inputLabel()"
+      [value]="draft()"
+      [placeholder]="placeholder()"
+      [ariaLabel]="inputLabel()"
+      [multiline]="multiline()"
+      [rows]="rows()"
+      (valueChange)="handleValue($event)"
+    />
+    @if (multiline()) {
+      <p class="tx-prompt__hint">Enter starts a new line. \n does the same. Ctrl+Enter saves.</p>
+    }
+    <div class="tx-prompt__actions">
+      <tx-button class="tx-prompt__cancel" variant="ghost" (clicked)="cancelled.emit()">
+        {{ cancelLabel() }}
+      </tx-button>
+      <tx-button
+        class="tx-prompt__ok"
+        variant="primary"
+        [disabled]="!canSubmit()"
+        (clicked)="handleSubmit()"
+      >
+        {{ confirmLabel() }}
+      </tx-button>
+    </div>
+  </div>
+</tx-overlay>

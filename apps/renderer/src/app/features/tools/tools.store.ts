@@ -12,11 +12,15 @@ import {
   type EnvDropSlot,
 } from '../environments/environments-drop-model';
 
+export type ToolsDrillId = 'plantuml';
+
 @Injectable({ providedIn: 'root' })
 export class ToolsStore {
   private readonly desktop = inject(DesktopApiService);
 
   readonly items = signal<ToolItem[]>(orderTools([]));
+  readonly drillId = signal<ToolsDrillId | null>(null);
+  readonly paneSlideDir = signal<'left' | 'right' | null>(null);
   readonly dragItem = signal<ToolItem | null>(null);
   readonly dragIds = signal<readonly string[]>([]);
   readonly dropTarget = signal<EnvDropSlot | null>(null);
@@ -28,11 +32,32 @@ export class ToolsStore {
   private persistEnabled = false;
 
   readonly hasItems = computed(() => this.items().length > 0);
+  readonly isDrilled = computed(() => this.drillId() !== null);
 
   hydrate(): void {
     this.persistEnabled = false;
     this.items.set(orderTools(this.desktop.settings().toolsOrderIds));
+    const drill = this.desktop.session().toolsDrill;
+    this.drillId.set(drill === 'plantuml' ? drill : null);
     this.persistEnabled = true;
+  }
+
+  sessionPatch(): Pick<import('@testrix/contracts').SessionFile, 'toolsDrill'> {
+    return { toolsDrill: this.drillId() };
+  }
+
+  drillIn(id: ToolsDrillId): void {
+    if (this.drillId() === id)
+      return;
+    this.paneSlideDir.set('right');
+    this.drillId.set(id);
+  }
+
+  back(): void {
+    if (!this.drillId())
+      return;
+    this.paneSlideDir.set('left');
+    this.drillId.set(null);
   }
 
   toolById(id: string): ToolItem | null {

@@ -18,6 +18,9 @@ export const splashWindowDefaults: BrowserWindowConstructorOptions = {
   backgroundColor: '#00000000',
 };
 
+/** Match --tx-titlebar-height / --tx-bg-chrome for frameless chrome. */
+const TITLEBAR_BG = '#110e14';
+
 export const mainWindowDefaults: BrowserWindowConstructorOptions = {
   width: 1280,
   height: 820,
@@ -27,7 +30,8 @@ export const mainWindowDefaults: BrowserWindowConstructorOptions = {
   frame: false,
   titleBarStyle: 'hidden',
   trafficLightPosition: { x: 14, y: 12 },
-  backgroundColor: '#0a090c',
+  // Custom HTML min/max/close on all platforms so caption chrome matches the shell.
+  backgroundColor: TITLEBAR_BG,
   autoHideMenuBar: true,
 };
 
@@ -51,7 +55,7 @@ export const setupWindowDefaults: BrowserWindowConstructorOptions = {
   maximizable: false,
   fullscreenable: false,
   frame: false,
-  show: false,
+  show: true,
   backgroundColor: '#0a090c',
   autoHideMenuBar: true,
 };
@@ -60,5 +64,8 @@ export const sandboxedWebPreferences = {
   contextIsolation: true,
   nodeIntegration: false,
   sandbox: true,
+  webSecurity: true,
+  allowRunningInsecureContent: false,
+  webviewTag: false,
   spellcheck: false,
 } as const;

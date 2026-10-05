@@ -1,0 +1,421 @@
+@use 'mixins';
+
+:host {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.mk-tab {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  background: var(--tx-bg-canvas);
+}
+
+.mk-tab__chrome {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--tx-border-subtle);
+  background: color-mix(in srgb, var(--tx-bg-elevated, var(--tx-bg-canvas)) 88%, transparent);
+}
+
+.mk-tab__identity {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 40px;
+  padding: 6px 14px;
+}
+
+.mk-tab__identity-main {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+
+.mk-tab__badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  min-width: 28px;
+  min-height: 22px;
+  padding: 0 7px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--tx-accent) 14%, transparent);
+  color: var(--tx-accent);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.mk-tab__name {
+  flex: 1;
+  min-width: 8rem;
+  max-width: 22rem;
+}
+
+.mk-tab__name ::ng-deep .tx-field {
+  gap: 0;
+}
+
+.mk-tab__name ::ng-deep input {
+  min-height: 28px;
+  padding: 0 8px;
+  border-color: transparent;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.mk-tab__name ::ng-deep input:hover,
+.mk-tab__name ::ng-deep input:focus {
+  border-color: var(--tx-border-subtle);
+  background: var(--tx-bg-canvas);
+}
+
+.mk-tab__tags {
+  display: flex;
+  flex-shrink: 1;
+  gap: 6px;
+  margin: 0;
+  min-width: 0;
+  padding: 0;
+  overflow: hidden;
+  list-style: none;
+}
+
+.mk-tab__tags li {
+  flex-shrink: 0;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--tx-accent) 12%, transparent);
+  color: var(--tx-accent);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.mk-tab__nav {
+  display: flex;
+  gap: 2px;
+  padding: 0 8px 4px;
+  overflow-x: auto;
+}
+
+.mk-tab__nav-item {
+  @include mixins.tx-press;
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--tx-text-muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 550;
+}
+
+.mk-tab__nav-item.is-active {
+  background: var(--tx-bg-active);
+  color: var(--tx-text-primary);
+  font-weight: 650;
+}
+
+.mk-tab__split {
+  position: relative;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.mk-tab__primary {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.mk-tab__pane-stage {
+  position: relative;
+  display: grid;
+  grid-template-areas: 'stack';
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.mk-tab__pane-stage > * {
+  grid-area: stack;
+  min-height: 0;
+  min-width: 0;
+}
+
+.mk-tab__pane {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-height: 0;
+  min-width: 0;
+  padding: 16px 18px 22px;
+  overflow: auto;
+  background: var(--tx-bg-canvas);
+}
+
+.mk-tab__pane-stage > .tx-folder-pane-out,
+.mk-tab__pane-stage > .tx-lt-pane-leave-left,
+.mk-tab__pane-stage > .tx-lt-pane-leave-right {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: var(--tx-bg-canvas);
+}
+
+.mk-tab__form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-width: 52rem;
+  min-width: 0;
+}
+
+.mk-tab__row {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.mk-tab__row > * {
+  flex: 1 1 12rem;
+  min-width: 10rem;
+}
+
+.mk-tab__checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.mk-tab__body-toolbar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.mk-tab__body-mode {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 10rem;
+}
+
+.mk-tab__field-label,
+.mk-tab__section-title {
+  margin: 0;
+  color: var(--tx-text-secondary);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.mk-tab__ghost {
+  @include mixins.tx-press;
+  @include mixins.tx-focus-ring;
+  min-height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--tx-border-subtle);
+  border-radius: var(--tx-radius-control);
+  background: transparent;
+  color: var(--tx-text-secondary);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.mk-tab__body-editor {
+  display: flex;
+  flex-direction: column;
+  min-height: 16rem;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--tx-border-subtle) 70%, transparent);
+  border-radius: 8px;
+}
+
+.mk-tab__body-editor > tx-code-editor {
+  flex: 1;
+  min-height: 16rem;
+}
+
+.mk-tab__activity-pane {
+  display: grid;
+  grid-template-columns: minmax(16rem, 22rem) minmax(0, 1fr);
+  gap: 14px;
+  align-items: stretch;
+  min-height: 0;
+  min-width: 0;
+  height: 100%;
+}
+
+@media (max-width: 960px) {
+  .mk-tab__activity-pane {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(10rem, 14rem) minmax(0, 1fr);
+  }
+}
+
+.mk-tab__activity {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  min-height: 0;
+}
+
+.mk-tab__activity-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.mk-tab__activity-count {
+  color: var(--tx-text-faint);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.mk-tab__hit-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid color-mix(in srgb, var(--tx-border-subtle) 70%, transparent);
+  border-radius: 8px;
+  overflow: auto;
+  min-height: 0;
+  flex: 1;
+}
+
+.mk-tab__hit-list > li {
+  margin: 0;
+  padding: 0;
+}
+
+.mk-tab__hit {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr) 48px auto;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 10px;
+  border: 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--tx-border-subtle) 55%, transparent);
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.mk-tab__hit-list > li:last-child .mk-tab__hit {
+  border-bottom: 0;
+}
+
+.mk-tab__hit:hover {
+  background: color-mix(in srgb, var(--tx-accent) 6%, transparent);
+}
+
+.mk-tab__hit.is-selected {
+  background: color-mix(in srgb, var(--tx-accent) 12%, transparent);
+}
+
+.mk-tab__hit[data-kind='mismatch'] {
+  background: color-mix(in srgb, var(--tx-warning, #e6b450) 6%, transparent);
+}
+
+.mk-tab__hit-method {
+  color: var(--tx-text-muted);
+  font-family: var(--tx-font-mono);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.mk-tab__hit-method[data-method='GET'] { color: var(--tx-method-get, #3d9b6d); }
+.mk-tab__hit-method[data-method='POST'] { color: var(--tx-method-post, #c9a227); }
+.mk-tab__hit-method[data-method='PUT'] { color: var(--tx-method-put, #3b82c4); }
+.mk-tab__hit-method[data-method='PATCH'] { color: var(--tx-method-patch, #7c6ad4); }
+.mk-tab__hit-method[data-method='DELETE'] { color: var(--tx-method-delete, #c45b5b); }
+
+.mk-tab__hit-url {
+  overflow: hidden;
+  color: var(--tx-text-secondary);
+  font-family: var(--tx-font-mono);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mk-tab__hit-status {
+  font-family: var(--tx-font-mono);
+  font-size: 11px;
+  text-align: right;
+}
+
+.mk-tab__hit-status[data-tone='ok'] { color: var(--tx-success, #3d9b6d); }
+.mk-tab__hit-status[data-tone='warn'] { color: var(--tx-warning, #c9a227); }
+
+.mk-tab__hit-time {
+  color: var(--tx-text-faint);
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.mk-tab__exchange {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--tx-border-subtle) 70%, transparent);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--tx-bg-elevated, var(--tx-bg-canvas)) 70%, transparent);
+}
+
+.mk-tab__exchange > tx-empty-state {
+  display: block;
+  box-sizing: border-box;
+  padding: 14px 16px;
+}
+
+.mk-tab__exchange > tx-flow-run-exchange {
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+  max-height: none;
+}
+
+.mk-tab__pane:has(.mk-tab__activity-pane) {
+  padding-bottom: 12px;
+  overflow: hidden;
+}

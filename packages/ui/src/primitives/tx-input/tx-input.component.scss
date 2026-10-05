@@ -34,7 +34,7 @@
 }
 
 .tx-field__input {
-  @include mixins.tx-focus-ring;
+  @include mixins.tx-input-focus;
   flex: 1;
   width: 100%;
   min-width: 0;
@@ -48,6 +48,8 @@
   font-size: var(--tx-type-ui);
   font-variant-numeric: tabular-nums;
   resize: none;
+  -webkit-user-select: text;
+  user-select: text;
 }
 
 .tx-field__input--area {

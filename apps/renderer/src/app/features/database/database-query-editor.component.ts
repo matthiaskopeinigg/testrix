@@ -3,7 +3,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   DestroyRef,
-  ElementRef,
+  type ElementRef,
   HostListener,
   computed,
   effect,
@@ -20,6 +20,8 @@ import {
   DATABASE_QUERY_PAGE_SIZE_DEFAULT,
   DATABASE_QUERY_PAGE_SIZES,
   formatDatabaseQueryResult,
+  buildRelationWhere,
+  foreignKeyJumpByColumn,
   isSqlTransactionEngine,
   isTransactionalWriteSql,
   parseDatabaseQueryTabNodeId,
@@ -38,12 +40,28 @@ import { DesktopApiService } from '../../core/desktop-api.service';
 import { WorkbenchStore, type WorkbenchTab } from '../workbench/workbench.store';
 import { DatabaseQueryActionsService } from './database-query-actions.service';
 import { DatabaseResultGridComponent } from './database-result-grid.component';
+import { applyQueryResultView, inferSqlFromTable } from './database-query-result-view';
+import { catalogTableKey } from './database-nav';
+import {
+  applyClauseSuggestion,
+  clauseGhost,
+  pairSqlKey as pairClauseKey,
+  suggestClause,
+  unpairSqlKey as unpairClauseKey,
+  type ClauseCompleteMode,
+  type ClauseGhost,
+  type ClauseSuggestion,
+} from './database-clause-complete';
 import { DatabaseStore } from './database.store';
 import { DatabaseTxnTracker } from './database-txn.tracker';
 
 const RUN_MENU_POSITIONS: ConnectedPosition[] = [
   { originX: 'end', originY: 'bottom', overlayX: 'end', overlayY: 'top', offsetY: 6 },
   { originX: 'end', originY: 'top', overlayX: 'end', overlayY: 'bottom', offsetY: -6 },
+];
+const CLAUSE_MENU_POSITIONS: ConnectedPosition[] = [
+  { originX: 'start', originY: 'bottom', overlayX: 'start', overlayY: 'top', offsetY: 6 },
+  { originX: 'start', originY: 'top', overlayX: 'start', overlayY: 'bottom', offsetY: -6 },
 ];
 import {
   applySqlSuggestion,
@@ -57,8 +75,8 @@ import {
   type SqlSuggestion,
 } from './database-sql-complete';
 
-const CONSOLE_HEIGHT_DEFAULT = 168;
-const CONSOLE_HEIGHT_MIN = 80;
+const CONSOLE_HEIGHT_DEFAULT = 236;
+const CONSOLE_HEIGHT_MIN = 120;
 
 @Component({
   selector: 'tx-database-query-editor',
@@ -86,6 +104,21 @@ export class DatabaseQueryEditorComponent {
   readonly result = signal<DatabaseQueryEnvelope | null>(null);
   readonly consoleHidden = signal(false);
   readonly consoleHeight = signal(CONSOLE_HEIGHT_DEFAULT);
+  readonly resultWhere = signal('');
+  readonly resultOrder = signal('');
+  readonly appliedWhere = signal('');
+  readonly appliedOrder = signal('');
+  readonly lastSql = signal('');
+  readonly resultWhereInput = viewChild<ElementRef<HTMLInputElement>>('resultWhereInput');
+  readonly resultOrderInput = viewChild<ElementRef<HTMLInputElement>>('resultOrderInput');
+  readonly clauseFocus = signal<ClauseCompleteMode | null>(null);
+  readonly clauseMenu = signal<ClauseCompleteMode | null>(null);
+  readonly clauseListOpen = signal(false);
+  readonly clauseIndex = signal(0);
+  readonly clauseGhostOff = signal(false);
+  readonly whereCursor = signal(0);
+  readonly orderCursor = signal(0);
+  readonly clauseMenuPositions = CLAUSE_MENU_POSITIONS;
   readonly schema = signal('');
   readonly caret = signal(0);
   readonly completeOpen = signal(false);
@@ -101,6 +134,7 @@ export class DatabaseQueryEditorComponent {
   readonly now = signal(Date.now());
   readonly rolledBack = signal(false);
   private resizing = false;
+  private reopenHeight = CONSOLE_HEIGHT_DEFAULT;
   private clock: ReturnType<typeof setInterval> | null = null;
   private errorTimer: ReturnType<typeof setTimeout> | null = null;
   private hydratedQueryId: string | null = null;
@@ -166,9 +200,15 @@ export class DatabaseQueryEditorComponent {
     suggestSql(this.query()?.query ?? '', this.caret(), this.completeContext()),
   );
 
-  readonly ghost = computed(() =>
-    sqlGhost(this.query()?.query ?? '', this.caret(), this.suggestions()[this.completeIndex()] ?? this.suggestions()[0]),
-  );
+  readonly ghost = computed(() => {
+    if (this.completeOpen())
+      return null;
+    return sqlGhost(
+      this.query()?.query ?? '',
+      this.caret(),
+      this.suggestions()[this.completeIndex()] ?? this.suggestions()[0],
+    );
+  });
 
   readonly highlightTokens = computed(() => tokenizeSqlHighlight(this.query()?.query ?? ''));
 
@@ -182,6 +222,62 @@ export class DatabaseQueryEditorComponent {
   );
 
   readonly showConsole = computed(() => this.hasConsoleContent() && !this.consoleHidden());
+
+  readonly displayTable = computed(() => {
+    const table = this.result()?.table;
+    if (!table)
+      return null;
+    return applyQueryResultView(table, this.appliedWhere(), this.appliedOrder());
+  });
+
+  readonly resultSource = computed(() => {
+    const schema = this.schema();
+    const inferred = inferSqlFromTable(this.lastSql() || this.query()?.query || '');
+    return {
+      schema: inferred?.schema || schema,
+      table: inferred?.table ?? '',
+    };
+  });
+
+  readonly columnTypes = computed(() => {
+    const connection = this.connection();
+    const source = this.resultSource();
+    const cache = connection ? this.store.catalogByConnection()[connection.id] : undefined;
+    const columns = cache?.columnsByTable[catalogTableKey(source.schema, source.table)] ?? [];
+    const types: Record<string, string> = {};
+    for (const column of columns) {
+      if (column.type)
+        types[column.name] = column.type;
+    }
+    return types;
+  });
+
+  readonly relations = computed(() => {
+    const connection = this.connection();
+    const source = this.resultSource();
+    if (!connection || !source.table)
+      return {};
+    const cache = this.store.catalogByConnection()[connection.id];
+    const key = catalogTableKey(source.schema, source.table);
+    const fromTable = cache?.foreignKeysByTable[key] ?? [];
+    const fromSchema = (cache?.foreignKeysBySchema[source.schema] ?? []).filter(
+      (fk) => !fk.table || fk.table === source.table,
+    );
+    return foreignKeyJumpByColumn(fromTable.length ? fromTable : fromSchema, source.schema);
+  });
+
+  readonly clauseSuggestions = computed(() => {
+    const field = this.clauseMenu() ?? this.clauseFocus();
+    if (!field)
+      return [] as readonly ClauseSuggestion[];
+    return this.suggestionsFor(field);
+  });
+
+  readonly clauseMenuOpen = computed(
+    () => this.clauseListOpen() && this.clauseMenu() !== null && this.clauseSuggestions().length > 0,
+  );
+  readonly whereGhost = computed(() => this.ghostFor('where'));
+  readonly orderGhost = computed(() => this.ghostFor('order'));
 
   constructor() {
     const unregister = this.actions.register(() => {
@@ -217,6 +313,12 @@ export class DatabaseQueryEditorComponent {
         void this.store.loadSchemaObjects(connection.id, schema);
     });
     effect(() => {
+      const connection = this.connection();
+      const source = this.resultSource();
+      if (connection && source.table)
+        void this.store.loadTableDetails(connection.id, source.schema, source.table);
+    });
+    effect(() => {
       const value = this.query()?.query ?? '';
       const editor = this.editor()?.nativeElement;
       if (!editor || editor.value === value)
@@ -240,8 +342,10 @@ export class DatabaseQueryEditorComponent {
         return;
       this.result.set({ table: last.table, durationMs: last.durationMs });
       this.consoleHidden.set(last.hidden === true);
-      if (last.consoleHeight)
+      if (last.consoleHeight) {
         this.consoleHeight.set(last.consoleHeight);
+        this.reopenHeight = last.consoleHeight;
+      }
     });
   }
 
@@ -250,10 +354,6 @@ export class DatabaseQueryEditorComponent {
     if (!(target instanceof HTMLTextAreaElement))
       return;
     this.writeSql(target.value, target.selectionStart);
-    if (target.value[target.selectionStart - 1] === '.') {
-      this.completeOpen.set(true);
-      this.completeIndex.set(0);
-    }
   }
 
   handleCaret(event: Event): void {
@@ -482,12 +582,269 @@ export class DatabaseQueryEditorComponent {
     }
   }
 
-  hideConsole(): void {
+  handleWhere(event: Event): void {
+    this.handleClauseInput('where', event);
+  }
+
+  handleOrder(event: Event): void {
+    this.handleClauseInput('order', event);
+  }
+
+  handleClauseFocus(field: ClauseCompleteMode): void {
+    this.clauseFocus.set(field);
+    this.clauseGhostOff.set(false);
+  }
+
+  handleClauseBlur(): void {
+    window.setTimeout(() => {
+      this.clauseFocus.set(null);
+      this.closeClauseMenu();
+    }, 120);
+  }
+
+  handleClauseKey(field: ClauseCompleteMode, event: KeyboardEvent): void {
+    const input = event.target;
+    if (!(input instanceof HTMLInputElement))
+      return;
+    this.syncClauseCursor(field, input);
+    if ((event.ctrlKey || event.metaKey) && event.code === 'Space') {
+      event.preventDefault();
+      this.clauseMenu.set(field);
+      this.clauseListOpen.set(true);
+      this.clauseIndex.set(0);
+      this.clauseGhostOff.set(false);
+      return;
+    }
+    if (event.key === 'Backspace' && input.selectionStart === input.selectionEnd) {
+      const unpaired = unpairClauseKey(input.value, input.selectionStart ?? input.value.length);
+      if (unpaired) {
+        event.preventDefault();
+        this.writeClause(field, unpaired.value, unpaired.cursor);
+        return;
+      }
+    }
+    if (input.selectionStart === input.selectionEnd) {
+      const paired = pairClauseKey(input.value, input.selectionStart ?? input.value.length, event.key);
+      if (paired) {
+        event.preventDefault();
+        this.writeClause(field, paired.value, paired.cursor);
+        return;
+      }
+    }
+    const suggestions = this.suggestionsFor(field);
+    const open = this.clauseListOpen() && this.clauseMenu() === field && suggestions.length > 0;
+    if (event.key === 'ArrowDown' && open) {
+      event.preventDefault();
+      this.clauseIndex.update((index) => (index + 1) % suggestions.length);
+      return;
+    }
+    if (event.key === 'ArrowUp' && open) {
+      event.preventDefault();
+      this.clauseIndex.update((index) => (index - 1 + suggestions.length) % suggestions.length);
+      return;
+    }
+    if (event.key === 'Tab') {
+      const ghost = this.ghostSuggestion(field);
+      const picked = open ? suggestions[this.clauseIndex()] ?? suggestions[0] : ghost;
+      if (picked) {
+        event.preventDefault();
+        this.acceptClauseSuggestion(field, picked);
+        if (open)
+          this.closeClauseMenu();
+        return;
+      }
+    }
+    if (event.key === 'Enter' && open) {
+      event.preventDefault();
+      this.acceptClauseSuggestion(field, suggestions[this.clauseIndex()] ?? suggestions[0]);
+      this.closeClauseMenu();
+      return;
+    }
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      this.closeClauseMenu();
+      this.applyResultClauses();
+      return;
+    }
+    if (event.key === 'Escape' && (this.clauseMenu() || this.ghostFor(field))) {
+      event.preventDefault();
+      event.stopPropagation();
+      this.closeClauseMenu();
+      this.clauseGhostOff.set(true);
+    }
+  }
+
+  handleClauseSelect(field: ClauseCompleteMode, suggestion: ClauseSuggestion): void {
+    this.acceptClauseSuggestion(field, suggestion);
+    this.closeClauseMenu();
+    this.inputFor(field)?.focus();
+  }
+
+  private closeClauseMenu(): void {
+    this.clauseMenu.set(null);
+    this.clauseListOpen.set(false);
+  }
+
+  private applyResultClauses(): void {
+    this.appliedWhere.set(this.resultWhere());
+    this.appliedOrder.set(this.resultOrder());
+  }
+
+  private handleClauseInput(field: ClauseCompleteMode, event: Event): void {
+    const target = event.target;
+    if (!(target instanceof HTMLInputElement))
+      return;
+    this.syncClauseCursor(field, target);
+    if (field === 'where')
+      this.resultWhere.set(target.value);
+    else
+      this.resultOrder.set(target.value);
+    this.clauseGhostOff.set(false);
+    this.clauseIndex.set(0);
+  }
+
+  private writeClause(field: ClauseCompleteMode, value: string, cursor: number): void {
+    if (field === 'where') {
+      this.resultWhere.set(value);
+      this.whereCursor.set(cursor);
+    } else {
+      this.resultOrder.set(value);
+      this.orderCursor.set(cursor);
+    }
+    const input = this.inputFor(field);
+    if (!input)
+      return;
+    input.value = value;
+    queueMicrotask(() => input.setSelectionRange(cursor, cursor));
+  }
+
+  private syncClauseCursor(field: ClauseCompleteMode, input: HTMLInputElement): void {
+    const cursor = input.selectionStart ?? input.value.length;
+    if (field === 'where')
+      this.whereCursor.set(cursor);
+    else
+      this.orderCursor.set(cursor);
+  }
+
+  private suggestionsFor(field: ClauseCompleteMode): readonly ClauseSuggestion[] {
+    return suggestClause(this.clauseValue(field), this.clauseCursor(field), {
+      columns: this.clauseColumns(),
+      schemas: this.clauseSchemas(),
+      tables: this.clauseTables(),
+      currentSchema: this.resultSource().schema,
+      currentTable: this.resultSource().table,
+      mode: field,
+    });
+  }
+
+  private ghostSuggestion(field: ClauseCompleteMode): ClauseSuggestion | null {
+    if (this.clauseFocus() !== field || this.clauseGhostOff())
+      return null;
+    const value = this.clauseValue(field);
+    const cursor = this.clauseCursor(field);
+    const suggestions = this.suggestionsFor(field);
+    if (this.clauseMenu() === field) {
+      const picked = suggestions[this.clauseIndex()] ?? suggestions[0];
+      return clauseGhost(value, cursor, picked) ? picked ?? null : null;
+    }
+    return suggestions.find((item) => clauseGhost(value, cursor, item)) ?? null;
+  }
+
+  private ghostFor(field: ClauseCompleteMode): ClauseGhost | null {
+    return clauseGhost(this.clauseValue(field), this.clauseCursor(field), this.ghostSuggestion(field));
+  }
+
+  private clauseValue(field: ClauseCompleteMode): string {
+    return field === 'where' ? this.resultWhere() : this.resultOrder();
+  }
+
+  private clauseCursor(field: ClauseCompleteMode): number {
+    return field === 'where' ? this.whereCursor() : this.orderCursor();
+  }
+
+  private clauseColumns(): readonly { readonly name: string; readonly type?: string }[] {
+    const resultCols = this.result()?.table?.columns ?? [];
+    const types = this.columnTypes();
+    if (resultCols.length)
+      return resultCols.map((name) => ({ name, type: types[name] }));
+    const connection = this.connection();
+    const source = this.resultSource();
+    if (!connection || !source.table)
+      return [];
+    return (
+      this.store.catalogByConnection()[connection.id]?.columnsByTable[
+        catalogTableKey(source.schema, source.table)
+      ] ?? []
+    );
+  }
+
+  private clauseSchemas(): readonly string[] {
+    return this.schemaOptions().map((item) => item.value);
+  }
+
+  private clauseTables(): readonly { readonly schema: string; readonly name: string }[] {
+    const connection = this.connection();
+    const cache = connection ? this.store.catalogByConnection()[connection.id] : undefined;
+    const schema = this.schema();
+    const tables = Object.entries(cache?.tablesBySchema ?? {}).flatMap(([itemSchema, items]) =>
+      items.map((table) => ({ schema: itemSchema, name: table.name })),
+    );
+    return schema ? tables.filter((item) => item.schema === schema) : tables;
+  }
+
+  private inputFor(field: ClauseCompleteMode): HTMLInputElement | null {
+    return (
+      (field === 'where' ? this.resultWhereInput()?.nativeElement : this.resultOrderInput()?.nativeElement) ?? null
+    );
+  }
+
+  private acceptClauseSuggestion(field: ClauseCompleteMode, suggestion: ClauseSuggestion | undefined): void {
+    if (!suggestion)
+      return;
+    const next = applyClauseSuggestion(this.clauseValue(field), this.clauseCursor(field), suggestion.value);
+    this.writeClause(field, next.value, next.cursor);
+    this.clauseIndex.set(0);
+  }
+
+  handleRelationJump(event: { readonly row: number; readonly column: string }): void {
+    const jump = this.relations()[event.column];
+    const connection = this.connection();
+    const table = this.displayTable();
+    const row = table?.rows[event.row];
+    if (!jump || !connection || !table || !row)
+      return;
+    const values: Record<string, string | null> = {};
+    for (const source of jump.sourceColumns) {
+      const index = table.columns.indexOf(source);
+      const cell = index >= 0 ? row[index] ?? null : null;
+      values[source] = cell == null ? null : String(cell);
+    }
+    const where = buildRelationWhere(jump, values, connection.type);
+    if (where) {
+      this.store.requestTableFocus({
+        connectionId: connection.id,
+        schema: jump.schema,
+        table: jump.table,
+        where,
+        column: jump.referencedColumns[0],
+      });
+    }
+    this.workbench.openFromDatabaseTable(
+      { connectionId: connection.id, schema: jump.schema, table: jump.table },
+      jump.schema ? `${jump.schema}.${jump.table}` : jump.table,
+    );
+  }
+
+  hideConsole(reopenHeight?: number): void {
+    const next = reopenHeight ?? this.consoleHeight();
+    if (next > CONSOLE_HEIGHT_MIN)
+      this.reopenHeight = next;
     this.consoleHidden.set(true);
     this.persistLastResult();
   }
 
   revealConsole(): void {
+    this.consoleHeight.set(this.reopenHeight);
     this.consoleHidden.set(false);
     this.persistLastResult();
   }
@@ -533,26 +890,33 @@ export class DatabaseQueryEditorComponent {
     const sash = event.currentTarget;
     if (!(sash instanceof HTMLElement))
       return;
-    const shell = sash.parentElement;
+    const shell = sash.closest('.tx-db-query');
     if (!shell)
       return;
     this.resizing = true;
     const rect = shell.getBoundingClientRect();
     const startY = event.clientY;
     const startHeight = this.consoleHeight();
+    const stopResize = (): void => {
+      this.resizing = false;
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+    };
     const onMove = (moveEvent: PointerEvent): void => {
       if (!this.resizing)
         return;
+      const next = startHeight - (moveEvent.clientY - startY);
+      if (next <= CONSOLE_HEIGHT_MIN) {
+        this.hideConsole(startHeight);
+        stopResize();
+        return;
+      }
       const maxHeight = Math.max(CONSOLE_HEIGHT_MIN, Math.floor(rect.height * 0.5));
-      this.consoleHeight.set(
-        Math.min(maxHeight, Math.max(CONSOLE_HEIGHT_MIN, startHeight - (moveEvent.clientY - startY))),
-      );
+      this.consoleHeight.set(Math.min(maxHeight, next));
     };
     const onUp = (): void => {
-      this.resizing = false;
+      stopResize();
       this.persistLastResult();
-      window.removeEventListener('pointermove', onMove);
-      window.removeEventListener('pointerup', onUp);
     };
     window.addEventListener('pointermove', onMove);
     window.addEventListener('pointerup', onUp);
@@ -596,6 +960,7 @@ export class DatabaseQueryEditorComponent {
       }
       if (last) {
         this.result.set({ ...last, durationMs });
+        this.lastSql.set(statements[statements.length - 1] ?? '');
         this.persistLastResult();
       }
       if (transactional && dirty) {
@@ -633,7 +998,7 @@ export class DatabaseQueryEditorComponent {
         table,
         durationMs,
         hidden: this.consoleHidden(),
-        consoleHeight: this.consoleHeight(),
+        consoleHeight: this.consoleHidden() ? this.reopenHeight : this.consoleHeight(),
       }),
     });
   }

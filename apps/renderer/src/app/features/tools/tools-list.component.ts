@@ -44,6 +44,10 @@ export class ToolsListComponent {
     if (isRangeModifier(event) || isToggleModifier(event)) {
       return;
     }
+    if (tool.id === 'plantuml') {
+      this.store.drillIn(tool.id);
+      return;
+    }
     this.workbench.openFromTool(tool);
   }
 
@@ -70,6 +74,8 @@ export class ToolsListComponent {
   isTabActive(id: string): boolean {
     const group = this.workbench.focusedGroup();
     const tab = group?.tabs.find((item) => item.id === group.activeTabId);
+    if (id === 'plantuml')
+      return tab?.kind === 'plantuml' || this.store.drillId() === 'plantuml';
     return tab?.kind === 'tool' && tab.nodeId === id;
   }
 

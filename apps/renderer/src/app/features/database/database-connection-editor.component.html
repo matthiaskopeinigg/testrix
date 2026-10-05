@@ -32,6 +32,8 @@
         <tx-input
           id="db-connection-string"
           label="Connection string"
+          multiline
+          [rows]="3"
           placeholder="postgres://user:password@localhost:5432/dbname"
           [value]="connectionString()"
           (valueChange)="handleConnectionString($event)"
@@ -61,15 +63,18 @@
               <tx-check variant="inline" label="TLS" [checked]="connection.tls === true" (checkedChange)="handleTls($event)" />
               <tx-check variant="inline" label="Connect on boot" [checked]="connection.connectOnBoot" (checkedChange)="handleBoot($event)" />
               @if (connection.type === 'oracle') {
+                <tx-hint label="Thin mode" detail="Connects without Oracle Instant Client" placement="top">
+                  <tx-check variant="inline" label="Thin mode" [checked]="isOracleThin(connection)" (checkedChange)="handleOracleThin($event)" />
+                </tx-hint>
                 <tx-check variant="inline" label="Use SID" [checked]="connection.useSid === true" (checkedChange)="handleUseSid($event)" />
               }
             </div>
           </div>
         }
 
-        @if (connection.type === 'oracle') {
+        @if (connection.type === 'oracle' && !isOracleThin(connection)) {
           <div class="tx-db-connection__row">
-            <tx-input id="db-client" label="Client path" [value]="connection.clientPath ?? ''" (valueChange)="patchClient($event)" />
+            <tx-input id="db-client" label="Instant Client path" [value]="connection.clientPath ?? ''" (valueChange)="patchClient($event)" />
             <tx-button variant="ghost" (clicked)="handleChooseOracle()">Browse</tx-button>
           </div>
         }

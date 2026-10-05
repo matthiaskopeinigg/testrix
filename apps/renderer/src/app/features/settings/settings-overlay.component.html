@@ -22,127 +22,25 @@
         />
       </label>
 
-      <nav class="tx-settings__nav" aria-label="Settings categories">
-        @for (group of groups; track group.label) {
-          <p class="tx-settings__group">{{ group.label }}</p>
-          @for (item of navItemsFor(group.ids); track item.id) {
-            <button
-              type="button"
-              class="tx-settings__nav-item"
-              [class.is-quiet]="isNavQuiet(item.id)"
-              [attr.aria-current]="category() === item.id ? 'page' : null"
-              (click)="selectCategory(item.id)"
-            >
-              <span class="tx-settings__nav-icon" aria-hidden="true">
-                @switch (item.id) {
-                  @case ('appearance') {
-                    <svg width="16" height="16" viewBox="0 0 16 16">
-                      <circle cx="8" cy="8" r="3.1" fill="none" stroke="currentColor" stroke-width="1.35" />
-                      <path
-                        d="M8 2.2v1.3M8 12.5v1.3M2.2 8h1.3M12.5 8h1.3M3.9 3.9l.9.9M11.2 11.2l.9.9M3.9 12.1l.9-.9M11.2 4.8l.9-.9"
-                        stroke="currentColor"
-                        stroke-width="1.35"
-                        stroke-linecap="round"
-                      />
-                    </svg>
-                  }
-                  @case ('keyboard') {
-                    <svg width="16" height="16" viewBox="0 0 16 16">
-                      <rect x="1.8" y="4.2" width="12.4" height="8" rx="1.6" fill="none" stroke="currentColor" stroke-width="1.35" />
-                      <path d="M4.2 6.6h1M7.5 6.6h1M10.8 6.6h1M5.8 9.2h4.4" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" />
-                    </svg>
-                  }
-                  @case ('collections') {
-                    <svg width="16" height="16" viewBox="0 0 16 16">
-                      <rect x="2.5" y="3.2" width="11" height="2.6" rx="0.9" fill="none" stroke="currentColor" stroke-width="1.35" />
-                      <rect x="2.5" y="6.7" width="11" height="2.6" rx="0.9" fill="none" stroke="currentColor" stroke-width="1.35" />
-                      <rect x="2.5" y="10.2" width="7.2" height="2.2" rx="0.9" fill="none" stroke="currentColor" stroke-width="1.35" />
-                    </svg>
-                  }
-                  @case ('environments') {
-                    <svg width="16" height="16" viewBox="0 0 24 24">
-                      <path
-                        d="M8 4H7a2 2 0 0 0-2 2v3a2 2 0 0 1-2 2 2 2 0 0 1 2 2v3a2 2 0 0 0 2 2h1M16 4h1a2 2 0 0 1 2 2v3a2 2 0 0 0 2 2 2 2 0 0 0-2 2v3a2 2 0 0 1-2 2h-1"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="2"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                      />
-                    </svg>
-                  }
-                  @case ('database') {
-                    <svg width="16" height="16" viewBox="0 0 16 16">
-                      <ellipse cx="8" cy="4.4" rx="4.6" ry="1.6" fill="none" stroke="currentColor" stroke-width="1.35" />
-                      <path d="M3.4 4.4v6.8c0 .9 2.1 1.6 4.6 1.6s4.6-.7 4.6-1.6V4.4" fill="none" stroke="currentColor" stroke-width="1.35" />
-                    </svg>
-                  }
-                  @case ('proxy') {
-                    <svg width="16" height="16" viewBox="0 0 16 16">
-                      <path
-                        d="M2.6 6.2h8.2M8.4 4.2 10.8 6.2 8.4 8.2M13.4 9.8H5.2M7.6 11.8 5.2 9.8 7.6 7.8"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="1.35"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                      />
-                    </svg>
-                  }
-                  @case ('dns') {
-                    <svg width="16" height="16" viewBox="0 0 16 16">
-                      <circle cx="8" cy="8" r="5.2" fill="none" stroke="currentColor" stroke-width="1.35" />
-                      <path d="M8 3.4v9.2M3.4 8h9.2" stroke="currentColor" stroke-width="1.35" />
-                    </svg>
-                  }
-                  @case ('certificates') {
-                    <svg width="16" height="16" viewBox="0 0 16 16">
-                      <path
-                        d="M8 2.8 12.8 4.6v4c0 2.9-2 4.7-4.8 5.6-2.8-.9-4.8-2.7-4.8-5.6v-4L8 2.8z"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="1.35"
-                        stroke-linejoin="round"
-                      />
-                      <path
-                        d="M6.1 8.1 7.4 9.4 10 6.6"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="1.35"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                      />
-                    </svg>
-                  }
-                  @case ('logging') {
-                    <svg width="16" height="16" viewBox="0 0 16 16">
-                      <path d="M3.2 4.2h9.6M3.2 8h6.4M3.2 11.8h4.4" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" />
-                    </svg>
-                  }
-                  @case ('data') {
-                    <svg width="16" height="16" viewBox="0 0 16 16">
-                      <path
-                        d="M3.2 6.2 8 4.2l4.8 2v5.6L8 13.8 3.2 11.8V6.2z"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="1.35"
-                        stroke-linejoin="round"
-                      />
-                      <path d="M3.2 6.2 8 8.2l4.8-2M8 8.2v5.6" stroke="currentColor" stroke-width="1.35" />
-                    </svg>
-                  }
-                  @case ('about') {
-                    <svg width="16" height="16" viewBox="0 0 16 16">
-                      <circle cx="8" cy="8" r="5.2" fill="none" stroke="currentColor" stroke-width="1.35" />
-                      <path d="M8 7.2V11M8 5.2v.4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
-                    </svg>
-                  }
-                }
-              </span>
-              {{ item.label }}
-            </button>
+      <nav class="tx-settings__wizard" aria-label="Settings wizard">
+        <ol class="tx-settings__wizard-groups">
+          @for (group of groups; track group.label; let groupIndex = $index) {
+            <li>
+              <button
+                type="button"
+                class="tx-settings__wizard-group"
+                [class.is-active]="isWizardGroupActive(groupIndex)"
+                [class.is-done]="isWizardGroupComplete(groupIndex)"
+                [disabled]="wizardMode() === 'abbreviated'"
+                [attr.aria-current]="isWizardGroupActive(groupIndex) ? 'step' : null"
+                (click)="selectWizardGroup(groupIndex)"
+              >
+                <span class="tx-settings__wizard-index" aria-hidden="true">{{ groupIndex + 1 }}</span>
+                <span class="tx-settings__wizard-label">{{ group.label }}</span>
+              </button>
+            </li>
           }
-        }
+        </ol>
       </nav>
     </aside>
 
@@ -166,6 +64,51 @@
         </tx-hint>
       </header>
 
+      @if (showWizardChrome() && wizardMode() === 'full' && activeGroupCategories().length > 1) {
+        <div class="tx-settings__substeps" role="tablist" aria-label="Categories in this step">
+          @for (cat of activeGroupCategories(); track cat) {
+            <button
+              type="button"
+              role="tab"
+              class="tx-settings__substep"
+              [class.is-active]="category() === cat"
+              [attr.aria-selected]="category() === cat"
+              (click)="selectCategory(cat)"
+            >
+              {{ categoryLabel(cat) }}
+            </button>
+          }
+        </div>
+      }
+      @if (
+        showWizardChrome()
+        && wizardMode() === 'abbreviated'
+        && currentWizardStep().id === 'network-essentials'
+      ) {
+        <div class="tx-settings__substeps" role="tablist" aria-label="Network essentials">
+          <button
+            type="button"
+            role="tab"
+            class="tx-settings__substep"
+            [class.is-active]="networkEssentialsPhase() === 0"
+            [attr.aria-selected]="networkEssentialsPhase() === 0"
+            (click)="selectNetworkEssentialsPhase(0)"
+          >
+            Proxy
+          </button>
+          <button
+            type="button"
+            role="tab"
+            class="tx-settings__substep"
+            [class.is-active]="networkEssentialsPhase() === 1"
+            [attr.aria-selected]="networkEssentialsPhase() === 1"
+            (click)="selectNetworkEssentialsPhase(1)"
+          >
+            TLS
+          </button>
+        </div>
+      }
+
       <div class="tx-settings__body">
         @if (query().trim() && hits().length === 0) {
           <p class="tx-settings__empty">No settings match "{{ query().trim() }}".</p>
@@ -180,8 +123,34 @@
               </li>
             }
           </ul>
+        } @else if (showWizardChrome() && currentWizardStep().category === null) {
+          @switch (currentWizardStep().id) {
+            @case ('get-started') {
+              <div class="tx-settings__intro">
+                <p>
+                  Set theme, how edits save, motion, and the network defaults Testrix uses when sending requests.
+                </p>
+                <div class="tx-settings__intro-actions">
+                  <tx-button variant="ghost" (clicked)="skipToFullWizard()">Skip</tx-button>
+                  <tx-button variant="ghost" (clicked)="showFullWizard()">Show all settings</tx-button>
+                </div>
+              </div>
+            }
+            @case ('done') {
+              <div class="tx-settings__intro">
+                <p>Essentials are saved. Search or browse every category whenever you need more control.</p>
+              </div>
+            }
+          }
         } @else {
-          @switch (category()) {
+          <div class="tx-settings__stage" [attr.data-slide]="paneSlideDir()">
+            @for (id of [category()]; track id) {
+              <div
+                class="tx-settings__slide"
+                [animate.enter]="paneEnter()"
+                animate.leave="tx-sidebar-pane-out"
+              >
+          @switch (id) {
             @case ('appearance') {
               <div class="tx-pref">
                 <div class="tx-pref__row" [class.is-flash]="isHighlighted('theme')">
@@ -205,123 +174,221 @@
                   </div>
                 </div>
 
+                <div class="tx-pref__row" [class.is-flash]="isHighlighted('save-mode')">
+                  <div class="tx-pref__copy">
+                    <h3>Save mode</h3>
+                    <p>When collection and flow edits write to disk</p>
+                  </div>
+                  <div class="tx-seg" role="radiogroup" aria-label="Save mode">
+                    @for (mode of saveModes; track mode.id) {
+                      <label class="tx-seg__item" [class.is-on]="desktop.settings().saveMode === mode.id">
+                        <input
+                          type="radio"
+                          name="save-mode"
+                          [value]="mode.id"
+                          [checked]="desktop.settings().saveMode === mode.id"
+                          (change)="desktop.patchSettings({ saveMode: mode.id })"
+                        />
+                        {{ mode.label }}
+                      </label>
+                    }
+                  </div>
+                </div>
+
                 <div class="tx-pref__row" [class.is-flash]="isHighlighted('motion')">
                   <div class="tx-pref__copy">
-                    <h3>Animation</h3>
-                    <p>Speed for opening and in-app motion</p>
+                    <h3>Motion</h3>
+                    <p>Overall speed for opening and closing UI</p>
                   </div>
-                  <div class="tx-seg" role="radiogroup" aria-label="Animation speed">
-                    @for (speed of speeds; track speed) {
-                      <label class="tx-seg__item" [class.is-on]="desktop.settings().animationSpeed === speed">
+                  <div class="tx-seg" role="radiogroup" aria-label="Motion">
+                    @for (preset of motionPresets; track preset.id) {
+                      <label class="tx-seg__item" [class.is-on]="motionPreset() === preset.id">
                         <input
                           type="radio"
-                          name="motion"
-                          [value]="speed"
-                          [checked]="desktop.settings().animationSpeed === speed"
-                          (change)="desktop.patchSettings({ animationSpeed: speed })"
+                          name="motion-preset"
+                          [value]="preset.id"
+                          [checked]="motionPreset() === preset.id"
+                          (change)="setMotionPreset(preset.id)"
                         />
-                        {{ speed }}
+                        {{ preset.label }}
                       </label>
                     }
                   </div>
                 </div>
 
-                <div class="tx-pref__row" [class.is-flash]="isHighlighted('motion-leave')">
+                <div
+                  class="tx-pref__row"
+                  [class.is-flash]="isHighlighted('focus-editing') || isHighlighted('focus-while-editing')"
+                >
                   <div class="tx-pref__copy">
-                    <h3>Close animation</h3>
-                    <p>Speed for closing overlays, menus, and sidebar panes</p>
+                    <h3>Focus while editing</h3>
+                    <p>Collapse the sidebar when you open a request tab</p>
                   </div>
-                  <div class="tx-seg" role="radiogroup" aria-label="Close animation speed">
-                    @for (speed of speeds; track speed) {
-                      <label class="tx-seg__item" [class.is-on]="desktop.settings().closeAnimationSpeed === speed">
-                        <input
-                          type="radio"
-                          name="motion-leave"
-                          [value]="speed"
-                          [checked]="desktop.settings().closeAnimationSpeed === speed"
-                          (change)="desktop.patchSettings({ closeAnimationSpeed: speed })"
-                        />
-                        {{ speed }}
-                      </label>
-                    }
-                  </div>
-                </div>
-
-                <div class="tx-pref__row" [class.is-flash]="isHighlighted('font-ui')">
-                  <div class="tx-pref__copy">
-                    <h3>Interface font</h3>
-                    <p>UI typeface for chrome and forms</p>
-                  </div>
-                  <tx-select
-                    [value]="desktop.settings().fontUi"
-                    [options]="fontUiSelect"
-                    ariaLabel="Interface font"
-                    (valueChange)="setFontUi($event)"
+                  <tx-check
+                    variant="compact"
+                    [checked]="desktop.settings().focusWhileEditing"
+                    label="Enabled"
+                    (checkedChange)="desktop.patchSettings({ focusWhileEditing: $event })"
                   />
                 </div>
 
-                <div class="tx-pref__row" [class.is-flash]="isHighlighted('font-mono')">
-                  <div class="tx-pref__copy">
-                    <h3>Monospace font</h3>
-                    <p>Editor, URLs, and payload views</p>
-                  </div>
-                  <tx-select
-                    [value]="desktop.settings().fontMono"
-                    [options]="fontMonoSelect"
-                    ariaLabel="Monospace font"
-                    (valueChange)="setFontMono($event)"
-                  />
-                </div>
+                <details class="tx-pref__disclosure" [open]="appearanceCustomizeOpen()">
+                  <summary (click)="toggleAppearanceCustomize($event)">Customize</summary>
+                  <div class="tx-pref__disclosure-body">
+                    <div class="tx-pref__row" [class.is-flash]="isHighlighted('motion-leave')">
+                      <div class="tx-pref__copy">
+                        <h3>Close animation</h3>
+                        <p>Independent speed for closing overlays and panes</p>
+                      </div>
+                      <div class="tx-seg" role="radiogroup" aria-label="Close animation speed">
+                        @for (speed of speeds; track speed) {
+                          <label class="tx-seg__item" [class.is-on]="desktop.settings().closeAnimationSpeed === speed">
+                            <input
+                              type="radio"
+                              name="motion-leave"
+                              [value]="speed"
+                              [checked]="desktop.settings().closeAnimationSpeed === speed"
+                              (change)="setCloseAnimationSpeed(speed)"
+                            />
+                            {{ speed }}
+                          </label>
+                        }
+                      </div>
+                    </div>
 
-                <div class="tx-pref__row" [class.is-flash]="isHighlighted('font-scale')">
-                  <div class="tx-pref__copy">
-                    <h3>Type scale</h3>
-                    <p>Relative size of UI copy</p>
-                  </div>
-                  <div class="tx-seg tx-seg--compact" role="radiogroup" aria-label="Type scale">
-                    @for (scale of scaleOptions; track scale) {
-                      <label
-                        class="tx-seg__item"
-                        [class.is-on]="desktop.settings().fontScale === scale"
-                        [style.font-size]="scalePreview[scale]"
-                      >
-                        <input
-                          type="radio"
-                          name="fontScale"
-                          [value]="scale"
-                          [checked]="desktop.settings().fontScale === scale"
-                          (change)="setScale('fontScale', scale)"
-                        />
-                        {{ scaleLabels[scale] }}
-                      </label>
-                    }
-                  </div>
-                </div>
+                    <div class="tx-pref__row" [class.is-flash]="isHighlighted('motion')">
+                      <div class="tx-pref__copy">
+                        <h3>Open animation</h3>
+                        <p>Speed for opening and in-app motion</p>
+                      </div>
+                      <div class="tx-seg" role="radiogroup" aria-label="Animation speed">
+                        @for (speed of speeds; track speed) {
+                          <label class="tx-seg__item" [class.is-on]="desktop.settings().animationSpeed === speed">
+                            <input
+                              type="radio"
+                              name="motion"
+                              [value]="speed"
+                              [checked]="desktop.settings().animationSpeed === speed"
+                              (change)="setOpenAnimationSpeed(speed)"
+                            />
+                            {{ speed }}
+                          </label>
+                        }
+                      </div>
+                    </div>
 
-                <div class="tx-pref__row" [class.is-flash]="isHighlighted('icon-scale')">
-                  <div class="tx-pref__copy">
-                    <h3>Icon scale</h3>
-                    <p>Rail and tree icon density</p>
-                  </div>
-                  <div class="tx-seg tx-seg--compact" role="radiogroup" aria-label="Icon scale">
-                    @for (scale of scaleOptions; track scale) {
-                      <label
-                        class="tx-seg__item"
-                        [class.is-on]="desktop.settings().iconScale === scale"
-                        [style.font-size]="scalePreview[scale]"
-                      >
+                    <div class="tx-pref__row" [class.is-flash]="isHighlighted('tab-warn')">
+                      <div class="tx-pref__copy">
+                        <h3>Tab count warning</h3>
+                        <p>Soft warning on the status strip when open tabs exceed this count</p>
+                      </div>
+                      <tx-input
+                        id="tab-warn-threshold"
+                        label="Max tabs before warn"
+                        type="number"
+                        [value]="'' + desktop.settings().tabWarnThreshold"
+                        (valueChange)="handleTabWarnInput($event)"
+                      />
+                    </div>
+
+                    <div class="tx-pref__row" [class.is-flash]="isHighlighted('font-ui')">
+                      <div class="tx-pref__copy">
+                        <h3>Interface font</h3>
+                        <p>UI typeface for chrome and forms</p>
+                      </div>
+                      <tx-select
+                        [value]="desktop.settings().fontUi"
+                        [options]="fontUiSelect"
+                        ariaLabel="Interface font"
+                        (valueChange)="setFontUi($event)"
+                      />
+                    </div>
+
+                    <div class="tx-pref__row" [class.is-flash]="isHighlighted('font-mono')">
+                      <div class="tx-pref__copy">
+                        <h3>Monospace font</h3>
+                        <p>Editor, URLs, and payload views</p>
+                      </div>
+                      <tx-select
+                        [value]="desktop.settings().fontMono"
+                        [options]="fontMonoSelect"
+                        ariaLabel="Monospace font"
+                        (valueChange)="setFontMono($event)"
+                      />
+                    </div>
+
+                    <div class="tx-pref__row" [class.is-flash]="isHighlighted('font-scale')">
+                      <div class="tx-pref__copy">
+                        <h3>Type scale</h3>
+                        <p>Relative size of UI copy</p>
+                      </div>
+                      <div class="tx-seg tx-seg--compact" role="radiogroup" aria-label="Type scale">
+                        @for (scale of scaleOptions; track scale) {
+                          <label
+                            class="tx-seg__item"
+                            [class.is-on]="desktop.settings().fontScale === scale"
+                            [style.font-size]="scalePreview[scale]"
+                          >
+                            <input
+                              type="radio"
+                              name="fontScale"
+                              [value]="scale"
+                              [checked]="desktop.settings().fontScale === scale"
+                              (change)="setScale('fontScale', scale)"
+                            />
+                            {{ scaleLabels[scale] }}
+                          </label>
+                        }
+                      </div>
+                    </div>
+
+                    <div class="tx-pref__row" [class.is-flash]="isHighlighted('icon-scale')">
+                      <div class="tx-pref__copy">
+                        <h3>Icon scale</h3>
+                        <p>Rail and tree icon density</p>
+                      </div>
+                      <div class="tx-seg tx-seg--compact" role="radiogroup" aria-label="Icon scale">
+                        @for (scale of scaleOptions; track scale) {
+                          <label
+                            class="tx-seg__item"
+                            [class.is-on]="desktop.settings().iconScale === scale"
+                            [style.font-size]="scalePreview[scale]"
+                          >
+                            <input
+                              type="radio"
+                              name="iconScale"
+                              [value]="scale"
+                              [checked]="desktop.settings().iconScale === scale"
+                              (change)="setScale('iconScale', scale)"
+                            />
+                            {{ scaleLabels[scale] }}
+                          </label>
+                        }
+                      </div>
+                    </div>
+
+                    <div class="tx-pref__row" [class.is-flash]="isHighlighted('ui-zoom')">
+                      <div class="tx-pref__copy">
+                        <h3>Zoom</h3>
+                        <p>Scale chrome, text, and columns. Ctrl + scroll wheel anywhere.</p>
+                      </div>
+                      <label class="tx-slider">
+                        <span class="visually-hidden">Interface zoom</span>
                         <input
-                          type="radio"
-                          name="iconScale"
-                          [value]="scale"
-                          [checked]="desktop.settings().iconScale === scale"
-                          (change)="setScale('iconScale', scale)"
+                          type="range"
+                          [min]="zoomMin"
+                          [max]="zoomMax"
+                          [step]="zoomStep"
+                          [value]="zoomSlider()"
+                          [attr.aria-valuetext]="zoomPercent() + ' percent'"
+                          (input)="previewZoom($event)"
+                          (change)="commitZoom($event)"
                         />
-                        {{ scaleLabels[scale] }}
+                        <span class="tx-slider__value">{{ zoomPercent() }}%</span>
                       </label>
-                    }
+                    </div>
                   </div>
-                </div>
+                </details>
               </div>
             }
             @case ('keyboard') {
@@ -358,19 +425,58 @@
                 <p class="tx-settings__error">{{ error }}</p>
               }
             }
-            @case ('collections') {
-              <tx-empty-state
-                class="tx-settings__soon"
-                title="Nothing here yet"
-                body="Collection preferences will land here."
-              />
+            @case ('http') {
+              <div class="tx-pref">
+                <div class="tx-pref__row tx-pref__row--stack" [class.is-flash]="isHighlighted('http-headers')">
+                  <div class="tx-pref__copy">
+                    <h3>Default headers</h3>
+                    <p>Sent with every HTTP request unless a folder or request overrides the same key. Type in the blank row to add one.</p>
+                  </div>
+                  <tx-request-kv-table
+                    label="Default headers"
+                    [headerComplete]="true"
+                    [extraHeaderNames]="apiKeyHeaderNames()"
+                    [rows]="defaultHeaderRows()"
+                    (rowsChange)="handleDefaultHeaders($event)"
+                  />
+                </div>
+                <div class="tx-pref__row" [class.is-flash]="isHighlighted('http-cookies')">
+                  <div class="tx-pref__copy">
+                    <h3>Cookie jar</h3>
+                    <p>Workspace cookies.json and collection auth. Browse, search, edit, and clear from the jar popup.</p>
+                  </div>
+                  <tx-button variant="ghost" (clicked)="openCookieAuthJar()">Manage jar…</tx-button>
+                </div>
+                <div class="tx-pref__row" [class.is-flash]="isHighlighted('http-apikey')">
+                  <div class="tx-pref__copy">
+                    <h3>API key header</h3>
+                    <p>Default name for API key auth, used when a request or folder does not set its own.</p>
+                  </div>
+                  <tx-input
+                    id="default-api-key-header"
+                    label="Header or param name"
+                    placeholder="X-Api-Key"
+                    [value]="desktop.settings().defaultApiKeyHeader"
+                    (valueChange)="handleApiKeyHeader($event)"
+                  />
+                </div>
+                <div class="tx-pref__row tx-pref__row--stack" [class.is-flash]="isHighlighted('http-email')">
+                  <div class="tx-pref__copy">
+                    <h3>Random email domain</h3>
+                    <p>$randomEmail uses this host, for example k3f9q2@test.at. $randomEmail(other.at) overrides it for that token.</p>
+                  </div>
+                  <tx-input
+                    id="placeholder-email-domain"
+                    label="Domain"
+                    placeholder="test.at"
+                    [value]="desktop.settings().placeholderEmailDomain"
+                    (valueChange)="handleEmailDomain($event)"
+                  />
+                </div>
+              </div>
             }
-            @case ('environments') {
-              <tx-empty-state
-                class="tx-settings__soon"
-                title="Nothing here yet"
-                body="Environment preferences will land here."
-              />
+            @case ('collab') {
+              <tx-collab-settings-pane />
             }
             @case ('database') {
               <div class="tx-pref">
@@ -439,7 +545,7 @@
                 <div class="tx-pref__row tx-pref__row--stack" [class.is-flash]="isHighlighted('db-boot-list')">
                   <div class="tx-pref__copy">
                     <h3>Connect on boot</h3>
-                    <p>Per-connection probes used when Connect on startup is on.</p>
+                    <p>{{ bootSummary() }} — per-connection probes when Connect on startup is on.</p>
                   </div>
                   @for (connection of database.connections(); track connection.id) {
                     <tx-check
@@ -612,67 +718,76 @@
                 </div>
 
                 <div class="tx-pref__row tx-pref__row--stack" [class.is-flash]="isHighlighted('client-certs')">
-                  <div class="tx-pref__heading">
-                    <div class="tx-pref__copy">
-                      <h3>Client certificates</h3>
-                      <p>PEM pair or PKCS#12 (.pfx) as the certificate file</p>
-                    </div>
-                    <tx-button variant="ghost" (clicked)="addClientCert()">Add certificate</tx-button>
-                  </div>
-
-                  @if (desktop.settings().certificates.clientCerts.length === 0) {
-                    <p class="tx-pref__empty">No client certificates yet.</p>
-                  } @else {
-                    @for (cert of desktop.settings().certificates.clientCerts; track cert.id) {
-                      <div class="tx-pref__cert">
-                        <div class="tx-pref__cert-head">
-                          <h4 class="tx-pref__cert-title">{{ cert.host || 'Untitled host' }}</h4>
-                          <tx-button variant="ghost" (clicked)="removeClientCert(cert.id)">Remove</tx-button>
+                  <details class="tx-pref__disclosure" [open]="clientCertsOpen() || desktop.settings().certificates.clientCerts.length > 0">
+                    <summary (click)="toggleClientCerts($event)">
+                      Client certificates
+                      <span class="tx-pref__disclosure-meta">
+                        {{ desktop.settings().certificates.clientCerts.length || 'None' }}
+                      </span>
+                    </summary>
+                    <div class="tx-pref__disclosure-body">
+                      <div class="tx-pref__heading">
+                        <div class="tx-pref__copy">
+                          <p>PEM pair or PKCS#12 (.pfx) as the certificate file</p>
                         </div>
-                        <div class="tx-pref__fields">
-                          <tx-input
-                            class="tx-pref__fields--span"
-                            [id]="'cert-host-' + cert.id"
-                            label="Host"
-                            [value]="cert.host"
-                            placeholder="api.internal"
-                            (valueChange)="patchClientCert(cert.id, { host: $event })"
-                          />
-                          <tx-input
-                            class="tx-pref__fields--span"
-                            [id]="'cert-file-' + cert.id"
-                            label="Certificate"
-                            [value]="cert.certPath"
-                            placeholder="Path to .pem, .crt, or .pfx"
-                            (valueChange)="patchClientCert(cert.id, { certPath: $event })"
-                          >
-                            @if (desktop.hasDesktop) {
-                              <tx-button variant="ghost" (clicked)="chooseCertFile('cert', cert.id)">Choose</tx-button>
-                            }
-                          </tx-input>
-                          <tx-input
-                            [id]="'cert-key-' + cert.id"
-                            label="Private key"
-                            [value]="cert.keyPath"
-                            placeholder="Optional for PKCS#12"
-                            (valueChange)="patchClientCert(cert.id, { keyPath: $event })"
-                          >
-                            @if (desktop.hasDesktop) {
-                              <tx-button variant="ghost" (clicked)="chooseCertFile('key', cert.id)">Choose</tx-button>
-                            }
-                          </tx-input>
-                          <tx-input
-                            [id]="'cert-pass-' + cert.id"
-                            label="Passphrase"
-                            type="password"
-                            [value]="cert.passphrase"
-                            autocomplete="off"
-                            (valueChange)="patchClientCert(cert.id, { passphrase: $event })"
-                          />
-                        </div>
+                        <tx-button variant="ghost" (clicked)="addClientCert()">Add certificate</tx-button>
                       </div>
-                    }
-                  }
+
+                      @if (desktop.settings().certificates.clientCerts.length === 0) {
+                        <p class="tx-pref__empty">No client certificates yet.</p>
+                      } @else {
+                        @for (cert of desktop.settings().certificates.clientCerts; track cert.id) {
+                          <div class="tx-pref__cert">
+                            <div class="tx-pref__cert-head">
+                              <h4 class="tx-pref__cert-title">{{ cert.host || 'Untitled host' }}</h4>
+                              <tx-button variant="ghost" (clicked)="removeClientCert(cert.id)">Remove</tx-button>
+                            </div>
+                            <div class="tx-pref__fields">
+                              <tx-input
+                                class="tx-pref__fields--span"
+                                [id]="'cert-host-' + cert.id"
+                                label="Host"
+                                [value]="cert.host"
+                                placeholder="api.internal"
+                                (valueChange)="patchClientCert(cert.id, { host: $event })"
+                              />
+                              <tx-input
+                                class="tx-pref__fields--span"
+                                [id]="'cert-file-' + cert.id"
+                                label="Certificate"
+                                [value]="cert.certPath"
+                                placeholder="Path to .pem, .crt, or .pfx"
+                                (valueChange)="patchClientCert(cert.id, { certPath: $event })"
+                              >
+                                @if (desktop.hasDesktop) {
+                                  <tx-button variant="ghost" (clicked)="chooseCertFile('cert', cert.id)">Choose</tx-button>
+                                }
+                              </tx-input>
+                              <tx-input
+                                [id]="'cert-key-' + cert.id"
+                                label="Private key"
+                                [value]="cert.keyPath"
+                                placeholder="Optional for PKCS#12"
+                                (valueChange)="patchClientCert(cert.id, { keyPath: $event })"
+                              >
+                                @if (desktop.hasDesktop) {
+                                  <tx-button variant="ghost" (clicked)="chooseCertFile('key', cert.id)">Choose</tx-button>
+                                }
+                              </tx-input>
+                              <tx-input
+                                [id]="'cert-pass-' + cert.id"
+                                label="Passphrase"
+                                type="password"
+                                [value]="cert.passphrase"
+                                autocomplete="off"
+                                (valueChange)="patchClientCert(cert.id, { passphrase: $event })"
+                              />
+                            </div>
+                          </div>
+                        }
+                      }
+                    </div>
+                  </details>
                 </div>
               </div>
             }
@@ -719,122 +834,275 @@
                   </div>
                 </div>
 
-                <div class="tx-pref__row" [class.is-flash]="isHighlighted('log-max')">
-                  <div class="tx-pref__copy">
-                    <h3>Max log file (MB)</h3>
-                    <p>Rotate testrix.log when it exceeds this size</p>
-                  </div>
-                  <label class="tx-slider">
-                    <span class="visually-hidden">Max log file in megabytes</span>
-                    <input
-                      type="range"
-                      [min]="logFileMaxMbMin"
-                      [max]="logFileMaxMbMax"
-                      step="1"
-                      [value]="logFileMaxMb()"
-                      [attr.aria-valuetext]="logFileMaxMb() + ' megabytes'"
-                      (input)="previewLogFileMaxMb($event)"
-                      (change)="commitLogFileMaxMb($event)"
-                    />
-                    <span class="tx-slider__value">{{ logFileMaxMb() }} MB</span>
-                  </label>
-                </div>
+                <details class="tx-pref__disclosure" [open]="desktop.settings().logToFile || loggingDiagnosticsOpen()">
+                  <summary (click)="toggleLoggingDiagnostics($event)">Diagnostics</summary>
+                  <div class="tx-pref__disclosure-body">
+                    <div class="tx-pref__row" [class.is-flash]="isHighlighted('log-max')">
+                      <div class="tx-pref__copy">
+                        <h3>Max log file (MB)</h3>
+                        <p>Rotate testrix.log when it exceeds this size</p>
+                      </div>
+                      <label class="tx-slider">
+                        <span class="visually-hidden">Max log file in megabytes</span>
+                        <input
+                          type="range"
+                          [min]="logFileMaxMbMin"
+                          [max]="logFileMaxMbMax"
+                          step="1"
+                          [value]="logFileMaxMb()"
+                          [attr.aria-valuetext]="logFileMaxMb() + ' megabytes'"
+                          (input)="previewLogFileMaxMb($event)"
+                          (change)="commitLogFileMaxMb($event)"
+                        />
+                        <span class="tx-slider__value">{{ logFileMaxMb() }} MB</span>
+                      </label>
+                    </div>
 
-                <div class="tx-pref__row tx-pref__row--stack" [class.is-flash]="isHighlighted('log-recent')">
-                  <div class="tx-pref__heading">
-                    <div class="tx-pref__copy">
-                      <h3>Last logs</h3>
-                      <p>Most recent lines from the logger</p>
-                    </div>
-                    <div class="tx-pref__actions">
-                      <tx-hint label="Refresh last logs" placement="left">
-                        <tx-button variant="ghost" (clicked)="refreshLogs()">Refresh</tx-button>
-                      </tx-hint>
-                    </div>
-                  </div>
-                  @if (lastLogs().length === 0) {
-                    <p class="tx-logs tx-logs--empty">No log lines yet.</p>
-                  } @else {
-                    <div class="tx-logs" role="log" aria-label="Last logs">
-                      @for (line of lastLogs(); track $index) {
-                        <div class="tx-logs__line" [attr.data-level]="logLevelOf(line)">{{ line }}</div>
+                    <div class="tx-pref__row tx-pref__row--stack" [class.is-flash]="isHighlighted('log-recent')">
+                      <div class="tx-pref__heading">
+                        <div class="tx-pref__copy">
+                          <h3>Last logs</h3>
+                          <p>Most recent lines from the logger</p>
+                        </div>
+                        <div class="tx-pref__actions">
+                          <tx-hint label="Refresh last logs" placement="left">
+                            <tx-button variant="ghost" (clicked)="refreshLogs()">Refresh</tx-button>
+                          </tx-hint>
+                        </div>
+                      </div>
+                      @if (lastLogs().length === 0) {
+                        <p class="tx-logs tx-logs--empty">No log lines yet.</p>
+                      } @else {
+                        <div class="tx-logs" role="log" aria-label="Last logs">
+                          @for (line of lastLogs(); track $index) {
+                            <div class="tx-logs__line" [attr.data-level]="logLevelOf(line)">{{ line }}</div>
+                          }
+                        </div>
                       }
                     </div>
-                  }
-                </div>
+                  </div>
+                </details>
               </div>
             }
             @case ('data') {
-              <div class="tx-pref tx-pref--dense">
-                <div class="tx-pref__row tx-pref__row--stack" [class.is-flash]="isHighlighted('config-folder')">
-                  <div class="tx-pref__heading">
-                    <div class="tx-pref__copy">
-                      <h3>App folder</h3>
-                      <p class="tx-path">{{ desktop.configPaths().folder }}</p>
+              <div class="tx-pref tx-pref--dense tx-data">
+                <section
+                  class="tx-data__section"
+                  [class.is-flash]="isHighlighted('export-workspace') || isHighlighted('import-workspace')"
+                  aria-labelledby="tx-data-transfer"
+                >
+                  <header class="tx-data__section-head">
+                    <div>
+                      <h3 id="tx-data-transfer">Import &amp; export</h3>
+                      <p>Move workspace data as a .testrix pack, or bring in Postman, Bruno, or OpenAPI.</p>
+                    </div>
+                  </header>
+                  <div class="tx-data__transfer">
+                    <tx-hint label="Choose categories and export a .testrix pack" placement="bottom">
+                      <tx-button
+                        variant="primary"
+                        [disabled]="!desktop.hasDesktop"
+                        (clicked)="handleExportWorkspace()"
+                      >
+                        Export…
+                      </tx-button>
+                    </tx-hint>
+                    <tx-hint label="Pick a file or folder to import" placement="bottom">
+                      <tx-button
+                        variant="ghost"
+                        [disabled]="!desktop.hasDesktop"
+                        (clicked)="handleImportWorkspace()"
+                      >
+                        Import…
+                      </tx-button>
+                    </tx-hint>
+                  </div>
+                  <p class="tx-data__hint">You can also drop a supported file onto the main window.</p>
+                </section>
+
+                <section
+                  class="tx-data__section"
+                  [class.is-flash]="isHighlighted('workspace-footprint') || isHighlighted('trim-history')"
+                  aria-labelledby="tx-data-footprint"
+                >
+                  <header class="tx-data__section-head">
+                    <div>
+                      <h3 id="tx-data-footprint">Workspace footprint</h3>
+                      <p>Local disk and history size — soft limits are 5,000 history entries and 50&nbsp;MB.</p>
                     </div>
                     @if (desktop.hasDesktop) {
-                      <div class="tx-pref__actions">
-                        <tx-button variant="ghost" (clicked)="handleChooseFolder()">Change folder</tx-button>
-                        <tx-button variant="ghost" (clicked)="handleReveal('folder')">Open in folder</tx-button>
-                      </div>
+                      <tx-button variant="ghost" (clicked)="refreshFootprint()">Refresh</tx-button>
                     }
-                  </div>
-                </div>
-
-                @if (desktop.hasDesktop) {
-                  <div class="tx-pref__row tx-pref__row--stack" [class.is-flash]="isHighlighted('configs-folder')">
-                    <div class="tx-pref__heading">
-                      <div class="tx-pref__copy">
-                        <h3>Configs</h3>
-                        <p class="tx-path">{{ desktop.configPaths().configsFolder }}</p>
+                  </header>
+                  @if (footprint(); as fp) {
+                    <div class="tx-data__list">
+                      <div class="tx-data__row">
+                        <div class="tx-data__copy">
+                          <h4>Total on disk</h4>
+                          <p>{{ formatFootprintBytes(fp.totalBytes) }}</p>
+                        </div>
                       </div>
-                      <div class="tx-pref__actions">
-                        <tx-button variant="ghost" (clicked)="handleChooseConfigsFolder()">Change folder</tx-button>
-                        <tx-button variant="ghost" (clicked)="handleReveal('configs')">Open in folder</tx-button>
+                      <div class="tx-data__row">
+                        <div class="tx-data__copy">
+                          <h4>History entries</h4>
+                          <p>{{ fp.historyEntries }}</p>
+                        </div>
+                        <tx-hint label="Remove history older than 30 days" placement="left">
+                          <tx-button variant="ghost" (clicked)="handleTrimHistory()">Trim history</tx-button>
+                        </tx-hint>
+                      </div>
+                      <div class="tx-data__row">
+                        <div class="tx-data__copy">
+                          <h4>Open tabs</h4>
+                          <p>{{ workbench.tabCount() }}</p>
+                        </div>
+                        <tx-hint label="Close inactive tabs in every editor group" placement="left">
+                          <tx-button variant="ghost" (clicked)="handleCloseInactiveTabs()">Close inactive</tx-button>
+                        </tx-hint>
                       </div>
                     </div>
-                  </div>
-                  <div class="tx-pref__row tx-pref__row--stack">
-                    <div class="tx-pref__heading">
-                      <div class="tx-pref__copy">
-                        <h3>Workspaces</h3>
-                        <p class="tx-path">{{ desktop.configPaths().workspacesFolder }}</p>
-                      </div>
-                      <tx-button variant="ghost" (clicked)="handleReveal('workspaces')">Open in folder</tx-button>
-                    </div>
-                  </div>
-                }
+                  } @else {
+                    <p class="tx-data__hint">Footprint stats load when you open this section on desktop.</p>
+                  }
+                </section>
 
-                @for (file of desktop.configPaths().files; track file.name) {
-                  <div class="tx-pref__row tx-pref__row--stack">
-                    <div class="tx-pref__heading">
-                      <div class="tx-pref__copy">
-                        <h3>
-                          {{ file.name }}
-                          <span class="tx-settings__schema">v{{ file.schemaVersion }}</span>
-                          @if (!file.exists) {
-                            <span class="tx-settings__pill">Pending</span>
-                          }
-                        </h3>
-                        <p class="tx-path">{{ file.path }}</p>
+                <section
+                  class="tx-data__section"
+                  [class.is-flash]="isHighlighted('config-folder') || isHighlighted('configs-folder')"
+                  aria-labelledby="tx-data-folders"
+                >
+                  <header class="tx-data__section-head">
+                    <div>
+                      <h3 id="tx-data-folders">Folders</h3>
+                      <p>Where Testrix keeps app settings and workspace JSON on disk.</p>
+                    </div>
+                  </header>
+                  <div class="tx-data__list">
+                    <div class="tx-data__row">
+                      <div class="tx-data__copy">
+                        <h4>App folder</h4>
+                        <p class="tx-path">{{ desktop.configPaths().folder }}</p>
                       </div>
                       @if (desktop.hasDesktop) {
-                        <tx-button variant="ghost" (clicked)="handleReveal(file.name)">Open in folder</tx-button>
+                        <div class="tx-pref__actions">
+                          <tx-button variant="ghost" (clicked)="handleChooseFolder()">Change</tx-button>
+                          <tx-button variant="ghost" (clicked)="handleReveal('folder')">Open</tx-button>
+                        </div>
+                      }
+                    </div>
+                    <div class="tx-data__row">
+                      <div class="tx-data__copy">
+                        <h4>Configs</h4>
+                        <p class="tx-path">{{ desktop.configPaths().configsFolder }}</p>
+                      </div>
+                      @if (desktop.hasDesktop) {
+                        <div class="tx-pref__actions">
+                          <tx-button variant="ghost" (clicked)="handleChooseConfigsFolder()">Change</tx-button>
+                          <tx-button variant="ghost" (clicked)="handleReveal('configs')">Open</tx-button>
+                        </div>
+                      }
+                    </div>
+                    <div class="tx-data__row">
+                      <div class="tx-data__copy">
+                        <h4>Workspaces</h4>
+                        <p class="tx-path">{{ desktop.configPaths().workspacesFolder }}</p>
+                      </div>
+                      @if (desktop.hasDesktop) {
+                        <tx-button variant="ghost" (clicked)="handleReveal('workspaces')">Open</tx-button>
                       }
                     </div>
                   </div>
-                }
+                </section>
 
-                <div class="tx-pref__row tx-pref__row--stack" [class.is-flash]="isHighlighted('reset-all')">
-                  <div class="tx-pref__copy">
-                    <h3>Reset all settings</h3>
-                    <p>
-                      Restores appearance, keyboard, logging, database, and network defaults. Session, workspaces,
-                      collections, environments, database.json, and queries.json stay as they are.
-                    </p>
-                  </div>
-                </div>
+                <section class="tx-data__section" aria-labelledby="tx-data-app-files">
+                  <button
+                    type="button"
+                    class="tx-data__disclosure"
+                    id="tx-data-app-files"
+                    [attr.aria-expanded]="dataAppFilesOpen()"
+                    (click)="dataAppFilesOpen.set(!dataAppFilesOpen())"
+                  >
+                    <span class="tx-data__disclosure-label">
+                      App config files
+                      <span class="tx-data__count">{{ appConfigFiles().length }}</span>
+                    </span>
+                    <span class="tx-data__chevron" aria-hidden="true">{{ dataAppFilesOpen() ? '▾' : '▸' }}</span>
+                  </button>
+                  @if (dataAppFilesOpen()) {
+                    <div class="tx-data__list">
+                      @for (file of appConfigFiles(); track file.name) {
+                        <div class="tx-data__row">
+                          <div class="tx-data__copy">
+                            <h4>
+                              {{ file.name }}
+                              <span class="tx-settings__schema">v{{ file.schemaVersion }}</span>
+                              @if (!file.exists) {
+                                <span class="tx-settings__pill">Pending</span>
+                              }
+                            </h4>
+                            <p class="tx-path">{{ file.path }}</p>
+                          </div>
+                          @if (desktop.hasDesktop) {
+                            <tx-button variant="ghost" (clicked)="handleReveal(file.name)">Open</tx-button>
+                          }
+                        </div>
+                      }
+                    </div>
+                  }
+                </section>
+
+                <section class="tx-data__section" aria-labelledby="tx-data-workspace-files">
+                  <button
+                    type="button"
+                    class="tx-data__disclosure"
+                    id="tx-data-workspace-files"
+                    [attr.aria-expanded]="dataWorkspaceFilesOpen()"
+                    (click)="dataWorkspaceFilesOpen.set(!dataWorkspaceFilesOpen())"
+                  >
+                    <span class="tx-data__disclosure-label">
+                      Workspace files
+                      <span class="tx-data__count">{{ workspaceConfigFiles().length }}</span>
+                    </span>
+                    <span class="tx-data__chevron" aria-hidden="true">{{ dataWorkspaceFilesOpen() ? '▾' : '▸' }}</span>
+                  </button>
+                  @if (dataWorkspaceFilesOpen()) {
+                    <div class="tx-data__list">
+                      @for (file of workspaceConfigFiles(); track file.name) {
+                        <div class="tx-data__row">
+                          <div class="tx-data__copy">
+                            <h4>
+                              {{ file.name }}
+                              <span class="tx-settings__schema">v{{ file.schemaVersion }}</span>
+                              @if (!file.exists) {
+                                <span class="tx-settings__pill">Pending</span>
+                              }
+                            </h4>
+                            <p class="tx-path">{{ file.path }}</p>
+                          </div>
+                          @if (desktop.hasDesktop) {
+                            <tx-button variant="ghost" (clicked)="handleReveal(file.name)">Open</tx-button>
+                          }
+                        </div>
+                      }
+                    </div>
+                  }
+                </section>
+
+                <section class="tx-data__section" [class.is-flash]="isHighlighted('reset-all')" aria-labelledby="tx-data-reset">
+                  <header class="tx-data__section-head">
+                    <div>
+                      <h3 id="tx-data-reset">Reset</h3>
+                      <p>
+                        Restores appearance, keyboard, logging, database, and network defaults. Session, workspaces,
+                        collections, and other JSON files stay as they are.
+                      </p>
+                    </div>
+                  </header>
+                </section>
               </div>
+            }
+            @case ('updates') {
+              <tx-update-settings-pane />
             }
             @case ('about') {
               <div class="tx-about" [class.is-flash]="isHighlighted('version')">
@@ -862,9 +1130,9 @@
                 <div class="tx-about__update">
                   <div>
                     <h3>Updates</h3>
-                    <p>{{ desktop.updateStatus() }}</p>
+                    <p>{{ updateStatusLine() }}</p>
                   </div>
-                  <tx-button variant="ghost" (clicked)="handleCheckUpdates()">Check for updates</tx-button>
+                  <tx-button variant="ghost" (clicked)="selectCategory('updates')">Update settings</tx-button>
                 </div>
               </div>
             }
@@ -875,8 +1143,22 @@
               <tx-button variant="ghost" (clicked)="handleReset()">{{ resetLabel() }}</tx-button>
             </div>
           }
+              </div>
+            }
+          </div>
         }
       </div>
+
+      @if (showWizardChrome()) {
+        <footer class="tx-settings__wizard-footer">
+          <tx-button variant="ghost" [disabled]="isFirstWizardStep()" (clicked)="wizardBack()">Back</tx-button>
+          @if (isLastWizardStep()) {
+            <tx-button (clicked)="wizardDone()">Done</tx-button>
+          } @else {
+            <tx-button (clicked)="wizardContinue()">Continue</tx-button>
+          }
+        </footer>
+      }
     </section>
   </div>
 </tx-overlay>

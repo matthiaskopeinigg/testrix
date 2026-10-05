@@ -1,0 +1,26 @@
+@if (dialog.issues(); as issues) {
+  <tx-overlay [labelledBy]="titleId" variant="dialog" (closed)="close()">
+    <div class="tx-health" role="dialog" [attr.aria-labelledby]="titleId">
+      <header class="tx-health__header">
+        <h2 class="tx-health__title" [id]="titleId">Collection health</h2>
+        <button type="button" class="tx-health__close" (click)="close()" aria-label="Close">×</button>
+      </header>
+      @if (issues.length === 0) {
+        <p class="tx-health__empty">No issues found for the active environment.</p>
+      } @else {
+        <p class="tx-health__summary">{{ issues.length }} issue{{ issues.length === 1 ? '' : 's' }}</p>
+        <ul class="tx-health__list">
+          @for (issue of issues; track issue.nodeId + issue.code + issue.message) {
+            <li>
+              <button type="button" class="tx-health__row" (click)="openIssue(issue.nodeId)">
+                <span class="tx-health__severity" [class.is-error]="issue.severity === 'error'">{{ issue.severity }}</span>
+                <span class="tx-health__name">{{ issue.nodeName }}</span>
+                <span class="tx-health__msg">{{ issue.message }}</span>
+              </button>
+            </li>
+          }
+        </ul>
+      }
+    </div>
+  </tx-overlay>
+}

@@ -21,4 +21,12 @@
   --tx-scrollbar-thumb: rgba(255, 236, 244, 0.16);
   --tx-scrollbar-thumb-hover: rgba(255, 236, 244, 0.34);
   --tx-scrollbar-thumb-active: color-mix(in srgb, var(--tx-accent) 58%, rgba(255, 236, 244, 0.42));
+  --tx-syntax-string: #86efac;
+  --tx-syntax-number: #fdba74;
+  --tx-syntax-keyword: #c4b5fd;
+  --tx-syntax-property: #7dd3fc;
+  --tx-syntax-tag: #67e8f9;
+  --tx-syntax-attribute: #fde68a;
+  --tx-syntax-variable: #f0abfc;
+  --tx-syntax-comment: rgba(255, 236, 244, 0.42);
 }

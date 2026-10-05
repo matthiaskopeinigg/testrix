@@ -1,0 +1,38 @@
+<label class="tx-tags" [class.is-readonly]="readonly()">
+  @if (label()) {
+    <span class="tx-tags__label">{{ label() }}</span>
+  }
+  <div class="tx-tags__edit" [attr.id]="id()">
+    @for (tag of tags(); track tag) {
+      <button
+        type="button"
+        class="tx-tags__chip"
+        [disabled]="readonly()"
+        [attr.aria-label]="'Remove ' + tag"
+        (click)="removeTag(tag)"
+      >
+        {{ tag }}
+        @if (!readonly()) {
+          <span aria-hidden="true">×</span>
+        }
+      </button>
+    }
+    @if (!readonly()) {
+      <input
+        class="tx-tags__input"
+        type="text"
+        [value]="draft()"
+        [placeholder]="placeholder()"
+        [attr.aria-label]="placeholder()"
+        autocomplete="off"
+        spellcheck="false"
+        (input)="handleInput($event)"
+        (keydown)="handleKey($event)"
+        (blur)="handleBlur()"
+      />
+    }
+  </div>
+  @if (hint()) {
+    <p class="tx-tags__hint">{{ hint() }}</p>
+  }
+</label>

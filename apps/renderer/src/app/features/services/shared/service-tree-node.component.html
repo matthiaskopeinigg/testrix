@@ -1,0 +1,133 @@
+<div
+  class="tx-service-node"
+  [style.padding-left.px]="8 + depth() * 12"
+>
+  <div
+    class="tx-service-node__drag"
+    [txDraggable]="node()"
+    [txDraggableDisabled]="dragDisabled() || renamingId() === node().id"
+    [txDraggablePreview]="dragPreview"
+    [txDraggableScrollContainer]="dnd.scrollContainer()"
+    (dragStarted)="dragStarted.emit($event)"
+    (dragMoved)="dragMoved.emit($event)"
+    (dragEnded)="dragEnded.emit($event)"
+  >
+    <div
+      class="tx-service-node__row"
+      role="button"
+      tabindex="0"
+      [attr.data-node-id]="node().id"
+      [class.is-active]="activeId() === node().id"
+      [class.is-selected]="isSelected()"
+      [attr.aria-expanded]="node().kind === 'folder' ? isExpanded() : null"
+      [attr.aria-label]="node().name"
+      (click)="handleRowClick($event)"
+      (keydown)="handleRowKeydown($event)"
+      (dblclick)="open.emit(node())"
+      (contextmenu)="handleMenu($event)"
+    >
+      @if (node().kind === 'folder') {
+        <button
+          type="button"
+          class="tx-service-node__twist"
+          [attr.aria-label]="isExpanded() ? 'Collapse ' + node().name : 'Expand ' + node().name"
+          (click)="handleChevronClick($event)"
+        >
+          {{ isExpanded() ? '▾' : '▸' }}
+        </button>
+      } @else {
+        <span class="tx-service-node__twist" aria-hidden="true"></span>
+      }
+      <span class="tx-service-node__icon" aria-hidden="true">
+        @if (node().kind === 'folder') {
+          <svg width="14" height="14" viewBox="0 0 14 14">
+            <path
+              d="M2 3.5h3.2l1 1.2H12v6.3H2V3.5z"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.25"
+              stroke-linejoin="round"
+            />
+          </svg>
+        } @else {
+          <tx-service-icon [serviceId]="serviceId()" [size]="14" />
+        }
+      </span>
+      @if (renamingId() === node().id) {
+        <input
+          class="tx-service-node__rename"
+          [value]="node().name"
+          (click)="$event.stopPropagation()"
+          (input)="handleRenameInput($event)"
+          (keydown.enter)="renameDone.emit()"
+          (blur)="renameDone.emit()"
+        />
+      } @else {
+        <span class="tx-service-node__name">{{ node().name }}</span>
+        @if (teamRunStatus(); as runStatus) {
+          <span class="tx-service-node__run" [attr.data-status]="runStatus" aria-hidden="true"></span>
+        }
+      }
+    </div>
+  </div>
+</div>
+@if (node().kind === 'folder' && isExpanded()) {
+  <div class="tx-tree-reveal" animate.enter="tx-tree-expand" animate.leave="tx-tree-collapse">
+    <div class="tx-tree-reveal__clip">
+      @for (child of children(); track child.id) {
+        <tx-service-tree-node
+          [node]="child"
+          [serviceId]="serviceId()"
+          [depth]="depth() + 1"
+          [expandedIds]="expandedIds()"
+          [activeId]="activeId()"
+          [selectedIds]="selectedIds()"
+          [renamingId]="renamingId()"
+          [dragDisabled]="dragDisabled()"
+          (toggle)="toggle.emit($event)"
+          (open)="open.emit($event)"
+          (selectNode)="selectNode.emit($event)"
+          (menu)="menu.emit($event)"
+          (rename)="rename.emit($event)"
+          (renameDone)="renameDone.emit()"
+          (dragStarted)="dragStarted.emit($event)"
+          (dragMoved)="dragMoved.emit($event)"
+          (dragEnded)="dragEnded.emit($event)"
+        />
+      }
+    </div>
+  </div>
+}
+
+<ng-template #dragPreview let-node>
+  <div
+    class="tx-service-preview"
+    [class.is-denied]="store.dropTarget()?.denied"
+    [class.is-into]="store.dropTarget()?.mode === 'into'"
+  >
+    <span class="tx-service-preview__icon" aria-hidden="true">
+      @if (node.kind === 'folder') {
+        <svg width="14" height="14" viewBox="0 0 14 14">
+          <path
+            d="M2 3.5h3.2l1 1.2H12v6.3H2V3.5z"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.25"
+            stroke-linejoin="round"
+          />
+        </svg>
+      } @else {
+        <tx-service-icon [serviceId]="serviceId()" [size]="14" />
+      }
+    </span>
+    <span class="tx-service-preview__name">{{ node.name }}</span>
+    @if (store.dragIds().length > 1) {
+      <span class="tx-service-preview__badge">{{ store.dragIds().length }}</span>
+    }
+    @if (store.dropTarget()?.denied) {
+      <span class="tx-service-preview__badge is-deny">Not allowed</span>
+    } @else if (store.dropTarget()?.mode === 'into') {
+      <span class="tx-service-preview__badge is-into">Into folder</span>
+    }
+  </div>
+</ng-template>

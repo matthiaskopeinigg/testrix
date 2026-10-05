@@ -1,0 +1,214 @@
+<div
+  #viewport
+  class="tx-graph"
+  [class.is-panning]="panning()"
+  [class.is-linking]="link()"
+  [class.is-selecting]="marquee()"
+  role="application"
+  aria-label="Diagram grid"
+  aria-keyshortcuts="Delete Control+A Escape"
+  tabindex="0"
+  (wheel)="handleWheel($event)"
+  (pointerdown)="handlePointerDown($event)"
+  (pointermove)="handlePointerMove($event)"
+  (pointerup)="handlePointerUp($event)"
+  (pointercancel)="handlePointerUp($event)"
+  (keydown)="handleKey($event)"
+  (contextmenu)="openCanvasMenu($event)"
+>
+  <div class="tx-graph__stage" [style.transform]="transform()">
+    <svg class="tx-graph__edges" aria-hidden="true">
+      @for (wire of wires(); track wire.id) {
+        <g class="tx-graph__wire">
+          <line
+            class="tx-graph__wire-line"
+            [class.is-dashed]="wire.dashed"
+            [attr.x1]="wire.x1"
+            [attr.y1]="wire.y1"
+            [attr.x2]="wire.x2"
+            [attr.y2]="wire.y2"
+          />
+          <line
+            class="tx-graph__wire-hit"
+            [attr.x1]="wire.x1"
+            [attr.y1]="wire.y1"
+            [attr.x2]="wire.x2"
+            [attr.y2]="wire.y2"
+            (contextmenu)="openEdgeMenu($event, wire.id)"
+          />
+          @if (wire.endMark !== 'none') {
+            <g [attr.transform]="'translate(' + wire.endX + ' ' + wire.endY + ') rotate(' + wire.angle + ')'">
+              @if (wire.endMark === 'triangle') {
+                <polygon class="tx-graph__triangle" points="-14,-7 0,0 -14,7" />
+              } @else {
+                <polyline class="tx-graph__arrow" points="-10,-5 0,0 -10,5" />
+              }
+            </g>
+          }
+          @if (wire.startMark !== 'none') {
+            <g [attr.transform]="'translate(' + wire.startX + ' ' + wire.startY + ') rotate(' + wire.angle + ')'">
+              <polygon
+                class="tx-graph__diamond"
+                [class.is-open]="wire.startMark === 'diamond-open'"
+                points="0,0 9,-7 18,0 9,7"
+              />
+            </g>
+          }
+          @if (wire.label) {
+            <text [attr.x]="(wire.x1 + wire.x2) / 2" [attr.y]="(wire.y1 + wire.y2) / 2 - 8">{{ wire.label }}</text>
+          }
+        </g>
+      }
+      @if (linkPath(); as draft) {
+        <line class="tx-graph__draft" [attr.x1]="draft.x1" [attr.y1]="draft.y1" [attr.x2]="draft.x2" [attr.y2]="draft.y2" />
+      }
+    </svg>
+
+    <tx-hint label="Diagram title" placement="bottom">
+      <button
+        type="button"
+        class="tx-graph__title"
+        [class.is-placeholder]="!model().title.trim()"
+        [attr.aria-label]="model().title.trim() ? 'Diagram title' : 'Add title'"
+        (click)="openTitleMenu($event)"
+        (contextmenu)="openTitleMenu($event)"
+      >
+        {{ model().title.trim() || 'Add title' }}
+      </button>
+    </tx-hint>
+
+    @if (marqueeBox(); as box) {
+      <div
+        class="tx-graph__marquee"
+        [style.left.px]="box.x"
+        [style.top.px]="box.y"
+        [style.width.px]="box.w"
+        [style.height.px]="box.h"
+      ></div>
+    }
+
+    @for (box of boxes(); track box.id) {
+      <div
+        class="tx-graph__node"
+        [class.is-selected]="isSelected(box.id)"
+        [class.is-target]="linkTarget() === box.id"
+        [class.tx-graph__node--class]="box.shape === 'class'"
+        [class.tx-graph__node--actor]="box.shape === 'actor'"
+        [class.tx-graph__node--usecase]="box.shape === 'usecase'"
+        [class.tx-graph__node--component]="box.shape === 'component'"
+        [class.tx-graph__node--state]="box.shape === 'state'"
+        [style.left.px]="box.x"
+        [style.top.px]="box.y"
+        [style.width.px]="box.width"
+        [style.height.px]="box.height"
+        (pointerdown)="startNodeDrag($event, box.id)"
+        (contextmenu)="openNodeMenu($event, box.id)"
+      >
+        @if (box.shape === 'class') {
+          <div class="tx-graph__class-head">
+            @if (box.stereotype) {
+              <span class="tx-graph__stereo">«{{ box.stereotype }}»</span>
+            }
+            <span class="tx-graph__name">{{ box.name }}</span>
+          </div>
+          @if (box.fields.length) {
+            <div class="tx-graph__class-body">
+              @for (line of box.fields; track $index) {
+                <span>{{ line }}</span>
+              }
+            </div>
+          }
+          @if (box.operations.length) {
+            <div class="tx-graph__class-body">
+              @for (line of box.operations; track $index) {
+                <span>{{ line }}</span>
+              }
+            </div>
+          }
+        } @else {
+          @if (box.shape === 'actor') {
+            <svg class="tx-graph__actor" viewBox="-4 -4 44 70" aria-hidden="true">
+              <circle cx="18" cy="8" r="7" />
+              <line x1="18" y1="16" x2="18" y2="38" />
+              <line x1="4" y1="24" x2="32" y2="24" />
+              <line x1="18" y1="38" x2="6" y2="58" />
+              <line x1="18" y1="38" x2="30" y2="58" />
+            </svg>
+          }
+          @if (box.shape === 'component') {
+            <span class="tx-graph__component-tab" aria-hidden="true"></span>
+          }
+          <span class="tx-graph__name">{{ box.name }}</span>
+          @if (box.stereotype) {
+            <span class="tx-graph__stereo">«{{ box.stereotype }}»</span>
+          }
+        }
+        <tx-hint label="Drag to another node" placement="right">
+          <button
+            type="button"
+            class="tx-graph__port"
+            aria-label="Draw link from {{ box.name }}"
+            (pointerdown)="startLink($event, box.id)"
+          ></button>
+        </tx-hint>
+      </div>
+    }
+  </div>
+
+  @if (menu(); as menu) {
+    <button type="button" class="tx-graph__backdrop" aria-label="Close menu" (click)="closeMenu()"></button>
+    <div class="tx-graph__menu" role="menu" [style.left.px]="menu.x" [style.top.px]="menu.y">
+      @if (menu.kind === 'canvas') {
+        @if (model().kind === 'usecase') {
+          <button type="button" class="tx-graph__menu-item" role="menuitem" (click)="addNode('actor')">Add actor</button>
+          <button type="button" class="tx-graph__menu-item" role="menuitem" (click)="addNode('usecase')">Add use case</button>
+        } @else {
+          <button type="button" class="tx-graph__menu-item" role="menuitem" (click)="addNode('node')">
+            {{ model().kind === 'class' ? 'Add class' : model().kind === 'component' ? 'Add component' : 'Add state' }}
+          </button>
+        }
+      } @else if (menu.kind === 'node') {
+        <button type="button" class="tx-graph__menu-item" role="menuitem" (click)="renameNode(menu.id)">Rename</button>
+        @if (model().kind === 'class' || model().kind === 'component') {
+          <button type="button" class="tx-graph__menu-item" role="menuitem" (click)="editStereotype(menu.id)">Stereotype</button>
+        }
+        @if (model().kind === 'class') {
+          <button type="button" class="tx-graph__menu-item" role="menuitem" (click)="editMembers(menu.id)">Members</button>
+        }
+        <button type="button" class="tx-graph__menu-item is-danger" role="menuitem" (click)="deleteNode(menu.id)">Delete</button>
+      } @else if (menu.kind === 'edge') {
+        @if (model().kind !== 'usecase') {
+          <button type="button" class="tx-graph__menu-item" role="menuitem" (click)="renameEdge(menu.id)">Rename</button>
+        }
+        @if (model().kind === 'class') {
+          @for (kind of classKinds; track kind) {
+            <button type="button" class="tx-graph__menu-item" role="menuitem" (click)="setEdgeKind(menu.id, kind)">{{ kind }}</button>
+          }
+        }
+        @if (model().kind === 'usecase') {
+          @for (kind of useKinds; track kind) {
+            <button type="button" class="tx-graph__menu-item" role="menuitem" (click)="setEdgeKind(menu.id, kind)">{{ kind }}</button>
+          }
+        }
+        <button type="button" class="tx-graph__menu-item is-danger" role="menuitem" (click)="deleteEdge(menu.id)">Delete</button>
+      } @else if (menu.kind === 'title') {
+        @if (!model().title.trim()) {
+          <button type="button" class="tx-graph__menu-item" role="menuitem" (click)="addTitle()">Add title</button>
+        } @else {
+          <button type="button" class="tx-graph__menu-item" role="menuitem" (click)="renameTitle()">Rename</button>
+          <button type="button" class="tx-graph__menu-item is-danger" role="menuitem" (click)="deleteTitle()">Delete</button>
+        }
+      } @else if (menu.kind === 'link-kind') {
+        @if (model().kind === 'class') {
+          @for (kind of classKinds; track kind) {
+            <button type="button" class="tx-graph__menu-item" role="menuitem" (click)="commitLink(kind)">{{ kind }}</button>
+          }
+        } @else {
+          @for (kind of useKinds; track kind) {
+            <button type="button" class="tx-graph__menu-item" role="menuitem" (click)="commitLink(kind)">{{ kind }}</button>
+          }
+        }
+      }
+    </div>
+  }
+</div>

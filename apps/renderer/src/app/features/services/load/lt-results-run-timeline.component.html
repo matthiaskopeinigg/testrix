@@ -1,0 +1,37 @@
+<div class="lt-run-timeline" role="list" aria-label="Load test run history">
+  @if (compareMode()) {
+    <p class="lt-run-timeline__hint">
+      Click a run for <strong>B</strong> (newer). Shift+click for <strong>A</strong> (baseline).
+    </p>
+  }
+  @for (run of runs(); track run.id) {
+    <button
+      type="button"
+      class="lt-run-timeline__chip"
+      role="listitem"
+      [class.is-active]="!compareMode() && selectedId() === run.id"
+      [class.is-pinned]="pinnedId() === run.id"
+      [class.is-compare-a]="compareSelection()?.a === run.id"
+      [class.is-compare-b]="compareSelection()?.b === run.id"
+      [attr.aria-pressed]="!compareMode() && selectedId() === run.id"
+      [attr.aria-label]="chipLabel(run)"
+      (click)="handleClick(run.id, $event)"
+    >
+      @if (compareSelection()?.a === run.id) {
+        <span class="lt-run-timeline__slot is-a">A</span>
+      } @else if (compareSelection()?.b === run.id) {
+        <span class="lt-run-timeline__slot is-b">B</span>
+      } @else if (pinnedId() === run.id) {
+        <span class="lt-run-timeline__pin" aria-hidden="true">★</span>
+      } @else {
+        <span
+          class="lt-run-timeline__dot"
+          [class.is-pass]="runStatus(run) === 'passed'"
+          [class.is-fail]="runStatus(run) === 'failed' || runStatus(run) === 'cancelled'"
+        ></span>
+      }
+      <span class="lt-run-timeline__label">{{ formatRunLabel(run) }}</span>
+      <span class="lt-run-timeline__rate" [attr.data-tone]="statusTone(run)">{{ successRate(run).toFixed(1) }}%</span>
+    </button>
+  }
+</div>

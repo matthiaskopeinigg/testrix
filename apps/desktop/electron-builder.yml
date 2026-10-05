@@ -1,10 +1,20 @@
 appId: dev.testrix.app
 productName: Testrix
-copyright: Copyright © 2026 Testrix contributors
+executableName: Testrix
+copyright: Copyright © 2026 Matthias Kopeinigg
+artifactName: Testrix.${ext}
+
+electronVersion: 44.3.0
 
 directories:
   output: ../../release
   buildResources: ../../build
+
+extraMetadata:
+  name: Testrix
+  author:
+    name: Matthias Kopeinigg
+  description: Testrix — local-first desktop API workbench
 
 files:
   - dist/**/*
@@ -26,10 +36,14 @@ win:
   icon: icon.ico
   target:
     - dir
+  # No paid Authenticode certificate. Pack must stay unsigned.
   forceCodeSigning: false
-  signAndEditExecutable: false
+  # rcedit writes icon, CompanyName, FileDescription, and copyright. Authenticode stays off.
+  signAndEditExecutable: true
 
 mac:
+  icon: icon.png
+  category: public.app-category.developer-tools
   target:
     - target: dir
       arch:
@@ -38,6 +52,7 @@ mac:
   identity: null
 
 linux:
+  icon: icon.png
   target:
     - dir
   category: Development

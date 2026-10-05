@@ -1,0 +1,318 @@
+@use 'mixins';
+
+:host {
+  display: block;
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+}
+
+.tx-flow-canvas {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background-color: var(--tx-bg-canvas);
+  background-image: radial-gradient(
+    circle at 1px 1px,
+    color-mix(in srgb, var(--tx-text-faint) 30%, transparent) 1px,
+    transparent 0
+  );
+  background-size: 20px 20px;
+  cursor: default;
+  outline: none;
+  touch-action: none;
+}
+
+.tx-flow-canvas.is-panning {
+  cursor: grabbing;
+}
+
+.tx-flow-canvas__world {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0;
+}
+
+/* Promote only while dragging the viewport — permanent will-change blurs HTML text. */
+.tx-flow-canvas.is-panning .tx-flow-canvas__world {
+  will-change: transform;
+}
+
+.tx-flow-canvas__edges {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 2;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.tx-flow-canvas__edge {
+  pointer-events: auto;
+}
+
+.tx-flow-canvas__edge.is-selected .tx-flow-canvas__edge-line {
+  stroke: var(--tx-accent);
+  stroke-width: 2.6;
+  filter: drop-shadow(0 0 4px color-mix(in srgb, var(--tx-accent) 55%, transparent));
+}
+
+.tx-flow-canvas__edge.is-selected .tx-flow-canvas__edge-flow {
+  stroke: color-mix(in srgb, var(--tx-accent) 80%, white);
+  opacity: 0.7;
+  animation: tx-flow-edge-dash 0.85s linear infinite;
+}
+
+.tx-flow-canvas__edge-hit {
+  fill: none;
+  stroke: transparent;
+  stroke-width: 14;
+  cursor: pointer;
+}
+
+.tx-flow-canvas__edge-line {
+  fill: none;
+  stroke: color-mix(in srgb, var(--tx-text-faint) 70%, transparent);
+  stroke-width: 1.6;
+  transition:
+    stroke var(--tx-motion-base) var(--tx-ease-out),
+    stroke-width var(--tx-motion-fast) var(--tx-ease-out),
+    opacity var(--tx-motion-base) var(--tx-ease-out),
+    filter var(--tx-motion-base) var(--tx-ease-out);
+}
+
+.tx-flow-canvas__edge-flow {
+  fill: none;
+  stroke: transparent;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-dasharray: 6 10;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--tx-motion-fast) var(--tx-ease-out);
+}
+
+.tx-flow-canvas__edge:hover .tx-flow-canvas__edge-line {
+  stroke: var(--tx-accent);
+  stroke-width: 2.35;
+  filter: drop-shadow(0 0 3px color-mix(in srgb, var(--tx-accent) 50%, transparent));
+  animation: tx-flow-edge-hover-glow 1.35s ease-in-out infinite;
+}
+
+.tx-flow-canvas__edge:hover .tx-flow-canvas__edge-flow {
+  stroke: color-mix(in srgb, var(--tx-accent) 75%, white);
+  opacity: 0.65;
+  animation: tx-flow-edge-dash 0.85s linear infinite;
+}
+
+.tx-flow-canvas__edge[data-port='else'] .tx-flow-canvas__edge-line {
+  stroke-dasharray: 5 4;
+}
+
+.tx-flow-canvas__edge[data-port='body'] .tx-flow-canvas__edge-line {
+  stroke: color-mix(in srgb, var(--tx-warning, #e6b450) 70%, transparent);
+}
+
+.tx-flow-canvas__edge[data-status='waiting'] .tx-flow-canvas__edge-line {
+  stroke: color-mix(in srgb, var(--tx-text-faint) 45%, transparent);
+  opacity: 0.55;
+}
+
+.tx-flow-canvas__edge[data-status='active'] .tx-flow-canvas__edge-line {
+  stroke: var(--tx-accent);
+  stroke-width: 2.2;
+}
+
+.tx-flow-canvas__edge[data-status='active'] .tx-flow-canvas__edge-flow {
+  stroke: color-mix(in srgb, var(--tx-accent) 85%, white);
+  opacity: 1;
+  animation: tx-flow-edge-dash 0.7s linear infinite;
+}
+
+.tx-flow-canvas__edge[data-status='ok'] .tx-flow-canvas__edge-line {
+  stroke: color-mix(in srgb, var(--tx-success, #3dd68c) 75%, transparent);
+  stroke-width: 2;
+}
+
+.tx-flow-canvas__edge[data-status='ok'] .tx-flow-canvas__edge-flow {
+  stroke: var(--tx-success, #3dd68c);
+  stroke-dasharray: none;
+  opacity: 0.35;
+  animation: tx-flow-edge-fade 0.45s var(--tx-ease-out) both;
+}
+
+.tx-flow-canvas__edge[data-status='ok']:hover .tx-flow-canvas__edge-line {
+  stroke: var(--tx-success, #3dd68c);
+  filter: drop-shadow(0 0 3px color-mix(in srgb, var(--tx-success, #3dd68c) 55%, transparent));
+}
+
+.tx-flow-canvas__edge[data-status='ok']:hover .tx-flow-canvas__edge-flow {
+  stroke: color-mix(in srgb, var(--tx-success, #3dd68c) 80%, white);
+  stroke-dasharray: 6 10;
+  opacity: 0.7;
+  animation: tx-flow-edge-dash 0.85s linear infinite;
+}
+
+.tx-flow-canvas__edge[data-status='error'] .tx-flow-canvas__edge-line {
+  stroke: var(--tx-danger);
+  stroke-width: 2.2;
+}
+
+.tx-flow-canvas__edge[data-status='error'] .tx-flow-canvas__edge-flow {
+  stroke: var(--tx-danger);
+  stroke-dasharray: 4 6;
+  opacity: 0.85;
+  animation: tx-flow-edge-dash 0.55s linear infinite;
+}
+
+.tx-flow-canvas__edge[data-status='error']:hover .tx-flow-canvas__edge-line {
+  stroke: var(--tx-danger);
+  filter: drop-shadow(0 0 3px color-mix(in srgb, var(--tx-danger) 55%, transparent));
+}
+
+.tx-flow-canvas__edge[data-status='skipped'] .tx-flow-canvas__edge-line,
+.tx-flow-canvas__edge[data-status='cancelled'] .tx-flow-canvas__edge-line {
+  stroke: color-mix(in srgb, var(--tx-text-muted) 50%, transparent);
+  stroke-dasharray: 3 5;
+  opacity: 0.45;
+}
+
+.tx-flow-canvas__edge[data-status='skipped']:hover .tx-flow-canvas__edge-line,
+.tx-flow-canvas__edge[data-status='cancelled']:hover .tx-flow-canvas__edge-line {
+  stroke: color-mix(in srgb, var(--tx-text-muted) 75%, white);
+  filter: drop-shadow(0 0 2px color-mix(in srgb, var(--tx-text-muted) 35%, transparent));
+}
+
+.tx-flow-canvas__edge-label {
+  position: absolute;
+  z-index: 5;
+  transform: translate(-50%, -50%);
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--tx-bg-canvas) 88%, transparent);
+  color: var(--tx-text-faint);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1.2;
+  text-transform: uppercase;
+  white-space: nowrap;
+  cursor: text;
+  -webkit-user-select: text;
+  user-select: text;
+  pointer-events: auto;
+}
+
+.tx-flow-canvas__edge-label.is-named {
+  color: var(--tx-text-muted);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  text-transform: none;
+  cursor: pointer;
+}
+
+.tx-flow-canvas__edge-label.is-named:hover,
+.tx-flow-canvas__edge-label.is-selected {
+  color: var(--tx-accent);
+  background: color-mix(in srgb, var(--tx-accent) 12%, var(--tx-bg-canvas));
+}
+
+.tx-flow-canvas__ghost {
+  fill: none;
+  stroke: var(--tx-accent);
+  stroke-dasharray: 4 4;
+  stroke-width: 2;
+}
+
+@keyframes tx-flow-edge-dash {
+  to {
+    stroke-dashoffset: -32;
+  }
+}
+
+@keyframes tx-flow-edge-fade {
+  from {
+    opacity: 0.8;
+    stroke-width: 3;
+  }
+
+  to {
+    opacity: 0.25;
+    stroke-width: 2.4;
+  }
+}
+
+@keyframes tx-flow-edge-hover-glow {
+  0%,
+  100% {
+    stroke-width: 2.2;
+  }
+
+  50% {
+    stroke-width: 2.6;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tx-flow-canvas__edge-flow,
+  .tx-flow-canvas__edge:hover .tx-flow-canvas__edge-line,
+  .tx-flow-canvas__edge:hover .tx-flow-canvas__edge-flow {
+    animation: none !important;
+  }
+}
+
+.tx-flow-canvas__marquee {
+  position: absolute;
+  border: 1px solid var(--tx-accent);
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--tx-accent) 12%, transparent);
+  pointer-events: none;
+}
+
+.tx-flow-canvas__empty {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  max-width: 260px;
+  text-align: center;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.tx-flow-canvas__empty-title {
+  margin: 0 0 4px;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.tx-flow-canvas__empty-body {
+  margin: 0;
+  color: var(--tx-text-muted);
+  font-size: 12px;
+}
+
+.tx-flow-canvas__minimap {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  width: 168px;
+  height: 108px;
+  overflow: hidden;
+  border: 1px solid var(--tx-border-subtle);
+  border-radius: var(--tx-radius-control);
+  background: color-mix(in srgb, var(--tx-bg-chrome) 80%, transparent);
+  cursor: pointer;
+}
+
+.tx-flow-canvas__minimap span {
+  position: absolute;
+  border-radius: 1px;
+  background: color-mix(in srgb, var(--tx-text-faint) 60%, transparent);
+}
+
+.tx-flow-canvas__minimap span.is-selected {
+  background: var(--tx-accent);
+}

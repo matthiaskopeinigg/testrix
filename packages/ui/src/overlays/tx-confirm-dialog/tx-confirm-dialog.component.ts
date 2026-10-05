@@ -27,11 +27,11 @@ export class TxConfirmDialogComponent {
   private readonly host = inject(ElementRef<HTMLElement>);
 
   constructor() {
+    // Focus Delete so Enter confirms (Escape still closes via the overlay).
     afterNextRender(() => {
-      const cancel = this.host.nativeElement.querySelector('.tx-confirm__cancel button');
-      if (cancel instanceof HTMLElement) {
-        cancel.focus();
-      }
+      const confirm = this.host.nativeElement.querySelector('.tx-confirm__ok button');
+      if (confirm instanceof HTMLElement)
+        confirm.focus();
     });
   }
 }

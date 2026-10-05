@@ -1,0 +1,145 @@
+<div class="tx-plantuml-list" (contextmenu)="handleEmptyMenu($event)">
+  <tx-plantuml-toolbar />
+
+  @if (!store.hasItems()) {
+    <tx-empty-state
+      title="No diagrams yet"
+      body="Right-click to add a sequence, class, or activity diagram."
+    />
+  } @else if (!store.hasVisible()) {
+    <tx-empty-state
+      title="No matches"
+      body="Try a different search or clear filters to see your diagrams again."
+    />
+  } @else {
+    <div
+      class="tx-plantuml-list__body"
+      #scroller
+      role="tree"
+      aria-label="PlantUML diagrams"
+      (click)="handleChromeClick($event)"
+    >
+      <div class="tx-plantuml-list__content" #flipRoot>
+        @for (row of store.visibleRows(); track row.node.id) {
+          <div
+            class="tx-plantuml-list__drag"
+            [attr.data-flip-id]="row.node.id"
+            [class.is-drop-folder]="isDropFolder(row.node.id)"
+            [class.is-just-moved]="isJustMoved(row.node.id)"
+            [txDraggable]="row.node"
+            [txDraggableDisabled]="dragDisabled() || renamingId() === row.node.id"
+            [txDraggablePreview]="dragPreview"
+            [txDraggableScrollContainer]="dnd.scrollContainer()"
+            (dragStarted)="handleDragStarted($event)"
+            (dragMoved)="handleDragMoved($event)"
+            (dragEnded)="handleDragEnded($event)"
+          >
+            <div
+              class="tx-plantuml-list__row"
+              role="treeitem"
+              tabindex="0"
+              [attr.data-node-id]="row.node.id"
+              [style.--tx-tree-depth]="row.depth"
+              [class.is-folder]="row.node.kind === 'folder'"
+              [class.is-leaf]="row.node.kind !== 'folder'"
+              [class.is-open]="row.node.kind === 'folder' && isExpanded(row.node.id)"
+              [class.is-active]="isActive(row.node.id)"
+              [class.is-selected]="isSelected(row.node.id)"
+              [class.is-renaming]="renamingId() === row.node.id"
+              [attr.aria-expanded]="row.node.kind === 'folder' ? isExpanded(row.node.id) : null"
+              [attr.aria-selected]="isSelected(row.node.id)"
+              [attr.aria-label]="rowLabel(row.node)"
+              (click)="handleRowClick(row.node, $event)"
+              (contextmenu)="handleRowMenu(row.node, $event)"
+              (keydown.enter)="handleRowClick(row.node, $any($event))"
+            >
+              @if (row.node.kind === 'folder') {
+                <button
+                  type="button"
+                  class="tx-plantuml-list__chevron"
+                  [class.is-expanded]="isExpanded(row.node.id)"
+                  [attr.aria-label]="isExpanded(row.node.id) ? 'Collapse ' + row.node.name : 'Expand ' + row.node.name"
+                  (click)="handleChevron($event, row.node.id)"
+                >
+                  <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
+                    <path d="M4 2.5 8 6 4 9.5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
+                  </svg>
+                </button>
+              } @else {
+                <span class="tx-plantuml-list__chevron-spacer" aria-hidden="true"></span>
+              }
+
+              <span class="tx-plantuml-list__icon" aria-hidden="true">
+                @if (row.node.kind === 'folder') {
+                  <svg width="14" height="14" viewBox="0 0 14 14">
+                    <path d="M2 3.5h3.2l1 1.2H12v6.3H2V3.5z" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linejoin="round" />
+                  </svg>
+                } @else {
+                  <span class="tx-plantuml-list__kind" [attr.data-kind]="kindOf(row.node)">{{ kindMark(kindOf(row.node)) }}</span>
+                }
+              </span>
+
+              @if (renamingId() === row.node.id) {
+                <input
+                  class="tx-plantuml-list__rename"
+                  type="text"
+                  [value]="row.node.name"
+                  aria-label="Rename"
+                  (click)="$event.stopPropagation()"
+                  (keydown.enter)="handleRenameInput(row.node.id, $event)"
+                  (keydown.escape)="finishRename()"
+                  (blur)="handleRenameInput(row.node.id, $event)"
+                />
+              } @else {
+                <span class="tx-plantuml-list__name">{{ row.node.name }}</span>
+              }
+            </div>
+          </div>
+        }
+
+        <div
+          class="tx-plantuml-list__indicator"
+          [class.is-visible]="dnd.isIndicatorVisible()"
+          [class.is-denied]="dnd.isIndicatorDenied()"
+          [style.left.px]="dnd.indicatorLeft()"
+          [style.transform]="'translate3d(0, ' + dnd.indicatorY() + 'px, 0)'"
+          aria-hidden="true"
+        ></div>
+      </div>
+    </div>
+    <p class="tx-plantuml-list__live" role="status" aria-live="polite">{{ dnd.announcement() }}</p>
+  }
+</div>
+
+<ng-template #dragPreview let-node>
+  <div
+    class="tx-plantuml-preview"
+    [class.is-denied]="store.dropTarget()?.denied"
+    [class.is-into]="store.dropTarget()?.mode === 'into'"
+  >
+    <span class="tx-plantuml-preview__icon" aria-hidden="true">
+      @if (node.kind === 'folder') {
+        <svg width="14" height="14" viewBox="0 0 14 14">
+          <path
+            d="M2 3.5h3.2l1 1.2H12v6.3H2V3.5z"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.25"
+            stroke-linejoin="round"
+          />
+        </svg>
+      } @else {
+        <span class="tx-plantuml-list__kind" [attr.data-kind]="kindOf(node)">{{ kindMark(kindOf(node)) }}</span>
+      }
+    </span>
+    <span class="tx-plantuml-preview__name">{{ node.name }}</span>
+    @if (store.dragIds().length > 1) {
+      <span class="tx-plantuml-preview__badge">{{ store.dragIds().length }}</span>
+    }
+    @if (store.dropTarget()?.denied) {
+      <span class="tx-plantuml-preview__badge is-deny">Not allowed</span>
+    } @else if (store.dropTarget()?.mode === 'into') {
+      <span class="tx-plantuml-preview__badge is-into">Into folder</span>
+    }
+  </div>
+</ng-template>

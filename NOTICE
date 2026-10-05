@@ -1,0 +1,13 @@
+Testrix
+Copyright (c) 2026 Matthias Kopeinigg and contributors
+
+This product is released under the MIT License. See LICENSE.
+
+Windows installers published from this repository are not Authenticode-signed.
+There is no paid code-signing certificate. SmartScreen or an "unknown publisher"
+warning on first run is expected. Integrity of in-app updates is provided by an
+Ed25519-signed release manifest and a SHA-512 digest of Testrix.exe, not
+by a Windows Authenticode certificate.
+
+Third-party packages remain under their own licenses in node_modules and in the
+corresponding upstream repositories.

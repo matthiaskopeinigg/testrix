@@ -13,17 +13,29 @@
           [parentId]="null"
           [depth]="0"
           [renamingId]="renamingId()"
+          [openNodeIds]="workbench.openNodeIds()"
+          [activeNodeId]="workbench.activeNodeId()"
           (nodeMenu)="handleItemMenu($event)"
           (renameStart)="startRename($event)"
           (renameInput)="handleRenameInput($event)"
           (renameKey)="handleRenameKey($event)"
           (renameBlur)="finishRename()"
         />
+      } @else if (store.isTreeEmpty()) {
+        <tx-empty-state
+          title="Start a collection"
+          body="Create a request, import a pack, or drop Postman, Bruno, OpenAPI, or .testrix files on the window."
+        >
+          <tx-button variant="primary" (clicked)="handleEmptyNewRequest()">New request</tx-button>
+          <tx-button variant="ghost" (clicked)="handleEmptyImport()">Import</tx-button>
+        </tx-empty-state>
       } @else {
         <tx-empty-state
           title="No matches"
-          body="Try a different search or clear filters to see your collections again."
-        />
+          body="Nothing in this workspace matches your search or filters."
+        >
+          <tx-button variant="primary" (clicked)="handleClearFilters()">Clear filters</tx-button>
+        </tx-empty-state>
       }
 
       <!-- One persistent indicator. Slot changes move it; nothing ever remounts. -->
@@ -43,7 +55,15 @@
 <ng-template #collectionsMenu>
   @if (menu(); as menu) {
     <div class="tx-collections-menu tx-menu" role="menu">
+      @if (menu.kind === 'folder' || menu.kind === 'http' || menu.kind === 'websocket') {
+        <button type="button" class="tx-collections-menu__item" role="menuitem" (click)="handleOpen()">
+          Open
+        </button>
+      }
       @if (menu.kind === 'root' || menu.kind === 'folder') {
+        @if (menu.kind === 'folder') {
+          <span class="tx-collections-menu__rule" aria-hidden="true"></span>
+        }
         <button type="button" class="tx-collections-menu__item" role="menuitem" (click)="handleNew('folder')">
           New folder
         </button>
@@ -54,21 +74,19 @@
           New WebSocket
         </button>
       }
-      @if (menu.kind === 'http' || menu.kind === 'websocket') {
-        <button type="button" class="tx-collections-menu__item" role="menuitem" (click)="handleOpen()">
-          Open
-        </button>
-      }
       @if (menu.kind !== 'root') {
-        @if (menu.kind === 'folder') {
-          <span class="tx-collections-menu__rule" aria-hidden="true"></span>
-        }
+        <span class="tx-collections-menu__rule" aria-hidden="true"></span>
         <button type="button" class="tx-collections-menu__item" role="menuitem" (click)="handleRenameFromMenu()">
           Rename
         </button>
         <button type="button" class="tx-collections-menu__item" role="menuitem" (click)="handleDuplicate()">
           Duplicate
         </button>
+        @if (canPin()) {
+          <button type="button" class="tx-collections-menu__item" role="menuitem" (click)="handlePinToggle()">
+            {{ pinLabel() }}
+          </button>
+        }
         <span class="tx-collections-menu__rule" aria-hidden="true"></span>
         <button
           type="button"

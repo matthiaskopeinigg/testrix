@@ -1,0 +1,167 @@
+<div class="tx-service-toolbar">
+  <div class="tx-service-toolbar__search">
+    <tx-input
+      [id]="searchId()"
+      [placeholder]="placeholder()"
+      [value]="search()"
+      (valueChange)="searchChange.emit($event)"
+    />
+  </div>
+  <div class="tx-service-toolbar__actions" role="toolbar" [attr.aria-label]="placeholder()">
+    @if (showTutorial()) {
+      <tx-hint label="Tutorial" detail="Open API, E2E, and Device showcase flows" placement="bottom">
+        <button
+          type="button"
+          class="tx-service-toolbar__btn tx-service-toolbar__btn--label"
+          aria-label="Open Flows tutorial"
+          (click)="tutorial.emit()"
+        >
+          Tutorial
+        </button>
+      </tx-hint>
+    }
+    @if (showTemplates()) {
+      <tx-hint label="Templates" detail="Manage reusable graph snippets" placement="bottom">
+        <button
+          type="button"
+          class="tx-service-toolbar__btn tx-service-toolbar__btn--label"
+          aria-label="Manage flow templates"
+          (click)="templates.emit()"
+        >
+          Templates
+        </button>
+      </tx-hint>
+    }
+    @if (showExpand()) {
+      <tx-hint [label]="expandToggleLabel()" placement="bottom">
+        <button
+          type="button"
+          class="tx-service-toolbar__btn"
+          [class.is-active]="allExpanded()"
+          [attr.aria-label]="expandToggleLabel()"
+          [attr.aria-pressed]="allExpanded()"
+          (click)="expandToggle.emit()"
+        >
+          @if (allExpanded()) {
+            <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+              <path
+                d="M3 10.5 8 6l5 4.5"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.4"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+              <path
+                d="M3 13.5 8 9l5 4.5"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.4"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                opacity="0.55"
+              />
+            </svg>
+          } @else {
+            <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+              <path
+                d="M3 5.5 8 10l5-4.5"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.4"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+              <path
+                d="M3 2.5 8 7l5-4.5"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.4"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                opacity="0.55"
+              />
+            </svg>
+          }
+        </button>
+      </tx-hint>
+    }
+    @if (showFilter()) {
+      <div class="tx-service-toolbar__menu-wrap">
+        <tx-hint
+          label="Filter"
+          [detail]="isFilterActive() ? 'Tag filters active' : 'Filter by tags'"
+          placement="bottom"
+          [suppressed]="openMenu() === 'filter'"
+        >
+          <button
+            type="button"
+            class="tx-service-toolbar__btn"
+            [class.is-active]="isFilterActive() || openMenu() === 'filter'"
+            aria-label="Filter by tags"
+            [attr.aria-expanded]="openMenu() === 'filter'"
+            (click)="handleToggleFilter($event)"
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+              <path
+                d="M2.5 3.5h11l-4 4.8V13l-3-1.5V8.3L2.5 3.5z"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.35"
+                stroke-linejoin="round"
+              />
+            </svg>
+          </button>
+        </tx-hint>
+      </div>
+    }
+    <tx-hint [label]="'Sort: ' + sortLabel()" placement="bottom">
+      <button
+        type="button"
+        class="tx-service-toolbar__btn"
+        [attr.aria-label]="'Sort by ' + sort()"
+        (click)="sortChange.emit(sort())"
+      >
+        <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+          <path d="M4 4h8M4 8h5.5M4 12h3" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
+        </svg>
+      </button>
+    </tx-hint>
+  </div>
+
+  @if (openMenu() === 'filter') {
+    <div
+      class="tx-service-toolbar__menu tx-menu"
+      role="menu"
+      animate.leave="tx-popover-leave"
+      [style.top.px]="menuPosition()?.top"
+      [style.left.px]="menuPosition()?.left"
+      [style.width.px]="menuPosition()?.width"
+      [style.max-height.px]="menuPosition()?.maxHeight"
+      (pointerdown)="$event.stopPropagation()"
+    >
+      <p class="tx-service-toolbar__menu-title">Tags</p>
+      @if (availableTags().length === 0) {
+        <p class="tx-service-toolbar__empty">No tags yet.</p>
+      } @else {
+        @for (tag of availableTags(); track tag) {
+          <button
+            type="button"
+            class="tx-service-toolbar__option"
+            role="menuitemcheckbox"
+            [attr.aria-checked]="selectedTags().includes(tag)"
+            (click)="handleToggleTag(tag)"
+          >
+            <span>{{ tag }}</span>
+            @if (selectedTags().includes(tag)) {
+              <span class="tx-service-toolbar__check" aria-hidden="true">✓</span>
+            }
+          </button>
+        }
+      }
+      @if (isFilterActive()) {
+        <button type="button" class="tx-service-toolbar__clear" (click)="handleClearFilters()">Clear filters</button>
+      }
+    </div>
+  }
+</div>

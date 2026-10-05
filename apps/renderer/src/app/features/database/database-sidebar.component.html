@@ -42,7 +42,9 @@
               (openTable)="handleOpenTable($event)"
             />
           } @else {
-            <tx-empty-state title="No connections" body="Right-click to add a folder or a connection, then pick the engine in the tab." />
+            <tx-empty-state title="No connections" body="Right-click to add a folder or a connection, then pick the engine in the tab.">
+              <tx-button variant="primary" (clicked)="handleNewConnection()">New connection</tx-button>
+            </tx-empty-state>
           }
           </div>
         </div>

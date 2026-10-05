@@ -2,30 +2,28 @@ import { Injectable, signal } from '@angular/core';
 
 import type { TestrixDesktopApi } from '@testrix/contracts';
 import {
-  APPEARANCE_SETTING_KEYS,
-  CONFIG_FILE_NAMES,
-  CONFIG_SCHEMA_VERSION,
   DEFAULT_COLLECTIONS_FILE,
   DEFAULT_DATABASES_FILE,
+  DEFAULT_FLOWS_FILE,
+  DEFAULT_HISTORY_FILE,
+  DEFAULT_COOKIES_FILE,
+  DEFAULT_LOAD_FILE,
+  DEFAULT_MOCKS_FILE,
+  DEFAULT_LISTENERS_FILE,
+  DEFAULT_INTERCEPT_FILE,
+  DEFAULT_PLANTUML_FILE,
+  DEFAULT_FLOW_TEMPLATES_FILE,
+  DEFAULT_EMULATOR_FILE,
   DEFAULT_QUERIES_FILE,
+  DEFAULT_REGRESSIONS_FILE,
   DEFAULT_SESSION_FILE,
-  DEFAULT_SHORTCUTS,
-  DEFAULT_USER_SETTINGS,
   cloneDefaultUserSettings,
+  clampUiZoom,
   createDefaultEnvironmentsFile,
   createDefaultWorkspacesFile,
-  duplicateWorkspaceName,
   mergeUserSettingsPatch,
   motionScaleForSpeed,
-  nextWorkspaceFolder,
-  nextWorkspaceId,
-  parseCollectionsFile,
-  parseDatabasesFile,
-  parseEnvironmentsFile,
-  parseQueriesFile,
-  parseSettingsFile,
-  removeWorkspaceFromCatalog,
-  toUserSettings,
+  nudgeUiZoom,
   type ChooseFileKind,
   type CollectionsFile,
   type DatabasesFile,
@@ -33,256 +31,29 @@ import {
   type ConfigPaths,
   type ConfigRevealTarget,
   type EnvironmentsFile,
+  type FlowsFile,
+  type HistoryFile,
+  type CookiesFile,
+  type LoadFile,
+  type MocksFile,
+  type ListenersFile,
+  type InterceptFile,
+  type PlantumlFile,
+  type FlowTemplatesFile,
+  type EmulatorFile,
+  type RegressionsFile,
   type SessionFile,
   type SettingsResetScope,
   type ThemeSnapshot,
   type UserSettings,
   type WorkspacesFile,
   type WorkspaceSnapshot,
-  type DatabaseQueryEnvelope,
 } from '@testrix/contracts';
 
-const memoryPaths = (): ConfigPaths => ({
-  folder: '(in-memory)',
-  configsFolder: '(in-memory)/configs',
-  workspacesFolder: '(in-memory)/workspaces',
-  logsFolder: '(in-memory)/logs',
-  files: CONFIG_FILE_NAMES.map((name) => ({
-    name,
-    path: `(in-memory)/${name}`,
-    directory: '(in-memory)',
-    schemaVersion: CONFIG_SCHEMA_VERSION,
-    exists: false,
-  })),
-});
-
-let memorySettings: UserSettings = cloneDefaultUserSettings();
-
-let memoryWorkspaces: WorkspacesFile = createDefaultWorkspacesFile();
-let memoryEnvironments: EnvironmentsFile = createDefaultEnvironmentsFile();
-let memoryCollections: CollectionsFile = { ...DEFAULT_COLLECTIONS_FILE };
-let memoryDatabases: DatabasesFile = { ...DEFAULT_DATABASES_FILE, nodes: [] };
-let memoryQueries: QueriesFile = { ...DEFAULT_QUERIES_FILE, nodes: [] };
-
-function emptyQueryEnvelope(): DatabaseQueryEnvelope {
-  return { table: { columns: [], rows: [], hasMore: false }, durationMs: 0 };
-}
-
-function memorySnapshot(): WorkspaceSnapshot {
-  return {
-    workspaces: memoryWorkspaces,
-    environments: memoryEnvironments,
-    collections: memoryCollections,
-    databases: memoryDatabases,
-    queries: memoryQueries,
-  };
-}
-
-const browserFallback: TestrixDesktopApi = {
-  app: {
-    getVersion: async () => '2.0.0-beta.1',
-    getPlatform: async () => 'win32',
-    notifyReady: async () => undefined,
-    reload: async () => window.location.reload(),
-  },
-  window: {
-    minimize: async () => undefined,
-    maximize: async () => undefined,
-    close: async () => undefined,
-    isMaximized: async () => false,
-    setMovable: async () => undefined,
-    onMaximizedChanged: () => () => undefined,
-  },
-  theme: {
-    get: async () => ({ preference: 'dark', resolved: 'dark' }),
-    set: async (preference) => ({
-      preference,
-      resolved: preference === 'system' ? 'dark' : preference,
-    }),
-    onChanged: () => () => undefined,
-  },
-  settings: {
-    get: async () => ({ ...memorySettings, shortcuts: { ...memorySettings.shortcuts } }),
-    set: async (patch) => {
-      memorySettings = toUserSettings(parseSettingsFile(mergeUserSettingsPatch(memorySettings, patch)));
-      return {
-        ...memorySettings,
-        shortcuts: { ...memorySettings.shortcuts },
-        proxy: { ...memorySettings.proxy },
-        dns: { ...memorySettings.dns },
-        certificates: {
-          ...memorySettings.certificates,
-          clientCerts: memorySettings.certificates.clientCerts.map((item) => ({ ...item })),
-        },
-      };
-    },
-    reset: async (scope) => {
-      if (scope === 'all') {
-        memorySettings = cloneDefaultUserSettings();
-      } else if (scope === 'appearance') {
-        const next = { ...memorySettings };
-        for (const key of APPEARANCE_SETTING_KEYS)
-          (next as Record<string, unknown>)[key] = DEFAULT_USER_SETTINGS[key];
-        memorySettings = next;
-      } else if (scope === 'keyboard') {
-        memorySettings = { ...memorySettings, shortcuts: { ...DEFAULT_SHORTCUTS } };
-      } else if (scope === 'proxy') {
-        memorySettings = { ...memorySettings, proxy: { ...DEFAULT_USER_SETTINGS.proxy } };
-      } else if (scope === 'dns') {
-        memorySettings = { ...memorySettings, dns: { ...DEFAULT_USER_SETTINGS.dns } };
-      } else if (scope === 'certificates') {
-        memorySettings = {
-          ...memorySettings,
-          certificates: { ...DEFAULT_USER_SETTINGS.certificates, clientCerts: [] },
-        };
-      } else if (scope === 'database') {
-        memorySettings = { ...memorySettings, database: { ...DEFAULT_USER_SETTINGS.database } };
-      } else {
-        memorySettings = {
-          ...memorySettings,
-          logLevel: DEFAULT_USER_SETTINGS.logLevel,
-          logToFile: DEFAULT_USER_SETTINGS.logToFile,
-          logsFolder: DEFAULT_USER_SETTINGS.logsFolder,
-          logFileMaxMb: DEFAULT_USER_SETTINGS.logFileMaxMb,
-        };
-      }
-      return { ...memorySettings, shortcuts: { ...memorySettings.shortcuts } };
-    },
-  },
-  session: {
-    get: async () => ({ ...DEFAULT_SESSION_FILE }),
-    set: async (patch) => ({ ...DEFAULT_SESSION_FILE, ...patch }),
-  },
-  environments: {
-    get: async () => memoryEnvironments,
-    set: async (patch) => {
-      memoryEnvironments = parseEnvironmentsFile({ ...memoryEnvironments, ...patch });
-      return memoryEnvironments;
-    },
-  },
-  collections: {
-    get: async () => memoryCollections,
-    set: async (patch) => {
-      memoryCollections = parseCollectionsFile({ ...memoryCollections, ...patch });
-      return memoryCollections;
-    },
-  },
-  databases: {
-    get: async () => memoryDatabases,
-    set: async (patch) => {
-      memoryDatabases = parseDatabasesFile({ ...memoryDatabases, ...patch });
-      return memoryDatabases;
-    },
-  },
-  queries: {
-    get: async () => memoryQueries,
-    set: async (patch) => {
-      memoryQueries = parseQueriesFile({ ...memoryQueries, ...patch });
-      return memoryQueries;
-    },
-  },
-  database: {
-    test: async () => ({ ok: true as const }),
-    introspect: async () => ({}),
-    query: async () => emptyQueryEnvelope(),
-    explain: async () => emptyQueryEnvelope(),
-    disconnect: async () => undefined,
-    statuses: async () => ({}),
-    sessionQuery: async () => emptyQueryEnvelope(),
-    sessionCommit: async (tabId) => ({ tabId, open: false, uncommitted: false, rollbackAt: null }),
-    sessionRollback: async (tabId) => ({ tabId, open: false, uncommitted: false, rollbackAt: null }),
-    sessionClose: async () => undefined,
-    warmBoot: async () => undefined,
-  },
-  workspaces: {
-    get: async () => memoryWorkspaces,
-    switch: async (id) => {
-      if (memoryWorkspaces.items.some((item) => item.id === id)) {
-        memoryWorkspaces = { ...memoryWorkspaces, activeId: id };
-      }
-      return memorySnapshot();
-    },
-    create: async (name) => {
-      const item = {
-        id: nextWorkspaceId(memoryWorkspaces.items.map((entry) => entry.id)),
-        name: name.trim() || 'Workspace',
-        folder: nextWorkspaceFolder(memoryWorkspaces.items.map((entry) => entry.folder)),
-        modifiedAt: new Date().toISOString(),
-      };
-      memoryWorkspaces = {
-        ...memoryWorkspaces,
-        items: [...memoryWorkspaces.items, item],
-        orderIds: [...memoryWorkspaces.orderIds, item.id],
-        activeId: item.id,
-      };
-      memoryEnvironments = createDefaultEnvironmentsFile();
-      memoryCollections = { ...DEFAULT_COLLECTIONS_FILE };
-      memoryDatabases = { ...DEFAULT_DATABASES_FILE, nodes: [] };
-      memoryQueries = { ...DEFAULT_QUERIES_FILE, nodes: [] };
-      return memorySnapshot();
-    },
-    rename: async (id, name) => {
-      const nextName = name.trim();
-      if (nextName) {
-        memoryWorkspaces = {
-          ...memoryWorkspaces,
-          items: memoryWorkspaces.items.map((item) =>
-            item.id === id ? { ...item, name: nextName, modifiedAt: new Date().toISOString() } : item,
-          ),
-        };
-      }
-      return memoryWorkspaces;
-    },
-    duplicate: async (id) => {
-      const source = memoryWorkspaces.items.find((item) => item.id === id);
-      if (!source) {
-        return memorySnapshot();
-      }
-      const item = {
-        id: nextWorkspaceId(memoryWorkspaces.items.map((entry) => entry.id)),
-        name: duplicateWorkspaceName(
-          source.name,
-          memoryWorkspaces.items.map((entry) => entry.name),
-        ),
-        folder: nextWorkspaceFolder(memoryWorkspaces.items.map((entry) => entry.folder)),
-        modifiedAt: new Date().toISOString(),
-      };
-      memoryWorkspaces = {
-        ...memoryWorkspaces,
-        items: [...memoryWorkspaces.items, item],
-        orderIds: [...memoryWorkspaces.orderIds, item.id],
-        activeId: item.id,
-      };
-      return memorySnapshot();
-    },
-    delete: async (id) => {
-      const next = removeWorkspaceFromCatalog(memoryWorkspaces, id);
-      if (next) {
-        memoryWorkspaces = next;
-        memoryEnvironments = createDefaultEnvironmentsFile();
-        memoryCollections = { ...DEFAULT_COLLECTIONS_FILE };
-        memoryDatabases = { ...DEFAULT_DATABASES_FILE, nodes: [] };
-        memoryQueries = { ...DEFAULT_QUERIES_FILE, nodes: [] };
-      }
-      return memorySnapshot();
-    },
-  },
-  config: {
-    paths: async () => memoryPaths(),
-    reveal: async () => undefined,
-    chooseFolder: async () => null,
-    chooseLogsFolder: async () => null,
-    chooseConfigsFolder: async () => null,
-    chooseFile: async () => null,
-  },
-  logs: {
-    recent: async () => [],
-  },
-};
+import { browserFallback, memoryPaths, normalizeUserSettings } from './desktop-api-fallback';
 
 @Injectable({ providedIn: 'root' })
 export class DesktopApiService {
-  readonly api: TestrixDesktopApi = window.testrix ?? browserFallback;
   readonly settings = signal<UserSettings>(cloneDefaultUserSettings());
   readonly theme = signal<ThemeSnapshot>({ preference: 'dark', resolved: 'dark' });
   readonly session = signal<SessionFile>({ ...DEFAULT_SESSION_FILE });
@@ -290,17 +61,47 @@ export class DesktopApiService {
   readonly collections = signal<CollectionsFile>({ ...DEFAULT_COLLECTIONS_FILE });
   readonly databases = signal<DatabasesFile>({ ...DEFAULT_DATABASES_FILE, nodes: [] });
   readonly queries = signal<QueriesFile>({ ...DEFAULT_QUERIES_FILE, nodes: [] });
+  readonly history = signal<HistoryFile>({ ...DEFAULT_HISTORY_FILE });
+  readonly cookies = signal<CookiesFile>({ ...DEFAULT_COOKIES_FILE });
+  readonly flows = signal({ ...DEFAULT_FLOWS_FILE });
+  readonly load = signal({ ...DEFAULT_LOAD_FILE });
+  readonly mocks = signal({ ...DEFAULT_MOCKS_FILE });
+  readonly listeners = signal({ ...DEFAULT_LISTENERS_FILE });
+  readonly intercept = signal({ ...DEFAULT_INTERCEPT_FILE });
+  readonly plantuml = signal({ ...DEFAULT_PLANTUML_FILE });
+  readonly regressions = signal({ ...DEFAULT_REGRESSIONS_FILE });
+  readonly flowTemplates = signal({ ...DEFAULT_FLOW_TEMPLATES_FILE });
+  readonly emulator = signal({ ...DEFAULT_EMULATOR_FILE });
   readonly workspaces = signal<WorkspacesFile>(createDefaultWorkspacesFile());
   readonly configPaths = signal<ConfigPaths>(memoryPaths());
   readonly version = signal('2.0.0-beta.1');
   readonly platform = signal('win32');
   readonly isMaximized = signal(false);
-  readonly hasDesktop = Boolean(window.testrix);
-  readonly updateStatus = signal('Testrix 2.0 is a local build. You’re up to date.');
   /** Bumps when the config folder changes so stores re-read persisted files. */
   readonly configGeneration = signal(0);
+  /** Parts of the last hydrate that fell back to defaults because the bridge failed. */
+  readonly hydrateFailures = signal<readonly string[]>([]);
+  private zoomTimer: number | null = null;
+  private appliedZoom = 1;
+
+  /** Prefer live preload each access — HMR / late bridge must not stick on the browser stub. */
+  get api(): TestrixDesktopApi {
+    return window.testrix ?? browserFallback;
+  }
+
+  get hasDesktop(): boolean {
+    return Boolean(window.testrix);
+  }
 
   async hydrate(): Promise<void> {
+    const failed: string[] = [];
+    const recover = <T>(label: string, request: Promise<T>, fallback: () => T): Promise<T> =>
+      request.catch((error: unknown) => {
+        failed.push(label);
+        // eslint-disable-next-line no-console -- the renderer has no log channel to main
+        console.error(`[testrix] Could not load ${label}:`, error);
+        return fallback();
+      });
     const [
       settings,
       theme,
@@ -312,23 +113,46 @@ export class DesktopApiService {
       collections,
       databases,
       queries,
+      history,
+      cookies,
+      flows,
+      load,
+      mocks,
+      listeners,
+      intercept,
+      plantuml,
+      regressions,
+      flowTemplates,
+      emulator,
       workspaces,
       paths,
     ] = await Promise.all([
-      this.api.settings.get().catch(() => cloneDefaultUserSettings()),
-      this.api.theme.get().catch(() => ({ preference: 'dark' as const, resolved: 'dark' as const })),
-      this.api.app.getVersion().catch(() => '2.0.0-beta.1'),
-      this.api.app.getPlatform().catch(() => 'win32'),
-      this.api.window.isMaximized().catch(() => false),
-      this.api.session.get().catch(() => ({ ...DEFAULT_SESSION_FILE })),
-      this.api.environments.get().catch(() => createDefaultEnvironmentsFile()),
-      this.api.collections.get().catch(() => ({ ...DEFAULT_COLLECTIONS_FILE })),
-      this.api.databases.get().catch(() => ({ ...DEFAULT_DATABASES_FILE, nodes: [] })),
-      this.api.queries.get().catch(() => ({ ...DEFAULT_QUERIES_FILE, nodes: [] })),
-      this.api.workspaces.get().catch(() => createDefaultWorkspacesFile()),
-      this.api.config.paths().catch(() => memoryPaths()),
+      recover('settings', this.api.settings.get(), cloneDefaultUserSettings),
+      recover('theme', this.api.theme.get(), () => ({ preference: 'dark' as const, resolved: 'dark' as const })),
+      recover('version', this.api.app.getVersion(), () => '0.0.0'),
+      recover('platform', this.api.app.getPlatform(), () => 'win32'),
+      recover('window', this.api.window.isMaximized(), () => false),
+      recover('session', this.api.session.get(), () => ({ ...DEFAULT_SESSION_FILE })),
+      recover('environments', this.api.environments.get(), createDefaultEnvironmentsFile),
+      recover('collections', this.api.collections.get(), () => ({ ...DEFAULT_COLLECTIONS_FILE })),
+      recover('databases', this.api.databases.get(), () => ({ ...DEFAULT_DATABASES_FILE, nodes: [] })),
+      recover('queries', this.api.queries.get(), () => ({ ...DEFAULT_QUERIES_FILE, nodes: [] })),
+      recover('history', this.api.history.get(), () => ({ ...DEFAULT_HISTORY_FILE })),
+      recover('cookies', this.api.cookies.get(), () => ({ ...DEFAULT_COOKIES_FILE })),
+      recover('flows', this.api.services.flows.get(), () => ({ ...DEFAULT_FLOWS_FILE })),
+      recover('load tests', this.api.services.load.get(), () => ({ ...DEFAULT_LOAD_FILE })),
+      recover('mocks', this.api.services.mocks.get(), () => ({ ...DEFAULT_MOCKS_FILE })),
+      recover('listeners', this.api.services.listeners.get(), () => ({ ...DEFAULT_LISTENERS_FILE })),
+      recover('intercept', this.api.services.intercept.get(), () => ({ ...DEFAULT_INTERCEPT_FILE })),
+      recover('PlantUML', this.api.plantuml.get(), () => ({ ...DEFAULT_PLANTUML_FILE })),
+      recover('regressions', this.api.services.regressions.get(), () => ({ ...DEFAULT_REGRESSIONS_FILE })),
+      recover('flow templates', this.api.services.flowTemplates.get(), () => ({ ...DEFAULT_FLOW_TEMPLATES_FILE })),
+      recover('emulator', this.api.services.emulator.get(), () => ({ ...DEFAULT_EMULATOR_FILE })),
+      recover('workspaces', this.api.workspaces.get(), createDefaultWorkspacesFile),
+      recover('config paths', this.api.config.paths(), memoryPaths),
     ]);
-    this.settings.set(settings);
+    const nextSettings = normalizeUserSettings(settings);
+    this.settings.set(nextSettings);
     this.theme.set(theme);
     this.version.set(version);
     this.platform.set(platform);
@@ -338,14 +162,26 @@ export class DesktopApiService {
     this.collections.set(collections);
     this.databases.set(databases);
     this.queries.set(queries);
+    this.history.set(history);
+    this.cookies.set(cookies);
+    this.flows.set(flows);
+    this.load.set(load);
+    this.mocks.set(mocks);
+    this.listeners.set(listeners);
+    this.intercept.set(intercept);
+    this.plantuml.set(plantuml);
+    this.regressions.set(regressions);
+    this.flowTemplates.set(flowTemplates);
+    this.emulator.set(emulator);
     this.workspaces.set(workspaces);
     this.configPaths.set(paths);
-    this.applyDom(theme, settings, false);
+    this.applyDom(theme, nextSettings, false);
     this.api.theme.onChanged((snapshot) => {
       this.theme.set(snapshot);
       this.applyDom(snapshot, this.settings(), true);
     });
     this.api.window.onMaximizedChanged((value) => this.isMaximized.set(value));
+    this.hydrateFailures.set(failed);
   }
 
   applySnapshot(snapshot: WorkspaceSnapshot): void {
@@ -354,6 +190,17 @@ export class DesktopApiService {
     this.collections.set(snapshot.collections);
     this.databases.set(snapshot.databases);
     this.queries.set(snapshot.queries);
+    this.history.set(snapshot.history);
+    this.cookies.set(snapshot.cookies);
+    this.flows.set(snapshot.flows);
+    this.load.set(snapshot.load);
+    this.mocks.set(snapshot.mocks);
+    this.listeners.set(snapshot.listeners);
+    this.intercept.set(snapshot.intercept);
+    this.plantuml.set(snapshot.plantuml);
+    this.regressions.set(snapshot.regressions);
+    this.flowTemplates.set(snapshot.flowTemplates);
+    this.emulator.set(snapshot.emulator);
   }
 
   async setTheme(preference: UserSettings['theme']): Promise<void> {
@@ -366,17 +213,17 @@ export class DesktopApiService {
     const snapshot: ThemeSnapshot = { preference, resolved };
     const settings = { ...this.settings(), theme: preference };
     this.theme.set(snapshot);
-    this.settings.set(settings);
+    this.settings.set(normalizeUserSettings(settings));
     this.applyDom(snapshot, settings, true);
     const nextTheme = await this.api.theme.set(preference);
     const nextSettings = await this.api.settings.set({ theme: preference });
     this.theme.set(nextTheme);
-    this.settings.set(nextSettings);
+    this.settings.set(normalizeUserSettings(nextSettings));
     this.applyDom(nextTheme, nextSettings, true);
   }
 
   async patchSettings(patch: Partial<UserSettings>): Promise<void> {
-    const optimistic = mergeUserSettingsPatch(this.settings(), patch);
+    const optimistic = normalizeUserSettings(mergeUserSettingsPatch(this.settings(), patch));
     this.settings.set(optimistic);
     this.applyDom(this.theme(), optimistic, false);
     if (patch.theme) {
@@ -384,13 +231,30 @@ export class DesktopApiService {
       return;
     }
     const next = await this.api.settings.set(patch);
-    this.settings.set(next);
+    this.settings.set(normalizeUserSettings(next));
     this.applyDom(this.theme(), next, false);
+  }
+
+  setUiZoom(value: number, persistNow = false): void {
+    const next = clampUiZoom(value);
+    const optimistic = { ...this.settings(), uiZoom: next };
+    this.settings.set(optimistic);
+    this.applyDom(this.theme(), optimistic, false);
+    if (!persistNow) {
+      this.queueZoomPersist(next);
+      return;
+    }
+    this.clearZoomTimer();
+    void this.persistUiZoom(next);
+  }
+
+  nudgeUiZoom(direction: 1 | -1): void {
+    this.setUiZoom(nudgeUiZoom(this.settings().uiZoom, direction));
   }
 
   async resetSettings(scope: SettingsResetScope): Promise<void> {
     const next = await this.api.settings.reset(scope);
-    this.settings.set(next);
+    this.settings.set(normalizeUserSettings(next));
     const snapshot: ThemeSnapshot = {
       preference: next.theme,
       resolved:
@@ -431,6 +295,61 @@ export class DesktopApiService {
     this.queries.set(next);
   }
 
+  async saveHistory(patch: Partial<Omit<HistoryFile, 'schemaVersion'>>): Promise<void> {
+    const next = await this.api.history.set(patch);
+    this.history.set(next);
+  }
+
+  async saveCookies(patch: Partial<Omit<CookiesFile, 'schemaVersion'>>): Promise<void> {
+    const next = await this.api.cookies.set(patch);
+    this.cookies.set(next);
+  }
+
+  async saveFlows(patch: Partial<Omit<FlowsFile, 'schemaVersion'>>): Promise<void> {
+    const next = await this.api.services.flows.set(patch);
+    this.flows.set(next);
+  }
+
+  async saveLoad(patch: Partial<Omit<LoadFile, 'schemaVersion'>>): Promise<void> {
+    const next = await this.api.services.load.set(patch);
+    this.load.set(next);
+  }
+
+  async saveMocks(patch: Partial<Omit<MocksFile, 'schemaVersion'>>): Promise<void> {
+    const next = await this.api.services.mocks.set(patch);
+    this.mocks.set(next);
+  }
+
+  async saveListeners(patch: Partial<Omit<ListenersFile, 'schemaVersion'>>): Promise<void> {
+    const next = await this.api.services.listeners.set(patch);
+    this.listeners.set(next);
+  }
+
+  async saveIntercept(patch: Partial<Omit<InterceptFile, 'schemaVersion'>>): Promise<void> {
+    const next = await this.api.services.intercept.set(patch);
+    this.intercept.set(next);
+  }
+
+  async savePlantuml(patch: Partial<Omit<PlantumlFile, 'schemaVersion'>>): Promise<void> {
+    const next = await this.api.plantuml.set(patch);
+    this.plantuml.set(next);
+  }
+
+  async saveRegressions(patch: Partial<Omit<RegressionsFile, 'schemaVersion'>>): Promise<void> {
+    const next = await this.api.services.regressions.set(patch);
+    this.regressions.set(next);
+  }
+
+  async saveFlowTemplates(patch: Partial<Omit<FlowTemplatesFile, 'schemaVersion'>>): Promise<void> {
+    const next = await this.api.services.flowTemplates.set(patch);
+    this.flowTemplates.set(next);
+  }
+
+  async saveEmulator(patch: Partial<Omit<EmulatorFile, 'schemaVersion'>>): Promise<void> {
+    const next = await this.api.services.emulator.set(patch);
+    this.emulator.set(next);
+  }
+
   async refreshPaths(): Promise<void> {
     this.configPaths.set(await this.api.config.paths());
   }
@@ -444,7 +363,7 @@ export class DesktopApiService {
     if (!paths)
       return;
     this.configPaths.set(paths);
-    this.settings.set(await this.api.settings.get());
+    this.settings.set(normalizeUserSettings(await this.api.settings.get()));
   }
 
   async chooseFile(kind: ChooseFileKind): Promise<string | null> {
@@ -467,21 +386,43 @@ export class DesktopApiService {
     if (!paths)
       return;
     this.configPaths.set(paths);
-    const [settings, session, environments, collections, databases, queries, workspaces] = await Promise.all([
+    const [settings, session, environments, collections, databases, queries, history, cookies, flows, load, mocks, listeners, intercept, plantuml, regressions, flowTemplates, emulator, workspaces] = await Promise.all([
       this.api.settings.get(),
       this.api.session.get(),
       this.api.environments.get(),
       this.api.collections.get(),
       this.api.databases.get(),
       this.api.queries.get(),
+      this.api.history.get(),
+      this.api.cookies.get(),
+      this.api.services.flows.get(),
+      this.api.services.load.get(),
+      this.api.services.mocks.get(),
+      this.api.services.listeners.get(),
+      this.api.services.intercept.get(),
+      this.api.plantuml.get(),
+      this.api.services.regressions.get(),
+      this.api.services.flowTemplates.get(),
+      this.api.services.emulator.get(),
       this.api.workspaces.get(),
     ]);
-    this.settings.set(settings);
+    this.settings.set(normalizeUserSettings(settings));
     this.session.set(session);
     this.environments.set(environments);
     this.collections.set(collections);
     this.databases.set(databases);
     this.queries.set(queries);
+    this.history.set(history);
+    this.cookies.set(cookies);
+    this.flows.set(flows);
+    this.load.set(load);
+    this.mocks.set(mocks);
+    this.listeners.set(listeners);
+    this.intercept.set(intercept);
+    this.plantuml.set(plantuml);
+    this.regressions.set(regressions);
+    this.flowTemplates.set(flowTemplates);
+    this.emulator.set(emulator);
     this.workspaces.set(workspaces);
     const snapshot: ThemeSnapshot = {
       preference: settings.theme,
@@ -497,10 +438,6 @@ export class DesktopApiService {
     this.configGeneration.update((value) => value + 1);
   }
 
-  checkForUpdates(): void {
-    this.updateStatus.set(`Testrix ${this.version()} is a local build. You’re up to date.`);
-  }
-
   notifyReady(): void {
     void this.api.app.notifyReady();
   }
@@ -511,14 +448,30 @@ export class DesktopApiService {
   private applyDom(theme: ThemeSnapshot, settings: UserSettings, animate: boolean): void {
     const root = document.documentElement;
     const themeChanged = root.dataset['theme'] !== theme.resolved;
+    const osReduce =
+      typeof window !== 'undefined' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const userWantsMotion =
+      settings.motionPreset === 'snappy' ||
+      (settings.motionPreset === 'custom' && settings.animationSpeed !== 'none');
+    const effectiveOpen = osReduce && !userWantsMotion ? 'none' : settings.animationSpeed;
+    const effectiveLeave = osReduce && !userWantsMotion ? 'none' : settings.closeAnimationSpeed;
     const commit = (): void => {
       root.dataset['theme'] = theme.resolved;
-      root.dataset['motion'] = settings.animationSpeed;
-      root.dataset['motionLeave'] = settings.closeAnimationSpeed;
+      root.dataset['motion'] = effectiveOpen;
+      root.dataset['motionLeave'] = effectiveLeave;
       root.dataset['fontUi'] = settings.fontUi;
       root.dataset['fontMono'] = settings.fontMono;
       root.dataset['fontScale'] = settings.fontScale;
       root.dataset['iconScale'] = settings.iconScale;
+      root.style.removeProperty('zoom');
+      if (this.appliedZoom === settings.uiZoom)
+        return;
+      this.appliedZoom = settings.uiZoom;
+      if (typeof this.api.window.setZoomFactor === 'function')
+        this.api.window.setZoomFactor(settings.uiZoom);
+      else
+        root.style.zoom = String(settings.uiZoom);
     };
 
     if (!themeChanged) {
@@ -526,7 +479,7 @@ export class DesktopApiService {
       return;
     }
 
-    if (!animate || !this.canAnimateTheme(settings)) {
+    if (!animate || !this.canAnimateTheme(settings) || effectiveOpen === 'none') {
       commit();
       return;
     }
@@ -549,5 +502,26 @@ export class DesktopApiService {
 
   private canAnimateTheme(settings: UserSettings): boolean {
     return settings.animationSpeed !== 'none';
+  }
+
+  private async persistUiZoom(zoom: number): Promise<void> {
+    const saved = await this.api.settings.set({ uiZoom: zoom });
+    this.settings.set({ ...normalizeUserSettings(saved), uiZoom: zoom });
+    this.applyDom(this.theme(), this.settings(), false);
+  }
+
+  private queueZoomPersist(zoom: number): void {
+    this.clearZoomTimer();
+    this.zoomTimer = window.setTimeout(() => {
+      this.zoomTimer = null;
+      void this.persistUiZoom(zoom);
+    }, 280);
+  }
+
+  private clearZoomTimer(): void {
+    if (!this.zoomTimer)
+      return;
+    window.clearTimeout(this.zoomTimer);
+    this.zoomTimer = null;
   }
 }

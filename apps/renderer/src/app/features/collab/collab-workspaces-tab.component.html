@@ -1,0 +1,80 @@
+<div class="tx-collab-ws">
+  <section aria-labelledby="collab-ws-here">
+    <h3 id="collab-ws-here" class="tx-collab-ws__title">On this PC</h3>
+    @if (onPc().length === 0) {
+      <p class="tx-collab-ws__quiet">Connected. Add a workspace when you are ready.</p>
+    } @else {
+      <ul class="tx-collab-ws__list">
+        @for (entry of onPc(); track entry.remoteId) {
+          <li class="tx-collab-ws__row">
+            <span class="tx-collab-ws__name">{{ entry.name }}</span>
+            @if (entry.localId === activeId()) {
+              <span class="tx-collab-ws__tag">Open</span>
+            } @else if (entry.localId) {
+              <button type="button" class="tx-collab-ws__link" (click)="collab.openWorkspace(entry.localId)">Open</button>
+            }
+            <tx-hint label="More" placement="left" [suppressed]="menuFor() === entry.remoteId">
+              <button
+                type="button"
+                class="tx-collab-ws__icon"
+                [attr.aria-label]="'More actions for ' + entry.name"
+                aria-haspopup="menu"
+                [attr.aria-expanded]="menuFor() === entry.remoteId"
+                (click)="toggleMenu(entry.remoteId)"
+              >
+                <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+                  <circle cx="3.4" cy="7" r="1.1" fill="currentColor" />
+                  <circle cx="7" cy="7" r="1.1" fill="currentColor" />
+                  <circle cx="10.6" cy="7" r="1.1" fill="currentColor" />
+                </svg>
+              </button>
+            </tx-hint>
+            @if (menuFor() === entry.remoteId) {
+              <div class="tx-collab-ws__menu" role="menu" [attr.aria-label]="entry.name">
+                <button type="button" role="menuitem" (click)="removeFromPc(entry)">Remove from this PC</button>
+                <button type="button" role="menuitem" class="is-danger" (click)="removeFromRepo(entry)">
+                  Remove from repository
+                </button>
+              </div>
+            }
+          </li>
+        }
+      </ul>
+    }
+  </section>
+
+  <section aria-labelledby="collab-ws-repo">
+    <h3 id="collab-ws-repo" class="tx-collab-ws__title">Also in {{ repo().repoName }}</h3>
+    @if (notOnPc().length === 0) {
+      <p class="tx-collab-ws__quiet">
+        {{ repo().workspaces.length === 0 ? 'This repository is empty.' : 'Every workspace in this repository is on this PC.' }}
+      </p>
+    } @else {
+      <ul class="tx-collab-ws__list">
+        @for (entry of notOnPc(); track entry.remoteId) {
+          <li class="tx-collab-ws__row">
+            <span class="tx-collab-ws__name">{{ entry.name }}</span>
+            <tx-button variant="secondary" [disabled]="collab.busy()" (clicked)="add(entry)">Add</tx-button>
+          </li>
+        }
+      </ul>
+    }
+  </section>
+
+  <section aria-labelledby="collab-ws-publish">
+    <h3 id="collab-ws-publish" class="tx-collab-ws__title">Publish from this PC</h3>
+    @if (collab.publishableWorkspaces().length === 0) {
+      <p class="tx-collab-ws__quiet">Every workspace on this PC is already in a repository.</p>
+    } @else {
+      <p class="tx-collab-ws__quiet">Moves a local workspace into {{ repo().repoName }} so teammates can add it.</p>
+      <ul class="tx-collab-ws__list">
+        @for (item of collab.publishableWorkspaces(); track item.id) {
+          <li class="tx-collab-ws__row">
+            <span class="tx-collab-ws__name">{{ item.name }}</span>
+            <tx-button variant="ghost" [disabled]="collab.busy()" (clicked)="publish(item.id, item.name)">Publish</tx-button>
+          </li>
+        }
+      </ul>
+    }
+  </section>
+</div>

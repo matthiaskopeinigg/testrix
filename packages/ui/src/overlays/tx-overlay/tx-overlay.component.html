@@ -3,6 +3,8 @@
   [class.tx-overlay--palette]="variant() === 'palette'"
   [class.tx-overlay--settings]="variant() === 'settings'"
   [class.tx-overlay--confirm]="variant() === 'confirm'"
+  [class.tx-overlay--lg]="size() === 'lg'"
+  [class.tx-overlay--wide]="size() === 'wide'"
   role="presentation"
   (keydown)="handleKeydown($event)"
 >

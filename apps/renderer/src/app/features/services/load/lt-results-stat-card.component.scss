@@ -1,0 +1,97 @@
+:host {
+  display: block;
+}
+
+.lt-stat-card {
+  position: relative;
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.55rem 0.65rem 0.55rem 0.4rem;
+  border: 1px solid color-mix(in srgb, var(--tx-border) 80%, transparent);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--tx-panel) 82%, transparent);
+  overflow: hidden;
+
+  &[data-health='good'] {
+    --lt-accent: var(--tx-success, #3dd68c);
+  }
+
+  &[data-health='ok'] {
+    --lt-accent: var(--tx-warning, #e6b800);
+  }
+
+  &[data-health='bad'] {
+    --lt-accent: var(--tx-danger, #e5484d);
+  }
+}
+
+.lt-stat-card__accent {
+  flex: 0 0 auto;
+  width: 3px;
+  border-radius: 3px;
+  background: var(--lt-accent, var(--tx-accent));
+}
+
+.lt-stat-card__content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.lt-stat-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+}
+
+.lt-stat-card__label {
+  color: var(--tx-muted);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.lt-stat-card__tag {
+  flex: 0 0 auto;
+  font-size: 0.62rem;
+  font-weight: 650;
+  padding: 0.05rem 0.35rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+
+  &[data-tone='success'] {
+    color: var(--tx-success, #3dd68c);
+    border-color: color-mix(in srgb, var(--tx-success, #3dd68c) 45%, transparent);
+    background: color-mix(in srgb, var(--tx-success, #3dd68c) 14%, transparent);
+  }
+
+  &[data-tone='warning'] {
+    color: var(--tx-warning, #e6b800);
+    border-color: color-mix(in srgb, var(--tx-warning, #e6b800) 45%, transparent);
+    background: color-mix(in srgb, var(--tx-warning, #e6b800) 14%, transparent);
+  }
+
+  &[data-tone='error'] {
+    color: var(--tx-danger, #e5484d);
+    border-color: color-mix(in srgb, var(--tx-danger, #e5484d) 45%, transparent);
+    background: color-mix(in srgb, var(--tx-danger, #e5484d) 14%, transparent);
+  }
+}
+
+.lt-stat-card__value {
+  font-size: 1.02rem;
+  font-weight: 650;
+  line-height: 1.15;
+}
+
+.lt-stat-card__hint {
+  color: var(--tx-muted);
+  font-size: 0.7rem;
+}

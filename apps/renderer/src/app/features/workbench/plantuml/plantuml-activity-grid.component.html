@@ -1,0 +1,114 @@
+<div
+  #viewport
+  class="tx-act"
+  [class.is-panning]="panning()"
+  [class.is-selecting]="marquee()"
+  role="application"
+  aria-label="Activity grid"
+  aria-keyshortcuts="Delete Control+A Escape"
+  tabindex="0"
+  (wheel)="handleWheel($event)"
+  (pointerdown)="handlePointerDown($event)"
+  (pointermove)="handlePointerMove($event)"
+  (pointerup)="handlePointerUp()"
+  (pointercancel)="handlePointerUp()"
+  (keydown)="handleKey($event)"
+  (contextmenu)="openCanvasMenu($event)"
+>
+  <div class="tx-act__stage" [style.transform]="transform()">
+    <svg class="tx-act__flow" aria-hidden="true">
+      @for (link of flowLinks(); track link.id) {
+        <line [attr.x1]="link.x" [attr.y1]="link.y1" [attr.x2]="link.x" [attr.y2]="link.y2 - 7" />
+        <polygon [attr.points]="(link.x - 4) + ',' + (link.y2 - 8) + ' ' + link.x + ',' + link.y2 + ' ' + (link.x + 4) + ',' + (link.y2 - 8)" />
+      }
+    </svg>
+
+    <tx-hint label="Diagram title" placement="bottom">
+      <button
+        type="button"
+        class="tx-act__title"
+        [class.is-placeholder]="!model().title.trim()"
+        [attr.aria-label]="model().title.trim() ? 'Diagram title' : 'Add title'"
+        (click)="openTitleMenu($event)"
+        (contextmenu)="openTitleMenu($event)"
+      >
+        {{ model().title.trim() || 'Add title' }}
+      </button>
+    </tx-hint>
+
+    @if (guideTop(); as guide) {
+      <div class="tx-act__guide" [style.top.px]="guide"></div>
+    }
+
+    @if (marqueeBox(); as box) {
+      <div
+        class="tx-act__marquee"
+        [style.left.px]="box.x"
+        [style.top.px]="box.y"
+        [style.width.px]="box.w"
+        [style.height.px]="box.h"
+      ></div>
+    }
+
+    @for (row of rows(); track row.step.id) {
+      <button
+        type="button"
+        class="tx-act__step"
+        [class.is-dragging]="row.dragging"
+        [class.is-selected]="isSelected(row.step.id)"
+        [class.tx-act__step--start]="row.step.kind === 'start'"
+        [class.tx-act__step--stop]="row.step.kind === 'stop'"
+        [class.tx-act__step--action]="row.step.kind === 'action'"
+        [class.tx-act__step--if]="row.step.kind === 'if'"
+        [class.tx-act__step--endif]="row.step.kind === 'endif'"
+        [class.tx-act__step--fork]="row.step.kind === 'fork'"
+        [class.tx-act__step--endfork]="row.step.kind === 'endfork'"
+        [style.top.px]="row.top"
+        [style.left.px]="row.left"
+        [style.width.px]="row.width"
+        [style.height.px]="row.height"
+        [attr.aria-label]="row.label"
+        (pointerdown)="startStepDrag($event, row.step.id, row.top)"
+        (contextmenu)="openStepMenu($event, row.step.id)"
+      >
+        @if (row.step.kind === 'if') {
+          <svg class="tx-act__diamond" viewBox="0 0 156 72" preserveAspectRatio="none" aria-hidden="true">
+            <polygon points="78,1.5 154.5,36 78,70.5 1.5,36" />
+          </svg>
+          <span class="tx-act__label">{{ row.label }}</span>
+        } @else if (row.step.kind === 'endif') {
+          <svg class="tx-act__merge" viewBox="0 0 28 28" aria-hidden="true">
+            <polygon points="14,1.5 26.5,14 14,26.5 1.5,14" />
+          </svg>
+        } @else if (row.step.kind === 'action') {
+          <span class="tx-act__label">{{ row.label }}</span>
+        }
+      </button>
+    }
+  </div>
+
+  @if (menu(); as menu) {
+    <button type="button" class="tx-act__backdrop" aria-label="Close menu" (click)="closeMenu()"></button>
+    <div class="tx-act__menu" role="menu" [style.left.px]="menu.x" [style.top.px]="menu.y">
+      @if (menu.kind === 'canvas') {
+        @for (kind of addKinds; track kind) {
+          <button type="button" class="tx-act__menu-item" role="menuitem" (click)="addStep(kind)">
+            {{ addLabel(kind) }}
+          </button>
+        }
+      } @else if (menu.kind === 'step') {
+        @if (canRename(menu.id)) {
+          <button type="button" class="tx-act__menu-item" role="menuitem" (click)="renameStep(menu.id)">Rename</button>
+        }
+        <button type="button" class="tx-act__menu-item is-danger" role="menuitem" (click)="deleteStep(menu.id)">Delete</button>
+      } @else {
+        @if (!model().title.trim()) {
+          <button type="button" class="tx-act__menu-item" role="menuitem" (click)="addTitle()">Add title</button>
+        } @else {
+          <button type="button" class="tx-act__menu-item" role="menuitem" (click)="renameTitle()">Rename</button>
+          <button type="button" class="tx-act__menu-item is-danger" role="menuitem" (click)="deleteTitle()">Delete</button>
+        }
+      }
+    </div>
+  }
+</div>

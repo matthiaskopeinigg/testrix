@@ -1,9 +1,14 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
-import { parseDatabaseConnectionTabNodeId, parseDatabaseDiagramTabNodeId, parseDatabaseQueryTabNodeId, parseDatabaseTableTabNodeId } from '@testrix/contracts';
+
+import { DirtyTabsRegistry } from '../../core/dirty-tabs.registry';
+import { DesktopApiService } from '../../core/desktop-api.service';
+import { isManualSaveMode } from '../../core/save-mode';
+import { parseDatabaseConnectionTabNodeId, parseDatabaseDiagramTabNodeId, parseDatabaseQueryTabNodeId, parseDatabaseTableTabNodeId, serviceIdFromTabKind } from '@testrix/contracts';
 import { TxHintComponent } from '@testrix/ui';
 
 import { DatabaseStore } from '../database/database.store';
 import { DatabaseTypeIconComponent } from '../database/database-type-icon.component';
+import { ServiceIconComponent } from '../services/service-icon.component';
 import { ToolIconComponent } from '../tools/tool-icon.component';
 import type { WorkbenchTab } from './workbench.store';
 
@@ -20,7 +25,7 @@ export function httpMethodLabel(method: string | null | undefined): string {
 @Component({
   selector: 'tx-workbench-tab',
   standalone: true,
-  imports: [TxHintComponent, ToolIconComponent, DatabaseTypeIconComponent],
+  imports: [TxHintComponent, ToolIconComponent, ServiceIconComponent, DatabaseTypeIconComponent],
   templateUrl: './workbench-tab.component.html',
   styleUrl: './workbench-tab.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -34,6 +39,12 @@ export class WorkbenchTabComponent {
   readonly close = output<string>();
   readonly menu = output<{ readonly tabId: string; readonly event: MouseEvent }>();
   private readonly database = inject(DatabaseStore);
+  private readonly dirtyTabs = inject(DirtyTabsRegistry);
+  private readonly desktop = inject(DesktopApiService);
+
+  readonly showUnsavedDot = computed(
+    () => isManualSaveMode(this.desktop.settings()) && this.dirtyTabs.isDirty(this.tab().id),
+  );
 
   readonly engineType = computed(() => {
     const tab = this.tab();
@@ -65,8 +76,11 @@ export class WorkbenchTabComponent {
     if (tab.kind === 'environment') {
       return `Environment ${tab.title}`;
     }
-    if (tab.kind === 'tool') {
+    if (tab.kind === 'tool' || tab.kind === 'service' || tab.kind === 'plantuml') {
       return tab.title;
+    }
+    if (tab.kind === 'history') {
+      return tab.method ? `History ${tab.method} ${tab.title}` : `History ${tab.title}`;
     }
     if (tab.kind === 'database-connection') {
       return `Connection ${tab.title}`;
@@ -80,7 +94,20 @@ export class WorkbenchTabComponent {
     if (tab.kind === 'database-diagram') {
       return `Diagram ${tab.title}`;
     }
-    return `WebSocket ${tab.title}`;
+    if (tab.kind === 'collection-folder') {
+      return `Folder ${tab.title}`;
+    }
+    if (tab.kind === 'websocket') {
+      return `WebSocket ${tab.title}`;
+    }
+    return tab.title;
+  });
+
+  readonly serviceIconId = computed(() => {
+    const tab = this.tab();
+    if (tab.kind === 'service')
+      return tab.nodeId;
+    return serviceIdFromTabKind(tab.kind);
   });
 
   readonly methodLabel = computed(() => httpMethodLabel(this.tab().method));

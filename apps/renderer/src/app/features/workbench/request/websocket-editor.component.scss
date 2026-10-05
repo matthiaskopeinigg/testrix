@@ -1,0 +1,223 @@
+@use 'mixins';
+
+:host {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+}
+
+.tx-ws-editor {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+  background: var(--tx-bg-canvas);
+}
+
+.tx-ws-editor__urlbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  height: 48px;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--tx-border-subtle);
+}
+
+.tx-ws-editor__badge {
+  flex-shrink: 0;
+  min-width: 40px;
+  padding: 4px 8px;
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--tx-accent) 16%, transparent);
+  color: var(--tx-accent);
+  font-family: var(--tx-font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.tx-ws-editor__url-field {
+  flex: 1;
+  min-width: 0;
+}
+
+:host ::ng-deep .tx-ws-editor__url-field .tx-token-field__input {
+  height: 32px;
+  min-height: 32px;
+  font-family: var(--tx-font-mono);
+  font-size: 12px;
+}
+
+.tx-ws-editor__status {
+  flex-shrink: 0;
+  max-width: 16rem;
+  overflow: hidden;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--tx-text-faint);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tx-ws-editor__status.is-connected {
+  color: color-mix(in srgb, #3ecf8e 90%, white);
+}
+
+.tx-ws-editor__status.is-error {
+  color: color-mix(in srgb, #c45b5b 85%, white);
+}
+
+.tx-ws-editor__connect,
+.tx-ws-editor__send {
+  @include mixins.tx-press;
+  flex-shrink: 0;
+  min-height: 32px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--tx-accent);
+  color: var(--tx-on-accent);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.tx-ws-editor__connect.is-connected,
+.tx-ws-editor__ghost {
+  background: color-mix(in srgb, var(--tx-bg-chrome) 70%, transparent);
+  color: var(--tx-text-primary);
+  box-shadow: inset 0 0 0 1px var(--tx-border-subtle);
+}
+
+.tx-ws-editor__ghost {
+  @include mixins.tx-press;
+  min-height: 28px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 7px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.tx-ws-editor__connect:disabled,
+.tx-ws-editor__send:disabled,
+.tx-ws-editor__ghost:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.tx-ws-editor__messages-pane {
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.tx-ws-editor__stream-head {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 16px 0;
+}
+
+.tx-ws-editor__stream-head .tx-folder-editor__subtitle {
+  margin: 0;
+}
+
+.tx-ws-editor__stream {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 10px 12px 12px;
+}
+
+.tx-ws-editor__messages {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tx-ws-editor__message {
+  display: grid;
+  grid-template-columns: 16px 64px minmax(0, 1fr);
+  gap: 10px;
+  align-items: baseline;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--tx-bg-chrome) 28%, transparent);
+}
+
+.tx-ws-editor__message + .tx-ws-editor__message {
+  margin-top: 4px;
+}
+
+.tx-ws-editor__direction {
+  color: var(--tx-accent);
+  font-size: 12px;
+}
+
+.tx-ws-editor__message[data-kind='message'] .tx-ws-editor__direction {
+  color: color-mix(in srgb, #5b9cff 85%, white);
+}
+
+.tx-ws-editor__message[data-kind='error'] .tx-ws-editor__body {
+  color: color-mix(in srgb, #c45b5b 85%, white);
+}
+
+.tx-ws-editor__time {
+  color: var(--tx-text-faint);
+  font-family: var(--tx-font-mono);
+  font-size: 10px;
+}
+
+.tx-ws-editor__body {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--tx-text-primary);
+  font-family: var(--tx-font-mono);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tx-ws-editor__composer {
+  display: flex;
+  flex-shrink: 0;
+  gap: 10px;
+  align-items: flex-end;
+  padding: 10px 12px;
+  border-top: 1px solid var(--tx-border-subtle);
+}
+
+.tx-ws-editor__composer-field {
+  flex: 1;
+  min-width: 0;
+}
+
+:host ::ng-deep .tx-ws-editor__composer-field .tx-token-field__input {
+  min-height: 72px;
+  font-family: var(--tx-font-mono);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.tx-ws-editor__jump {
+  @include mixins.tx-press;
+  align-self: flex-start;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--tx-accent);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+}

@@ -19,20 +19,21 @@
     (dragStart)="dragStart.emit()"
     (dragEnd)="dragEnd.emit()"
   />
-  <div class="tx-workbench-group__stage">
+  <div class="tx-workbench-group__stage" [attr.data-slide]="slideDir()">
     @if (activeTab(); as tab) {
-      <div
-        class="tx-workbench-group__panel"
-        [attr.data-slide]="slideDir()"
-        [attr.data-swap]="swapNonce() % 2"
-        (animationstart)="handlePanelAnimationStart($event)"
-        (animationend)="handlePanelAnimationEnd($event)"
-        (animationcancel)="handlePanelAnimationEnd($event)"
-      >
-        @for (_ of [tab.id]; track _) {
+      @for (id of [tab.id]; track id) {
+        <div
+          class="tx-workbench-group__panel"
+          [attr.data-swap]="swapNonce() % 2"
+          [animate.enter]="panelEnter()"
+          animate.leave="tx-workbench-panel-out"
+          (animationstart)="handlePanelAnimationStart($event)"
+          (animationend)="handlePanelAnimationEnd($event)"
+          (animationcancel)="handlePanelAnimationEnd($event)"
+        >
           <tx-workbench-panel [tab]="tab" />
-        }
-      </div>
+        </div>
+      }
     }
   </div>
 </div>

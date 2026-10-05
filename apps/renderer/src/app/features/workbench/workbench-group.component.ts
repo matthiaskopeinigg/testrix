@@ -94,6 +94,10 @@ export class WorkbenchGroupComponent {
     },
   });
 
+  panelEnter(): string | undefined {
+    return this.slideDir() ? 'tx-workbench-panel-in' : undefined;
+  }
+
   handlePanelAnimationStart(event: AnimationEvent): void {
     if (event.target !== event.currentTarget)
       return;

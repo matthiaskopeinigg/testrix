@@ -1,0 +1,532 @@
+@if (flow(); as flow) {
+  <div class="tx-flow-editor">
+    <header class="tx-flow-editor__identity">
+      <span class="tx-flow-editor__icon" aria-hidden="true">
+        <tx-service-icon serviceId="flows" />
+      </span>
+      @if (flow.tags.length) {
+        <ul class="tx-flow-editor__chips" aria-label="Tags">
+          @for (tag of flow.tags; track tag) {
+            <li>{{ tag }}</li>
+          }
+        </ul>
+      }
+      <span class="tx-flow-editor__identity-spacer" aria-hidden="true"></span>
+      @if (runSummary(); as summary) {
+        <div class="tx-flow-editor__run-meta" [attr.data-status]="summary.label.toLowerCase()">
+          <span>{{ summary.label }}</span>
+          @if (!summary.running) {
+            <span>{{ summary.passed }} passed · {{ summary.failed }} failed</span>
+          }
+        </div>
+      }
+      <div class="tx-flow-editor__run-group">
+        @if (isManualSave() && dirty()) {
+          <tx-hint label="Discard changes" detail="Revert the canvas to the last saved graph" placement="bottom">
+            <button
+              type="button"
+              class="tx-flow-editor__run is-cancel"
+              aria-label="Discard unsaved changes"
+              [disabled]="store.flowRunning()"
+              (click)="discardGraph()"
+            >
+              Discard
+            </button>
+          </tx-hint>
+          <tx-hint label="Save" detail="Ctrl+S — write the canvas to this scenario" placement="bottom">
+            <button
+              type="button"
+              class="tx-flow-editor__run"
+              aria-label="Save scenario graph"
+              [disabled]="store.flowRunning()"
+              (click)="saveGraph()"
+            >
+              Save
+            </button>
+          </tx-hint>
+        }
+        @if (store.flowRunning()) {
+          <tx-hint label="Cancel run" detail="Stops the current flow run" placement="bottom">
+            <button
+              type="button"
+              class="tx-flow-editor__run is-cancel"
+              aria-label="Cancel run"
+              (click)="cancelFlow()"
+            >
+              Cancel
+            </button>
+          </tx-hint>
+        } @else {
+          <tx-hint
+            label="Run current"
+            [detail]="
+              canRunCurrent()
+                ? dirty()
+                  ? 'Runs the unsaved canvas for this scenario'
+                  : 'Runs the active scenario only'
+                : 'Connect Start to End before running this scenario'
+            "
+            placement="bottom"
+          >
+            <button
+              type="button"
+              class="tx-flow-editor__run"
+              aria-label="Run current scenario"
+              [disabled]="!canRunCurrent()"
+              (click)="runFlow()"
+            >
+              Run current
+            </button>
+          </tx-hint>
+          @if (showRunAll()) {
+            <tx-hint
+              label="Run all"
+              [detail]="
+                !canRunAll()
+                  ? 'Need at least two enabled scenarios with a path from Start to End'
+                  : flow.scenariosRunMode === 'parallel'
+                    ? 'Runs every enabled scenario at the same time'
+                    : 'Runs every enabled scenario one after another'
+              "
+              placement="bottom"
+            >
+              <button
+                type="button"
+                class="tx-flow-editor__run tx-flow-editor__run--all"
+                aria-label="Run all scenarios"
+                [disabled]="!canRunAll()"
+                (click)="runAllScenarios()"
+              >
+                Run all
+              </button>
+            </tx-hint>
+          }
+        }
+      </div>
+    </header>
+
+    <div class="tx-flow-editor__head" role="tablist" [attr.aria-label]="tab().title + ' sections'">
+      @for (item of sections; track item.id) {
+        <button
+          type="button"
+          class="tx-flow-editor__tab"
+          role="tab"
+          [class.is-active]="section() === item.id"
+          [attr.aria-selected]="section() === item.id"
+          (click)="handleSection(item.id)"
+        >
+          {{ item.label }}
+        </button>
+      }
+    </div>
+
+    <div class="tx-flow-editor__pane">
+      <div class="tx-flow-editor__pane-stage" [attr.data-slide]="sectionSlideDir()">
+        @for (id of [section()]; track id) {
+          <div
+            class="tx-flow-editor__pane-body"
+            [class.is-design]="id === 'design'"
+            [class.is-docs]="id === 'docs'"
+            [animate.enter]="sectionPaneEnter()"
+            animate.leave="tx-folder-pane-out"
+          >
+            @switch (id) {
+              @case ('design') {
+                <tx-flow-scenario-bar
+                  [scenarios]="scenarios()"
+                  [activeId]="scenario()?.id ?? null"
+                  (selected)="selectScenario($event)"
+                  (added)="addScenario()"
+                  (duplicated)="duplicateScenario($event)"
+                  (removed)="removeScenario($event)"
+                  (renamed)="renameScenario($event)"
+                  (toggled)="toggleScenario($event)"
+                  (runOne)="runScenario($event)"
+                />
+
+                <div class="tx-flow-editor__design">
+                  @if (outlineOpen()) {
+                    <div
+                      class="tx-flow-editor__slide tx-flow-editor__slide--left"
+                      [animate.enter]="designChromeAnimate() ? 'tx-flow-slide-in-left' : undefined"
+                      [animate.leave]="designChromeAnimate() ? 'tx-flow-slide-out-left' : undefined"
+                    >
+                      <div class="tx-flow-editor__slide-body">
+                        <tx-flow-outline
+                          [scenario]="graph()"
+                          [selectedIds]="selectedIds()"
+                          [statuses]="statuses()"
+                          (selected)="focusNode($event)"
+                          (menu)="handleNodeMenu($event)"
+                        />
+                      </div>
+                    </div>
+                  }
+
+                  <tx-flow-canvas
+                    [scenario]="graph()"
+                    [selectedIds]="selectedIds()"
+                    [selectedEdgeIds]="selectedEdgeIds()"
+                    [statuses]="statuses()"
+                    [errorMessages]="errorMessages()"
+                    [exchanges]="store.flowStepExchanges()"
+                    [pulses]="store.flowStepPulse()"
+                    [runOrder]="runOrder()"
+                    [flowRunning]="store.flowRunning()"
+                    [fitToken]="fitToken()"
+                    [viewportInsetLeft]="canvasInsetLeft()"
+                    [viewportInsetRight]="canvasInsetRight()"
+                    (selectionChange)="handleSelection($event)"
+                    (edgeSelectionChange)="handleEdgeSelection($event)"
+                    (nodesMoved)="handleMove($event)"
+                    (frameResized)="handleFrameResized($event)"
+                    (connected)="handleConnect($event)"
+                    (connectDropped)="handleConnectDropped($event)"
+                    (nodeMenu)="handleNodeMenu($event)"
+                    (edgeMenu)="handleEdgeMenu($event)"
+                    (edgeRenameRequested)="openEdgeRename($event)"
+                    (canvasMenu)="handleCanvasMenu($event)"
+                    (nodeOpened)="focusNode($event)"
+                    (viewExchange)="openExchangeViewer($event)"
+                    (deleteRequested)="deleteSelection()"
+                    (duplicateRequested)="duplicateSelection()"
+                    (copyRequested)="copySelection()"
+                    (cutRequested)="cutSelection()"
+                    (pasteRequested)="pasteClipboard()"
+                    (autoLayoutRequested)="autoLayout()"
+                  />
+
+                  @if (selectedEdge(); as edge) {
+                    <div
+                      class="tx-flow-editor__slide tx-flow-editor__slide--right"
+                      [class.is-resizing]="inspectorResizing()"
+                      [style.--tx-flow-inspector-w.px]="inspectorPanelWidth()"
+                      [animate.enter]="designChromeAnimate() ? 'tx-flow-slide-in-right' : undefined"
+                      [animate.leave]="designChromeAnimate() ? 'tx-flow-slide-out-right' : undefined"
+                    >
+                      <tx-hint
+                        class="tx-flow-editor__inspector-resize-hint"
+                        label="Resize inspector"
+                        placement="right"
+                        [suppressed]="inspectorResizing()"
+                      >
+                        <div
+                          class="tx-flow-editor__inspector-resize"
+                          role="separator"
+                          aria-orientation="vertical"
+                          aria-label="Resize inspector"
+                          tabindex="0"
+                          (pointerdown)="handleInspectorResizeStart($event)"
+                          (keydown)="handleInspectorResizeKey($event)"
+                        ></div>
+                      </tx-hint>
+                      <div class="tx-flow-editor__slide-body">
+                        <div class="tx-flow-edge-inspector">
+                          <header class="tx-flow-edge-inspector__head">
+                            <div>
+                              <p class="tx-flow-edge-inspector__kicker">Link</p>
+                              <p class="tx-flow-edge-inspector__title">{{ edge.name?.trim() || edge.fromPort }}</p>
+                            </div>
+                            <button type="button" class="tx-flow-edge-inspector__remove" (click)="deleteEdge()">Remove</button>
+                          </header>
+                          <p class="tx-flow-edge-inspector__hint">Port {{ edge.fromPort }}</p>
+                          <tx-input
+                            id="flow-edge-selected-name"
+                            label="Name"
+                            [value]="edge.name ?? ''"
+                            placeholder="Optional label on the wire"
+                            (valueChange)="patchSelectedEdgeName($event)"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  } @else if (selectedNode(); as node) {
+                    <div
+                      class="tx-flow-editor__slide tx-flow-editor__slide--right"
+                      [class.is-wide]="wideInspector()"
+                      [class.is-resizing]="inspectorResizing()"
+                      [style.--tx-flow-inspector-w.px]="inspectorPanelWidth()"
+                      [animate.enter]="designChromeAnimate() ? 'tx-flow-slide-in-right' : undefined"
+                      [animate.leave]="designChromeAnimate() ? 'tx-flow-slide-out-right' : undefined"
+                    >
+                      <tx-hint
+                        class="tx-flow-editor__inspector-resize-hint"
+                        label="Resize inspector"
+                        placement="right"
+                        [suppressed]="inspectorResizing()"
+                      >
+                        <div
+                          class="tx-flow-editor__inspector-resize"
+                          role="separator"
+                          aria-orientation="vertical"
+                          aria-label="Resize inspector"
+                          tabindex="0"
+                          (pointerdown)="handleInspectorResizeStart($event)"
+                          (keydown)="handleInspectorResizeKey($event)"
+                        ></div>
+                      </tx-hint>
+                      <div class="tx-flow-editor__slide-body">
+                        <tx-flow-inspector
+                          [node]="node"
+                          [selectionCount]="selectedIds().length"
+                          [connectionOptions]="connectionOptions()"
+                          [flowOptions]="flowOptions()"
+                          [variables]="placeholderVariables()"
+                          [pickingSelector]="pickingSelector()"
+                          [pickingDeviceSelector]="pickingDeviceSelector()"
+                          [devicePickError]="devicePickError()"
+                          (patch)="patchSelected($event)"
+                          (configPatch)="patchSelectedConfig($event)"
+                          (removed)="deleteSelection()"
+                          (pickSelector)="pickSelectorOnPage()"
+                          (pickDeviceSelector)="pickDeviceSelectorOnDevice($event)"
+                        />
+                      </div>
+                    </div>
+                  }
+                </div>
+
+                <footer class="tx-flow-editor__status">
+                  <tx-hint [label]="outlineOpen() ? 'Hide run order' : 'Show run order'" placement="top">
+                    <button type="button" (click)="toggleOutline()">
+                      {{ outlineOpen() ? 'Hide outline' : 'Show outline' }}
+                    </button>
+                  </tx-hint>
+                  <span>{{ nodeCount() }} nodes</span>
+                  <span>{{ totalRuns() }} run{{ totalRuns() === 1 ? '' : 's' }}</span>
+                  @if (dirty()) {
+                    <span class="tx-flow-editor__dirty">Unsaved changes</span>
+                  }
+                  <span class="tx-flow-editor__tip">
+                    {{ canvasStatusHint }}
+                  </span>
+                </footer>
+              }
+              @case ('data') {
+                @if (scenario(); as scenario) {
+                  <tx-flow-data-grid
+                    [data]="scenario.data"
+                    [scenarioName]="scenario.name"
+                    [variables]="placeholderVariables()"
+                    (changed)="patchData($event)"
+                  />
+                }
+              }
+              @case ('history') {
+                <tx-flow-history-panel
+                  [runs]="runHistory()"
+                  [nodes]="graph().nodes"
+                  [scenarioName]="scenario()?.name ?? ''"
+                  [running]="store.flowRunning()"
+                  (apply)="applyHistoryRun($event)"
+                  (clear)="clearHistoryRuns()"
+                  (openExchange)="openHistoryExchange($event)"
+                />
+              }
+              @case ('settings') {
+                <div class="tx-flow-editor__section">
+                  <header class="tx-flow-editor__intro">
+                    <h2>Settings</h2>
+                    <p>Tags, environment, and run options for this flow.</p>
+                  </header>
+                  <tx-input id="flow-desc" label="Description" multiline [rows]="4" [value]="flow.description" (valueChange)="store.patchFlow(flow.id, { description: $event })" />
+                  <tx-tags-input id="flow-tags" [tags]="flow.tags" (tagsChange)="setTags($event)" />
+                  <p class="tx-flow-editor__hint">Variables use the app-selected environment.</p>
+
+                  @if (showRunAll()) {
+                    <header class="tx-flow-editor__intro tx-flow-editor__intro--sub">
+                      <h2>Scenarios</h2>
+                      <p>How Run all executes enabled scenarios.</p>
+                    </header>
+                    <p class="tx-flow-editor__label">Run all</p>
+                    <tx-select
+                      ariaLabel="Run all mode"
+                      [value]="flow.scenariosRunMode || 'sequential'"
+                      [options]="scenariosRunModeOptions"
+                      (valueChange)="setScenariosRunMode($event)"
+                    />
+                    <p class="tx-flow-editor__hint">
+                      One by one finishes a scenario before starting the next. All at once starts every enabled scenario together and finishes when they all finish.
+                    </p>
+                  }
+
+                  @if (hasE2eNodes()) {
+                    <header class="tx-flow-editor__intro tx-flow-editor__intro--sub">
+                      <h2>E2E</h2>
+                      <p>How browser nodes run in this flow.</p>
+                    </header>
+                    <tx-check
+                      label="Display E2E window"
+                      detail="Show the browser while the flow runs (slow, watchable). Off keeps it hidden and runs fast."
+                      [checked]="flow.e2eShowWindow !== false"
+                      (checkedChange)="setE2eShowWindow($event)"
+                    />
+                  }
+
+                  @if (hasDeviceNodes()) {
+                    <header class="tx-flow-editor__intro tx-flow-editor__intro--sub">
+                      <h2>Device</h2>
+                      <p>How emulator nodes run in this flow.</p>
+                    </header>
+                    <tx-check
+                      label="Display emulator"
+                      detail="Show the Android emulator window while the flow runs. Off starts it headless (−no-window) so device steps run without a visible window."
+                      [checked]="flow.deviceShowEmulator !== false"
+                      (checkedChange)="setDeviceShowEmulator($event)"
+                    />
+                  }
+                </div>
+              }
+              @case ('docs') {
+                <tx-docs-editor
+                  [value]="flow.docs"
+                  [mode]="docsMode()"
+                  ariaLabel="Flow docs"
+                  emptyBody="Write markdown for this flow."
+                  (valueChange)="store.patchFlow(flow.id, { docs: $event })"
+                  (modeChange)="handleDocsMode($event)"
+                />
+              }
+            }
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+}
+
+<ng-template #flowMenu>
+  @if (menu(); as menu) {
+    <div class="tx-menu tx-flow-editor__menu" role="menu" (pointerdown)="$event.stopPropagation()">
+      @if (menu.kind === 'node') {
+        @if (!menuIsTerminal()) {
+          @if (!menuIsNote() && !menuIsFrame()) {
+            @for (port of menuNodePorts(); track port) {
+              <button type="button" class="tx-flow-editor__item" role="menuitem" (click)="openPicker({ after: { id: menu.id, port } })">
+                Add after{{ port === 'next' ? '' : ' (' + port + ')' }}…
+              </button>
+            }
+            @for (port of menuNodePorts(); track port) {
+              <button type="button" class="tx-flow-editor__item" role="menuitem" (click)="openPicker({ split: { id: menu.id, port } })">
+                Split{{ port === 'next' ? '' : ' (' + port + ')' }}…
+              </button>
+            }
+          }
+          @if (menuIsFrame()) {
+            <button type="button" class="tx-flow-editor__item" role="menuitem" (click)="addInsideFrame()">
+              Add inside…
+            </button>
+          }
+          <button type="button" class="tx-flow-editor__item" role="menuitem" (click)="duplicateSelection()">Duplicate</button>
+          @if (!menuIsNote()) {
+            <button type="button" class="tx-flow-editor__item" role="menuitem" (click)="saveSelectionAsTemplate()">
+              Save selection as template
+            </button>
+            <button type="button" class="tx-flow-editor__item" role="menuitem" (click)="toggleSelection()">Enable or skip</button>
+          }
+          <button type="button" class="tx-flow-editor__item is-danger" role="menuitem" (click)="deleteSelection()">Delete</button>
+        } @else if (menuNodePorts().length > 0) {
+          @for (port of menuNodePorts(); track port) {
+            <button type="button" class="tx-flow-editor__item" role="menuitem" (click)="openPicker({ after: { id: menu.id, port } })">
+              Add after Start…
+            </button>
+          }
+        }
+      }
+      @if (menu.kind === 'edge') {
+        <button type="button" class="tx-flow-editor__item" role="menuitem" (click)="renameEdge()">
+          {{ edgeMenuName() ? 'Rename link…' : 'Name link…' }}
+        </button>
+        @if (edgeMenuName()) {
+          <button type="button" class="tx-flow-editor__item" role="menuitem" (click)="clearEdgeName()">Clear name</button>
+        }
+        <button type="button" class="tx-flow-editor__item is-danger" role="menuitem" (click)="deleteEdge()">Delete link</button>
+      }
+    </div>
+  }
+</ng-template>
+
+@if (picker()) {
+  <div txOverlayHost animate.enter="tx-overlay-enter" animate.leave="tx-overlay-leave">
+    <tx-overlay labelledBy="flow-add-title" size="lg" (closed)="picker.set(null)">
+      <div class="tx-flow-add">
+        <header class="tx-flow-add__head">
+          <h2 id="flow-add-title">Add node</h2>
+          <p>Pick a step for this scenario. Escape or click outside to cancel.</p>
+        </header>
+        <div class="tx-flow-add__body">
+          <section>
+            <h3>Templates</h3>
+            @for (group of templateGroups(); track group.tag) {
+              <h4 class="tx-flow-add__tag">{{ group.tag }}</h4>
+              <div class="tx-flow-add__grid">
+                @for (template of group.items; track template.id) {
+                  <button type="button" (click)="pickTemplate(template)">
+                    <span class="tx-flow-add__chip">{{ group.tag.toUpperCase() }}</span>
+                    <span class="tx-flow-add__name">{{ template.name }}</span>
+                    <small>{{ template.hint }}</small>
+                  </button>
+                }
+              </div>
+            }
+          </section>
+          @for (group of nodeGroups; track group.id) {
+            <section>
+              @if (group.id !== 'canvas') {
+                <h3>{{ group.label }}</h3>
+              }
+              <div class="tx-flow-add__grid">
+                @for (item of group.nodes; track item.kind) {
+                  <button type="button" (click)="pickKind(item.kind)">
+                    <span class="tx-flow-add__title">
+                      <tx-flow-node-icon [kind]="item.kind" />
+                      @if (group.id !== 'canvas') {
+                        <span class="tx-flow-add__chip">{{ item.chip }}</span>
+                      }
+                    </span>
+                    <span class="tx-flow-add__name">{{ item.label }}</span>
+                    <small>{{ item.hint }}</small>
+                  </button>
+                }
+              </div>
+            </section>
+          }
+        </div>
+      </div>
+    </tx-overlay>
+  </div>
+}
+
+@if (edgeRename(); as draft) {
+  <div txOverlayHost animate.enter="tx-overlay-enter" animate.leave="tx-overlay-leave">
+    <tx-overlay labelledBy="flow-edge-name-title" (closed)="cancelEdgeRename()">
+      <form class="tx-flow-edge-name" (submit)="$event.preventDefault(); commitEdgeRename()">
+        <header class="tx-flow-edge-name__head">
+          <h2 id="flow-edge-name-title">{{ draft.name.trim() ? 'Rename link' : 'Name link' }}</h2>
+          <p>Shown on the connection. Leave empty to clear.</p>
+        </header>
+        <tx-input
+          id="flow-edge-name"
+          label="Name"
+          [value]="draft.name"
+          placeholder="e.g. on success"
+          (valueChange)="setEdgeRenameName($event)"
+        />
+        <div class="tx-flow-edge-name__actions">
+          <button type="button" class="tx-flow-edge-name__cancel" (click)="cancelEdgeRename()">Cancel</button>
+          <button type="submit" class="tx-flow-edge-name__save">Save</button>
+        </div>
+      </form>
+    </tx-overlay>
+  </div>
+}
+
+@if (exchangeViewer(); as viewer) {
+  <div txOverlayHost animate.enter="tx-overlay-enter" animate.leave="tx-overlay-leave">
+    @if (exchangeDetail(); as detail) {
+      <tx-overlay labelledBy="flow-exchange-title" size="lg" (closed)="closeExchangeViewer()">
+        <tx-flow-run-exchange [detail]="detail" [title]="viewer.title" />
+      </tx-overlay>
+    }
+  </div>
+}

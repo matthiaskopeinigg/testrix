@@ -1,0 +1,241 @@
+<tx-overlay [labelledBy]="titleId" variant="dialog" size="wide" (closed)="close()">
+  <div class="tx-cookie-auth">
+    <header class="tx-cookie-auth__header">
+      <div class="tx-cookie-auth__heading">
+        <h2 class="tx-cookie-auth__title" [id]="titleId">Cookie &amp; auth jar</h2>
+        <p class="tx-cookie-auth__lede">
+          Workspace cookies and auth already set on folders and requests.
+        </p>
+      </div>
+      <tx-hint label="Close" keys="Esc" placement="left">
+        <tx-button variant="ghost" (clicked)="close()">Close</tx-button>
+      </tx-hint>
+    </header>
+
+    <section class="tx-cookie-auth__panel" aria-labelledby="tx-cookie-auth-cookies">
+      <div class="tx-cookie-auth__panel-head">
+        <div class="tx-cookie-auth__panel-title">
+          <h3 id="tx-cookie-auth-cookies">Cookies</h3>
+          <span class="tx-cookie-auth__count" [attr.aria-label]="jarCookies().length + ' cookies'">
+            {{ jarCookies().length }}
+          </span>
+        </div>
+        <div class="tx-cookie-auth__toolbar">
+          <tx-hint label="Show or hide cookie values" placement="bottom">
+            <tx-button variant="ghost" (clicked)="toggleRevealCookies()">
+              {{ revealCookies() ? 'Hide values' : 'Reveal values' }}
+            </tx-button>
+          </tx-hint>
+          <tx-button variant="primary" (clicked)="addCookie()">Add cookie</tx-button>
+        </div>
+      </div>
+      <p class="tx-cookie-auth__hint">
+        Sent when Send cookies is on; stored from Set-Cookie when Save cookies is on.
+      </p>
+
+      <div class="tx-cookie-auth__filters">
+        <tx-input
+          id="cookie-auth-search"
+          label="Search"
+          placeholder="Name, value, domain…"
+          [value]="cookieQuery()"
+          (valueChange)="cookieQuery.set($event)"
+        />
+        <tx-input
+          id="cookie-auth-domain"
+          label="Domain"
+          placeholder="example.com"
+          [value]="cookieDomain()"
+          (valueChange)="cookieDomain.set($event)"
+        />
+        <div class="tx-cookie-auth__checks" role="group" aria-label="Cookie filters">
+          <tx-check
+            variant="inline"
+            label="Enabled only"
+            [checked]="enabledOnly()"
+            (checkedChange)="enabledOnly.set($event)"
+          />
+          <tx-check
+            variant="inline"
+            label="Expired only"
+            [checked]="expiredOnly()"
+            (checkedChange)="expiredOnly.set($event)"
+          />
+        </div>
+      </div>
+
+      <div class="tx-cookie-auth__body">
+        @if (filteredCookies().length === 0) {
+          <p class="tx-cookie-auth__empty">
+            {{
+              jarCookies().length === 0
+                ? 'No cookies stored for this workspace.'
+                : 'No cookies match these filters.'
+            }}
+          </p>
+        } @else {
+          <div class="tx-cookie-auth__table-wrap">
+            <table class="tx-cookie-auth__table" aria-label="Workspace cookie jar">
+              <thead>
+                <tr>
+                  <th>On</th>
+                  <th>Name</th>
+                  <th>Value</th>
+                  <th>Domain</th>
+                  <th>Path</th>
+                  <th>Expires</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (cookie of filteredCookies(); track cookie.id) {
+                  <tr [class.is-expired]="isExpired(cookie)">
+                    <td>
+                      <tx-check
+                        variant="compact"
+                        [checked]="cookie.enabled"
+                        [label]="'Send ' + (cookie.name || 'cookie')"
+                        (checkedChange)="toggleCookie(cookie.id, $event)"
+                      />
+                    </td>
+                    <td>
+                      <input
+                        type="text"
+                        [value]="cookie.name"
+                        aria-label="Cookie name"
+                        (change)="patchCookie(cookie.id, 'name', $event)"
+                      />
+                    </td>
+                    <td>
+                      <input
+                        [type]="revealCookies() ? 'text' : 'password'"
+                        [value]="cookie.value"
+                        aria-label="Cookie value"
+                        autocomplete="off"
+                        (change)="patchCookie(cookie.id, 'value', $event)"
+                      />
+                    </td>
+                    <td>
+                      <input
+                        type="text"
+                        [value]="cookie.domain"
+                        aria-label="Cookie domain"
+                        (change)="patchCookie(cookie.id, 'domain', $event)"
+                      />
+                    </td>
+                    <td>
+                      <input
+                        type="text"
+                        [value]="cookie.path"
+                        aria-label="Cookie path"
+                        (change)="patchCookie(cookie.id, 'path', $event)"
+                      />
+                    </td>
+                    <td>
+                      <input
+                        type="text"
+                        [value]="cookie.expires"
+                        aria-label="Cookie expires"
+                        (change)="patchCookie(cookie.id, 'expires', $event)"
+                      />
+                    </td>
+                    <td>
+                      <tx-button variant="ghost" (clicked)="removeCookie(cookie.id)">Remove</tx-button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+
+      <div class="tx-cookie-auth__footer">
+        <tx-hint label="Remove cookies that match the current filters" placement="top">
+          <tx-button variant="ghost" [disabled]="filteredCookies().length === 0" (clicked)="clearMatching()">
+            Clear matching
+          </tx-button>
+        </tx-hint>
+        <tx-hint label="Remove cookies past their Expires time" placement="top">
+          <tx-button variant="ghost" (clicked)="clearExpired()">Clear expired</tx-button>
+        </tx-hint>
+        <tx-button variant="ghost" [disabled]="jarCookies().length === 0" (clicked)="clearJar()">
+          Clear jar
+        </tx-button>
+      </div>
+    </section>
+
+    <section class="tx-cookie-auth__panel" aria-labelledby="tx-cookie-auth-auth">
+      <div class="tx-cookie-auth__panel-head">
+        <div class="tx-cookie-auth__panel-title">
+          <h3 id="tx-cookie-auth-auth">Auth</h3>
+          <span class="tx-cookie-auth__count" [attr.aria-label]="authEntries().length + ' auth entries'">
+            {{ authEntries().length }}
+          </span>
+        </div>
+        <div class="tx-cookie-auth__toolbar">
+          <tx-hint label="Show or hide stored secrets" placement="bottom">
+            <tx-button variant="ghost" (clicked)="toggleRevealAuth()">
+              {{ revealAuth() ? 'Hide secrets' : 'Reveal secrets' }}
+            </tx-button>
+          </tx-hint>
+        </div>
+      </div>
+      <p class="tx-cookie-auth__hint">
+        Inspect auth on collection folders and requests. Clear secrets without changing the auth type.
+      </p>
+
+      <div class="tx-cookie-auth__filters tx-cookie-auth__filters--auth">
+        <tx-input
+          id="cookie-auth-auth-search"
+          label="Search"
+          placeholder="Path, type…"
+          [value]="authQuery()"
+          (valueChange)="authQuery.set($event)"
+        />
+      </div>
+
+      <div class="tx-cookie-auth__body">
+        @if (authEntries().length === 0) {
+          <p class="tx-cookie-auth__empty">No folder or request auth configured.</p>
+        } @else {
+          <div class="tx-cookie-auth__table-wrap">
+            <table class="tx-cookie-auth__table" aria-label="Collection auth">
+              <thead>
+                <tr>
+                  <th>Path</th>
+                  <th>Type</th>
+                  <th>Summary</th>
+                  <th>Secret</th>
+                  <th>Expires</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (entry of authEntries(); track entry.id) {
+                  <tr [class.is-expired]="entry.isExpired">
+                    <td class="tx-cookie-auth__path">{{ entry.path }}</td>
+                    <td>{{ entry.authType }}</td>
+                    <td>{{ entry.summary }}</td>
+                    <td class="tx-cookie-auth__mono">{{ authSecretPreview(entry) }}</td>
+                    <td>{{ entry.expiresAt || '—' }}</td>
+                    <td class="tx-cookie-auth__row-actions">
+                      <tx-button variant="ghost" (clicked)="openAuthNode(entry)">Open</tx-button>
+                      <tx-button
+                        variant="ghost"
+                        [disabled]="!entry.hasSecrets"
+                        (clicked)="clearAuthSecrets(entry)"
+                      >
+                        Clear secrets
+                      </tx-button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+    </section>
+  </div>
+</tx-overlay>

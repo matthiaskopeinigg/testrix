@@ -11,7 +11,7 @@ function isDesktopPreviewSurface(value: string): value is DesktopPreviewSurface 
  */
 export function resolveDesktopPreviewSurface(): DesktopPreviewSurface | null {
   const flag = process.argv.find((item) => item.startsWith('--preview='));
-  const raw = flag ? flag.slice('--preview='.length) : process.env.TESTRIX_PREVIEW;
+  const raw = flag ? flag.slice('--preview='.length) : process.env['TESTRIX_PREVIEW'];
   if (!raw) {
     return null;
   }

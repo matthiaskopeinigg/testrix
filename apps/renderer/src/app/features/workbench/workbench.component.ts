@@ -1,4 +1,4 @@
-import { CdkDragDrop, CdkDragEnter, DragDropModule } from '@angular/cdk/drag-drop';
+import { type CdkDragDrop, type CdkDragEnter, DragDropModule } from '@angular/cdk/drag-drop';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 
 import { WelcomeComponent } from '../welcome/welcome.component';

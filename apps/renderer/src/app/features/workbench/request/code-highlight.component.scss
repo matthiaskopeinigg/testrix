@@ -1,0 +1,60 @@
+:host {
+  display: block;
+  margin: 0;
+  overflow: auto;
+  color: var(--tx-text-primary);
+  font-family: var(--tx-font-mono, ui-monospace, monospace);
+  font-size: 12px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  tab-size: 2;
+  cursor: text;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.is-keyword {
+  color: var(--tx-syntax-keyword);
+}
+
+.is-string {
+  color: var(--tx-syntax-string);
+}
+
+.is-number {
+  color: var(--tx-syntax-number);
+}
+
+.is-comment {
+  color: var(--tx-syntax-comment);
+  font-style: italic;
+}
+
+.is-property {
+  color: var(--tx-syntax-property);
+}
+
+.is-tag {
+  color: var(--tx-syntax-tag);
+}
+
+.is-attribute {
+  color: var(--tx-syntax-attribute);
+}
+
+.is-variable {
+  color: var(--tx-syntax-variable);
+}
+
+.is-punct {
+  color: var(--tx-text-faint);
+}
+
+.is-invalid {
+  color: var(--tx-danger);
+}
+
+.is-text {
+  color: inherit;
+}

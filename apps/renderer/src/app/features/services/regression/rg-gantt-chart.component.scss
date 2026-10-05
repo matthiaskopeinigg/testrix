@@ -1,0 +1,142 @@
+.rg-gantt {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--tx-border-subtle);
+  border-radius: 10px;
+  background: var(--tx-bg-elevated, transparent);
+}
+
+.rg-gantt__title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--tx-text-primary);
+}
+
+.rg-gantt__empty {
+  margin: 0;
+  padding: 12px 0;
+  text-align: center;
+  font-size: 12px;
+  color: var(--tx-text-muted);
+}
+
+.rg-gantt__lanes {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: min(420px, calc(var(--rg-lane-count, 4) * 40px + 24px));
+  overflow-y: auto;
+}
+
+.rg-gantt__lane {
+  display: grid;
+  grid-template-columns: 56px 1fr;
+  align-items: center;
+  gap: 8px;
+}
+
+.rg-gantt__lane-label {
+  font-size: 11px;
+  font-weight: 650;
+  color: var(--tx-text-muted);
+}
+
+.rg-gantt__track {
+  position: relative;
+  height: 32px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--tx-text-muted) 8%, transparent);
+  border: 1px solid var(--tx-border-subtle);
+  overflow: hidden;
+}
+
+.rg-gantt__bar-wrap {
+  position: absolute !important;
+  top: 4px;
+  bottom: 4px;
+  min-width: 28px;
+  max-width: none !important;
+  display: block !important;
+  z-index: 1;
+}
+
+.rg-gantt__bar-wrap:has(.is-running) {
+  z-index: 2;
+}
+
+:host ::ng-deep .rg-gantt__bar-wrap .tx-hint__trigger {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+}
+
+.rg-gantt__bar {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 6px;
+  background: var(--rg-bar-color, var(--tx-accent));
+  color: var(--tx-text-on-accent, #fff);
+  cursor: pointer;
+  overflow: hidden;
+  text-align: left;
+}
+
+.rg-gantt__bar[data-status='ok'] {
+  --rg-bar-color: color-mix(in srgb, var(--tx-success, #3dd68c) 82%, transparent);
+}
+
+.rg-gantt__bar[data-status='error'] {
+  --rg-bar-color: color-mix(in srgb, var(--tx-danger) 82%, transparent);
+}
+
+.rg-gantt__bar[data-status='skipped'],
+.rg-gantt__bar[data-status='cancelled'] {
+  --rg-bar-color: color-mix(in srgb, var(--tx-text-muted) 45%, transparent);
+  color: var(--tx-text-primary);
+}
+
+.rg-gantt__bar[data-status='running'] {
+  --rg-bar-color: color-mix(in srgb, var(--tx-accent) 75%, transparent);
+  animation: rg-gantt-pulse 1.2s ease-in-out infinite;
+}
+
+.rg-gantt__bar.is-ghost {
+  opacity: 0.35;
+  pointer-events: none;
+  background: transparent;
+  border: 1px dashed color-mix(in srgb, var(--tx-border-strong) 80%, transparent);
+  color: var(--tx-text-muted);
+}
+
+.rg-gantt__bar.is-selected {
+  outline: 2px solid color-mix(in srgb, var(--tx-accent) 65%, transparent);
+  outline-offset: 1px;
+}
+
+.rg-gantt__bar-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 650;
+  line-height: 24px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@keyframes rg-gantt-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.65;
+  }
+}

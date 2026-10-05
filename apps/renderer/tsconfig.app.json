@@ -2,8 +2,18 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "outDir": "./out-tsc/app",
+    "rootDir": "../..",
     "types": []
   },
-  "include": ["src/**/*.ts", "../../packages/ui/src/**/*.ts", "../../packages/contracts/src/**/*.ts", "../../packages/motion/src/**/*.ts"],
-  "exclude": ["src/**/*.spec.ts", "../../packages/**/*.spec.ts"]
+  "include": [
+    "src/**/*.ts",
+    "../../packages/ui/src/**/*.ts",
+    "../../packages/contracts/src/**/*.ts"
+  ],
+  "exclude": [
+    "src/**/*.spec.ts",
+    "src/**/*.test.ts",
+    "src/testing/**",
+    "../../packages/**/*.spec.ts"
+  ]
 }

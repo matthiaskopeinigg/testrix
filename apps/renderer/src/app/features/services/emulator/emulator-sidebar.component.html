@@ -1,0 +1,148 @@
+<div
+  class="tx-emulator-side"
+  #root
+  (contextmenu)="$event.preventDefault()"
+>
+  <div
+    class="tx-emulator-side__body"
+    #scroller
+    (click)="handleChromeClick($event)"
+    (contextmenu)="openDevicesRootMenu($event)"
+  >
+    <div class="tx-emulator-side__content">
+      <div class="tx-emulator-side__head">
+        <span>Devices</span>
+        <span class="tx-emulator-side__count">{{ devices().length }}</span>
+        <tx-hint label="Add a device" placement="right">
+          <button type="button" class="tx-emulator-side__add" aria-label="Add device" (click)="addDevice()">+</button>
+        </tx-hint>
+      </div>
+
+      @if (devices().length === 0) {
+        <tx-empty-state
+          title="No devices"
+          body="Add a device, or use an AVD from Android Studio. The phone model for app devices is chosen on the device tab."
+        />
+      } @else {
+        <ul
+          class="tx-emulator-side__list"
+          role="listbox"
+          aria-label="Devices"
+          aria-multiselectable="true"
+          (keydown)="handleListKeydown($event)"
+        >
+          @for (device of devices(); track device.id) {
+            <li
+              class="tx-emulator-side__item"
+              [attr.data-device-id]="device.id"
+              [attr.data-flip-id]="device.id"
+              [class.is-just-moved]="isJustMoved(device.id)"
+              [class.tx-dragging]="isDragging(device.id)"
+              [txDraggable]="device"
+              [txDraggablePreview]="dragPreview"
+              [txDraggableScrollContainer]="dnd.scrollContainer()"
+              (dragStarted)="handleDragStarted($event)"
+              (dragMoved)="handleDragMoved($event)"
+              (dragEnded)="handleDragEnded($event)"
+            >
+              <div
+                class="tx-emulator-side__row"
+                role="option"
+                tabindex="0"
+                [attr.aria-selected]="isSelected(device.id)"
+                [class.is-selected]="isSelected(device.id)"
+                [class.is-active]="activeDeviceId() === device.id"
+                (click)="handleSelect(device, $event)"
+                (dblclick)="start(device)"
+                (contextmenu)="openDeviceMenu(device, $event)"
+                (keydown)="handleRowKeydown(device, $event)"
+              >
+                <span>{{ device.name }}</span>
+                @if (isAvdDevice(device)) {
+                  <span class="tx-emulator-side__meta">AVD</span>
+                }
+                @if (status().emulatorRunning && activeDeviceId() === device.id) {
+                  <span class="tx-emulator-side__meta">running</span>
+                }
+              </div>
+            </li>
+          }
+        </ul>
+      }
+
+      @if (dnd.isIndicatorVisible()) {
+        <div
+          class="tx-emulator-side__indicator"
+          [style.left.px]="dnd.indicatorLeft()"
+          [style.transform]="'translate3d(0, ' + dnd.indicatorY() + 'px, 0)'"
+          aria-hidden="true"
+        ></div>
+      }
+    </div>
+  </div>
+  <p class="tx-emulator-side__live" role="status" aria-live="polite">{{ dnd.announcement() }}</p>
+</div>
+
+<ng-template #dragPreview let-device>
+  <div class="tx-emulator-side__preview">
+    <span class="tx-emulator-side__preview-name">{{ device.name }}</span>
+    @if (dragCount() > 1) {
+      <span class="tx-emulator-side__preview-badge">{{ dragCount() }}</span>
+    }
+  </div>
+</ng-template>
+
+<ng-template #emulatorMenu>
+  @if (menu(); as menu) {
+    <div class="tx-menu tx-emulator-side__menu" role="menu">
+      @switch (menu.kind) {
+        @case ('devices-root') {
+          <button type="button" role="menuitem" (click)="addDevice()">Add device</button>
+        }
+        @case ('device') {
+          <button
+            type="button"
+            role="menuitem"
+            [disabled]="!canStartDevice()"
+            (click)="start(menu.device)"
+          >
+            Start
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            [disabled]="!canColdBoot()"
+            (click)="start(menu.device, true)"
+          >
+            Cold boot
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            [disabled]="!status().emulatorRunning || busy()"
+            (click)="stop()"
+          >
+            Stop
+          </button>
+          <tx-hint
+            [label]="
+              isAvdDevice(menu.device)
+                ? 'AVD devices stay until you remove the AVD in Android Studio'
+                : 'Delete device'
+            "
+          >
+            <button
+              type="button"
+              class="is-danger"
+              role="menuitem"
+              [disabled]="isAvdDevice(menu.device)"
+              (click)="removeFromMenu()"
+            >
+              {{ deleteLabel() }}
+            </button>
+          </tx-hint>
+        }
+      }
+    </div>
+  }
+</ng-template>

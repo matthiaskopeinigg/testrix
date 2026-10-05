@@ -1,4 +1,4 @@
-import { GlobalPositionStrategy, Overlay, OverlayRef } from '@angular/cdk/overlay';
+import { type GlobalPositionStrategy, Overlay, type OverlayRef } from '@angular/cdk/overlay';
 import { TemplatePortal } from '@angular/cdk/portal';
 import {
   afterNextRender,
@@ -20,9 +20,14 @@ import {
   databaseConnectionTabNodeId,
   databaseQueryTabNodeId,
 } from '@testrix/contracts';
-import { TxEmptyStateComponent, playLeaveThen } from '@testrix/ui';
+import { TxButtonComponent, TxEmptyStateComponent, playLeaveThen } from '@testrix/ui';
 
 import { ConfirmDialogService } from '../../core/confirm-dialog.service';
+import {
+  isEditableKeyboardTarget,
+  isModKey,
+  shouldDeferToFlowCanvas,
+} from '../../core/selection-hotkeys';
 import { WorkbenchStore } from '../workbench/workbench.store';
 import { DatabaseDndService } from './database-dnd.service';
 import { isDatabaseDraggableNav, type DatabaseNavKind, type DatabaseNavNode } from './database-nav';
@@ -60,6 +65,7 @@ function databaseMenuHasItems(menu: DatabaseMenu): boolean {
     DatabaseToolbarComponent,
     DatabaseTreeComponent,
     DatabaseSchemaPickerComponent,
+    TxButtonComponent,
     TxEmptyStateComponent,
   ],
   templateUrl: './database-sidebar.component.html',
@@ -307,6 +313,13 @@ export class DatabaseSidebarComponent {
     const targetId = menu.id;
     const ids =
       targetId && selected.includes(targetId) && selected.length > 1 ? [...selected] : targetId ? [targetId] : [];
+    await this.deleteIds(ids, menu.section);
+  }
+
+  private async deleteIds(
+    ids: readonly string[],
+    section: 'connections' | 'queries',
+  ): Promise<void> {
     if (ids.length === 0)
       return;
     const ok = await this.confirm.ask({
@@ -316,7 +329,7 @@ export class DatabaseSidebarComponent {
     });
     if (!ok)
       return;
-    const removed = this.store.remove(ids, menu.section);
+    const removed = this.store.remove(ids, section);
     const tabIds = new Set(
       removed.flatMap((id) => [databaseConnectionTabNodeId(id), databaseQueryTabNodeId(id)]),
     );
@@ -416,21 +429,70 @@ export class DatabaseSidebarComponent {
 
   @HostListener('document:keydown', ['$event'])
   handleDocumentKeydown(event: KeyboardEvent): void {
-    if (event.key !== 'Escape')
-      return;
-    if (this.store.pickerConnectionId()) {
+    if (event.key === 'Escape') {
+      if (this.store.pickerConnectionId()) {
+        event.preventDefault();
+        this.store.closeSchemaPicker();
+        return;
+      }
+      if (this.menu()) {
+        event.preventDefault();
+        this.closeMenu();
+        return;
+      }
+      if (this.renamingId()) {
+        event.preventDefault();
+        this.renamingId.set(null);
+        return;
+      }
+      if (
+        this.store.connectionSelectedIds().length === 0 &&
+        this.store.querySelectedIds().length === 0
+      )
+        return;
       event.preventDefault();
-      this.store.closeSchemaPicker();
+      this.store.clearSelection();
       return;
     }
-    if (this.menu()) {
+
+    if (this.menu() || this.renamingId() || this.store.pickerConnectionId())
+      return;
+    if (isEditableKeyboardTarget(event.target))
+      return;
+    if (shouldDeferToFlowCanvas(event))
+      return;
+
+    if (event.key === 'Delete' || event.key === 'Backspace') {
+      const conn = [...this.store.connectionSelectedIds()];
+      const query = [...this.store.querySelectedIds()];
+      if (conn.length === 0 && query.length === 0)
+        return;
       event.preventDefault();
-      this.closeMenu();
+      if (conn.length > 0)
+        void this.deleteIds(conn, 'connections');
+      else
+        void this.deleteIds(query, 'queries');
       return;
     }
-    if (this.renamingId()) {
+
+    if (isModKey(event, 'a')) {
       event.preventDefault();
-      this.renamingId.set(null);
+      const preferQueries = this.store.querySelectedIds().length > 0;
+      this.store.selectAllVisible(preferQueries ? 'queries' : 'connections');
+      return;
+    }
+
+    if (isModKey(event, 'd')) {
+      const conn = [...this.store.connectionSelectedIds()];
+      const query = [...this.store.querySelectedIds()];
+      const section = conn.length > 0 ? 'connections' : query.length > 0 ? 'queries' : null;
+      const ids = section === 'connections' ? conn : query;
+      if (!section || ids.length === 0)
+        return;
+      event.preventDefault();
+      this.store.setSearchQuery('');
+      for (const id of ids)
+        this.store.duplicate(id, section);
     }
   }
 

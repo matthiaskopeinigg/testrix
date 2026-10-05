@@ -1,0 +1,40 @@
+<section class="tx-service-editor" [attr.aria-label]="tab().title">
+  @if (service(); as service) {
+    <header class="tx-service-editor__head">
+      <span class="tx-service-editor__mark" aria-hidden="true">
+        <tx-service-icon [serviceId]="service.id" [size]="18" />
+      </span>
+      <div class="tx-service-editor__title">
+        <h1>{{ service.label }}</h1>
+        <p>{{ service.description }}</p>
+      </div>
+      <span class="tx-service-editor__badge">Preview</span>
+    </header>
+
+    <p class="tx-service-editor__preview">{{ service.preview }}</p>
+
+    <div class="tx-service-editor__canvas" aria-hidden="true">
+      <span>Editor surface</span>
+      <strong>This pane is a mock. The live editor lands in a later drop.</strong>
+    </div>
+
+    <dl class="tx-service-editor__facts">
+      <div>
+        <dt>Status</dt>
+        <dd>Preview</dd>
+      </div>
+      <div>
+        <dt>Runs on</dt>
+        <dd>this machine</dd>
+      </div>
+      <div>
+        <dt>Network</dt>
+        <dd>none yet</dd>
+      </div>
+      <div>
+        <dt>Persists</dt>
+        <dd>not yet</dd>
+      </div>
+    </dl>
+  }
+</section>

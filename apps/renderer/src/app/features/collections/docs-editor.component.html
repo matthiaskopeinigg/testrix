@@ -1,0 +1,67 @@
+<div class="tx-folder-editor__docs-shell">
+  <div class="tx-folder-editor__docs-toolbar">
+    <div class="tx-folder-editor__docs-head" role="tablist" aria-label="Docs mode">
+      <button
+        type="button"
+        class="tx-folder-editor__tab"
+        role="tab"
+        [class.is-active]="docsMode() === 'write'"
+        [attr.aria-selected]="docsMode() === 'write'"
+        (click)="handleDocsMode('write')"
+      >
+        Write
+      </button>
+      <button
+        type="button"
+        class="tx-folder-editor__tab"
+        role="tab"
+        [class.is-active]="docsMode() === 'split'"
+        [attr.aria-selected]="docsMode() === 'split'"
+        (click)="handleDocsMode('split')"
+      >
+        Split
+      </button>
+      <button
+        type="button"
+        class="tx-folder-editor__tab"
+        role="tab"
+        [class.is-active]="docsMode() === 'preview'"
+        [attr.aria-selected]="docsMode() === 'preview'"
+        (click)="handleDocsMode('preview')"
+      >
+        Preview
+      </button>
+    </div>
+  </div>
+  <div class="tx-folder-editor__docs-stage">
+    @for (mode of [docsMode()]; track mode) {
+      <div
+        class="tx-folder-editor__docs-slide"
+        (animate.enter)="handlePaneEnter($event)"
+        (animate.leave)="handlePaneLeave($event)"
+      >
+        <div class="tx-folder-editor__docs-body" [class.is-split]="mode === 'split'">
+          @if (mode !== 'preview') {
+            <textarea
+              class="tx-folder-editor__code-input"
+              [value]="value()"
+              [readOnly]="readonly()"
+              (input)="handleDocsInput($event)"
+              spellcheck="false"
+              [attr.aria-label]="ariaLabel()"
+            ></textarea>
+          }
+          @if (mode !== 'write') {
+            <div class="tx-folder-editor__preview" [class.is-empty]="!value().trim()">
+              @if (value().trim()) {
+                <tx-folder-docs-preview [source]="value()" />
+              } @else {
+                <tx-empty-state [title]="emptyTitle()" [body]="emptyBody()" />
+              }
+            </div>
+          }
+        </div>
+      </div>
+    }
+  </div>
+</div>

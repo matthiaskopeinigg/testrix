@@ -1,0 +1,39 @@
+<section class="rg-gantt" aria-label="Flow execution timeline">
+  <h3 class="rg-gantt__title">Flow timeline</h3>
+  @if (bars().length === 0) {
+    <p class="rg-gantt__empty">No timeline data for this run.</p>
+  } @else {
+    <div class="rg-gantt__lanes" [style.--rg-lane-count]="laneCount()">
+      @for (lane of laneIndices(); track lane) {
+        <div class="rg-gantt__lane" [attr.data-lane]="lane">
+          <span class="rg-gantt__lane-label">Slot {{ lane + 1 }}</span>
+          <div class="rg-gantt__track">
+            @for (bar of barsForLane(lane); track bar.key) {
+              <tx-hint
+                class="rg-gantt__bar-wrap"
+                stretch
+                [label]="bar.title"
+                placement="top"
+                [style.left.%]="bar.leftPercent"
+                [style.width.%]="bar.widthPercent"
+              >
+                <button
+                  type="button"
+                  class="rg-gantt__bar"
+                  [class.is-ghost]="bar.isGhost"
+                  [class.is-selected]="!bar.isGhost && selectedFlowId() === bar.entry.flowId"
+                  [class.is-running]="bar.entry.status === 'running'"
+                  [attr.data-status]="bar.entry.status"
+                  [attr.aria-label]="bar.title"
+                  (click)="handleBarClick(bar)"
+                >
+                  <span class="rg-gantt__bar-label">{{ bar.label }}</span>
+                </button>
+              </tx-hint>
+            }
+          </div>
+        </div>
+      }
+    </div>
+  }
+</section>

@@ -1,0 +1,110 @@
+<div class="tx-services">
+  <div class="tx-services__stage" [attr.data-slide]="store.paneSlideDir()">
+    @if (!store.activeService()) {
+      <div class="tx-services__hub" [animate.enter]="paneEnter()" animate.leave="tx-sidebar-pane-out">
+        <div class="tx-services__body">
+          @for (section of groups; track section.group.id) {
+            <section class="tx-services__group">
+              <h2>{{ section.group.label }}</h2>
+              <div class="tx-services__list" role="listbox" [attr.aria-label]="section.group.label">
+                @for (service of section.items; track service.id; let i = $index) {
+                  <tx-hint stretch [label]="service.label" [detail]="service.description" placement="right">
+                    <div
+                      class="tx-services__item"
+                      role="option"
+                      tabindex="0"
+                      [style.--i]="i"
+                      [class.is-active]="isHubActive(service.id)"
+                      [attr.aria-selected]="isHubActive(service.id)"
+                      [attr.aria-label]="service.label"
+                      (click)="handleOpen(service)"
+                      (keydown)="handleRowKeydown(service, $event)"
+                    >
+                      <span class="tx-services__icon" aria-hidden="true">
+                        <tx-service-icon [serviceId]="service.id" />
+                      </span>
+                      <span class="tx-services__copy">
+                        <span class="tx-services__name">{{ service.label }}</span>
+                        <span class="tx-services__detail">{{ service.description }}</span>
+                      </span>
+                    </div>
+                  </tx-hint>
+                }
+              </div>
+            </section>
+          }
+        </div>
+      </div>
+    } @else {
+      <div class="tx-services__drill" [animate.enter]="paneEnter()" animate.leave="tx-sidebar-pane-out">
+        <div class="tx-services__back">
+          <tx-hint label="Back to catalog" placement="right">
+            <button type="button" class="tx-services__back-btn" aria-label="Back to Services" (click)="store.back()">
+              <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+                <path d="M8.5 3 4.5 7l4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+              Catalog
+            </button>
+          </tx-hint>
+        </div>
+        @switch (store.activeService()) {
+          @case ('emulator') {
+            <tx-emulator-sidebar />
+          }
+          @case ('mocks') {
+            <tx-mock-sidebar
+              [renamingId]="renamingId()"
+              (emptyMenu)="handleEmptyMenu('mocks', $event)"
+              (menu)="handleMenu('mocks', $event)"
+              (rename)="handleRenameInput($event)"
+              (renameDone)="finishRename()"
+            />
+          }
+          @default {
+            <tx-service-list-pane
+              [serviceId]="store.activeService()!"
+              [store]="store"
+              [noun]="noun(store.activeService()!)"
+              [renamingId]="renamingId()"
+              (emptyMenu)="handleEmptyMenu(store.activeService()!, $event)"
+              (emptyPrimary)="handleEmptyNewFlow()"
+              (menu)="handleMenu(store.activeService()!, $event)"
+              (rename)="handleRenameInput($event)"
+              (renameDone)="finishRename()"
+            />
+          }
+        }
+      </div>
+    }
+  </div>
+</div>
+
+<ng-template #servicesMenu>
+  @if (menu(); as menu) {
+    <div class="tx-menu tx-services__menu" role="menu">
+      @if (menu.target.kind === 'root' || menu.target.kind === 'folder') {
+        <button type="button" class="tx-services-menu__item" role="menuitem" (click)="handleMenuNew('artifact')">
+          New {{ noun(menu.serviceId) }}
+        </button>
+        @if (canCreateFolder(menu.serviceId)) {
+          <button type="button" class="tx-services-menu__item" role="menuitem" (click)="handleMenuNew('folder')">
+            New folder
+          </button>
+        }
+      }
+      @if (menu.target.kind === 'artifact') {
+        <button type="button" class="tx-services-menu__item" role="menuitem" (click)="handleMenuOpen()">Open</button>
+      }
+      @if (menu.target.kind !== 'root') {
+        <button type="button" class="tx-services-menu__item" role="menuitem" (click)="handleMenuRename()">Rename</button>
+        <button type="button" class="tx-services-menu__item" role="menuitem" (click)="handleMenuDuplicate()">Duplicate</button>
+        @if (canPinFlow()) {
+          <button type="button" class="tx-services-menu__item" role="menuitem" (click)="handleMenuPinToggle()">
+            {{ pinLabel() }}
+          </button>
+        }
+        <button type="button" class="tx-services-menu__item is-danger" role="menuitem" (click)="handleMenuDelete()">Delete</button>
+      }
+    </div>
+  }
+</ng-template>

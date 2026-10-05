@@ -2,10 +2,14 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import {
   createDefaultEnvironments,
   environmentVariableCount,
+  environmentVariableMap,
   persistEnvironmentNodes,
   collectEnvironmentNodeIds,
+  insertEnvironmentNode,
   isEnvironmentFolder,
+  newEntityId,
   nextEnvironmentId,
+  parseEnvironmentsFile,
   sanitizeSelectionEntry,
   type Environment,
   type EnvironmentList,
@@ -83,12 +87,19 @@ export class EnvironmentsStore {
 
   hydrate(file: EnvironmentsFile): void {
     this.persistEnabled = false;
-    const items = applyOrder(file.items, file.orderIds);
+    const parsed = parseEnvironmentsFile(file);
+    const items = applyOrder(parsed.items, parsed.orderIds);
+    const didStripLegacy = file.items.some((item) => {
+      const next = items.find((entry) => entry.id === item.id);
+      return Boolean(next) && JSON.stringify(item.variables) !== JSON.stringify(next?.variables);
+    });
     this.items.set(items);
     const activeId =
-      file.activeId && items.some((item) => item.id === file.activeId) ? file.activeId : null;
+      parsed.activeId && items.some((item) => item.id === parsed.activeId) ? parsed.activeId : null;
     this.activeId.set(activeId);
     this.persistEnabled = true;
+    if (didStripLegacy)
+      this.persist();
   }
 
   restoreSelection(session: SessionFile): void {
@@ -282,42 +293,69 @@ export class EnvironmentsStore {
   }
 
   /**
-   * Removes environments. Keeps at least one. Returns the ids that were actually removed.
+   * Removes environments. An empty list is allowed.
+   * Returns the ids that were actually removed.
    */
-  remove(ids: readonly string[]): readonly string[] {
+  remove(ids: readonly string[], options?: { readonly persist?: boolean }): readonly string[] {
     const removing = new Set(ids);
     const items = this.items();
-    let remaining = items.filter((item) => !removing.has(item.id));
-    if (remaining.length === 0) {
-      const keep = items[0];
-      if (!keep) {
-        return [];
-      }
-      remaining = [keep];
-      removing.delete(keep.id);
-    }
-    if (remaining.length === items.length) {
+    const remaining = items.filter((item) => !removing.has(item.id));
+    if (remaining.length === items.length)
       return [];
-    }
+
     const removed = items.filter((item) => removing.has(item.id)).map((item) => item.id);
     this.items.set(remaining);
     const activeId = this.activeId();
-    if (activeId && removing.has(activeId)) {
+    if (activeId && removing.has(activeId))
       this.activeId.set(null);
-    }
     this.selectedIds.set(this.selectedIds().filter((id) => !removing.has(id)));
-    if (this.selectionAnchorId() && removing.has(this.selectionAnchorId() ?? '')) {
+    if (this.selectionAnchorId() && removing.has(this.selectionAnchorId() ?? ''))
       this.selectionAnchorId.set(this.selectedIds()[0] ?? null);
-    }
     this.nodeSelection.update((current) => {
       const next = { ...current };
-      for (const id of removed) {
+      for (const id of removed)
         delete next[id];
-      }
       return next;
     });
-    this.persist();
+    if (options?.persist !== false)
+      this.persist();
     return removed;
+  }
+
+  removeDeferred(ids: readonly string[]): {
+    readonly removedIds: readonly string[];
+    readonly restore: () => void;
+    readonly commit: () => void;
+  } | null {
+    const items = this.items();
+    const snapshots = ids
+      .map((id) => {
+        const index = items.findIndex((item) => item.id === id);
+        if (index < 0)
+          return null;
+        return { item: structuredClone(items[index]!), index };
+      })
+      .filter((entry): entry is { readonly item: Environment; readonly index: number } => entry !== null);
+    if (snapshots.length === 0)
+      return null;
+
+    const removedIds = this.remove(ids, { persist: false });
+    if (removedIds.length === 0)
+      return null;
+
+    return {
+      removedIds,
+      restore: () => {
+        this.items.update((list) => {
+          const next = [...list];
+          for (const snapshot of [...snapshots].sort((a, b) => a.index - b.index))
+            next.splice(Math.min(snapshot.index, next.length), 0, snapshot.item);
+          return next;
+        });
+        this.persist();
+      },
+      commit: () => this.persist(),
+    };
   }
 
   setVariables(id: string, rows: readonly EnvironmentNode[]): void {
@@ -456,6 +494,42 @@ export class EnvironmentsStore {
         }, 320);
       });
     });
+  }
+
+  /**
+   * Adds empty variables for keys not already defined on the environment.
+   * Returns how many rows were created.
+   */
+  addMissingVariableKeys(envId: string, keys: readonly string[]): number {
+    const env = this.environmentById(envId);
+    if (!env || keys.length === 0)
+      return 0;
+    const existing = new Set(
+      Object.keys(environmentVariableMap(env.variables)).map((key) => key.toLowerCase()),
+    );
+    let variables = env.variables;
+    let added = 0;
+    for (const raw of keys) {
+      const key = raw.trim();
+      if (!key || existing.has(key.toLowerCase()))
+        continue;
+      existing.add(key.toLowerCase());
+      const id = newEntityId();
+      variables = insertEnvironmentNode(variables, null, {
+        kind: 'variable',
+        id,
+        key,
+        value: '',
+        description: '',
+        enabled: true,
+        secret: false,
+      });
+      added += 1;
+    }
+    if (added === 0)
+      return 0;
+    this.setVariables(envId, variables);
+    return added;
   }
 
   private persist(): void {

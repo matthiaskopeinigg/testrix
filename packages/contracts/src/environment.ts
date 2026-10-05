@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { newEntityId } from './entity-id';
 import { CONFIG_SCHEMA_VERSION } from './settings';
 
 /** One key/value pair inside an environment. */
@@ -48,6 +49,46 @@ export function isEnvironmentFolder(node: EnvironmentNode): node is EnvironmentF
 
 export function isEnvironmentVariable(node: EnvironmentNode): node is EnvironmentVariable {
   return node.kind !== 'folder';
+}
+
+/** Enabled environment variables as a name-to-value map for `{{var}}` substitution. */
+export function environmentVariableMap(nodes: readonly EnvironmentNode[]): Record<string, string> {
+  const out: Record<string, string> = {};
+  const walk = (list: readonly EnvironmentNode[]): void => {
+    for (const node of list) {
+      if (isEnvironmentFolder(node)) {
+        walk(node.children);
+        continue;
+      }
+      if (node.enabled && node.key.trim())
+        out[node.key.trim()] = node.value;
+    }
+  };
+  walk(nodes);
+  return out;
+}
+
+/** Last enabled variable with this key, matching `environmentVariableMap` overlay order. */
+export function findEnabledEnvironmentVariableByKey(
+  nodes: readonly EnvironmentNode[],
+  key: string,
+): EnvironmentVariable | null {
+  const needle = key.trim().toLowerCase();
+  if (!needle)
+    return null;
+  let found: EnvironmentVariable | null = null;
+  const walk = (list: readonly EnvironmentNode[]): void => {
+    for (const node of list) {
+      if (isEnvironmentFolder(node)) {
+        walk(node.children);
+        continue;
+      }
+      if (node.enabled && node.key.trim().toLowerCase() === needle)
+        found = node;
+    }
+  };
+  walk(nodes);
+  return found;
 }
 
 /** Named variable set shown in the Environments sidebar. */
@@ -117,8 +158,13 @@ function folder(
   };
 }
 
-/** Seeded variables written with each default environment. */
-export function createDefaultVariables(envId: string): EnvironmentNode[] {
+/** New environments start empty. Users add the keys they need. */
+export function createDefaultVariables(_envId: string): EnvironmentNode[] {
+  return [];
+}
+
+/** First-run dummy rows. Cleared on load when an environment still matches exactly. */
+function legacySeededVariables(envId: string): EnvironmentNode[] {
   const testdata = folder(
     envId,
     'testdata',
@@ -217,6 +263,28 @@ export function createDefaultVariables(envId: string): EnvironmentNode[] {
     default:
       return [];
   }
+}
+
+function seedSignature(nodes: readonly EnvironmentNode[]): string {
+  const rows: string[] = [];
+  const walk = (list: readonly EnvironmentNode[], path: string): void => {
+    for (const node of list) {
+      if (isEnvironmentFolder(node)) {
+        walk(node.children, `${path}${node.name}/`);
+        continue;
+      }
+      rows.push(`${path}${node.key}=${node.value}`);
+    }
+  };
+  walk(nodes, '');
+  return rows.sort().join('\n');
+}
+
+function stripLegacySeededVariables(envId: string, nodes: EnvironmentNode[]): EnvironmentNode[] {
+  const seed = legacySeededVariables(envId);
+  if (seed.length === 0 || nodes.length === 0)
+    return nodes;
+  return seedSignature(nodes) === seedSignature(seed) ? [] : nodes;
 }
 
 function countNodes(nodes: readonly EnvironmentNode[]): number {
@@ -516,7 +584,7 @@ export function moveEnvironmentNode(
   return insertEnvironmentNodeAt(stripped, parentId, insertIndex, removed);
 }
 
-function flattenEnvironmentNodes(nodes: readonly EnvironmentNode[]): EnvironmentNode[] {
+export function flattenEnvironmentNodes(nodes: readonly EnvironmentNode[]): EnvironmentNode[] {
   const out: EnvironmentNode[] = [];
   const walk = (list: readonly EnvironmentNode[]): void => {
     for (const node of list) {
@@ -673,13 +741,9 @@ export function createDefaultEnvironments(): EnvironmentList {
   }));
 }
 
-/** Next unused `env_n` identifier. */
-export function nextEnvironmentId(ids: readonly string[]): string {
-  const used = new Set(ids);
-  let n = 1;
-  while (used.has(`env_${n}`))
-    n += 1;
-  return `env_${n}`;
+/** Next environment catalog id. */
+export function nextEnvironmentId(_ids: readonly string[]): string {
+  return newEntityId();
 }
 
 export const environmentsFileSchema = z.object({
@@ -753,19 +817,6 @@ function parseNode(raw: unknown, fallbackId: string): EnvironmentNode | null {
   };
 }
 
-function placeholderVariables(envId: string, count: number): EnvironmentVariable[] {
-  const size = Math.max(0, Math.min(24, Math.floor(count)));
-  return Array.from({ length: size }, (_item, index) => ({
-    kind: 'variable' as const,
-    id: `${envId}-var-${index + 1}`,
-    key: `VAR_${index + 1}`,
-    value: '',
-    description: '',
-    enabled: true,
-    secret: false,
-  }));
-}
-
 function parseItem(raw: unknown): Environment | null {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
     return null;
@@ -782,14 +833,8 @@ function parseItem(raw: unknown): Environment | null {
     variables = source['variables']
       .map((item, index) => parseNode(item, `${id}-var-${index + 1}`))
       .filter((item): item is EnvironmentNode => item !== null);
-  } else {
-    const seeded = createDefaultVariables(id);
-    const count =
-      typeof source['variableCount'] === 'number' && Number.isFinite(source['variableCount'])
-        ? source['variableCount']
-        : 0;
-    variables = seeded.length > 0 ? seeded : placeholderVariables(id, count);
   }
+  variables = stripLegacySeededVariables(id, variables);
 
   const parsed = environmentSchema.safeParse({
     id,
@@ -811,20 +856,20 @@ export function parseEnvironmentsFile(raw: unknown): EnvironmentsFile {
       : raw && typeof raw === 'object' && !Array.isArray(raw)
         ? (raw as Record<string, unknown>)
         : {};
-  const items = Array.isArray(source['items'])
-    ? source['items'].map(parseItem).filter((item): item is Environment => item !== null)
+  // Explicit empty `items` stays empty; missing/invalid files get the seed list.
+  const rawItems = source['items'];
+  const items: Environment[] = Array.isArray(rawItems)
+    ? rawItems.map(parseItem).filter((item): item is Environment => item !== null)
     : fallback.items;
-  if (items.length === 0) {
-    return fallback;
-  }
-  const orderIds = Array.isArray(source['orderIds'])
-    ? source['orderIds'].filter((id): id is string => typeof id === 'string')
+  const rawOrderIds = source['orderIds'];
+  const orderIds = Array.isArray(rawOrderIds)
+    ? rawOrderIds.filter((id): id is string => typeof id === 'string')
     : items.map((item) => item.id);
   const activeSpecified = Object.prototype.hasOwnProperty.call(source, 'activeId');
   const activeId =
     typeof source['activeId'] === 'string' && items.some((item) => item.id === source['activeId'])
       ? source['activeId']
-      : activeSpecified
+      : activeSpecified || items.length === 0
         ? null
         : (items[0]?.id ?? null);
   return {

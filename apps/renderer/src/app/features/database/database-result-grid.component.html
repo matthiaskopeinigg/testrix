@@ -1,10 +1,11 @@
 <div class="tx-db-grid" [attr.aria-busy]="busy() ? 'true' : null">
+  <div class="visually-hidden" aria-live="polite" aria-atomic="true">{{ gridLive() }}</div>
   @if (busy() && table()) {
     <div class="tx-db-grid__busy" aria-hidden="true"></div>
   }
   <div class="tx-db-grid__scroll" (contextmenu)="handleCanvasMenu($event)">
     @if (table(); as table) {
-      <table [style.width.px]="tableWidth()">
+      <table role="presentation" [style.width.px]="tableWidth()">
         <colgroup>
           <col class="tx-db-grid__index-col" [style.width.px]="indexWidth" />
           @for (column of table.columns; track column) {
@@ -92,12 +93,13 @@
                         <input
                           class="tx-db-grid__cell-input"
                           autofocus
+                          [readOnly]="!canEditCell(entry.index)"
                           [value]="editValue(entry.row[col] ?? null)"
                           (input)="$event.stopPropagation()"
                           (blur)="handleCellCommit(entry.index, column, $event)"
                           (keydown.enter)="handleCellCommit(entry.index, column, $event)"
                           (keydown.escape)="handleCellCancel($event)"
-                          [attr.aria-label]="'Edit ' + column"
+                          [attr.aria-label]="canEditCell(entry.index) ? 'Edit ' + column : 'Copy ' + column"
                         />
                       }
                     </div>

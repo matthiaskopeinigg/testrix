@@ -1,0 +1,440 @@
+<section class="lt-results-panel" aria-label="Load test results">
+  <header
+    class="lt-results-panel__head"
+    (pointerdown)="resizeStart.emit($event)"
+    (dblclick)="hide.emit()"
+  >
+    <div class="lt-results-panel__meta">
+      <span
+        class="lt-results-panel__status"
+        [class.is-running]="runState() === 'running'"
+        [class.is-completed]="runState() === 'completed'"
+      >
+        {{ statusLabel() }}
+      </span>
+      @if (hasDisplayableData()) {
+        <span class="lt-results-panel__chip" data-tone="time">{{ elapsedLabel() }}</span>
+        <span class="lt-results-panel__tag" [attr.data-tone]="overallTagTone()">{{ healthOverview().label }}</span>
+      } @else if (runState() === 'running') {
+        <span class="lt-results-panel__status is-pending">Running</span>
+      } @else {
+        <span class="lt-results-panel__stat">Results</span>
+      }
+    </div>
+
+    <div class="lt-results-panel__actions" (pointerdown)="$event.stopPropagation()">
+      <tx-lt-results-export-toolbar
+        class="lt-results-panel__export"
+        [record]="exportRecord()"
+        [artifact]="exportArtifact()"
+      />
+      @if (runs().length > 0) {
+        <tx-hint label="Clear all saved runs" placement="bottom">
+          <button type="button" class="lt-results-panel__ghost" [disabled]="running()" (click)="handleClearHistory()">
+            Clear
+          </button>
+        </tx-hint>
+      }
+      <tx-hint label="Run again" placement="bottom">
+        <button type="button" class="lt-results-panel__ghost" [disabled]="running()" (click)="rerun.emit()">Rerun</button>
+      </tx-hint>
+      <tx-hint label="Hide results" placement="bottom">
+        <button type="button" class="lt-results-panel__ghost" (click)="hide.emit()" aria-label="Hide results">Hide</button>
+      </tx-hint>
+    </div>
+
+    <div class="lt-results-panel__tabs" role="tablist" aria-label="Results view" (pointerdown)="$event.stopPropagation()">
+      <button
+        type="button"
+        class="lt-results-panel__tab"
+        role="tab"
+        [class.is-active]="resultsView() === 'live'"
+        [attr.aria-selected]="resultsView() === 'live'"
+        (click)="handleViewChange('live')"
+      >
+        Live
+      </button>
+      <button
+        type="button"
+        class="lt-results-panel__tab"
+        role="tab"
+        [class.is-active]="resultsView() === 'history'"
+        [attr.aria-selected]="resultsView() === 'history'"
+        (click)="handleViewChange('history')"
+      >
+        History
+        @if (runs().length > 0) {
+          <span class="lt-results-panel__count">{{ runs().length }}</span>
+        }
+      </button>
+      <tx-hint [label]="canCompare() ? 'Compare two saved runs' : 'Save at least two runs to compare'" placement="top">
+        <button
+          type="button"
+          class="lt-results-panel__tab"
+          role="tab"
+          [class.is-active]="resultsView() === 'compare'"
+          [attr.aria-selected]="resultsView() === 'compare'"
+          [disabled]="!canCompare()"
+          (click)="handleViewChange('compare')"
+        >
+          Compare
+        </button>
+      </tx-hint>
+    </div>
+  </header>
+
+  <div class="lt-results-panel__view-stage">
+    @for (view of [resultsView()]; track view) {
+      <div
+        class="lt-results-panel__scroll"
+        (animate.enter)="handleViewEnter($event)"
+        (animate.leave)="handleViewLeave($event)"
+      >
+        @switch (view) {
+          @case ('live') {
+            <div class="lt-results-panel__body" [class.is-empty]="isDashboardEmpty()">
+              @if (isDashboardEmpty()) {
+                <tx-empty-state
+                  title="No live results"
+                  body="Start a load test to stream throughput, latency, and health scores here."
+                />
+              } @else {
+                <ng-container *ngTemplateOutlet="dashboardMetrics" />
+                @if (runState() === 'running') {
+                  <div class="lt-results-panel__note" role="note">
+                    Metrics update every 500 ms. Switch to History to browse saved runs, or Compare when you have two or more.
+                  </div>
+                }
+              }
+            </div>
+          }
+
+          @case ('history') {
+            @if (runs().length === 0) {
+              <div class="lt-results-panel__body is-empty">
+                <tx-empty-state
+                  title="No saved runs"
+                  body="Completed load tests appear here. Run a test from Live to start building history."
+                />
+              </div>
+            } @else {
+              <div class="lt-results-panel__history">
+                <section class="lt-results-panel__history-nav" aria-label="Browse saved runs">
+                  <label class="lt-results-panel__picker">
+                    <span>Saved run</span>
+                    <tx-select
+                      ariaLabel="Saved run"
+                      [value]="timelineSelectedId() || ''"
+                      [options]="runOptions()"
+                      (valueChange)="handleSelectedRunChange($event)"
+                    />
+                  </label>
+                  <tx-lt-results-run-timeline
+                    class="lt-results-panel__timeline"
+                    [runs]="runs()"
+                    [selectedId]="timelineSelectedId()"
+                    [pinnedId]="pinnedBaselineRunId()"
+                    [compareMode]="false"
+                    [compareSelection]="null"
+                    (selectedIdChange)="handleTimelineSelect($event)"
+                    (compareRuns)="handleTimelineCompare($event)"
+                    (pinRun)="handlePinRun($event)"
+                  />
+                </section>
+
+                <section class="lt-results-panel__history-detail" aria-label="Selected run">
+                  <header class="lt-results-panel__history-head">
+                    <h3 class="lt-results-panel__section-title">Selected run</h3>
+                    <p class="lt-results-panel__history-meta">
+                      {{ formatRunOptionLabel(selectedHistoricalRun() ?? runs()[0]!) }}
+                    </p>
+                  </header>
+                  <div class="lt-results-panel__body">
+                    <ng-container *ngTemplateOutlet="dashboardMetrics" />
+                  </div>
+                </section>
+
+                @if (hasHistoryTrends()) {
+                  <section class="lt-results-panel__history-trends" aria-label="History trends">
+                    <h3 class="lt-results-panel__section-title">Trends across runs</h3>
+                    <div class="lt-results-panel__charts lt-results-panel__charts--triple">
+                      <tx-lt-results-line-chart
+                        title="Throughput"
+                        unit="rps"
+                        primaryLabel="Across runs"
+                        strokeColor="var(--tx-accent)"
+                        [values]="historyThroughputSeries()"
+                      />
+                      <tx-lt-results-line-chart
+                        title="Success rate"
+                        unit="%"
+                        primaryLabel="Across runs"
+                        strokeColor="var(--tx-success, #3dd68c)"
+                        [values]="historySuccessSeries()"
+                      />
+                      <tx-lt-results-line-chart
+                        title="p95 latency"
+                        unit="ms"
+                        primaryLabel="Across runs"
+                        strokeColor="var(--tx-secondary, #8b7bff)"
+                        [values]="historyP95Series()"
+                      />
+                    </div>
+                  </section>
+                }
+              </div>
+            }
+          }
+
+          @case ('compare') {
+            @if (runs().length > 0) {
+              @if (canCompare()) {
+                <section class="lt-results-panel__compare-picker" aria-label="Choose runs to compare">
+                  <label class="lt-results-panel__picker">
+                    <span>Run A (baseline)</span>
+                    <tx-select
+                      ariaLabel="Baseline run"
+                      [value]="compareRunAId()"
+                      [options]="runOptions()"
+                      (valueChange)="handleCompareRunAChange($event)"
+                    />
+                  </label>
+                  <tx-hint label="Swap baseline and comparison runs" placement="top">
+                    <tx-button variant="ghost" (clicked)="handleSwapCompareRuns()">Swap</tx-button>
+                  </tx-hint>
+                  <label class="lt-results-panel__picker">
+                    <span>Run B (comparison)</span>
+                    <tx-select
+                      ariaLabel="Comparison run"
+                      [value]="compareRunBId()"
+                      [options]="runOptions()"
+                      (valueChange)="handleCompareRunBChange($event)"
+                    />
+                  </label>
+                </section>
+              }
+
+              <tx-lt-results-run-timeline
+                class="lt-results-panel__timeline"
+                [runs]="runs()"
+                [selectedId]="timelineSelectedId()"
+                [pinnedId]="pinnedBaselineRunId()"
+                [compareMode]="true"
+                [compareSelection]="compareSelection()"
+                (selectedIdChange)="handleTimelineSelect($event)"
+                (compareRuns)="handleTimelineCompare($event)"
+                (pinRun)="handlePinRun($event)"
+              />
+            }
+
+            <div class="lt-results-panel__body" [class.is-empty]="!compareRuns()">
+              @if (compareRuns(); as pair) {
+                <tx-lt-results-compare-panel [runA]="pair.a" [runB]="pair.b" />
+              } @else if (canCompare()) {
+                <div class="lt-results-panel__note" role="note">
+                  Pick run A and run B above, or click chips in the timeline to compare throughput, latency, and success side by side.
+                </div>
+              } @else {
+                <tx-empty-state
+                  title="Need two runs"
+                  body="Save at least two load test runs before comparing them."
+                />
+              }
+            </div>
+          }
+        }
+      </div>
+    }
+  </div>
+</section>
+
+<ng-template #dashboardMetrics>
+  @if (baselineDeltas().length > 0) {
+    <section class="lt-results-panel__baseline" aria-label="Baseline comparison">
+      <h3 class="lt-results-panel__section-title">Vs pinned baseline</h3>
+      <ul class="lt-baseline-deltas">
+        @for (delta of baselineDeltas(); track delta.label) {
+          <li class="lt-baseline-deltas__item" [attr.data-direction]="delta.direction">
+            <span>{{ delta.label }}</span>
+            <span class="lt-baseline-deltas__tag" [attr.data-tone]="deltaTone(delta)">{{ delta.delta }}</span>
+          </li>
+        }
+      </ul>
+    </section>
+  }
+
+  <tx-lt-results-health-overview [overview]="healthOverview()" />
+
+  <div class="lt-results-panel__stats">
+    <tx-lt-results-stat-card
+      label="Throughput"
+      [value]="formatStat(displayMetrics().rps.toFixed(1) + ' rps')"
+      [health]="throughputHealth().level"
+      [healthLabel]="throughputHealth().label"
+      [hint]="throughputHealth().hint"
+    />
+    <tx-lt-results-stat-card
+      label="Peak throughput"
+      [value]="formatStat(displayMetrics().peakRps.toFixed(1) + ' rps')"
+      [health]="peakHealth().level"
+      [healthLabel]="peakHealth().label"
+      [hint]="peakHealth().hint"
+    />
+    <tx-lt-results-stat-card
+      label="Success rate"
+      [value]="formatStat(displayMetrics().successRatePercent.toFixed(2) + '%')"
+      [health]="successHealth().level"
+      [healthLabel]="successHealth().label"
+      [hint]="successHealth().hint"
+    />
+    <tx-lt-results-stat-card
+      label="Error rate"
+      [value]="formatStat(displayMetrics().errorRatePercent.toFixed(2) + '%')"
+      [health]="errorHealth().level"
+      [healthLabel]="errorHealth().label"
+      [hint]="errorHealth().hint"
+    />
+    <tx-lt-results-stat-card
+      label="Total requests"
+      [value]="formatStat(displayMetrics().requests + '')"
+      [showHealth]="false"
+    />
+    <tx-lt-results-stat-card
+      label="Failed requests"
+      [value]="formatStat(displayMetrics().errors + '')"
+      [health]="errorHealth().level"
+      [healthLabel]="errorHealth().label"
+    />
+    <tx-lt-results-stat-card
+      label="Virtual users"
+      [value]="formatStat(displayMetrics().virtualUsers + '')"
+      [showHealth]="false"
+    />
+    <tx-lt-results-stat-card
+      label="p50 latency"
+      [value]="formatStat(displayMetrics().p50Ms + ' ms')"
+      [health]="p50Health().level"
+      [healthLabel]="p50Health().label"
+    />
+    <tx-lt-results-stat-card
+      label="p95 latency"
+      [value]="formatStat(displayMetrics().p95Ms + ' ms')"
+      [health]="p95Health().level"
+      [healthLabel]="p95Health().label"
+    />
+    <tx-lt-results-stat-card
+      label="p99 latency"
+      [value]="formatStat(displayMetrics().p99Ms + ' ms')"
+      [health]="p95Health().level"
+      [healthLabel]="p95Health().label"
+    />
+    <tx-lt-results-stat-card
+      label="Avg latency"
+      [value]="formatStat(displayMetrics().avgMs + ' ms')"
+      [health]="avgHealth().level"
+      [healthLabel]="avgHealth().label"
+    />
+  </div>
+
+  <div class="lt-results-panel__charts-layout">
+    <section class="lt-results-panel__chart-block" aria-label="Latency distribution">
+      <h3 class="lt-results-panel__section-title">Latency distribution</h3>
+      <div class="lt-results-panel__chart-card">
+        <tx-lt-results-latency-bars
+          [avgMs]="displayMetrics().avgMs"
+          [p50Ms]="displayMetrics().p50Ms"
+          [p95Ms]="displayMetrics().p95Ms"
+          [p99Ms]="displayMetrics().p99Ms"
+          [empty]="isDashboardEmpty()"
+        />
+      </div>
+    </section>
+
+    <section class="lt-results-panel__chart-block" aria-label="Traffic charts">
+      <h3 class="lt-results-panel__section-title">Traffic</h3>
+      <div class="lt-results-panel__charts">
+        <tx-lt-results-line-chart
+          title="Throughput"
+          unit="rps"
+          strokeColor="var(--tx-accent)"
+          [elapsedSec]="displayMetrics().elapsedSec"
+          [values]="throughputSeries()"
+          [secondaryValues]="compareThroughputSeries()"
+        />
+        <tx-lt-results-line-chart
+          title="Virtual users"
+          unit="VUs"
+          strokeColor="var(--tx-accent)"
+          [elapsedSec]="displayMetrics().elapsedSec"
+          [values]="vuSeries()"
+        />
+      </div>
+    </section>
+
+    <section class="lt-results-panel__chart-block" aria-label="Reliability charts">
+      <h3 class="lt-results-panel__section-title">Reliability</h3>
+      <div class="lt-results-panel__charts">
+        <tx-lt-results-line-chart
+          title="Success rate"
+          unit="%"
+          strokeColor="var(--tx-success, #3dd68c)"
+          [elapsedSec]="displayMetrics().elapsedSec"
+          [values]="successSeries()"
+          [secondaryValues]="compareSuccessSeries()"
+        />
+        <tx-lt-results-line-chart
+          title="Error rate"
+          unit="%"
+          strokeColor="var(--tx-danger, #e5484d)"
+          [elapsedSec]="displayMetrics().elapsedSec"
+          [values]="errorSeries()"
+        />
+      </div>
+    </section>
+
+    <section class="lt-results-panel__chart-block" aria-label="Latency over time">
+      <h3 class="lt-results-panel__section-title">Latency over time</h3>
+      <div class="lt-results-panel__charts lt-results-panel__charts--triple">
+        <tx-lt-results-line-chart
+          title="p95 latency"
+          unit="ms"
+          strokeColor="var(--tx-secondary, #8b7bff)"
+          [elapsedSec]="displayMetrics().elapsedSec"
+          [values]="latencySeries()"
+          [secondaryValues]="compareLatencySeries()"
+        />
+        <tx-lt-results-line-chart
+          title="p50 latency"
+          unit="ms"
+          strokeColor="var(--tx-warning, #e6b800)"
+          [elapsedSec]="displayMetrics().elapsedSec"
+          [values]="p50Series()"
+        />
+        <tx-lt-results-line-chart
+          title="Avg latency"
+          unit="ms"
+          strokeColor="var(--tx-accent)"
+          [elapsedSec]="displayMetrics().elapsedSec"
+          [values]="avgLatencySeries()"
+        />
+      </div>
+    </section>
+  </div>
+
+  @if (thresholdChecks().length > 0) {
+    <section class="lt-results-panel__thresholds" aria-label="Threshold checks">
+      <h3 class="lt-results-panel__section-title">Configured thresholds</h3>
+      <ul class="lt-threshold-list">
+        @for (check of thresholdChecks(); track check.id) {
+          <li class="lt-threshold-list__item" [class.is-pass]="check.ok" [class.is-fail]="!check.ok">
+            <span class="lt-threshold-list__label">{{ check.label }}</span>
+            <span class="lt-threshold-list__value">{{ check.actual }} / {{ check.expected }}</span>
+            <span class="lt-threshold-list__tag" [attr.data-tone]="check.ok ? 'success' : 'error'">
+              {{ check.ok ? 'Pass' : 'Fail' }}
+            </span>
+          </li>
+        }
+      </ul>
+    </section>
+  }
+</ng-template>

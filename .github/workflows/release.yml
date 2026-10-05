@@ -1,0 +1,93 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing git tag to publish (for example v2.0.0-beta.2)
+        required: true
+        type: string
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  quality:
+    uses: ./.github/workflows/quality.yml
+
+  publish:
+    name: Publish unsigned Windows installer
+    runs-on: windows-latest
+    needs: quality
+    timeout-minutes: 60
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TAG: ${{ inputs.tag || github.ref_name }}
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run electron:pack
+
+      - name: Resolve version
+        id: meta
+        shell: pwsh
+        run: |
+          $version = $env:TAG.TrimStart('v')
+          $package = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          if ($package -ne $version) { throw "Tag $env:TAG does not match package.json version $package" }
+          "version=$version" >> $env:GITHUB_OUTPUT
+          "prerelease=$(if ($version -match '-') { 'true' } else { 'false' })" >> $env:GITHUB_OUTPUT
+
+      - name: Fetch the current beta manifest
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force release/update-current | Out-Null
+          gh release download updates --pattern beta.json --dir release/update-current --clobber
+          if ($LASTEXITCODE -ne 0) { 'No beta manifest published yet.' }
+          exit 0
+
+      - name: Write update manifests
+        env:
+          UPDATE_SIGNING_KEY: ${{ secrets.UPDATE_SIGNING_KEY }}
+        run: >-
+          node tooling/scripts/release-manifest.mjs
+          --exe release/setup-shell-build/Testrix.exe
+          --tag ${{ env.TAG }}
+          --current-beta release/update-current/beta.json
+          --notes-out release/notes.md
+
+      - name: Publish the GitHub release
+        shell: pwsh
+        run: |
+          $flags = @('--title', "Testrix ${{ steps.meta.outputs.version }}", '--notes-file', 'release/notes.md')
+          if ('${{ steps.meta.outputs.prerelease }}' -eq 'true') { $flags += '--prerelease' }
+          gh release create $env:TAG release/setup-shell-build/Testrix.exe @flags
+          if ($LASTEXITCODE -ne 0) { throw 'gh release create failed' }
+
+      - name: Publish update manifests
+        shell: pwsh
+        run: |
+          gh release view updates *> $null
+          if ($LASTEXITCODE -ne 0) {
+            gh release create updates --prerelease --latest=false --title 'Update manifests' `
+              --notes 'Ed25519-signed manifests read by the in-app updater. Do not delete this release.'
+            if ($LASTEXITCODE -ne 0) { throw 'Could not create the updates release' }
+          }
+          $files = Get-ChildItem release/update -File | ForEach-Object { $_.FullName }
+          gh release upload updates @files --clobber
+          if ($LASTEXITCODE -ne 0) { throw 'gh release upload failed' }

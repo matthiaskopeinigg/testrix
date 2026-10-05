@@ -1,0 +1,134 @@
+:host {
+  display: block;
+}
+
+.lt-line-chart {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid color-mix(in srgb, var(--tx-border) 80%, transparent);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--tx-panel) 78%, transparent);
+}
+
+.lt-line-chart__caption {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.lt-line-chart__title {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--tx-muted);
+}
+
+.lt-line-chart__latest {
+  font-size: 0.82rem;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+
+.lt-line-chart__legend {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.lt-line-chart__legend-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  font-size: 0.66rem;
+  color: var(--tx-muted);
+}
+
+.lt-line-chart__legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  color: var(--tx-text-1, inherit);
+}
+
+.lt-line-chart__legend-swatch {
+  width: 12px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--tx-accent);
+}
+
+.lt-line-chart__legend-swatch--dashed {
+  background: repeating-linear-gradient(
+    90deg,
+    var(--lt-swatch-color, var(--tx-warning)) 0,
+    var(--lt-swatch-color, var(--tx-warning)) 3px,
+    transparent 3px,
+    transparent 5px
+  );
+}
+
+.lt-line-chart__legend-stat {
+  font-variant-numeric: tabular-nums;
+}
+
+.lt-line-chart__plot {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.lt-line-chart__y-axis {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  font-size: 0.6rem;
+  color: var(--tx-muted);
+  text-align: right;
+  min-width: 1.6rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.lt-line-chart__svg {
+  flex: 1 1 auto;
+  width: 100%;
+  height: 68px;
+}
+
+.lt-line-chart__grid {
+  stroke: color-mix(in srgb, var(--tx-border) 55%, transparent);
+  stroke-width: 0.4;
+  stroke-dasharray: 2 2;
+}
+
+.lt-line-chart__area {
+  stroke: none;
+}
+
+.lt-line-chart__line {
+  fill: none;
+  stroke-width: 1.6;
+  vector-effect: non-scaling-stroke;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.lt-line-chart__line--secondary {
+  stroke-dasharray: 3 2;
+  opacity: 0.85;
+}
+
+.lt-line-chart__baseline {
+  stroke: color-mix(in srgb, var(--tx-border) 70%, transparent);
+  stroke-width: 0.6;
+}
+
+.lt-line-chart__x-axis {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.6rem;
+  color: var(--tx-muted);
+  font-variant-numeric: tabular-nums;
+}

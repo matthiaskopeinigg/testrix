@@ -1,3 +1,5 @@
+import { PRODUCT_NAME } from './identity';
+
 export const SetupIpcChannels = {
   getMeta: 'testrix-setup:getMeta',
   chooseDirectory: 'testrix-setup:chooseDirectory',
@@ -11,7 +13,16 @@ export const SetupIpcChannels = {
   progress: 'testrix-setup:progress',
 } as const;
 
-export type SetupMode = 'install' | 'uninstall';
+export type SetupMode = 'install' | 'uninstall' | 'update';
+
+/** Window title and AppUserModel name for Setup, Update, and Uninstall. */
+export function setupSurfaceTitle(mode: SetupMode): string {
+  if (mode === 'uninstall')
+    return `${PRODUCT_NAME} Uninstall`;
+  if (mode === 'update')
+    return `${PRODUCT_NAME} Update`;
+  return `${PRODUCT_NAME} Setup`;
+}
 
 export type SetupScope = 'user' | 'machine';
 
@@ -20,6 +31,7 @@ export interface SetupMeta {
   readonly version: string;
   readonly productName: string;
   readonly defaultDir: string;
+  readonly machineDir: string;
   readonly defaultScope: SetupScope;
   readonly installDir: string | null;
   readonly installScope: SetupScope | null;

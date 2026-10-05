@@ -1,8 +1,22 @@
 import { z } from 'zod';
 
+import { newEntityId } from './entity-id';
+
 import type { CollectionsFile } from './config-files';
 import type { DatabasesFile, QueriesFile } from './database';
 import type { EnvironmentsFile } from './environment';
+import type { HistoryFile } from './history';
+import type { CookiesFile } from './cookies-file';
+import type { FlowsFile } from './flows-file';
+import type { LoadFile } from './load-file';
+import type { MocksFile } from './mocks-file';
+import type { ListenersFile } from './listeners-file';
+import type { InterceptFile } from './intercept-file';
+import type { PlantumlFile } from './plantuml-file';
+import type { RegressionsFile } from './regressions-file';
+import type { FlowTemplatesFile } from './flow-templates-file';
+import type { EmulatorFile } from './emulator-file';
+import { workspaceCollabSchema, workspaceLegacyCollabSchema } from './collab';
 import { CONFIG_SCHEMA_VERSION } from './settings';
 
 export interface WorkspaceSnapshot {
@@ -11,6 +25,17 @@ export interface WorkspaceSnapshot {
   readonly collections: CollectionsFile;
   readonly databases: DatabasesFile;
   readonly queries: QueriesFile;
+  readonly history: HistoryFile;
+  readonly cookies: CookiesFile;
+  readonly flows: FlowsFile;
+  readonly load: LoadFile;
+  readonly mocks: MocksFile;
+  readonly listeners: ListenersFile;
+  readonly intercept: InterceptFile;
+  readonly plantuml: PlantumlFile;
+  readonly regressions: RegressionsFile;
+  readonly flowTemplates: FlowTemplatesFile;
+  readonly emulator: EmulatorFile;
 }
 
 export const CONFIGS_DIR = 'configs';
@@ -19,12 +44,41 @@ export const WORKSPACES_FILE_NAME = 'workspaces.json';
 export const DEFAULT_WORKSPACE_ID = 'ws_1';
 export const DEFAULT_WORKSPACE_FOLDER = 'workspace-1';
 export const DEFAULT_WORKSPACE_NAME = 'Default';
+export const TESTING_WORKSPACE_ID = 'ws_testing';
+export const TESTING_WORKSPACE_FOLDER = 'workspace-testing';
+export const TESTING_WORKSPACE_NAME = 'Testing';
+
+export function createTestingWorkspace(now = new Date().toISOString()): Workspace {
+  return {
+    id: TESTING_WORKSPACE_ID,
+    name: TESTING_WORKSPACE_NAME,
+    folder: TESTING_WORKSPACE_FOLDER,
+    modifiedAt: now,
+  };
+}
+
+/** Adds the seeded Testing workspace to the catalog when it is missing. */
+export function withTestingWorkspace(file: WorkspacesFile, now = new Date().toISOString()): WorkspacesFile {
+  if (file.items.some((item) => item.id === TESTING_WORKSPACE_ID))
+    return file;
+  const item = createTestingWorkspace(now);
+  return {
+    schemaVersion: file.schemaVersion,
+    items: [...file.items, item],
+    activeId: file.activeId,
+    orderIds: [...file.orderIds, item.id],
+  };
+}
 
 export const workspaceSchema = z.object({
   id: z.string().min(1),
   name: z.string(),
   folder: z.string().min(1),
   modifiedAt: z.string().min(1),
+  kind: z.enum(['local', 'shared']).optional(),
+  collab: workspaceCollabSchema.optional(),
+  /** Per-workspace repository metadata awaiting migration into `collab-repos.json`. */
+  legacyCollab: workspaceLegacyCollabSchema.optional(),
 });
 
 export type Workspace = z.infer<typeof workspaceSchema>;
@@ -92,34 +146,18 @@ export function applyWorkspaceOrder(
   return next;
 }
 
-function nextIndex(values: readonly string[], prefix: string): number {
-  let max = 0;
-  const pattern = new RegExp(`^${prefix}(\\d+)$`);
-  for (const value of values) {
-    const match = pattern.exec(value);
-    if (!match) {
-      continue;
-    }
-    const n = Number(match[1]);
-    if (Number.isFinite(n) && n > max) {
-      max = n;
-    }
-  }
-  return max + 1;
-}
-
 /** Next on-disk folder name. Uses a UUID so rename does not collide. */
 export function nextWorkspaceFolder(folders: readonly string[] = []): string {
   const used = new Set(folders);
-  let folder = globalThis.crypto.randomUUID();
+  let folder = newEntityId();
   while (used.has(folder))
-    folder = globalThis.crypto.randomUUID();
+    folder = newEntityId();
   return folder;
 }
 
-/** Next catalog id: ws_1, ws_2, … */
-export function nextWorkspaceId(ids: readonly string[]): string {
-  return `ws_${nextIndex(ids, 'ws_')}`;
+/** Next catalog id — UUID so duplicate display names are allowed. */
+export function nextWorkspaceId(_ids?: readonly string[]): string {
+  return newEntityId();
 }
 
 export function duplicateWorkspaceName(name: string, existing: readonly string[]): string {
@@ -208,11 +246,34 @@ export function shouldMigrateLegacyLayout(input: {
   );
 }
 
+/** Fills `transport` for Collab metadata written before SSH remotes existed. */
+function withTransport(raw: unknown): unknown {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw))
+    return raw;
+  const source = raw as Record<string, unknown>;
+  if (typeof source['transport'] === 'string')
+    return source;
+  const url = typeof source['remoteUrl'] === 'string' ? source['remoteUrl'] : '';
+  return { ...source, transport: /^https?:\/\//i.test(url) ? 'https' : 'ssh' };
+}
+
 function parseWorkspace(raw: unknown, fallback: Workspace): Workspace {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
     return fallback;
   }
   const source = raw as Record<string, unknown>;
+  const collab = workspaceCollabSchema.safeParse(source['collab']);
+  const legacy = collab.success
+    ? null
+    : workspaceLegacyCollabSchema.safeParse(withTransport(source['legacyCollab'] ?? source['collab']));
+  const legacyCollab = legacy?.success ? legacy.data : null;
+  // A shared workspace without readable Collab metadata falls back to local.
+  const kind =
+    source['kind'] === 'shared' && (collab.success || legacyCollab)
+      ? 'shared'
+      : source['kind'] === 'shared' || source['kind'] === 'local'
+        ? 'local'
+        : undefined;
   const parsed = workspaceSchema.safeParse({
     id: typeof source['id'] === 'string' && source['id'].trim() ? source['id'] : fallback.id,
     name: typeof source['name'] === 'string' ? source['name'] : fallback.name,
@@ -224,6 +285,9 @@ function parseWorkspace(raw: unknown, fallback: Workspace): Workspace {
       typeof source['modifiedAt'] === 'string' && source['modifiedAt'].trim()
         ? source['modifiedAt']
         : fallback.modifiedAt,
+    ...(kind ? { kind } : {}),
+    ...(collab.success ? { collab: collab.data } : {}),
+    ...(legacyCollab ? { legacyCollab } : {}),
   });
   return parsed.success ? parsed.data : fallback;
 }

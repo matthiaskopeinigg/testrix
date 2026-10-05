@@ -1,0 +1,179 @@
+@use 'mixins';
+
+/// Results dock shell — mirrors Request Response dock (sash, slide, collapsed bar).
+/// Call with the tab prefix, e.g. `rg-tab` or `lt-tab`.
+@mixin results-dock-shell($prefix, $height-var) {
+  .#{$prefix}__console-stage {
+    display: flex;
+    flex: 0 0 auto;
+    flex-direction: column;
+    width: 100%;
+    min-height: 0;
+    overflow: hidden;
+    background: var(--tx-bg-canvas);
+  }
+
+  .#{$prefix}__console-clip {
+    display: flex;
+    flex: 1 1 0;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .#{$prefix}__response {
+    display: flex;
+    flex: 1 1 0;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+    container-type: inline-size;
+  }
+
+  .#{$prefix}__dock-stage {
+    display: grid;
+    flex-shrink: 0;
+    grid-template-rows: 1fr;
+    width: 100%;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .#{$prefix}__dock-clip {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .#{$prefix}__dock-hint {
+    display: block;
+    flex-shrink: 0;
+    width: 100%;
+  }
+
+  .#{$prefix}__dock {
+    @include mixins.tx-press;
+    @include mixins.tx-hover-fill;
+    @include mixins.tx-focus-ring;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    min-height: 32px;
+    padding: 0 12px;
+    border: 0;
+    border-top: 1px solid var(--tx-border-subtle);
+    border-radius: 0;
+    background: var(--tx-bg-canvas);
+    color: var(--tx-text-muted);
+    font: inherit;
+    font-size: 12px;
+    cursor: pointer;
+  }
+
+  .#{$prefix}__sash {
+    position: relative;
+    z-index: 2;
+    flex-shrink: 0;
+    height: 5px;
+    margin: 0;
+    cursor: row-resize;
+    touch-action: none;
+    background: var(--tx-border-subtle);
+  }
+
+  .#{$prefix}__sash::before {
+    content: '';
+    position: absolute;
+    inset: -6px 0;
+    cursor: row-resize;
+  }
+
+  .#{$prefix}__sash:hover,
+  .#{$prefix}__sash:active,
+  .#{$prefix}__sash:focus-visible,
+  .#{$prefix}.is-resizing .#{$prefix}__sash {
+    background: var(--tx-accent);
+  }
+
+  .#{$prefix}__sash:focus-visible {
+    outline: none;
+  }
+
+  .#{$prefix}__split:has(.tx-results-panel-out) .#{$prefix}__dock-stage {
+    visibility: hidden;
+  }
+
+  .tx-results-panel-in {
+    animation: tx-results-panel-slide-up calc(420ms * var(--tx-motion-scale, 1)) var(--tx-ease-out) both;
+  }
+
+  .tx-results-panel-out {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 4;
+    flex: none;
+    height: var(#{$height-var}, 320px);
+    pointer-events: none;
+    animation: tx-results-panel-slide-down
+      calc(360ms * var(--tx-motion-leave-scale, var(--tx-motion-scale, 1))) var(--tx-ease-in-out) both;
+  }
+
+  @keyframes tx-results-panel-slide-up {
+    from {
+      transform: translateY(100%);
+    }
+
+    to {
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes tx-results-panel-slide-down {
+    from {
+      transform: translateY(0);
+    }
+
+    to {
+      transform: translateY(100%);
+    }
+  }
+
+  @keyframes tx-request-console-in {
+    from {
+      grid-template-rows: 0fr;
+      opacity: 0.4;
+    }
+
+    to {
+      grid-template-rows: 1fr;
+      opacity: 1;
+    }
+  }
+
+  @keyframes tx-request-console-out {
+    from {
+      grid-template-rows: 1fr;
+      opacity: 1;
+    }
+
+    to {
+      grid-template-rows: 0fr;
+      opacity: 0;
+    }
+  }
+
+  .tx-request-console-in {
+    animation: tx-request-console-in calc(280ms * var(--tx-motion-scale, 1)) var(--tx-ease-out) both;
+  }
+
+  .tx-request-console-out {
+    animation: tx-request-console-out
+      calc(220ms * var(--tx-motion-leave-scale, var(--tx-motion-scale, 1))) var(--tx-ease-out) both;
+    pointer-events: none;
+  }
+}

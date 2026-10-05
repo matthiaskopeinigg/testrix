@@ -1,0 +1,16 @@
+<div #list class="tx-placeholder-suggest" role="listbox" aria-label="Placeholders">
+  @for (item of items(); track item.insert; let i = $index) {
+    <button
+      #option
+      type="button"
+      class="tx-placeholder-suggest__item"
+      role="option"
+      [class.is-active]="i === index()"
+      [attr.aria-selected]="i === index()"
+      (mousedown)="handlePick(item, $event)"
+    >
+      <span>{{ item.label }}</span>
+      <span class="tx-placeholder-suggest__detail">{{ item.detail }}</span>
+    </button>
+  }
+</div>

@@ -1,16 +1,24 @@
 import { OverlayModule, type ConnectedPosition, type CdkOverlayOrigin } from '@angular/cdk/overlay';
-import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
-import { isDefaultWorkspace, workspaceDisplayName, type Workspace } from '@testrix/contracts';
-import { lockOverlayWindowDrag, playLeaveThen, TxHintComponent, unlockOverlayWindowDrag } from '@testrix/ui';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  inject,
+  signal,
+} from '@angular/core';
+import { workspaceDisplayName, type CollabSyncState, type Workspace } from '@testrix/contracts';
+import { lockOverlayWindowDrag, playLeaveThen, TxHintComponent, TxSpinnerComponent, unlockOverlayWindowDrag } from '@testrix/ui';
 
 import { SessionPersistenceService } from '../core/session-persistence.service';
 import { ShellStateService } from '../core/shell-state.service';
+import { CollabStore } from '../features/collab/collab.store';
 import { WorkspacesStore } from '../features/workspaces/workspaces.store';
 
 @Component({
   selector: 'tx-workspace-switcher',
   standalone: true,
-  imports: [OverlayModule, TxHintComponent],
+  imports: [OverlayModule, TxHintComponent, TxSpinnerComponent],
   templateUrl: './workspace-switcher.component.html',
   styleUrl: './workspace-switcher.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -19,12 +27,43 @@ export class WorkspaceSwitcherComponent {
   private readonly workspaces = inject(WorkspacesStore);
   private readonly session = inject(SessionPersistenceService);
   private readonly shell = inject(ShellStateService);
+  readonly collab = inject(CollabStore);
+  readonly shared = computed(() => this.workspaces.active()?.kind === 'shared');
+  readonly hintDetail = computed(() => {
+    if (!this.shared())
+      return 'Collections and environments on this PC';
+    if (this.collab.status().state === 'offline')
+      return 'Offline — saved on this PC';
+    return this.collab.statusLine();
+  });
 
   readonly items = this.workspaces.items;
-  readonly defaultWorkspace = computed(
-    () => this.items().find((item) => isDefaultWorkspace(item)) ?? null,
-  );
-  readonly otherWorkspaces = computed(() => this.items().filter((item) => !isDefaultWorkspace(item)));
+
+  /** Workspaces on this PC first, then one group per connected repository. */
+  readonly groups = computed<readonly SwitcherGroup[]>(() => {
+    const repos = this.collab.repos();
+    const repoIds = new Set(repos.map((repo) => repo.id));
+    const items = this.items();
+    const local = items.filter((item) => !item.collab || !repoIds.has(item.collab.repoId));
+    const groups: SwitcherGroup[] = local.length > 0
+      ? [{ id: 'local', label: 'This PC', state: null, items: local, addRepoId: null }]
+      : [];
+    for (const repo of repos) {
+      const linked = items.filter((item) => item.collab?.repoId === repo.id);
+      const hasMore = repo.workspaces.some((entry) => !entry.localId);
+      if (linked.length === 0 && !hasMore)
+        continue;
+      groups.push({
+        id: repo.id,
+        label: repo.repoName,
+        state: repo.state,
+        items: linked,
+        addRepoId: hasMore ? repo.id : null,
+      });
+    }
+    return groups;
+  });
+  readonly showGroupHeads = computed(() => this.collab.repos().length > 0);
   readonly activeId = computed(() => this.workspaces.active()?.id ?? '');
   readonly activeName = computed(() => {
     const active = this.workspaces.active();
@@ -83,6 +122,19 @@ export class WorkspaceSwitcherComponent {
     this.shell.openWorkspaceManager();
   }
 
+  handleCollab(): void {
+    this.close();
+    if (this.shared())
+      this.collab.openDock();
+    else
+      this.collab.openConnect();
+  }
+
+  handleAddFrom(repoId: string): void {
+    this.close();
+    this.collab.openAddFromRepo(repoId);
+  }
+
   async handleSelect(id: string): Promise<void> {
     this.close();
     const snapshot = await this.workspaces.switchTo(id);
@@ -106,4 +158,12 @@ export class WorkspaceSwitcherComponent {
       this.open.set(false);
     });
   }
+}
+
+interface SwitcherGroup {
+  readonly id: string;
+  readonly label: string;
+  readonly state: CollabSyncState | null;
+  readonly items: readonly Workspace[];
+  readonly addRepoId: string | null;
 }

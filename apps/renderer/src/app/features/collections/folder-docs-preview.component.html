@@ -1,0 +1,128 @@
+@if (blocks().length === 0) {
+  <p class="tx-docs-preview__empty">Nothing to preview yet.</p>
+} @else {
+  <div class="tx-docs-preview">
+    @for (block of blocks(); track trackBlock($index, block)) {
+      @switch (block.kind) {
+        @case ('heading') {
+          @if (block.level === 1) {
+            <h1>
+              @for (part of block.inlines; track trackInline($index, part)) {
+                <ng-container *ngTemplateOutlet="inline; context: { $implicit: part }" />
+              }
+            </h1>
+          } @else if (block.level === 2) {
+            <h2>
+              @for (part of block.inlines; track trackInline($index, part)) {
+                <ng-container *ngTemplateOutlet="inline; context: { $implicit: part }" />
+              }
+            </h2>
+          } @else {
+            <h3>
+              @for (part of block.inlines; track trackInline($index, part)) {
+                <ng-container *ngTemplateOutlet="inline; context: { $implicit: part }" />
+              }
+            </h3>
+          }
+        }
+        @case ('paragraph') {
+          <p>
+            @for (part of block.inlines; track trackInline($index, part)) {
+              <ng-container *ngTemplateOutlet="inline; context: { $implicit: part }" />
+            }
+          </p>
+        }
+        @case ('blockquote') {
+          <blockquote>
+            @for (part of block.inlines; track trackInline($index, part)) {
+              <ng-container *ngTemplateOutlet="inline; context: { $implicit: part }" />
+            }
+          </blockquote>
+        }
+        @case ('code') {
+          <figure class="tx-docs-preview__code">
+            @if (block.language) {
+              <figcaption>{{ block.language }}</figcaption>
+            }
+            <pre><code>{{ block.text }}</code></pre>
+          </figure>
+        }
+        @case ('hr') {
+          <hr />
+        }
+        @case ('table') {
+          <div class="tx-docs-preview__table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  @for (header of block.headers; track $index) {
+                    <th scope="col">{{ header }}</th>
+                  }
+                </tr>
+              </thead>
+              <tbody>
+                @for (row of block.rows; track $index) {
+                  <tr>
+                    @for (cell of row; track $index) {
+                      <td>{{ cell }}</td>
+                    }
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+        @case ('list') {
+          @if (block.ordered) {
+            <ol>
+              @for (item of block.items; track $index) {
+                <li>
+                  @for (part of item; track trackInline($index, part)) {
+                    <ng-container *ngTemplateOutlet="inline; context: { $implicit: part }" />
+                  }
+                </li>
+              }
+            </ol>
+          } @else {
+            <ul>
+              @for (item of block.items; track $index) {
+                <li>
+                  @for (part of item; track trackInline($index, part)) {
+                    <ng-container *ngTemplateOutlet="inline; context: { $implicit: part }" />
+                  }
+                </li>
+              }
+            </ul>
+          }
+        }
+      }
+    }
+  </div>
+}
+
+<ng-template #inline let-part>
+  @switch (part.kind) {
+    @case ('text') {
+      <span>{{ part.text }}</span>
+    }
+    @case ('code') {
+      <code>{{ part.text }}</code>
+    }
+    @case ('strong') {
+      <strong>{{ part.text }}</strong>
+    }
+    @case ('em') {
+      <em>{{ part.text }}</em>
+    }
+    @case ('strike') {
+      <s>{{ part.text }}</s>
+    }
+    @case ('link') {
+      @if (part.href) {
+        <a [href]="part.href" rel="noreferrer" target="_blank">{{ part.text }}</a>
+      } @else {
+        <span>{{ part.text }}</span>
+      }
+    }
+  }
+</ng-template>

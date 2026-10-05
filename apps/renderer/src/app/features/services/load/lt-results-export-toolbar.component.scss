@@ -1,0 +1,16 @@
+:host {
+  display: block;
+}
+
+.lt-export-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.lt-export-toolbar__feedback {
+  color: var(--tx-success, #3dd68c);
+  font-size: 0.74rem;
+  margin-left: 0.25rem;
+}

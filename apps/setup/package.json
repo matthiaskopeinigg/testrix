@@ -1,17 +1,22 @@
 {
   "name": "@testrix/setup",
-  "version": "2.0.0-beta.1",
+  "version": "2.0.0",
   "private": true,
   "main": "dist/main.cjs",
-  "productName": "Testrix Setup",
+  "productName": "Testrix",
+  "description": "Testrix — local-first desktop API workbench",
+  "author": {
+    "name": "Matthias Kopeinigg"
+  },
+  "copyright": "Copyright © 2026 Matthias Kopeinigg",
   "scripts": {
     "start": "electron .",
     "build": "node ../../tooling/scripts/bundle-setup.mjs",
     "pack:win": "electron-builder build --win portable --publish never"
   },
   "dependencies": {
-    "@testrix/contracts": "2.0.0-beta.1",
-    "@testrix/electron-core": "2.0.0-beta.1"
+    "@testrix/contracts": "2.0.0",
+    "@testrix/electron-core": "2.0.0"
   },
   "devDependencies": {
     "electron": "^44.3.0",
@@ -19,8 +24,18 @@
   },
   "build": {
     "appId": "dev.testrix.app.setup",
-    "productName": "Testrix Setup",
-    "copyright": "Copyright © 2026",
+    "productName": "Testrix",
+    "executableName": "Testrix",
+    "copyright": "Copyright © 2026 Matthias Kopeinigg",
+    "extraMetadata": {
+      "name": "Testrix",
+      "author": {
+        "name": "Matthias Kopeinigg"
+      },
+      "description": "Testrix — local-first desktop API workbench"
+    },
+    "artifactName": "Testrix.${ext}",
+    "electronVersion": "44.3.0",
     "directories": {
       "output": "../../release/setup-shell-build",
       "buildResources": "build"
@@ -32,28 +47,57 @@
     ],
     "asar": true,
     "portable": {
-      "artifactName": "Testrix-Setup.${ext}",
+      "artifactName": "Testrix.${ext}",
       "unpackDirName": "TestrixSetup"
     },
+    "extraResources": [
+      {
+        "from": "src/assets/icon.ico",
+        "to": "icon.ico"
+      },
+      {
+        "from": "src/assets/icon.png",
+        "to": "icon.png"
+      }
+    ],
     "win": {
       "icon": "icon.ico",
       "target": [
         {
           "target": "portable",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ],
       "forceCodeSigning": false,
-      "signAndEditExecutable": false
+      "signAndEditExecutable": true
+    },
+    "mac": {
+      "icon": "icon.png",
+      "identity": null,
+      "artifactName": "Testrix.${ext}",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ]
     },
     "linux": {
+      "icon": "icon.png",
       "target": [
         {
           "target": "AppImage",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ],
-      "artifactName": "Testrix-Setup.${ext}",
+      "artifactName": "Testrix.${ext}",
       "category": "Development"
     }
   }

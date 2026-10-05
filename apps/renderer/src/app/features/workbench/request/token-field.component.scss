@@ -1,0 +1,145 @@
+@use 'mixins';
+
+:host {
+  display: block;
+  width: 100%;
+  min-width: 0;
+}
+
+:host.is-cell,
+:host.is-code {
+  height: 100%;
+}
+
+.tx-token-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+}
+
+:host.is-cell .tx-token-field,
+:host.is-code .tx-token-field {
+  gap: 0;
+  height: 100%;
+}
+
+.tx-token-field__label {
+  color: var(--tx-text-muted);
+  font-size: var(--tx-type-chrome);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.tx-token-field__shell {
+  position: relative;
+  display: flex;
+  flex: 1;
+  align-items: center;
+  min-width: 0;
+  min-height: 0;
+}
+
+:host.is-multiline .tx-token-field__shell,
+:host.is-code .tx-token-field__shell {
+  align-items: stretch;
+}
+
+:host.is-token-hover .tx-token-field__input {
+  cursor: pointer;
+}
+
+.tx-token-field__input {
+  @include mixins.tx-input-focus;
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  width: 100%;
+  min-width: 0;
+  min-height: 38px;
+  padding: 0 12px;
+  border: 1px solid var(--tx-border-subtle);
+  border-radius: var(--tx-radius-control);
+  background: color-mix(in srgb, var(--tx-bg-canvas) 80%, transparent);
+  color: var(--tx-text-primary);
+  font-family: var(--tx-font-mono);
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0;
+  line-height: inherit;
+  resize: none;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+:host.is-cell .tx-token-field__input {
+  height: 34px;
+  min-height: 34px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+:host.is-code .tx-token-field__input,
+:host.is-multiline .tx-token-field__input {
+  min-height: 96px;
+  padding: 10px 12px;
+  line-height: 1.55;
+  overflow: auto;
+}
+
+:host.is-code .tx-token-field__input {
+  height: 100%;
+  min-height: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+/*
+ * Highlight sits behind the input. Transparent glyphs let token colors show
+ * through; ::selection paints real text so drag-select always works.
+ */
+:host .tx-token-field__input.has-tokens {
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  caret-color: var(--tx-text-primary);
+  background: transparent;
+}
+
+:host .tx-token-field__input.has-tokens::selection {
+  color: var(--tx-text-primary);
+  -webkit-text-fill-color: var(--tx-text-primary);
+  background: color-mix(in srgb, var(--tx-accent) 40%, transparent);
+}
+
+:host .tx-token-field__input.has-tokens::-moz-selection {
+  color: var(--tx-text-primary);
+  background: color-mix(in srgb, var(--tx-accent) 40%, transparent);
+}
+
+.tx-token-field__input::placeholder {
+  color: var(--tx-text-faint);
+  -webkit-text-fill-color: var(--tx-text-faint);
+}
+
+.tx-token-field__input:not(.has-tokens)::selection {
+  background: color-mix(in srgb, var(--tx-accent) 35%, transparent);
+  color: var(--tx-text-primary);
+}
+
+:host.is-cell tx-placeholder-highlight,
+:host.is-code tx-placeholder-highlight {
+  padding: 0 12px;
+}
+
+:host.is-multiline:not(.is-code) tx-placeholder-highlight,
+:host.is-code tx-placeholder-highlight {
+  align-items: flex-start;
+  padding-top: 10px;
+  white-space: pre;
+}

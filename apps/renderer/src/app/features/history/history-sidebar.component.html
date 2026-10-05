@@ -1,0 +1,198 @@
+<div class="tx-history-sidebar" (click)="handleChromeClick($event)">
+  <div class="tx-history-sidebar__toolbar">
+    <div class="tx-history-sidebar__search">
+      <tx-input
+        id="history-search"
+        placeholder="Search history"
+        [value]="store.searchQuery()"
+        (valueChange)="handleSearch($event)"
+      />
+    </div>
+    <div class="tx-history-sidebar__actions" role="toolbar" aria-label="History tools">
+      <div class="tx-history-sidebar__menu-wrap">
+        <tx-hint
+          label="Filter"
+          [detail]="store.isFilterActive() ? 'Filters active' : null"
+          placement="bottom"
+          [suppressed]="openMenu() === 'filter'"
+        >
+          <button
+            type="button"
+            class="tx-history-sidebar__btn"
+            [class.is-active]="store.isFilterActive() || openMenu() === 'filter'"
+            aria-label="Filter history"
+            [attr.aria-expanded]="openMenu() === 'filter'"
+            (click)="handleToggleMenu('filter', $event)"
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+              <path
+                d="M2.5 3.5h11l-4 4.8V13l-3-1.5V8.3L2.5 3.5z"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.35"
+                stroke-linejoin="round"
+              />
+            </svg>
+          </button>
+        </tx-hint>
+      </div>
+      <div class="tx-history-sidebar__menu-wrap">
+        <tx-hint [label]="'Group: ' + groupLabel()" placement="bottom" [suppressed]="openMenu() === 'group'">
+          <button
+            type="button"
+            class="tx-history-sidebar__btn"
+            [class.is-active]="openMenu() === 'group'"
+            aria-label="Group history"
+            [attr.aria-expanded]="openMenu() === 'group'"
+            (click)="handleToggleMenu('group', $event)"
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+              <path d="M4 4h8M4 8h5.5M4 12h3" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
+            </svg>
+          </button>
+        </tx-hint>
+      </div>
+      <tx-hint label="Clear history" placement="bottom">
+        <button
+          type="button"
+          class="tx-history-sidebar__btn is-danger"
+          [disabled]="store.entries().length === 0"
+          aria-label="Clear history"
+          (click)="handleClearHistory()"
+        >
+          <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+            <path
+              d="M4 5.5h8M6.2 5.5V4.2A1.2 1.2 0 0 1 7.4 3h1.2a1.2 1.2 0 0 1 1.2 1.2v1.3M5.2 5.5l.5 7.2h4.6l.5-7.2"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.3"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+        </button>
+      </tx-hint>
+    </div>
+
+    @if (openMenu(); as menu) {
+      <div
+        class="tx-history-sidebar__menu tx-menu"
+        role="menu"
+        animate.leave="tx-popover-leave"
+        [style.top.px]="menuPosition()?.top"
+        [style.left.px]="menuPosition()?.left"
+        [style.width.px]="menuPosition()?.width"
+        [style.max-height.px]="menuPosition()?.maxHeight"
+        (pointerdown)="$event.stopPropagation()"
+      >
+        @if (menu === 'filter') {
+          <p class="tx-history-sidebar__menu-title">Method</p>
+          @for (method of httpMethods; track method) {
+            <button
+              type="button"
+              class="tx-history-sidebar__option"
+              role="menuitemcheckbox"
+              [attr.aria-checked]="store.methods().includes(method)"
+              (click)="handleToggleMethod(method)"
+            >
+              <span>{{ method }}</span>
+              @if (store.methods().includes(method)) {
+                <span class="tx-history-sidebar__check" aria-hidden="true">✓</span>
+              }
+            </button>
+          }
+          <p class="tx-history-sidebar__menu-title">Status</p>
+          @for (status of statusClasses; track status) {
+            <button
+              type="button"
+              class="tx-history-sidebar__option"
+              role="menuitemcheckbox"
+              [attr.aria-checked]="store.statusClasses().includes(status)"
+              (click)="handleToggleStatus(status)"
+            >
+              <span>{{ statusLabel(status) }}</span>
+              @if (store.statusClasses().includes(status)) {
+                <span class="tx-history-sidebar__check" aria-hidden="true">✓</span>
+              }
+            </button>
+          }
+          @if (store.isFilterActive()) {
+            <button type="button" class="tx-history-sidebar__clear" (click)="handleClearFilters()">Clear filters</button>
+          }
+        } @else {
+          <p class="tx-history-sidebar__menu-title">Group by</p>
+          @for (option of groupOptions; track option) {
+            <button
+              type="button"
+              class="tx-history-sidebar__option"
+              role="menuitemradio"
+              [attr.aria-checked]="store.groupBy() === option"
+              (click)="handleGroup(option)"
+            >
+              <span>{{ groupOptionLabel(option) }}</span>
+              @if (store.groupBy() === option) {
+                <span class="tx-history-sidebar__check" aria-hidden="true">✓</span>
+              }
+            </button>
+          }
+        }
+      </div>
+    }
+  </div>
+
+  @if (store.entries().length === 0) {
+    <tx-empty-state title="No history yet" body="Sent requests appear here. Click a row to reopen the snapshot as a History tab." />
+  } @else if (store.filtered().length === 0) {
+    <tx-empty-state title="No matches" body="Try a different search or clear filters to see history again." />
+  } @else {
+    <div class="tx-history-sidebar__list">
+      @for (group of store.groups(); track group.id) {
+        <section class="tx-history-sidebar__group">
+          <h2>{{ group.label }}</h2>
+          <ul>
+            @for (entry of group.entries; track entry.id) {
+              <li class="tx-history-sidebar__item">
+                <tx-hint [label]="entry.url" [detail]="entry.requestName || 'History snapshot'" placement="right">
+                  <button
+                    type="button"
+                    class="tx-history-sidebar__row"
+                    [class.is-active]="activeEntryId() === entry.id"
+                    [class.is-selected]="store.isSelected(entry.id)"
+                    (click)="handleSelect(entry.id, $event)"
+                  >
+                    <span class="tx-history-sidebar__method" [attr.data-method]="entry.method">{{ entry.method }}</span>
+                    <span class="tx-history-sidebar__url">{{ entry.url || entry.requestName }}</span>
+                    <span class="tx-history-sidebar__status" [attr.data-tone]="statusTone(entry.status, entry.error)">
+                      {{ entry.error ? 'ERR' : entry.status || '—' }}
+                    </span>
+                    <span class="tx-history-sidebar__time">{{ timeLabel(entry.at) }}</span>
+                  </button>
+                </tx-hint>
+                <tx-hint label="Send again" detail="Resend without opening the snapshot" placement="left">
+                  <button
+                    type="button"
+                    class="tx-history-sidebar__send"
+                    aria-label="Send again"
+                    [disabled]="resendingId() === entry.id"
+                    (click)="handleSendAgain(entry.id, $event)"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+                      <path d="M7 2.5v2.8L10.2 4 7 1.2 3.8 4 7 5.3V2.5z" fill="currentColor" />
+                      <path
+                        d="M4.2 6.2a3.8 3.8 0 1 0 7.6 0"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.35"
+                        stroke-linecap="round"
+                      />
+                    </svg>
+                  </button>
+                </tx-hint>
+              </li>
+            }
+          </ul>
+        </section>
+      }
+    </div>
+  }
+</div>

@@ -1,0 +1,67 @@
+:host {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  padding: 0 12px;
+  pointer-events: none;
+  font-family: var(--tx-font-mono);
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0;
+  line-height: inherit;
+  white-space: pre;
+}
+
+:host-context(.is-multiline) {
+  align-items: flex-start;
+  overflow: auto;
+}
+
+.tx-ph {
+  display: block;
+  overflow: hidden;
+  font: inherit;
+  letter-spacing: inherit;
+  line-height: inherit;
+  white-space: pre;
+  color: var(--tx-text-primary);
+}
+
+.tx-ph__text,
+.tx-ph__token {
+  font: inherit;
+  letter-spacing: inherit;
+  white-space: pre;
+}
+
+.tx-ph__token {
+  padding: 0;
+  border: 0;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--tx-accent) 16%, transparent);
+  color: var(--tx-accent);
+  font: inherit;
+  letter-spacing: inherit;
+}
+
+.tx-ph__token.is-var {
+  background: color-mix(in srgb, var(--tx-accent) 12%, transparent);
+}
+
+.tx-ph__token.is-path {
+  background: color-mix(in srgb, var(--tx-accent) 14%, transparent);
+}
+
+.tx-ph__token.is-unknown {
+  background: color-mix(in srgb, var(--tx-accent) 8%, transparent);
+  opacity: 0.78;
+}
+
+.tx-ph__token.is-link {
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--tx-accent) 45%, transparent);
+  text-underline-offset: 2px;
+}

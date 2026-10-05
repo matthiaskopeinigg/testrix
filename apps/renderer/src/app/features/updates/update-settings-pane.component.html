@@ -1,0 +1,90 @@
+<section class="tx-update-settings__status" aria-live="polite" [attr.data-phase]="status().phase">
+  <div class="tx-update-settings__status-copy">
+    <h3>Testrix {{ status().currentVersion }} · {{ channelName() }}</h3>
+    <p>{{ statusLine() }}</p>
+    @if (lastChecked(); as checked) {
+      <p class="tx-update-settings__meta">{{ checked }}</p>
+    }
+  </div>
+  @if (status().isSupported) {
+    <div class="tx-update-settings__actions">
+      @switch (status().phase) {
+        @case ('ready') {
+          <tx-button variant="primary" (clicked)="updates.install()">Install update</tx-button>
+        }
+        @case ('available') {
+          <tx-button variant="primary" [disabled]="updates.isBusy()" (clicked)="updates.downloadAndInstall()">
+            Download &amp; Install
+          </tx-button>
+        }
+        @case ('error') {
+          <tx-button variant="secondary" (clicked)="updates.check()">Retry</tx-button>
+        }
+        @default {
+          <tx-button variant="secondary" [disabled]="updates.isBusy()" (clicked)="updates.check()">Check now</tx-button>
+        }
+      }
+    </div>
+  }
+  @if (status().phase === 'downloading') {
+    <div
+      class="tx-update-settings__progress"
+      role="progressbar"
+      aria-label="Update download"
+      aria-valuemin="0"
+      aria-valuemax="100"
+      [attr.aria-valuenow]="percent()"
+    >
+      <span [style.width.%]="percent()"></span>
+    </div>
+  }
+</section>
+
+<div class="tx-pref">
+  <div class="tx-pref__row">
+    <div class="tx-pref__copy">
+      <h3>Release channel</h3>
+      <p>
+        Beta gets new features first and may be rougher. Stable only moves to releases that finished beta.
+        @if (isOnPrerelease()) {
+          This build is a beta, so switching to Stable takes effect with the next stable release.
+        }
+      </p>
+    </div>
+    <tx-select
+      [value]="status().channel"
+      [options]="channelOptions"
+      ariaLabel="Release channel"
+      (valueChange)="setChannel($event)"
+    />
+  </div>
+
+  <div class="tx-pref__row">
+    <div class="tx-pref__copy">
+      <h3>Check for updates automatically</h3>
+      <p>
+        Looks on GitHub at most every six hours. Restarts reuse the last check so Releases is not
+        rate-limited. Nothing else about this PC is sent.
+      </p>
+    </div>
+    <tx-check
+      variant="compact"
+      label="Check for updates automatically"
+      [checked]="status().prefs.autoCheck"
+      (checkedChange)="updates.setAutoCheck($event)"
+    />
+  </div>
+
+  <div class="tx-pref__row">
+    <div class="tx-pref__copy">
+      <h3>Download updates in the background</h3>
+      <p>Downloads in the background. Install applies the new version and opens it. Every download is checked against a signed manifest.</p>
+    </div>
+    <tx-check
+      variant="compact"
+      label="Download updates in the background"
+      [checked]="status().prefs.autoDownload"
+      (checkedChange)="updates.setAutoDownload($event)"
+    />
+  </div>
+</div>

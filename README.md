@@ -4,59 +4,40 @@
 
 # Testrix
 
-**Local-first desktop API workbench.** Collections, environments, and requests stay on this PC. No cloud account.
+[![CI](https://github.com/matthiaskopeinigg/testrix-workspace/actions/workflows/ci.yml/badge.svg)](https://github.com/matthiaskopeinigg/testrix-workspace/actions/workflows/ci.yml)
 
-<img src="assets/brand/banner.svg" alt="Testrix — local-first desktop API workbench" width="100%" />
+**Local-first desktop toolkit for building, testing, and verifying software.** APIs, databases, flows, and regression tools on this PC — no cloud account.
 
 <img src="assets/brand/icon.png" width="28" alt="" /> &nbsp;
-`2.0.0-beta.1` &nbsp;·&nbsp; `MIT` &nbsp;·&nbsp; `Node 22` &nbsp;·&nbsp; `Windows`
+`2.0.0-beta.1` &nbsp;·&nbsp; `MIT` &nbsp;·&nbsp; `Node >=20.11` &nbsp;·&nbsp; `Windows` &nbsp;·&nbsp; `macOS` &nbsp;·&nbsp; `Linux`
 
-[Docs](docs/README.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md) · [Changelog](CHANGELOG.md)
+[Develop](docs/development.md) · [Release](docs/releasing.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md) · [Changelog](CHANGELOG.md)
 
 </div>
+
+`assets/brand/logo.svg` is the mark. `npm run sync:brand` copies it and generates icons into the apps.
+
+## Install the beta
+
+Download **Testrix.exe** from [GitHub Releases](https://github.com/matthiaskopeinigg/testrix-workspace/releases). Windows builds are **not Authenticode-signed** (no paid code-signing certificate). SmartScreen may show an unknown-publisher warning; that is expected. In-app updates still verify an Ed25519-signed manifest and the SHA-512 of the installer. See [NOTICE](NOTICE) and [docs/releasing.md](docs/releasing.md).
 
 ---
 
 ## Why Testrix
 
-Testrix is a dense Electron + Angular client for people who want Postman-class request tooling without shipping collection data to someone else’s servers.
+Testrix is for the people who ship and prove quality every day: developers, testers, SQAs, architects, and anyone else who lives in APIs, data, and regression loops. One desktop app for the jobs those roles already share — design and exercise endpoints, run multi-step flows and regression suites, inspect databases, manage environments, and keep the supporting tools close at hand.
 
-- **Local by default.** Config, environments, and session state live as versioned JSON under the app data folder.
-- **Offline.** The workbench does not call a Testrix backend, CDN, or telemetry endpoint.
-- **Desktop-native chrome.** Custom titlebar, activity rail, command palette, and installer — not a browser tab in a frame.
+Most “API clients” push you into accounts, sync, and someone else’s cloud. Testrix keeps collections, environments, flows, database sessions, history, and service tools on this machine until you share a workspace. Sharing is opt-in. No signup is required to work locally, and there is no telemetry phone-home.
 
-## Features
-
-| Area | What you get |
-| --- | --- |
-| **Workbench** | Split tabs for HTTP, WebSocket, and environment editors |
-| **Collections** | Nested folders, drag-and-drop order, keyboard-first tree |
-| **Environments** | Nested folders of variables, secrets, and a titlebar ENV picker |
-| **Settings** | Appearance, shortcuts, logging, and config-folder management |
-| **Command palette** | Jump to actions without leaving the keyboard |
-| **Setup** | Custom installer / uninstaller with a silent update path |
-
-## Brand
-
-<p align="center">
-  <img src="assets/brand/logo.svg" width="64" alt="Testrix mark" />
-  &nbsp;&nbsp;
-  <img src="assets/brand/icon.png" width="64" alt="Testrix app icon" />
-</p>
-
-Canonical files live in [`assets/brand`](assets/brand/README.md):
-
-| File | Use |
-| --- | --- |
-| [`logo.svg`](assets/brand/logo.svg) | Vector mark |
-| [`banner.svg`](assets/brand/banner.svg) | README / social banner |
-| [`icon.png`](assets/brand/icon.png) / [`icon.ico`](assets/brand/icon.ico) | App / taskbar icon |
+- **Your data stays put.** Versioned JSON under the app data folder — not a vendor vault.
+- **Works offline.** No Testrix backend, CDN, or account gate between you and the work.
+- **Built like a desktop app.** Custom titlebar, activity rail, command palette, and a real installer — not a browser shell.
 
 ## Requirements
 
-- [Node.js 22](https://nodejs.org/) (see `.nvmrc`)
+- [Node.js](https://nodejs.org/) **>=20.11.0** (`engines` in `package.json`; CI and local dev use **22.x** from `.nvmrc`)
 - npm 11 (`packageManager` in `package.json`)
-- Windows 10/11 for the packaged desktop build
+- Windows, macOS, or Linux for the packaged desktop build
 
 ## Develop
 
@@ -75,7 +56,7 @@ Dev and an installed copy can run side by side. `npm run dev` uses a separate pr
 npm run db:up
 ```
 
-Starts PostgreSQL, MySQL, MariaDB (port **3307**), SQL Server, Redis, and MongoDB. Oracle is opt-in: `docker compose --profile oracle up -d`. Connection fields are in [docs/development.md](docs/development.md). SQLite is a local file and is not in Compose.
+Starts PostgreSQL, MySQL, MariaDB (port **3307**), SQL Server, Redis, and MongoDB. Oracle is opt-in: `docker compose --project-directory docker --profile oracle up -d`. Connection fields are in [docs/development.md](docs/development.md). SQLite is a local file and is not in Compose.
 
 ### Useful flags
 
@@ -94,9 +75,15 @@ Starts PostgreSQL, MySQL, MariaDB (port **3307**), SQL Server, Redis, and MongoD
 ### Scripts
 
 ```bash
-npm test                 # Vitest
+npm test                 # Vitest unit specs
+npm run test:coverage    # Vitest with coverage floors
+npm run test:components  # Angular TestBed (*.component.test.ts)
+npm run test:e2e         # Playwright against the built Electron app
+npm run verify           # lint, styles, format, typecheck, coverage, components, doc links
+npm run test:all         # verify + build + e2e
+npm run check:docs       # relative Markdown link check
 npm run build            # Renderer + Electron bundle
-npm run electron:pack    # Windows payload + setup
+npm run electron:pack    # Unsigned Windows payload + Setup
 npm run sync:brand       # Copy logo/icons into apps
 npm run db:up            # Local test databases
 ```
@@ -107,10 +94,12 @@ npm run db:up            # Local test databases
 apps/desktop   Electron host, splash, IPC, config JSON
 apps/renderer  Angular 22 workbench
 apps/setup     Install / uninstall / silent-update
-packages/*     contracts, tokens, motion, UI kit, electron-core
+packages/*     contracts, electron-core, http-engine, ui, design-tokens
 ```
 
-IPC is a narrow `window.testrix` bridge defined in `@testrix/contracts`. The renderer runs with context isolation, sandboxing, and `nodeIntegration: false`.
+IPC is a narrow `window.testrix` bridge. The main process validates every payload. The renderer runs with context isolation, sandboxing, and `nodeIntegration: false`. Secrets go in `secrets.local.json`, encrypted with the OS keychain.
+
+Boot: splash → hidden main window → renderer `notifyReady` → workbench.
 
 ```mermaid
 flowchart LR
@@ -127,21 +116,35 @@ flowchart LR
   Main --> JSON[(userData JSON)]
 ```
 
-More detail: [docs/architecture.md](docs/architecture.md).
-
 ## Data and privacy
 
 Testrix writes local JSON (settings, session, collections, environments) with a versioned schema and ordered migrations. Change the config folder from **Settings → Data**. Nothing is synced unless you copy those files yourself.
 
-## Security
+## Support
 
-Report vulnerabilities privately to the repository owner. Do not add Node APIs to the renderer. See [SECURITY.md](SECURITY.md) and [docs/security.md](docs/security.md).
+Press **F1** in the app for features and shortcuts. Bugs and ideas go on GitHub Issues. Vulnerabilities: [SECURITY.md](SECURITY.md). Do not add Node APIs to the renderer.
 
 ## Contributing
 
 Use conventional commits. Apps own entrypoints; packages own shared code. Renderer UI is Angular standalone components, SCSS, kebab-case files, and a `tx-` prefix.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) and [docs/development.md](docs/development.md).
+
+## Features
+
+| Area | What you get |
+| --- | --- |
+| **Workbench** | Tabs for HTTP, WebSocket, flows, database, and environments |
+| **Collections** | Nested folders, drag-and-drop order, keyboard-first tree |
+| **Environments** | Folders of variables and secrets, plus a titlebar ENV picker |
+| **Services** | Flows, load, regression, emulator, mock, listener, and intercept |
+| **Tools** | UUID, Base64, JWT, Cron, URL codec, Regex, Password Generator, and PlantUML |
+| **Collab** | Opt-in Git remotes to share workspaces across PCs |
+| **Database** | Table browse, SQL editor, and result grids against local DBs |
+| **History** | Grouped local request history |
+| **Settings** | Appearance, shortcuts, logging, and config-folder management |
+| **Command palette** | Jump to actions without leaving the keyboard |
+| **Setup** | Custom installer / uninstaller with a silent update path |
 
 ## License
 

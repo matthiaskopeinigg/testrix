@@ -1,0 +1,93 @@
+<div class="tx-flow-history">
+  <header class="tx-flow-history__head">
+    <div>
+      <h2>History</h2>
+      <p>
+        @if (scenarioName()) {
+          Saved runs for {{ scenarioName() }}. Apply one to restore statuses and Exchange on Design.
+        } @else {
+          Saved runs for this flow. Apply one to restore statuses and Exchange on Design.
+        }
+      </p>
+    </div>
+    @if (hasRuns()) {
+      <tx-hint label="Clear history" detail="Removes saved runs for this scenario" placement="bottom">
+        <button type="button" class="tx-flow-history__clear" [disabled]="running()" (click)="handleClear()">
+          Clear
+        </button>
+      </tx-hint>
+    }
+  </header>
+
+  @if (!hasRuns()) {
+    <tx-empty-state
+      title="No runs yet"
+      body="Run this scenario to keep a history of statuses and HTTP exchanges."
+    />
+  } @else {
+    <ul class="tx-flow-history__list" role="list">
+      @for (run of runs(); track run.id) {
+        <li class="tx-flow-history__item" [attr.data-tone]="tone(run)">
+          <div class="tx-flow-history__row">
+            <button
+              type="button"
+              class="tx-flow-history__toggle"
+              [attr.aria-expanded]="expandedId() === run.id"
+              (click)="handleToggle(run)"
+            >
+              <svg
+                class="tx-flow-history__chevron"
+                [class.is-open]="expandedId() === run.id"
+                width="10"
+                height="10"
+                viewBox="0 0 12 12"
+                aria-hidden="true"
+              >
+                <path d="M4.2 2.4 7.8 6 4.2 9.6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+              <span class="tx-flow-history__when">{{ formatWhen(run.at) }}</span>
+              <span class="tx-flow-history__summary">{{ summary(run) }}</span>
+            </button>
+            <tx-hint label="Show on Design" detail="Restores node statuses and Exchange buttons" placement="left">
+              <button
+                type="button"
+                class="tx-flow-history__apply"
+                [disabled]="running()"
+                (click)="handleApply(run)"
+              >
+                Apply
+              </button>
+            </tx-hint>
+          </div>
+
+          @if (expandedId() === run.id) {
+            <div class="tx-flow-history__detail" animate.enter="tx-folder-pane-in">
+              <ul class="tx-flow-history__steps" role="list">
+                @for (step of stepEntries(run); track step.id) {
+                  <li class="tx-flow-history__step" [attr.data-status]="step.status">
+                    <span class="tx-flow-history__step-status">{{ step.status }}</span>
+                    <span class="tx-flow-history__step-name">{{ step.label }}</span>
+                    @if (step.hasExchange) {
+                      <button
+                        type="button"
+                        class="tx-flow-history__exchange"
+                        (click)="handleOpenExchange($event, run, step.id, step.label)"
+                      >
+                        Exchange
+                      </button>
+                    } @else {
+                      <span></span>
+                    }
+                    @if (step.message) {
+                      <span class="tx-flow-history__step-msg">{{ step.message }}</span>
+                    }
+                  </li>
+                }
+              </ul>
+            </div>
+          }
+        </li>
+      }
+    </ul>
+  }
+</div>

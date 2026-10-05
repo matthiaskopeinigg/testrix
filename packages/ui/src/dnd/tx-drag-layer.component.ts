@@ -4,7 +4,7 @@ import {
   Component,
   computed,
   effect,
-  ElementRef,
+  type ElementRef,
   inject,
   viewChild,
 } from '@angular/core';

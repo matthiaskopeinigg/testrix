@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
 import { TxHintComponent, TxOverlayComponent, TxOverlayHostDirective } from '@testrix/ui';
 
 import { DesktopApiService } from '../../core/desktop-api.service';
@@ -10,6 +10,7 @@ import {
   filterHelpHits,
   type HelpSectionId,
 } from './help-registry';
+import { HelpContextService } from './help-context.service';
 
 @Component({
   selector: 'tx-help-overlay',
@@ -23,8 +24,10 @@ import {
 export class HelpOverlayComponent {
   readonly desktop = inject(DesktopApiService);
   readonly shell = inject(ShellStateService);
+  private readonly helpContext = inject(HelpContextService);
 
   readonly section = signal<HelpSectionId>('start');
+  readonly paneSlideDir = signal<'up' | 'down' | null>(null);
   readonly query = signal('');
   readonly highlightId = signal<string | null>(null);
   readonly nav = HELP_NAV;
@@ -44,6 +47,17 @@ export class HelpOverlayComponent {
     return this.nav.find((item) => item.id === this.section())?.summary ?? '';
   });
 
+  constructor() {
+    effect(() => {
+      if (!this.shell.helpOpen())
+        return;
+      const target = this.shell.helpTarget() ?? this.helpContext.contextualTarget();
+      this.section.set(target.section);
+      this.highlightId.set(target.articleId ?? null);
+      this.query.set('');
+    });
+  }
+
   handleSearch(event: Event): void {
     this.query.set((event.target as HTMLInputElement).value);
   }
@@ -61,15 +75,29 @@ export class HelpOverlayComponent {
   }
 
   selectSection(id: HelpSectionId): void {
+    if (id === this.section() && !this.query().trim())
+      return;
+    this.paneSlideDir.set(this.slideDirTo(id));
     this.section.set(id);
     this.highlightId.set(null);
     this.query.set('');
   }
 
   openHit(id: string, section: HelpSectionId): void {
+    this.paneSlideDir.set(this.slideDirTo(section));
     this.section.set(section);
     this.highlightId.set(id);
     this.query.set('');
+  }
+
+  paneEnter(): string | undefined {
+    return this.paneSlideDir() ? 'tx-sidebar-pane-in' : undefined;
+  }
+
+  private slideDirTo(id: HelpSectionId): 'up' | 'down' {
+    const from = this.nav.findIndex((item) => item.id === this.section());
+    const to = this.nav.findIndex((item) => item.id === id);
+    return to > from ? 'down' : 'up';
   }
 
   isHighlighted(id: string): boolean {

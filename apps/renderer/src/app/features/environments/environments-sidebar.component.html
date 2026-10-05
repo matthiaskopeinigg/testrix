@@ -16,6 +16,14 @@
           (renameKey)="handleRenameKey($event)"
           (renameBlur)="finishRename()"
         />
+      } @else if (store.items().length === 0) {
+        <tx-empty-state
+          title="No environments"
+          body="Create an environment for template variables, or pull keys from open request tabs."
+        >
+          <tx-button variant="primary" (clicked)="handleNewEnvironment()">New environment</tx-button>
+          <tx-button variant="ghost" (clicked)="handleScanOpenRequests()">Scan open requests for variables</tx-button>
+        </tx-empty-state>
       } @else {
         <tx-empty-state
           title="No matches"
@@ -49,17 +57,15 @@
         <button type="button" class="tx-environments-menu__item" role="menuitem" (click)="handleDuplicate()">
           Duplicate
         </button>
-        @if (canDelete()) {
-          <span class="tx-environments-menu__rule" aria-hidden="true"></span>
-          <button
-            type="button"
-            class="tx-environments-menu__item is-danger"
-            role="menuitem"
-            (click)="handleDelete()"
-          >
-            {{ deleteLabel() }}
-          </button>
-        }
+        <span class="tx-environments-menu__rule" aria-hidden="true"></span>
+        <button
+          type="button"
+          class="tx-environments-menu__item is-danger"
+          role="menuitem"
+          (click)="handleDelete()"
+        >
+          {{ deleteLabel() }}
+        </button>
       } @else {
         <button type="button" class="tx-environments-menu__item" role="menuitem" (click)="handleNewEnvironment()">
           New environment

@@ -13,3 +13,9 @@
   min-height: 0;
   height: 100%;
 }
+
+.tx-workbench-panel__defer {
+  flex: 1;
+  min-height: 0;
+  background: var(--tx-bg-canvas);
+}

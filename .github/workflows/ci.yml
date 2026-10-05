@@ -13,11 +13,20 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
-  test:
-    name: Test and typecheck
-    runs-on: ubuntu-latest
-    timeout-minutes: 25
+  quality:
+    uses: ./.github/workflows/quality.yml
+
+  package-windows:
+    name: Windows package smoke
+    runs-on: windows-latest
+    needs: quality
+    timeout-minutes: 40
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
@@ -25,5 +34,21 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
-      - run: npm test
-      - run: npm run build
+      - run: npm run electron:pack
+      - name: Verify unsigned installer
+        shell: pwsh
+        run: |
+          $exe = 'release/setup-shell-build/Testrix.exe'
+          if (-not (Test-Path $exe)) { throw "Missing $exe" }
+          $size = (Get-Item $exe).Length
+          if ($size -lt 50MB) { throw "Installer looks truncated: $size bytes" }
+          $sig = Get-AuthenticodeSignature $exe
+          if ($sig.Status -ne 'NotSigned') {
+            throw "Expected an unsigned installer (no paid Authenticode cert). Status: $($sig.Status)"
+          }
+          "Installer size: $([math]::Round($size / 1MB, 1)) MB (unsigned)"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: testrix-setup-windows
+          path: release/setup-shell-build/Testrix.exe
+          retention-days: 7

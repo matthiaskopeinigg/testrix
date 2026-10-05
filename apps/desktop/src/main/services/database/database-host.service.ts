@@ -14,11 +14,14 @@ import {
   databaseErrorContext,
   formatDatabaseError,
   sqlTransactionControl,
+  usesOracleThin,
   tableDmlBeginSql,
   tableDmlCommitSql,
   tableDmlRollbackSql,
 } from '@testrix/contracts';
+import { appLogger } from '@testrix/electron-core';
 
+import { detach } from '../../lifecycle';
 import { introspectConnection } from './database-introspect';
 import {
   applySqlPage,
@@ -35,6 +38,7 @@ import {
 
 interface PinnedSession {
   readonly tabId: string;
+  readonly connection: DatabaseConnection;
   readonly connectionId: string;
   readonly type: DatabaseType;
   uncommitted: boolean;
@@ -72,7 +76,7 @@ export class DatabaseHost {
     if (this.idleWatchTimer !== null)
       return;
     this.idleWatchTimer = setInterval(() => {
-      void this.closeIdleConnections();
+      detach('database:idle', this.closeIdleConnections());
     }, 15_000);
     this.idleWatchTimer.unref?.();
   }
@@ -116,14 +120,6 @@ export class DatabaseHost {
     } finally {
       this.endActivity(payload.connection.id);
     }
-  }
-
-  async explain(payload: DatabaseQueryRequest): Promise<DatabaseQueryEnvelope> {
-    return this.query({
-      ...payload,
-      query: wrapExplain(payload.connection, payload.query),
-      page: undefined,
-    });
   }
 
   async introspect(payload: {
@@ -217,13 +213,6 @@ export class DatabaseHost {
     return { tabId, open: false, uncommitted: false, rollbackAt: null };
   }
 
-  async sessionClose(tabId: string, connection?: DatabaseConnection): Promise<void> {
-    if (connection)
-      await this.sessionRollback(tabId, connection);
-    else
-      await this.releaseSession(tabId);
-  }
-
   sessionConnectionId(tabId: string): string | null {
     return this.sessions.get(tabId)?.connectionId ?? null;
   }
@@ -258,17 +247,8 @@ export class DatabaseHost {
       clearInterval(this.idleWatchTimer);
       this.idleWatchTimer = null;
     }
-    for (const [tabId, session] of [...this.sessions.entries()]) {
-      await this.sessionRollback(tabId, {
-        id: session.connectionId,
-        type: session.type,
-        name: session.connectionId,
-        kind: 'connection',
-        host: '',
-        port: 0,
-        connectOnBoot: false,
-      } as DatabaseConnection);
-    }
+    for (const [tabId, session] of [...this.sessions.entries()])
+      await this.sessionRollback(tabId, session.connection);
     await Promise.allSettled([...this.collectClosePromises()]);
     this.sqliteDbs.clear();
     this.pgPools.clear();
@@ -309,6 +289,7 @@ export class DatabaseHost {
       const client = await pool.connect();
       const session: PinnedSession = {
         tabId,
+        connection,
         connectionId: connection.id,
         type: connection.type,
         uncommitted: false,
@@ -328,6 +309,7 @@ export class DatabaseHost {
       const client = await pool.getConnection();
       const session: PinnedSession = {
         tabId,
+        connection,
         connectionId: connection.id,
         type: connection.type,
         uncommitted: false,
@@ -349,6 +331,7 @@ export class DatabaseHost {
       await transaction.begin();
       const session: PinnedSession = {
         tabId,
+        connection,
         connectionId: connection.id,
         type: connection.type,
         uncommitted: true,
@@ -366,6 +349,7 @@ export class DatabaseHost {
       const db = this.getSqlite(connection);
       const session: PinnedSession = {
         tabId,
+        connection,
         connectionId: connection.id,
         type: connection.type,
         uncommitted: false,
@@ -380,7 +364,7 @@ export class DatabaseHost {
     }
     if (family === 'oracle') {
       const oracledb = loadDriver<OracleModule>('oracledb');
-      initOracleClient(oracledb, connection.clientPath);
+      initOracleClient(oracledb, connection);
       const connectString = connection.useSid
         ? `${connection.host || 'localhost'}:${connection.port || 1521}:${connection.database || 'ORCL'}`
         : `${connection.host || 'localhost'}:${connection.port || 1521}/${connection.database || 'ORCL'}`;
@@ -391,6 +375,7 @@ export class DatabaseHost {
       });
       const session: PinnedSession = {
         tabId,
+        connection,
         connectionId: connection.id,
         type: connection.type,
         uncommitted: false,
@@ -407,6 +392,7 @@ export class DatabaseHost {
     }
     const session: PinnedSession = {
       tabId,
+      connection,
       connectionId: connection.id,
       type: connection.type,
       uncommitted: false,
@@ -431,7 +417,7 @@ export class DatabaseHost {
     }
     session.rollbackAt = Date.now() + seconds * 1000;
     session.rollbackTimer = setTimeout(() => {
-      void this.releaseSession(session.tabId, true);
+      detach('database:auto-rollback', this.releaseSession(session.tabId, true));
     }, seconds * 1000);
   }
 
@@ -441,18 +427,15 @@ export class DatabaseHost {
       return;
     if (session.rollbackTimer)
       clearTimeout(session.rollbackTimer);
+    const rollbackSql = tableDmlRollbackSql(session.type);
     if (timedOut && session.uncommitted) {
       try {
         if (session.nativeTxn)
           await this.rollbackNative(session);
-        else
-          await this.executeOnSession(
-            session,
-            { id: session.connectionId, type: session.type } as DatabaseConnection,
-            'ROLLBACK',
-          );
-      } catch {
-        /* ignore */
+        else if (rollbackSql)
+          await this.executeOnSession(session, session.connection, rollbackSql);
+      } catch (error) {
+        appLogger.warn('database', `Auto-rollback failed for ${session.connectionId}: ${error instanceof Error ? error.message : String(error)}`);
       }
     }
     this.sessions.delete(tabId);
@@ -669,7 +652,7 @@ export class DatabaseHost {
     commandMs: number | undefined,
   ): Promise<DatabaseQueryEnvelope['table']> {
     const oracledb = loadDriver<OracleModule>('oracledb');
-    initOracleClient(oracledb, connection.clientPath);
+    initOracleClient(oracledb, connection);
     const connectString = connection.useSid
       ? `${connection.host || 'localhost'}:${connection.port || 1521}:${connection.database || 'ORCL'}`
       : `${connection.host || 'localhost'}:${connection.port || 1521}/${connection.database || 'ORCL'}`;
@@ -932,17 +915,6 @@ function probeSql(connection: DatabaseConnection): string {
   return 'SELECT 1 AS ok';
 }
 
-function wrapExplain(connection: DatabaseConnection, sql: string): string {
-  const family = databaseEngineFamily(connection.type);
-  if (family === 'mysql')
-    return `EXPLAIN ${sql}`;
-  if (family === 'mssql')
-    return `SET SHOWPLAN_TEXT ON; ${sql}`;
-  if (family === 'sqlite')
-    return `EXPLAIN QUERY PLAN ${sql}`;
-  return `EXPLAIN ${sql}`;
-}
-
 function tokenizeRedis(source: string): string[] {
   const tokens: string[] = [];
   const regex = /"([^"]*)"|'([^']*)'|(\S+)/g;
@@ -1065,11 +1037,12 @@ interface OracleModule {
   getConnection(config: Record<string, unknown>): Promise<OracleConnection>;
 }
 
-function initOracleClient(oracledb: OracleModule, clientPath: string | undefined): void {
-  if (!clientPath || !oracledb.initOracleClient)
+function initOracleClient(oracledb: OracleModule, connection: DatabaseConnection): void {
+  if (usesOracleThin(connection) || !oracledb.initOracleClient)
     return;
   try {
-    oracledb.initOracleClient({ libDir: clientPath });
+    const libDir = connection.clientPath?.trim();
+    oracledb.initOracleClient(libDir ? { libDir } : {});
   } catch {
     /* already initialized */
   }

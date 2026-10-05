@@ -20,6 +20,7 @@
     @for (tab of tabs(); track tab.id) {
       <div
         class="tx-workbench-tablist__item"
+        animate.leave="tx-workbench-tab-out"
         cdkDrag
         cdkDragPreviewClass="tx-workbench-drag-preview"
         [cdkDragData]="tab"
@@ -42,10 +43,22 @@
         <div *cdkDragPreview matchSize class="tx-workbench-tab-preview-shell">
           <div class="tx-workbench-tab-preview">
           <span class="tx-workbench-tab-preview__icon" aria-hidden="true">
-            @if (tab.kind === 'http') {
+            @if (tab.kind === 'http' || tab.kind === 'history') {
               <span class="tx-workbench-tab-preview__method" [attr.data-method]="tab.method">{{
                 methodLabel(tab)
               }}</span>
+            } @else if (tab.kind === 'service' || tab.kind === 'flow' || tab.kind === 'flow-template' || tab.kind === 'load' || tab.kind === 'regression' || tab.kind === 'emulator' || tab.kind === 'mock-endpoint' || tab.kind === 'listener-session' || tab.kind === 'intercept-rule') {
+              <tx-service-icon [serviceId]="tab.kind === 'service' ? tab.nodeId : tab.kind === 'flow' || tab.kind === 'flow-template' ? 'flows' : tab.kind === 'regression' ? 'regression' : tab.kind === 'emulator' ? 'emulator' : tab.kind === 'mock-endpoint' ? 'mocks' : tab.kind === 'listener-session' ? 'listeners' : tab.kind === 'intercept-rule' ? 'intercept' : 'load'" />
+            } @else if (tab.kind === 'collection-folder') {
+              <svg width="14" height="14" viewBox="0 0 14 14">
+                <path
+                  d="M2 3.5h3.2l1 1.2H12v6.3H2V3.5z"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.25"
+                  stroke-linejoin="round"
+                />
+              </svg>
             } @else if (tab.kind === 'environment') {
               <svg width="14" height="14" viewBox="0 0 24 24">
                 <path
@@ -57,8 +70,8 @@
                   stroke-linejoin="round"
                 />
               </svg>
-            } @else if (tab.kind === 'tool') {
-              <tx-tool-icon [toolId]="tab.nodeId" />
+            } @else if (tab.kind === 'tool' || tab.kind === 'plantuml') {
+              <tx-tool-icon [toolId]="tab.kind === 'plantuml' ? 'plantuml' : tab.nodeId" />
             } @else if (tab.kind.startsWith('database')) {
               <svg width="14" height="14" viewBox="0 0 14 14">
                 <ellipse cx="7" cy="4.2" rx="4.4" ry="1.6" fill="none" stroke="currentColor" stroke-width="1.25" />
@@ -94,6 +107,9 @@
       <button type="button" class="tx-workbench-tablist__menu-item" role="menuitem" (click)="handleMenuClose()">
         Close
       </button>
+      @if (menuTabUnsaved()) {
+        <span class="tx-workbench-tablist__menu-note" role="presentation">Unsaved changes</span>
+      }
       @if (canCloseOthers()) {
         <button type="button" class="tx-workbench-tablist__menu-item" role="menuitem" (click)="handleMenuCloseOthers()">
           Close others

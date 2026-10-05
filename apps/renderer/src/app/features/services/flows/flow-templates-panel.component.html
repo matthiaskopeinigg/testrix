@@ -1,0 +1,261 @@
+<div class="tx-flow-tpl">
+  <header class="tx-flow-tpl__head">
+    <tx-hint label="Back to flows" placement="bottom">
+      <button type="button" class="tx-flow-tpl__back" aria-label="Back to flows" (click)="close()">
+        <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+          <path d="M8.5 3 4.5 7l4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+        Flows
+      </button>
+    </tx-hint>
+    <h2>Templates</h2>
+  </header>
+
+  <tx-service-toolbar
+    searchId="flow-templates-search"
+    placeholder="Search templates"
+    [search]="store.search()"
+    [sort]="store.sort()"
+    [showExpand]="true"
+    [allExpanded]="store.allGroupsExpanded()"
+    [showFilter]="true"
+    [availableTags]="store.availableTags()"
+    [selectedTags]="store.tagFilters()"
+    (searchChange)="store.setSearch($event)"
+    (sortChange)="store.cycleSort()"
+    (expandToggle)="store.toggleExpandAll()"
+    (tagToggle)="store.toggleTagFilter($event)"
+    (tagsClear)="store.clearTagFilters()"
+  />
+
+  <p class="tx-flow-tpl__hint">
+    Groups on top, ungrouped templates at the bottom. Drag to reorder or move.
+  </p>
+
+  <div
+    class="tx-flow-tpl__body"
+    #scroller
+    (click)="handleChromeClick($event)"
+    (contextmenu)="handleEmptyMenu($event)"
+  >
+    <div class="tx-flow-tpl__content" #flipRoot>
+      @if (store.tree().groups.length === 0 && store.tree().ungrouped.length === 0) {
+        <tx-empty-state
+          title="No templates"
+          body="Right-click to create a template or group, or save a selection from a flow canvas."
+        />
+      } @else {
+        @for (group of store.tree().groups; track group.id) {
+          <div
+            class="tx-flow-tpl__node"
+            [attr.data-flip-id]="group.id"
+            [class.is-drop-folder]="store.dropTarget()?.mode === 'into' && store.dropTarget()?.folderId === group.id"
+          >
+            <div
+              class="tx-flow-tpl__drag"
+              [txDraggable]="group"
+              [txDraggableDisabled]="store.isDragDisabled() || store.renamingGroup() === group.tag"
+              [txDraggablePreview]="groupPreview"
+              [txDraggableScrollContainer]="dnd.scrollContainer()"
+              (dragStarted)="handleDragStarted($event)"
+              (dragMoved)="handleDragMoved($event)"
+              (dragEnded)="handleDragEnded($event)"
+            >
+              <div
+                class="tx-flow-tpl__row is-group"
+                role="button"
+                tabindex="0"
+                [attr.data-node-id]="group.id"
+                [class.is-selected]="store.isSelected(group.id)"
+                [attr.aria-expanded]="store.isGroupExpanded(group.id)"
+                (click)="handleGroupClick(group, $event)"
+                (contextmenu)="handleGroupMenu(group, $event)"
+              >
+                <button
+                  type="button"
+                  class="tx-flow-tpl__twist"
+                  [attr.aria-label]="store.isGroupExpanded(group.id) ? 'Collapse ' + group.name : 'Expand ' + group.name"
+                  (click)="$event.stopPropagation(); store.toggleGroupExpanded(group.id)"
+                >
+                  {{ store.isGroupExpanded(group.id) ? '▾' : '▸' }}
+                </button>
+                <span class="tx-flow-tpl__icon" aria-hidden="true">
+                  <svg width="14" height="14" viewBox="0 0 14 14">
+                    <path
+                      d="M2 3.5h3.2l1 1.2H12v6.3H2V3.5z"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.25"
+                      stroke-linejoin="round"
+                    />
+                  </svg>
+                </span>
+                @if (store.renamingGroup() === group.tag) {
+                  <input
+                    class="tx-flow-tpl__rename"
+                    [value]="group.tag"
+                    (click)="$event.stopPropagation()"
+                    (input)="handleGroupRenameInput($event)"
+                    (keydown.enter)="finishGroupRename()"
+                    (blur)="finishGroupRename()"
+                  />
+                } @else {
+                  <span class="tx-flow-tpl__name">{{ group.name }}</span>
+                }
+              </div>
+            </div>
+          </div>
+
+          @if (store.isGroupExpanded(group.id)) {
+            @for (leaf of group.children; track leaf.id) {
+              <div class="tx-flow-tpl__node is-child" [attr.data-flip-id]="leaf.id">
+                <div
+                  class="tx-flow-tpl__drag"
+                  [txDraggable]="leaf"
+                  [txDraggableDisabled]="store.isDragDisabled() || store.renamingId() === leaf.id"
+                  [txDraggablePreview]="templatePreview"
+                  [txDraggableScrollContainer]="dnd.scrollContainer()"
+                  (dragStarted)="handleDragStarted($event)"
+                  (dragMoved)="handleDragMoved($event)"
+                  (dragEnded)="handleDragEnded($event)"
+                >
+                  <div
+                    class="tx-flow-tpl__row is-template"
+                    role="button"
+                    tabindex="0"
+                    [attr.data-node-id]="leaf.id"
+                    [class.is-selected]="store.isSelected(leaf.id)"
+                    (click)="handleTemplateClick(leaf, $event)"
+                    (contextmenu)="handleItemMenu(leaf, $event)"
+                  >
+                    <span class="tx-flow-tpl__twist" aria-hidden="true"></span>
+                    <span class="tx-flow-tpl__main">
+                      @if (store.renamingId() === leaf.id) {
+                        <input
+                          class="tx-flow-tpl__rename"
+                          [value]="leaf.name"
+                          (click)="$event.stopPropagation()"
+                          (input)="handleRenameInput(leaf.id, $event)"
+                          (keydown.enter)="finishRename()"
+                          (blur)="finishRename()"
+                        />
+                      } @else {
+                        <span class="tx-flow-tpl__name">{{ leaf.name }}</span>
+                      }
+                      @if (leaf.hint) {
+                        <span class="tx-flow-tpl__meta">{{ leaf.hint }}</span>
+                      }
+                    </span>
+                  </div>
+                </div>
+              </div>
+            }
+          }
+        }
+
+        @for (leaf of store.tree().ungrouped; track leaf.id) {
+          <div class="tx-flow-tpl__node" [attr.data-flip-id]="leaf.id">
+            <div
+              class="tx-flow-tpl__drag"
+              [txDraggable]="leaf"
+              [txDraggableDisabled]="store.isDragDisabled() || store.renamingId() === leaf.id"
+              [txDraggablePreview]="templatePreview"
+              [txDraggableScrollContainer]="dnd.scrollContainer()"
+              (dragStarted)="handleDragStarted($event)"
+              (dragMoved)="handleDragMoved($event)"
+              (dragEnded)="handleDragEnded($event)"
+            >
+              <div
+                class="tx-flow-tpl__row is-template"
+                role="button"
+                tabindex="0"
+                [attr.data-node-id]="leaf.id"
+                [class.is-selected]="store.isSelected(leaf.id)"
+                (click)="handleTemplateClick(leaf, $event)"
+                (contextmenu)="handleItemMenu(leaf, $event)"
+              >
+                <span class="tx-flow-tpl__twist" aria-hidden="true"></span>
+                <span class="tx-flow-tpl__main">
+                  @if (store.renamingId() === leaf.id) {
+                    <input
+                      class="tx-flow-tpl__rename"
+                      [value]="leaf.name"
+                      (click)="$event.stopPropagation()"
+                      (input)="handleRenameInput(leaf.id, $event)"
+                      (keydown.enter)="finishRename()"
+                      (blur)="finishRename()"
+                    />
+                  } @else {
+                    <span class="tx-flow-tpl__name">{{ leaf.name }}</span>
+                  }
+                  @if (leaf.hint) {
+                    <span class="tx-flow-tpl__meta">{{ leaf.hint }}</span>
+                  }
+                </span>
+              </div>
+            </div>
+          </div>
+        }
+      }
+
+      <div
+        class="tx-flow-tpl__indicator"
+        [class.is-visible]="dnd.isIndicatorVisible()"
+        [class.is-denied]="dnd.isIndicatorDenied()"
+        [style.left.px]="dnd.indicatorLeft()"
+        [style.transform]="'translate3d(0, ' + dnd.indicatorY() + 'px, 0)'"
+        aria-hidden="true"
+      ></div>
+    </div>
+  </div>
+  <p class="tx-flow-tpl__live" role="status" aria-live="polite">{{ dnd.announcement() }}</p>
+</div>
+
+<ng-template #groupPreview let-node>
+  <div class="tx-flow-tpl__preview" [class.is-denied]="store.dropTarget()?.denied">
+    <span class="tx-flow-tpl__preview-name">{{ node.name }}</span>
+    @if (dragCount() > 1) {
+      <span class="tx-flow-tpl__preview-badge">{{ dragCount() }}</span>
+    }
+  </div>
+</ng-template>
+
+<ng-template #templatePreview let-node>
+  <div class="tx-flow-tpl__preview" [class.is-denied]="store.dropTarget()?.denied">
+    <span class="tx-flow-tpl__preview-name">{{ node.name }}</span>
+    @if (dragCount() > 1) {
+      <span class="tx-flow-tpl__preview-badge">{{ dragCount() }}</span>
+    }
+  </div>
+</ng-template>
+
+<ng-template #templatesMenu>
+  @if (menu(); as menu) {
+    <div class="tx-menu tx-flow-tpl__menu" role="menu">
+      @if (menu.kind === 'root' || menu.kind === 'group') {
+        <button type="button" class="tx-flow-tpl__menu-item" role="menuitem" (click)="handleMenuNewTemplate()">
+          New template
+        </button>
+        @if (menu.kind === 'root') {
+          <button type="button" class="tx-flow-tpl__menu-item" role="menuitem" (click)="handleMenuNewGroup()">
+            New group
+          </button>
+        }
+      }
+      @if (menu.kind === 'group') {
+        <button type="button" class="tx-flow-tpl__menu-item" role="menuitem" (click)="handleMenuRename()">
+          Rename group
+        </button>
+        <button type="button" class="tx-flow-tpl__menu-item is-danger" role="menuitem" (click)="handleMenuDelete()">
+          Delete group
+        </button>
+      }
+      @if (menu.kind === 'template') {
+        <button type="button" class="tx-flow-tpl__menu-item" role="menuitem" (click)="handleMenuOpen()">Open</button>
+        <button type="button" class="tx-flow-tpl__menu-item" role="menuitem" (click)="handleMenuRename()">Rename</button>
+        <button type="button" class="tx-flow-tpl__menu-item" role="menuitem" (click)="handleMenuDuplicate()">Duplicate</button>
+        <button type="button" class="tx-flow-tpl__menu-item is-danger" role="menuitem" (click)="handleMenuDelete()">Delete</button>
+      }
+    </div>
+  }
+</ng-template>

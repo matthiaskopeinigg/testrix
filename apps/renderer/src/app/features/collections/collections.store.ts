@@ -4,11 +4,25 @@ import {
   DEFAULT_COLLECTION_PREFS,
   DEFAULT_COLLECTIONS_FILE,
   collectionPrefsSchema,
+  createTestingCollectionsFile,
+  newEntityId,
+  folderConfigOf,
+  parseCollectionFolderConfig,
+  parseCollectionRequestConfig,
+  parseCollectionWebSocketConfig,
+  requestConfigOf,
+  websocketConfigOf,
   sanitizeSelectionEntry,
+  type CollectionCookie,
   type CollectionFilters,
+  type CollectionFolderConfig,
   type CollectionFolderNode,
+  type CollectionHttpNode,
   type CollectionNode,
   type CollectionNodeKind,
+  type CollectionRequestConfig,
+  type CollectionWebSocketConfig,
+  type CollectionWebSocketNode,
   type CollectionSortMode,
   type CollectionStatusFilter,
   type CollectionTree,
@@ -26,138 +40,9 @@ export { COLLECTIONS_ROOT_ID } from './collections-drop-model';
 
 const PREFS_KEY = 'testrix.collections.prefs';
 
-function isoDaysAgo(days: number): string {
-  const date = new Date();
-  date.setUTCDate(date.getUTCDate() - days);
-  return date.toISOString();
-}
-
-/** Seeded mock hierarchy for the Collections sidebar. */
+/** Seeded mock hierarchy for the Collections sidebar (browser / empty desktop). */
 export function createMockCollectionTree(): CollectionTree {
-  return [
-    {
-      kind: 'folder',
-      id: 'folder-auth',
-      name: 'Auth',
-      modifiedAt: isoDaysAgo(1),
-      children: [
-        {
-          kind: 'http',
-          id: 'http-login',
-          name: 'Login',
-          method: 'POST',
-          status: 200,
-          modifiedAt: isoDaysAgo(1),
-        },
-        {
-          kind: 'http',
-          id: 'http-refresh',
-          name: 'Refresh token',
-          method: 'POST',
-          status: 401,
-          modifiedAt: isoDaysAgo(3),
-        },
-        {
-          kind: 'websocket',
-          id: 'ws-session',
-          name: 'Session events',
-          modifiedAt: isoDaysAgo(2),
-        },
-      ],
-    },
-    {
-      kind: 'folder',
-      id: 'folder-users',
-      name: 'Users',
-      modifiedAt: isoDaysAgo(0),
-      children: [
-        {
-          kind: 'folder',
-          id: 'folder-users-admin',
-          name: 'Admin',
-          modifiedAt: isoDaysAgo(0),
-          children: [
-            {
-              kind: 'http',
-              id: 'http-list-admins',
-              name: 'List admins',
-              method: 'GET',
-              status: 200,
-              modifiedAt: isoDaysAgo(0),
-            },
-            {
-              kind: 'http',
-              id: 'http-create-admin',
-              name: 'Create admin',
-              method: 'POST',
-              status: null,
-              modifiedAt: isoDaysAgo(4),
-            },
-          ],
-        },
-        {
-          kind: 'http',
-          id: 'http-get-user',
-          name: 'Get user',
-          method: 'GET',
-          status: 404,
-          modifiedAt: isoDaysAgo(5),
-        },
-        {
-          kind: 'http',
-          id: 'http-update-user',
-          name: 'Update user',
-          method: 'PATCH',
-          status: 200,
-          modifiedAt: isoDaysAgo(2),
-        },
-        {
-          kind: 'websocket',
-          id: 'ws-presence',
-          name: 'Presence',
-          modifiedAt: isoDaysAgo(1),
-        },
-      ],
-    },
-    {
-      kind: 'http',
-      id: 'http-health',
-      name: 'Health check',
-      method: 'GET',
-      status: 200,
-      modifiedAt: isoDaysAgo(6),
-    },
-    {
-      kind: 'websocket',
-      id: 'ws-live',
-      name: 'Live feed',
-      modifiedAt: isoDaysAgo(0),
-    },
-    {
-      kind: 'folder',
-      id: 'folder-billing',
-      name: 'Billing',
-      modifiedAt: isoDaysAgo(8),
-      children: [
-        {
-          kind: 'http',
-          id: 'http-invoices',
-          name: 'List invoices',
-          method: 'GET',
-          status: 500,
-          modifiedAt: isoDaysAgo(7),
-        },
-        {
-          kind: 'http',
-          id: 'http-charge',
-          name: 'Create charge',
-          method: 'POST',
-          status: 201,
-          modifiedAt: isoDaysAgo(9),
-        },
-      ],
-    },
-  ];
+  return createTestingCollectionsFile().collections;
 }
 
 function prefsKey(workspaceId: string | null): string {
@@ -246,34 +131,40 @@ function leafPasses(node: CollectionNode, filters: CollectionFilters, query: str
   return true;
 }
 
-function folderNameMatches(node: CollectionFolderNode, query: string): boolean {
+function folderPasses(node: CollectionFolderNode, filters: CollectionFilters, query: string): boolean {
+  if (filters.kinds.length > 0 && !filters.kinds.includes('folder'))
+    return false;
+  if (filters.methods.length > 0 || filters.statuses.length > 0)
+    return false;
   const q = query.trim().toLowerCase();
-  return !!q && node.name.toLowerCase().includes(q);
+  if (!q)
+    return true;
+  return node.name.toLowerCase().includes(q);
 }
 
-function filterTree(nodes: CollectionTree, filters: CollectionFilters, query: string): CollectionTree {
+/**
+ * Filters the collection tree for the sidebar. Empty folders stay visible when
+ * there is no search query, so creating a folder is not a no-op.
+ */
+export function filterCollectionTree(
+  nodes: CollectionTree,
+  filters: CollectionFilters,
+  query: string,
+): CollectionTree {
   const result: CollectionNode[] = [];
   for (const node of nodes) {
     if (node.kind === 'folder') {
-      const children = filterTree(node.children, filters, query);
+      const children = filterCollectionTree(node.children, filters, query);
       if (children.length > 0) {
         result.push({ ...node, children });
         continue;
       }
-      const kindsOk = filters.kinds.length === 0 || filters.kinds.includes('folder');
-      if (
-        folderNameMatches(node, query) &&
-        kindsOk &&
-        filters.methods.length === 0 &&
-        filters.statuses.length === 0
-      ) {
+      if (folderPasses(node, filters, query))
         result.push({ ...node, children: [] });
-      }
       continue;
     }
-    if (leafPasses(node, filters, query)) {
+    if (leafPasses(node, filters, query))
       result.push(node);
-    }
   }
   return result;
 }
@@ -379,23 +270,36 @@ function findNodeInFolder(
   return null;
 }
 
-function isDescendant(nodes: CollectionTree, ancestorId: string, maybeChildId: string): boolean {
-  const found = findNode(nodes, ancestorId);
-  if (!found || found.node.kind !== 'folder') {
-    return false;
-  }
-  const walk = (list: CollectionNode[]): boolean => {
+/** Maps every node id to its parent folder id, or null at the top level. */
+function buildParentMap(nodes: CollectionTree): ReadonlyMap<string, string | null> {
+  const parents = new Map<string, string | null>();
+  const walk = (list: readonly CollectionNode[], parentId: string | null): void => {
     for (const node of list) {
-      if (node.id === maybeChildId) {
-        return true;
-      }
-      if (node.kind === 'folder' && walk(node.children)) {
-        return true;
+      parents.set(node.id, parentId);
+      if (node.kind === 'folder') {
+        walk(node.children, node.id);
       }
     }
-    return false;
   };
-  return walk(found.node.children);
+  walk(nodes, null);
+  return parents;
+}
+
+function isDescendant(
+  parents: ReadonlyMap<string, string | null>,
+  ancestorId: string,
+  maybeChildId: string,
+): boolean {
+  const seen = new Set<string>();
+  let current = parents.get(maybeChildId) ?? null;
+  while (current !== null && !seen.has(current)) {
+    if (current === ancestorId) {
+      return true;
+    }
+    seen.add(current);
+    current = parents.get(current) ?? null;
+  }
+  return false;
 }
 
 function removeNode(nodes: CollectionTree, id: string): { tree: CollectionTree; removed: CollectionNode | null } {
@@ -419,12 +323,8 @@ function removeNode(nodes: CollectionTree, id: string): { tree: CollectionTree; 
   return { tree: next, removed };
 }
 
-function nextCollectionId(ids: readonly string[], prefix: string): string {
-  const used = new Set(ids);
-  let n = 1;
-  while (used.has(`${prefix}_${n}`))
-    n += 1;
-  return `${prefix}_${n}`;
+function nextCollectionId(_ids: readonly string[], _prefix: string): string {
+  return newEntityId();
 }
 
 function defaultCollectionName(kind: CollectionNodeKind): string {
@@ -455,6 +355,7 @@ function createCollectionNode(
       id: nextCollectionId(ids, 'ws'),
       name: defaultCollectionName(kind),
       modifiedAt,
+      config: parseCollectionWebSocketConfig({}),
     };
   }
   return {
@@ -483,6 +384,31 @@ function collectDescendantIds(node: CollectionNode, out: string[] = []): string[
       collectDescendantIds(child, out);
   }
   return out;
+}
+
+export interface CollectionRestoreEntry {
+  readonly node: CollectionNode;
+  readonly parentId: string | null;
+  readonly index: number;
+}
+
+function cloneNodeDeep(node: CollectionNode): CollectionNode {
+  if (node.kind === 'folder')
+    return { ...node, children: cloneTree(node.children) };
+  return { ...node };
+}
+
+function topLevelDeleteIds(tree: CollectionTree, ids: readonly string[]): readonly string[] {
+  const set = new Set(ids);
+  return ids.filter((id) => {
+    let parentId = findNode(tree, id)?.parentId ?? null;
+    while (parentId) {
+      if (set.has(parentId))
+        return false;
+      parentId = findNode(tree, parentId)?.parentId ?? null;
+    }
+    return findNode(tree, id) !== null;
+  });
 }
 
 function cloneCollectionNode(node: CollectionNode, used: Set<string>): CollectionNode {
@@ -596,12 +522,19 @@ export class CollectionsStore {
   readonly dragIds = signal<readonly string[]>([]);
 
   private moveAnimTimer: ReturnType<typeof setTimeout> | null = null;
+  private collectionsPersistTimer: ReturnType<typeof setTimeout> | null = null;
+  private collectionsPersistInFlight: Promise<void> | null = null;
+  private static readonly COLLECTIONS_PERSIST_DEBOUNCE_MS = 400;
 
   readonly visibleTree = computed(() =>
-    ensureFoldersFirst(filterTree(this.tree(), this.filters(), this.searchQuery())),
+    ensureFoldersFirst(filterCollectionTree(this.tree(), this.filters(), this.searchQuery())),
   );
 
   readonly hasVisibleNodes = computed(() => this.visibleTree().length > 0);
+
+  readonly isTreeEmpty = computed(() => this.tree().length === 0);
+
+  private readonly parentIndex = computed(() => buildParentMap(this.tree()));
 
   visibleIds(): readonly string[] {
     return flattenTree(this.visibleTree(), (id) => this.isExpanded(id)).map((row) => row.id);
@@ -808,7 +741,7 @@ export class CollectionsStore {
     if (parentId === nodeId) {
       return;
     }
-    if (parentId && isDescendant(this.tree(), nodeId, parentId)) {
+    if (parentId && isDescendant(this.parentIndex(), nodeId, parentId)) {
       return;
     }
 
@@ -870,18 +803,19 @@ export class CollectionsStore {
     const parentId =
       targetParentId === null || targetParentId === COLLECTIONS_ROOT_ID ? null : targetParentId;
     const tree = this.tree();
+    const parents = this.parentIndex();
     const ordered = flattenTree(tree, () => true)
       .map((row) => row.id)
       .filter((id) => unique.includes(id));
     const movingIds = ordered.filter(
-      (id) => !unique.some((other) => other !== id && isDescendant(tree, other, id)),
+      (id) => !unique.some((other) => other !== id && isDescendant(parents, other, id)),
     );
     if (movingIds.length === 0) {
       return false;
     }
 
     for (const id of movingIds) {
-      if (parentId === id || (parentId && isDescendant(tree, id, parentId))) {
+      if (parentId === id || (parentId && isDescendant(parents, id, parentId))) {
         return false;
       }
     }
@@ -946,7 +880,7 @@ export class CollectionsStore {
 
   /** Appends a node into a folder (and expands it). */
   moveIntoFolder(nodeId: string, folderId: string): void {
-    if (nodeId === folderId || isDescendant(this.tree(), nodeId, folderId)) {
+    if (nodeId === folderId || isDescendant(this.parentIndex(), nodeId, folderId)) {
       return;
     }
     const folder = findNode(this.tree(), folderId);
@@ -1011,7 +945,7 @@ export class CollectionsStore {
     }
 
     if (target.mode === 'into') {
-      if (ids.some((id) => id === target.parentId || isDescendant(this.tree(), id, target.parentId))) {
+      if (ids.some((id) => id === target.parentId || isDescendant(this.parentIndex(), id, target.parentId))) {
         return null;
       }
       const folder = findNode(this.tree(), target.parentId);
@@ -1023,7 +957,7 @@ export class CollectionsStore {
     const parentId = target.parentId === COLLECTIONS_ROOT_ID ? null : target.parentId;
     if (
       parentId &&
-      ids.some((id) => parentId === id || isDescendant(this.tree(), id, parentId))
+      ids.some((id) => parentId === id || isDescendant(this.parentIndex(), id, parentId))
     ) {
       return null;
     }
@@ -1047,6 +981,119 @@ export class CollectionsStore {
 
   nodeById(id: string): CollectionNode | null {
     return findNode(this.tree(), id)?.node ?? null;
+  }
+
+  folderById(id: string): CollectionFolderNode | null {
+    const node = this.nodeById(id);
+    return node?.kind === 'folder' ? node : null;
+  }
+
+  /**
+   * Patches persisted folder settings. Missing config is filled with defaults.
+   */
+  updateFolderConfig(id: string, patch: Partial<CollectionFolderConfig>): void {
+    const found = findNode(this.tree(), id);
+    if (!found || found.node.kind !== 'folder')
+      return;
+    const current = folderConfigOf(found.node);
+    const config = parseCollectionFolderConfig({ ...current, ...patch });
+    const now = new Date().toISOString();
+    const apply = (node: CollectionNode): CollectionNode => {
+      if (node.id === id && node.kind === 'folder')
+        return { ...node, config, modifiedAt: now };
+      if (node.kind === 'folder')
+        return { ...node, children: node.children.map(apply) };
+      return node;
+    };
+    this.commitTree(this.tree().map(apply));
+  }
+
+  /**
+   * Patches persisted HTTP request config. Missing fields are filled with defaults.
+   */
+  updateHttpConfig(id: string, patch: Partial<CollectionRequestConfig>): void {
+    const found = findNode(this.tree(), id);
+    if (!found || found.node.kind !== 'http')
+      return;
+    const current = requestConfigOf(found.node);
+    const config = parseCollectionRequestConfig({ ...current, ...patch });
+    const now = new Date().toISOString();
+    const apply = (node: CollectionNode): CollectionNode => {
+      if (node.id === id && node.kind === 'http')
+        return { ...node, config, modifiedAt: now };
+      if (node.kind === 'folder')
+        return { ...node, children: node.children.map(apply) };
+      return node;
+    };
+    this.commitTree(this.tree().map(apply));
+  }
+
+  websocketById(id: string): CollectionWebSocketNode | null {
+    const node = this.nodeById(id);
+    return node?.kind === 'websocket' ? node : null;
+  }
+
+  /**
+   * Patches persisted WebSocket config. Missing fields are filled with defaults.
+   */
+  updateWebsocketConfig(id: string, patch: Partial<CollectionWebSocketConfig>): void {
+    const found = findNode(this.tree(), id);
+    if (!found || found.node.kind !== 'websocket')
+      return;
+    const current = websocketConfigOf(found.node);
+    const config = parseCollectionWebSocketConfig({ ...current, ...patch });
+    const now = new Date().toISOString();
+    const apply = (node: CollectionNode): CollectionNode => {
+      if (node.id === id && node.kind === 'websocket')
+        return { ...node, config, modifiedAt: now };
+      if (node.kind === 'folder')
+        return { ...node, children: node.children.map(apply) };
+      return node;
+    };
+    this.commitTree(this.tree().map(apply));
+  }
+
+  httpById(id: string): CollectionHttpNode | null {
+    const node = this.nodeById(id);
+    return node?.kind === 'http' ? node : null;
+  }
+
+  updateHttpMeta(id: string, patch: { readonly method?: HttpMethod; readonly status?: number | null }): void {
+    const found = findNode(this.tree(), id);
+    if (!found || found.node.kind !== 'http')
+      return;
+    const now = new Date().toISOString();
+    const apply = (node: CollectionNode): CollectionNode => {
+      if (node.id === id && node.kind === 'http')
+        return {
+          ...node,
+          method: patch.method ?? node.method,
+          status: patch.status !== undefined ? patch.status : node.status,
+          modifiedAt: now,
+        };
+      if (node.kind === 'folder')
+        return { ...node, children: node.children.map(apply) };
+      return node;
+    };
+    this.commitTree(this.tree().map(apply));
+  }
+
+  /** Writes Set-Cookie values into a folder jar, replacing same name/domain/path. */
+  mergeFolderCookies(id: string, cookies: readonly CollectionCookie[]): void {
+    if (cookies.length === 0)
+      return;
+    const folder = this.folderById(id);
+    if (!folder)
+      return;
+    const current = folderConfigOf(folder);
+    const next = new Map<string, CollectionCookie>();
+    for (const cookie of current.settings.cookies)
+      next.set(`${cookie.name}\0${cookie.domain}\0${cookie.path}`, cookie);
+    for (const cookie of cookies)
+      next.set(`${cookie.name}\0${cookie.domain}\0${cookie.path}`, cookie);
+    this.updateFolderConfig(id, {
+      settings: { ...current.settings, cookies: [...next.values()] },
+    });
   }
 
   parentIdOf(id: string): string | null {
@@ -1106,7 +1153,7 @@ export class CollectionsStore {
   /**
    * Removes nodes and their descendants. Returns every id that left the tree.
    */
-  remove(ids: readonly string[]): readonly string[] {
+  remove(ids: readonly string[], options?: { readonly persist?: boolean }): readonly string[] {
     const tree = this.tree();
     const collected: string[] = [];
     for (const id of ids) {
@@ -1121,7 +1168,7 @@ export class CollectionsStore {
     for (const id of ids) {
       next = removeNode(next, id).tree;
     }
-    this.commitTree(next);
+    this.commitTree(next, { persist: options?.persist !== false });
     this.pruneSelection();
     const expanded = new Set(this.expandedIds());
     for (const id of unique)
@@ -1131,20 +1178,108 @@ export class CollectionsStore {
     return unique;
   }
 
-  private commitTree(next: CollectionTree): void {
+  /**
+   * Soft-delete with undo: updates the tree immediately but delays disk persist until commit().
+   */
+  removeDeferred(ids: readonly string[]): {
+    readonly removedIds: readonly string[];
+    readonly restore: () => void;
+    readonly commit: () => Promise<void>;
+  } | null {
+    const tree = this.tree();
+    const topLevel = topLevelDeleteIds(tree, ids);
+    if (topLevel.length === 0)
+      return null;
+
+    const entries: CollectionRestoreEntry[] = [];
+    for (const id of topLevel) {
+      const found = findNode(tree, id);
+      if (!found)
+        continue;
+      entries.push({
+        node: cloneNodeDeep(found.node),
+        parentId: found.parentId,
+        index: found.index,
+      });
+    }
+    if (entries.length === 0)
+      return null;
+
+    const removedIds = this.remove(topLevel, { persist: false });
+    if (removedIds.length === 0)
+      return null;
+
+    return {
+      removedIds,
+      restore: () => this.restoreEntries(entries),
+      commit: () => this.flushCollectionsPersist(),
+    };
+  }
+
+  restoreEntries(entries: readonly CollectionRestoreEntry[]): void {
+    if (entries.length === 0)
+      return;
+    const sorted = [...entries].sort((a, b) => {
+      const parentA = a.parentId ?? '';
+      const parentB = b.parentId ?? '';
+      if (parentA !== parentB)
+        return parentA.localeCompare(parentB);
+      return b.index - a.index;
+    });
+    let next = this.tree();
+    for (const entry of sorted)
+      next = insertNode(next, entry.parentId, entry.index, entry.node);
+    this.commitTree(sortTree(next, this.sortMode()));
+    const expanded = new Set(this.expandedIds());
+    for (const entry of entries) {
+      if (entry.node.kind === 'folder')
+        expanded.add(entry.node.id);
+      if (entry.parentId)
+        expanded.add(entry.parentId);
+    }
+    this.expandedIds.set(expanded);
+    this.persistPrefs();
+  }
+
+  private commitTree(next: CollectionTree, options?: { readonly persist?: boolean }): void {
     this.tree.set(next);
-    this.persist();
+    if (options?.persist !== false)
+      this.persist();
   }
 
   private persist(): void {
     if (!this.persistEnabled) {
       return;
     }
+    if (this.collectionsPersistTimer) {
+      clearTimeout(this.collectionsPersistTimer);
+    }
+    this.collectionsPersistTimer = setTimeout(() => {
+      this.collectionsPersistTimer = null;
+      void this.flushCollectionsPersist();
+    }, CollectionsStore.COLLECTIONS_PERSIST_DEBOUNCE_MS);
+  }
+
+  /** Writes the current collection tree immediately (cancels any pending debounced save). */
+  flushCollectionsPersist(): Promise<void> {
+    if (this.collectionsPersistTimer) {
+      clearTimeout(this.collectionsPersistTimer);
+      this.collectionsPersistTimer = null;
+    }
+    if (!this.persistEnabled) {
+      return Promise.resolve();
+    }
+    if (this.collectionsPersistInFlight) {
+      return this.collectionsPersistInFlight;
+    }
     const payload: CollectionsFile = {
       ...DEFAULT_COLLECTIONS_FILE,
       collections: this.tree(),
     };
-    void this.desktop.saveCollections(payload);
+    this.collectionsPersistInFlight = this.desktop.saveCollections(payload).finally(() => {
+      this.collectionsPersistInFlight = null;
+    });
+    return this.collectionsPersistInFlight;
   }
 
   private persistPrefs(): void {

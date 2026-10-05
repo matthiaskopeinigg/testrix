@@ -1,0 +1,31 @@
+:host {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.lt-docs {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.lt-docs__meta {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  gap: 10px;
+  max-width: 42rem;
+  padding: 14px 16px 12px;
+  border-bottom: 1px solid var(--tx-border-subtle);
+}
+
+.lt-docs tx-docs-editor {
+  flex: 1;
+  min-height: 0;
+}

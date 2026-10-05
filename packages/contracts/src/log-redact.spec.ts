@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { collectEnvironmentSecrets, createDefaultEnvironmentsFile } from './environment';
+import { collectEnvironmentSecrets } from './environment';
 import { LOG_SECRET_REDACTED, redactSecrets } from './log-redact';
 
 describe('redactSecrets', () => {
@@ -18,8 +18,30 @@ describe('redactSecrets', () => {
   });
 
   it('collects secret environment values', () => {
-    const secrets = collectEnvironmentSecrets(createDefaultEnvironmentsFile());
-    expect(secrets.some((value) => value.endsWith('-secret'))).toBe(true);
+    const secrets = collectEnvironmentSecrets({
+      schemaVersion: 1,
+      items: [
+        {
+          id: 'env-1',
+          name: 'Local',
+          modifiedAt: '2026-01-01T00:00:00.000Z',
+          variables: [
+            {
+              kind: 'variable',
+              id: 's1',
+              key: 'pw',
+              value: 'local-secret',
+              description: '',
+              enabled: true,
+              secret: true,
+            },
+          ],
+        },
+      ],
+      activeId: 'env-1',
+      orderIds: ['env-1'],
+    });
+    expect(secrets).toEqual(['local-secret']);
     expect(redactSecrets(`pw=${secrets[0]}`, secrets)).not.toContain(secrets[0]);
     expect(redactSecrets(`pw=${secrets[0]}`, secrets)).toContain(LOG_SECRET_REDACTED);
   });

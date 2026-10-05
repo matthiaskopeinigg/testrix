@@ -1,0 +1,211 @@
+@if (load(); as artifact) {
+  <section class="lt-tab" [class.is-resizing]="resizing()" [class.is-running]="isRunning()" [attr.aria-label]="artifact.name">
+    <header class="lt-tab__chrome">
+      <div class="lt-tab__identity">
+        <div class="lt-tab__identity-main">
+          <span class="lt-tab__badge" aria-hidden="true">LT</span>
+          <tx-input
+            class="lt-tab__name"
+            [id]="'lt-name-' + artifact.id"
+            [value]="artifact.name"
+            ariaLabel="Load name"
+            (valueChange)="patchName($event)"
+          />
+          @if (artifact.tags.length) {
+            <ul class="lt-tab__tags" aria-label="Tags">
+              @for (tag of artifact.tags; track tag) {
+                <li>{{ tag }}</li>
+              }
+            </ul>
+          }
+        </div>
+
+        <div class="lt-tab__actions">
+          @if (isRunning()) {
+            <tx-hint label="Cancel load" detail="Stops virtual users for this run" placement="bottom">
+              <button type="button" class="lt-tab__run is-cancel" aria-label="Cancel load" (click)="cancelLoad()">
+                Cancel
+              </button>
+            </tx-hint>
+          } @else {
+            <tx-hint label="Run load" detail="Ramps virtual users against the configured target" placement="bottom">
+              <button
+                type="button"
+                class="lt-tab__run"
+                aria-label="Run load"
+                [disabled]="!canRun()"
+                (click)="runLoad()"
+              >
+                Run
+              </button>
+            </tx-hint>
+          }
+        </div>
+      </div>
+
+      @if (completionBanner(); as banner) {
+        <div class="lt-tab__banner" [attr.data-kind]="banner.kind" role="status">
+          {{ banner.title }}
+        </div>
+      }
+
+      @if (store.loadStatus().error; as statusError) {
+        <div class="lt-tab__banner" data-kind="error" role="status">
+          {{ statusError }}
+        </div>
+      }
+
+      <nav class="lt-tab__nav" role="tablist" aria-label="Load sections">
+        @for (item of sections; track item.id) {
+          <button
+            type="button"
+            class="lt-tab__nav-item"
+            role="tab"
+            [class.is-active]="section() === item.id"
+            [attr.aria-selected]="section() === item.id"
+            (click)="handleSection(item.id)"
+          >
+            {{ item.label }}
+          </button>
+        }
+      </nav>
+
+      @if (isRunning()) {
+        <div
+          class="lt-tab__progress"
+          role="progressbar"
+          [attr.aria-valuenow]="runProgressPercent()"
+          aria-valuemin="0"
+          aria-valuemax="100"
+          [attr.aria-label]="'Load run progress ' + runProgressPercent() + ' percent'"
+        >
+          <span class="lt-tab__progress-fill" [style.width.%]="runProgressPercent()"></span>
+        </div>
+      }
+    </header>
+
+    <div class="lt-tab__split">
+      <div class="lt-tab__primary">
+        <div class="lt-tab__pane-stage">
+          @for (id of [section()]; track id) {
+            <div
+              class="lt-tab__pane"
+              [class.is-target]="id === 'target'"
+              [class.is-docs]="id === 'docs'"
+              (animate.enter)="handlePaneEnter($event)"
+              (animate.leave)="handlePaneLeave($event)"
+            >
+              @switch (id) {
+                @case ('overview') {
+                  <tx-lt-overview-panel
+                    [description]="artifact.description"
+                    [tags]="artifact.tags"
+                    [method]="artifact.method"
+                    [url]="artifact.url"
+                    [virtualUsers]="artifact.virtualUsers"
+                    [durationSec]="artifact.durationSec"
+                    [envName]="envName()"
+                    [maxErrorRate]="artifact.maxErrorRate"
+                    [maxP95Ms]="artifact.maxP95Ms"
+                    [minSuccessRate]="artifact.minSuccessRate"
+                    [minRps]="artifact.minRps"
+                    [runs]="artifact.runs"
+                    (openResults)="handleOpenResults()"
+                    (sectionSelect)="handleSection($event)"
+                  />
+                }
+                @case ('target') {
+                  <tx-lt-target-panel
+                    [targetSource]="artifact.targetSource"
+                    [targetRequestId]="artifact.targetRequestId"
+                    [method]="artifact.method"
+                    [url]="artifact.url"
+                    [headers]="artifact.headers"
+                    [body]="artifact.body"
+                    [environmentId]="artifact.environmentId"
+                    [collectionTree]="collectionTree()"
+                    [envOptions]="envOptions()"
+                    (patch)="patchTarget($event)"
+                  />
+                }
+                @case ('profile') {
+                  <tx-lt-profile-panel
+                    [virtualUsers]="artifact.virtualUsers"
+                    [durationSec]="artifact.durationSec"
+                    [rampUpSec]="artifact.rampUpSec"
+                    (patch)="patchProfile($event)"
+                  />
+                }
+                @case ('thresholds') {
+                  <tx-lt-thresholds-panel
+                    [maxErrorRate]="artifact.maxErrorRate"
+                    [maxP95Ms]="artifact.maxP95Ms"
+                    [minSuccessRate]="artifact.minSuccessRate"
+                    [minRps]="artifact.minRps"
+                    (patch)="patchThresholds($event)"
+                  />
+                }
+                @case ('docs') {
+                  <tx-lt-docs-panel
+                    [docs]="artifact.docs"
+                    [description]="artifact.description"
+                    [tags]="artifact.tags"
+                    (patch)="patchDocs($event)"
+                  />
+                }
+              }
+            </div>
+          }
+        </div>
+      </div>
+
+      @if (!resultsHidden()) {
+        <div
+          class="lt-tab__console-stage"
+          [style.height.px]="resultsHeightPx() + handleHeightPx"
+          [style.--lt-results-h.px]="resultsHeightPx() + handleHeightPx"
+          animate.enter="tx-results-panel-in"
+          animate.leave="tx-results-panel-out"
+        >
+          <div class="lt-tab__console-clip">
+            <div
+              class="lt-tab__sash"
+              role="separator"
+              aria-orientation="horizontal"
+              aria-label="Resize results panel"
+              tabindex="0"
+              (pointerdown)="handleResultsResizeStart($event)"
+              (dblclick)="hideResults()"
+            ></div>
+            <div class="lt-tab__response" [style.height.px]="resultsHeightPx()">
+              <tx-lt-results-panel
+                [runs]="artifact.runs"
+                [running]="isRunning()"
+                [liveMetrics]="store.loadMetrics()"
+                [artifactName]="artifact.name"
+                [artifact]="artifact"
+                (clearHistory)="clearHistory()"
+                (rerun)="runLoad()"
+                (hide)="hideResults()"
+                (resizeStart)="handleResultsResizeStart($event)"
+              />
+            </div>
+          </div>
+        </div>
+      } @else {
+        <div class="lt-tab__dock-stage" animate.enter="tx-request-console-in" animate.leave="tx-request-console-out">
+          <div class="lt-tab__dock-clip">
+            <tx-hint class="lt-tab__dock-hint" label="Open results" placement="top" stretch>
+              <button type="button" class="lt-tab__dock" (click)="revealResults()" aria-label="Open results">
+                <span>Results</span>
+                <span>Open</span>
+              </button>
+            </tx-hint>
+          </div>
+        </div>
+      }
+    </div>
+  </section>
+} @else {
+  <tx-empty-state title="Load missing" body="This load test was deleted or is not in the workspace." />
+}

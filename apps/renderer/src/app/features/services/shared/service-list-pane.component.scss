@@ -1,0 +1,77 @@
+@use 'mixins';
+
+:host {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.tx-service-pane {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.tx-service-pane__body {
+  @include mixins.tx-scrollbar;
+  flex: 1;
+  min-height: 0;
+  padding-bottom: 48px;
+  overflow: auto;
+}
+
+.tx-service-pane__content {
+  position: relative;
+  z-index: 0;
+  min-width: 0;
+  min-height: 100%;
+}
+
+.tx-service-pane__indicator {
+  display: none;
+  position: absolute;
+  top: 0;
+  right: 8px;
+  z-index: 4;
+  height: 3px;
+  margin-top: -1px;
+  border-radius: 99px;
+  background: var(--tx-accent);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--tx-accent) 55%, transparent);
+  pointer-events: none;
+}
+
+.tx-service-pane__indicator::before {
+  content: '';
+  position: absolute;
+  top: -3px;
+  left: -3px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: inherit;
+  box-shadow: 0 0 8px color-mix(in srgb, var(--tx-accent) 60%, transparent);
+}
+
+.tx-service-pane__indicator.is-visible {
+  display: block;
+}
+
+.tx-service-pane__indicator.is-denied {
+  background: #ff6b7a;
+  box-shadow: 0 0 10px color-mix(in srgb, #ff6b7a 55%, transparent);
+}
+
+.tx-service-pane__live {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

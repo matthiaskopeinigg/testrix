@@ -1,0 +1,23 @@
+@switch (kind()) {
+  @case ('plantuml') {
+    @defer (on immediate) {
+      <tx-plantuml-editor [tab]="tab()" />
+    } @placeholder {
+      <div class="tx-workbench-panel__defer" aria-hidden="true"></div>
+    }
+  }
+  @case ('flow') {
+    @defer (on immediate) {
+      <tx-flows-editor [tab]="tab()" />
+    } @placeholder {
+      <div class="tx-workbench-panel__defer" aria-hidden="true"></div>
+    }
+  }
+  @case ('flow-template') {
+    @defer (on immediate) {
+      <tx-flow-template-editor [tab]="tab()" />
+    } @placeholder {
+      <div class="tx-workbench-panel__defer" aria-hidden="true"></div>
+    }
+  }
+}

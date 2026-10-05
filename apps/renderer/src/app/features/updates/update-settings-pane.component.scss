@@ -1,0 +1,117 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+// Settings overlay scopes `.tx-pref` to its own template. Mirror the row so
+// compact checks and the channel select sit on the right of the copy.
+.tx-pref {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 4px 4px 4px 8px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--tx-bg-overlay) 72%, transparent);
+  list-style: none;
+}
+
+.tx-pref__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  min-height: 64px;
+  padding: 12px 14px;
+  border-radius: 10px;
+}
+
+.tx-pref__row + .tx-pref__row {
+  border-top: 1px solid var(--tx-border-subtle);
+}
+
+.tx-pref__copy {
+  flex: 1;
+  min-width: 0;
+}
+
+.tx-pref__copy h3 {
+  margin: 0;
+  font-size: var(--tx-type-ui);
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.tx-pref__copy p {
+  margin: 3px 0 0;
+  color: var(--tx-text-muted);
+  font-size: var(--tx-type-chrome);
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.tx-pref__row > tx-check,
+.tx-pref__row > tx-select {
+  flex-shrink: 0;
+  align-self: center;
+}
+
+.tx-update-settings__status {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px 16px;
+  padding: 14px 16px;
+  border: 1px solid var(--tx-border-subtle);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--tx-bg-chrome) 60%, transparent);
+
+  &[data-phase='ready'] {
+    border-color: color-mix(in srgb, var(--tx-accent) 45%, transparent);
+  }
+
+  &[data-phase='error'] p {
+    color: var(--tx-danger, #f87171);
+  }
+}
+
+.tx-update-settings__status-copy {
+  min-width: 0;
+
+  h3 {
+    margin: 0;
+    font-size: var(--tx-type-body, 13px);
+    font-weight: 650;
+  }
+
+  p {
+    margin: 4px 0 0;
+    font-size: var(--tx-type-chrome, 12px);
+    color: var(--tx-text-secondary);
+  }
+}
+
+.tx-update-settings__meta {
+  opacity: 0.8;
+}
+
+.tx-update-settings__actions {
+  display: flex;
+  gap: 8px;
+}
+
+.tx-update-settings__progress {
+  grid-column: 1 / -1;
+  height: 4px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--tx-text-primary) 10%, transparent);
+  overflow: hidden;
+
+  span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--tx-accent);
+    transition: width calc(200ms * var(--tx-motion-scale, 1)) linear;
+  }
+}

@@ -1,0 +1,286 @@
+<div class="tx-flow-exchange">
+  <header class="tx-flow-exchange__chrome">
+    <div class="tx-flow-exchange__identity">
+      @if (detail().method) {
+        <span class="tx-flow-exchange__method" [attr.data-method]="detail().method">{{ detail().method }}</span>
+      }
+      <div class="tx-flow-exchange__url-wrap">
+        <h2 class="tx-flow-exchange__title" [attr.id]="headingId() || null">{{ title() }}</h2>
+        @if (detail().url) {
+          <code class="tx-flow-exchange__url">{{ detail().url }}</code>
+        }
+      </div>
+      @if (detail().status !== undefined) {
+        <span class="tx-flow-exchange__status" [attr.data-tone]="statusTone()">
+          <span class="tx-flow-exchange__status-dot" aria-hidden="true"></span>
+          <span class="tx-flow-exchange__status-code">{{ detail().status }}</span>
+          <span class="tx-flow-exchange__status-text">{{ statusLabel() }}</span>
+        </span>
+      }
+      @if (detail().hit === false) {
+        <span class="tx-flow-exchange__miss">No matching hit</span>
+      }
+    </div>
+
+    <div class="tx-flow-exchange__toolbar" role="toolbar" aria-label="Exchange actions">
+      @if (detail().url) {
+        <tx-hint label="Copy URL" placement="bottom">
+          <button
+            type="button"
+            class="tx-flow-exchange__icon-btn"
+            aria-label="Copy URL"
+            [class.is-copied]="copiedKey() === 'url'"
+            (click)="handleCopy('url', detail().url || '')"
+          >
+            @if (copiedKey() === 'url') {
+              <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+                <path d="M3.5 7.2 5.8 9.5 10.5 4.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            } @else {
+              <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+                <rect x="4.5" y="4.5" width="7" height="7" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.35" />
+                <path d="M3 9.5V3.8A1.3 1.3 0 0 1 4.3 2.5H9.5" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" />
+              </svg>
+            }
+          </button>
+        </tx-hint>
+      }
+    </div>
+  </header>
+
+  <div class="tx-flow-exchange__stats" aria-label="Exchange summary">
+    @if (hasRequest()) {
+      <div class="tx-flow-exchange__stat">
+        <span class="tx-flow-exchange__stat-label">Req headers</span>
+        <span class="tx-flow-exchange__stat-value">{{ requestHeaders().length }}</span>
+      </div>
+    }
+    @if (hasResponse()) {
+      <div class="tx-flow-exchange__stat">
+        <span class="tx-flow-exchange__stat-label">Res headers</span>
+        <span class="tx-flow-exchange__stat-value">{{ responseHeaders().length }}</span>
+      </div>
+    }
+    <div class="tx-flow-exchange__stat">
+      <span class="tx-flow-exchange__stat-label">Query</span>
+      <span class="tx-flow-exchange__stat-value">{{ queryParams().length }}</span>
+    </div>
+    @if (contentTypeLabel()) {
+      <div class="tx-flow-exchange__stat tx-flow-exchange__stat--wide">
+        <span class="tx-flow-exchange__stat-label">Content-Type</span>
+        <span class="tx-flow-exchange__stat-value">{{ contentTypeLabel() }}</span>
+      </div>
+    }
+  </div>
+
+  @if (detail().expected || detail().actual) {
+    <p class="tx-flow-exchange__assert">
+      @if (detail().expected) {
+        Expected <code>{{ detail().expected }}</code>
+      }
+      @if (detail().actual) {
+        · Actual <code>{{ detail().actual }}</code>
+      }
+    </p>
+  }
+
+  @if (detail().captures; as captures) {
+    @if (headerEntries(captures).length > 0) {
+      <section class="tx-flow-exchange__captures">
+        <h3>Captures</h3>
+        <div class="tx-flow-exchange__pairs">
+          @for (item of headerEntries(captures); track item.key) {
+            <div class="tx-flow-exchange__pair">
+              <span class="tx-flow-exchange__pair-key">{{ item.key }}</span>
+              <span class="tx-flow-exchange__pair-value"><pre>{{ item.value }}</pre></span>
+            </div>
+          }
+        </div>
+      </section>
+    }
+  }
+
+  <div
+    class="tx-flow-exchange__body"
+    [class.is-single]="hasRequest() !== hasResponse()"
+  >
+    @if (hasRequest()) {
+      <section class="tx-flow-exchange__pane">
+        <div class="tx-flow-exchange__pane-head">
+          <h3>Request</h3>
+          <span class="tx-flow-exchange__pane-meta">{{ requestMeta() }}</span>
+        </div>
+
+        <div class="tx-flow-exchange__pane-body">
+          <div class="tx-flow-exchange__block">
+            <button
+              type="button"
+              class="tx-flow-exchange__block-toggle"
+              [attr.aria-expanded]="!isCollapsed('req-headers')"
+              (click)="handleToggle('req-headers')"
+            >
+              <svg class="tx-flow-exchange__chevron" [class.is-collapsed]="isCollapsed('req-headers')" width="10" height="10" viewBox="0 0 12 12" aria-hidden="true">
+                <path d="M4.2 2.4 7.8 6 4.2 9.6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+              <span>Headers</span>
+              <span class="tx-flow-exchange__count">{{ requestHeaders().length }}</span>
+            </button>
+            @if (!isCollapsed('req-headers')) {
+              <div class="tx-flow-exchange__reveal" animate.enter="tx-flow-exchange-reveal" animate.leave="tx-flow-exchange-hide">
+                @if (requestHeaders().length > 0) {
+                  <div class="tx-flow-exchange__pairs">
+                    @for (item of requestHeaders(); track item.key) {
+                      <div class="tx-flow-exchange__pair">
+                        <span class="tx-flow-exchange__pair-key">{{ item.key }}</span>
+                        <span class="tx-flow-exchange__pair-value">{{ item.value }}</span>
+                      </div>
+                    }
+                  </div>
+                } @else {
+                  <p class="tx-flow-exchange__empty">Not captured for this exchange.</p>
+                }
+              </div>
+            }
+          </div>
+
+          <div class="tx-flow-exchange__block" [class.is-body]="!hasResponse()">
+            <div class="tx-flow-exchange__block-bar">
+              <button
+                type="button"
+                class="tx-flow-exchange__block-toggle"
+                [attr.aria-expanded]="!isCollapsed('req-body')"
+                (click)="handleToggle('req-body')"
+              >
+                <svg class="tx-flow-exchange__chevron" [class.is-collapsed]="isCollapsed('req-body')" width="10" height="10" viewBox="0 0 12 12" aria-hidden="true">
+                  <path d="M4.2 2.4 7.8 6 4.2 9.6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+                <span>Body</span>
+                <span class="tx-flow-exchange__count">{{ bodyKindLabel(requestBodyKind()) }}</span>
+              </button>
+              @if (requestBodyFormatted()) {
+                <tx-hint label="Copy request body" placement="bottom">
+                  <button
+                    type="button"
+                    class="tx-flow-exchange__icon-btn is-sm"
+                    aria-label="Copy request body"
+                    [class.is-copied]="copiedKey() === 'req-body'"
+                    (click)="handleCopy('req-body', requestBodyFormatted())"
+                  >
+                    <svg width="12" height="12" viewBox="0 0 14 14" aria-hidden="true">
+                      <rect x="4.5" y="4.5" width="7" height="7" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.35" />
+                      <path d="M3 9.5V3.8A1.3 1.3 0 0 1 4.3 2.5H9.5" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" />
+                    </svg>
+                  </button>
+                </tx-hint>
+              }
+            </div>
+            @if (!isCollapsed('req-body')) {
+              <div class="tx-flow-exchange__reveal" animate.enter="tx-flow-exchange-reveal" animate.leave="tx-flow-exchange-hide">
+                @if (requestBodyFormatted()) {
+                  <tx-code-highlight
+                    class="tx-flow-exchange__pre"
+                    [class.is-primary]="!hasResponse()"
+                    [value]="requestBodyFormatted()"
+                    [language]="requestBodyLanguage()"
+                    ariaLabel="Request body"
+                  />
+                } @else {
+                  <p class="tx-flow-exchange__empty">Not captured for this exchange.</p>
+                }
+              </div>
+            }
+          </div>
+        </div>
+      </section>
+    }
+
+    @if (hasResponse()) {
+      <section class="tx-flow-exchange__pane">
+        <div class="tx-flow-exchange__pane-head">
+          <h3>Response</h3>
+          <span class="tx-flow-exchange__pane-meta">{{ responseMeta() }}</span>
+        </div>
+
+        <div class="tx-flow-exchange__pane-body">
+          <div class="tx-flow-exchange__block">
+            <button
+              type="button"
+              class="tx-flow-exchange__block-toggle"
+              [attr.aria-expanded]="!isCollapsed('res-headers')"
+              (click)="handleToggle('res-headers')"
+            >
+              <svg class="tx-flow-exchange__chevron" [class.is-collapsed]="isCollapsed('res-headers')" width="10" height="10" viewBox="0 0 12 12" aria-hidden="true">
+                <path d="M4.2 2.4 7.8 6 4.2 9.6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+              <span>Headers</span>
+              <span class="tx-flow-exchange__count">{{ responseHeaders().length }}</span>
+            </button>
+            @if (!isCollapsed('res-headers')) {
+              <div class="tx-flow-exchange__reveal" animate.enter="tx-flow-exchange-reveal" animate.leave="tx-flow-exchange-hide">
+                @if (responseHeaders().length > 0) {
+                  <div class="tx-flow-exchange__pairs">
+                    @for (item of responseHeaders(); track item.key) {
+                      <div class="tx-flow-exchange__pair">
+                        <span class="tx-flow-exchange__pair-key">{{ item.key }}</span>
+                        <span class="tx-flow-exchange__pair-value">{{ item.value }}</span>
+                      </div>
+                    }
+                  </div>
+                } @else {
+                  <p class="tx-flow-exchange__empty">No response headers.</p>
+                }
+              </div>
+            }
+          </div>
+
+          <div class="tx-flow-exchange__block is-body">
+            <div class="tx-flow-exchange__block-bar">
+              <button
+                type="button"
+                class="tx-flow-exchange__block-toggle"
+                [attr.aria-expanded]="!isCollapsed('res-body')"
+                (click)="handleToggle('res-body')"
+              >
+                <svg class="tx-flow-exchange__chevron" [class.is-collapsed]="isCollapsed('res-body')" width="10" height="10" viewBox="0 0 12 12" aria-hidden="true">
+                  <path d="M4.2 2.4 7.8 6 4.2 9.6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+                <span>Body</span>
+                <span class="tx-flow-exchange__count">{{ bodyKindLabel(responseBodyKind()) }}</span>
+              </button>
+              @if (responseBodyFormatted()) {
+                <tx-hint label="Copy response body" placement="bottom">
+                  <button
+                    type="button"
+                    class="tx-flow-exchange__icon-btn is-sm"
+                    aria-label="Copy response body"
+                    [class.is-copied]="copiedKey() === 'res-body'"
+                    (click)="handleCopy('res-body', responseBodyFormatted())"
+                  >
+                    <svg width="12" height="12" viewBox="0 0 14 14" aria-hidden="true">
+                      <rect x="4.5" y="4.5" width="7" height="7" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.35" />
+                      <path d="M3 9.5V3.8A1.3 1.3 0 0 1 4.3 2.5H9.5" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" />
+                    </svg>
+                  </button>
+                </tx-hint>
+              }
+            </div>
+            @if (!isCollapsed('res-body')) {
+              <div class="tx-flow-exchange__reveal" animate.enter="tx-flow-exchange-reveal" animate.leave="tx-flow-exchange-hide">
+                @if (responseBodyFormatted()) {
+                  <tx-code-highlight
+                    class="tx-flow-exchange__pre is-primary"
+                    [value]="responseBodyFormatted()"
+                    [language]="responseBodyLanguage()"
+                    ariaLabel="Response body"
+                  />
+                } @else {
+                  <p class="tx-flow-exchange__empty">No response body.</p>
+                }
+              </div>
+            }
+          </div>
+        </div>
+      </section>
+    }
+  </div>
+</div>

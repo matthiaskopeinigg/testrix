@@ -15,6 +15,116 @@
   min-height: 0;
 }
 
+.tx-tools__stage {
+  position: relative;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.tx-tools__stage > * {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.tx-tools__stage > .tx-sidebar-pane-out {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: var(--tx-bg-chrome);
+}
+
+.tx-tools__stage:not([data-slide]) > .tx-sidebar-pane-in {
+  animation: none;
+}
+
+.tx-tools__stage[data-slide='right'] > .tx-sidebar-pane-in {
+  animation: tx-tools-pane-in-right calc(420ms * var(--tx-motion-scale, 1)) var(--tx-spring) both;
+}
+
+.tx-tools__stage[data-slide='right'] > .tx-sidebar-pane-out {
+  animation: tx-tools-pane-out-right
+    calc(280ms * var(--tx-motion-leave-scale, var(--tx-motion-scale, 1))) var(--tx-ease-in-out) both;
+}
+
+.tx-tools__stage[data-slide='left'] > .tx-sidebar-pane-in {
+  animation: tx-tools-pane-in-left calc(420ms * var(--tx-motion-scale, 1)) var(--tx-spring) both;
+}
+
+.tx-tools__stage[data-slide='left'] > .tx-sidebar-pane-out {
+  animation: tx-tools-pane-out-left
+    calc(280ms * var(--tx-motion-leave-scale, var(--tx-motion-scale, 1))) var(--tx-ease-in-out) both;
+}
+
+@keyframes tx-tools-pane-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(-28%) scale(0.98);
+    filter: blur(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+}
+
+@keyframes tx-tools-pane-out-right {
+  from {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+
+  to {
+    opacity: 0;
+    transform: translateX(22%) scale(0.98);
+    filter: blur(6px);
+  }
+}
+
+@keyframes tx-tools-pane-in-left {
+  from {
+    opacity: 0;
+    transform: translateX(28%) scale(0.98);
+    filter: blur(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+}
+
+@keyframes tx-tools-pane-out-left {
+  from {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+
+  to {
+    opacity: 0;
+    transform: translateX(-22%) scale(0.98);
+    filter: blur(6px);
+  }
+}
+
+.tx-tools__hub,
+.tx-tools__drill {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
 .tx-tools__body {
   @include mixins.tx-scrollbar;
   flex: 1;
@@ -54,4 +164,94 @@
   border: 0;
   clip-path: inset(50%);
   white-space: nowrap;
+}
+
+.tx-tools__back {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px 4px;
+}
+
+.tx-tools__back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+  padding: 4px 6px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--tx-text-muted);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.tx-tools__back-btn:hover {
+  background: var(--tx-bg-hover);
+  color: var(--tx-text);
+}
+
+.tx-tools__drill-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--tx-text);
+}
+
+.tx-tools__menu {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 160px;
+  padding: 6px;
+  border: 1px solid var(--tx-border-subtle);
+  border-radius: 10px;
+  background: var(--tx-bg-overlay);
+  box-shadow: var(--tx-shadow-2);
+}
+
+.tx-tools-menu__item {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  margin: 0;
+  min-height: 30px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--tx-text-primary);
+  font: inherit;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.tx-tools-menu__item:hover {
+  background: var(--tx-bg-hover);
+}
+
+.tx-tools-menu__item.is-danger {
+  color: var(--tx-danger, #c44);
+}
+
+.tx-tools-menu__item.is-danger:hover {
+  background: color-mix(in srgb, var(--tx-danger, #c44) 12%, transparent);
+}
+
+.tx-tools-menu__item.is-sub {
+  justify-content: space-between;
+}
+
+.tx-tools-menu__item.is-sub::after {
+  content: '';
+  width: 5px;
+  height: 5px;
+  margin-left: 12px;
+  border-right: 1.4px solid currentColor;
+  border-top: 1.4px solid currentColor;
+  transform: rotate(45deg);
+  opacity: 0.55;
 }

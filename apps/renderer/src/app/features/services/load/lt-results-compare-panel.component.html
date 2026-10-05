@@ -1,0 +1,33 @@
+<section class="lt-compare-panel" aria-label="Run comparison">
+  <header class="lt-compare-panel__header">
+    <div>
+      <h3 class="lt-compare-panel__title">Compare runs</h3>
+      <p class="lt-compare-panel__subtitle">
+        {{ runLabel(compare().runA) }} vs {{ runLabel(compare().runB) }}
+      </p>
+    </div>
+  </header>
+
+  <table class="lt-compare-panel__table">
+    <thead>
+      <tr>
+        <th scope="col">Metric</th>
+        <th scope="col">Run A</th>
+        <th scope="col">Run B</th>
+        <th scope="col">Delta</th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (row of compare().metrics; track row.label) {
+        <tr [attr.data-direction]="row.direction">
+          <th scope="row">{{ row.label }}</th>
+          <td>{{ row.aValue }}</td>
+          <td>{{ row.bValue }}</td>
+          <td>
+            <span class="lt-compare-panel__delta" [attr.data-tone]="deltaTone(row)">{{ row.delta }}</span>
+          </td>
+        </tr>
+      }
+    </tbody>
+  </table>
+</section>

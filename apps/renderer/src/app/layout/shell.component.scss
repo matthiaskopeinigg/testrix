@@ -4,12 +4,165 @@
 }
 
 .tx-shell {
+  position: relative;
   display: flex;
   flex-direction: column;
   height: 100%;
   overflow: hidden;
   background: var(--tx-bg-chrome);
   animation: tx-shell-enter calc(180ms * var(--tx-motion-scale, 1)) var(--tx-ease-out) both;
+}
+
+.tx-shell__drop-scrim {
+  /* Cover rail + sidebar + canvas; stay under the titlebar window controls. */
+  position: absolute;
+  top: var(--tx-titlebar-height, 38px);
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: calc(var(--tx-z-overlay, 40) - 1);
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  padding: var(--tx-space-6, 24px);
+  border: 1.5px dashed color-mix(in srgb, var(--tx-accent) 42%, transparent);
+  border-radius: 0;
+  background: color-mix(in srgb, var(--tx-bg-chrome) 55%, transparent);
+  backdrop-filter: blur(calc(3px * var(--tx-motion-scale, 1)));
+  transition:
+    border-color calc(160ms * var(--tx-motion-scale, 1)) ease,
+    background calc(160ms * var(--tx-motion-scale, 1)) ease;
+}
+
+.tx-shell__drop-scrim--unknown {
+  border-color: color-mix(in srgb, var(--tx-border-strong, var(--tx-border-subtle)) 80%, var(--tx-accent) 20%);
+}
+
+.tx-shell__drop-scrim--valid {
+  border-color: color-mix(in srgb, var(--tx-accent) 70%, transparent);
+  background: color-mix(in srgb, var(--tx-bg-chrome) 50%, var(--tx-accent) 6%);
+}
+
+.tx-shell__drop-scrim--invalid {
+  border-color: color-mix(in srgb, var(--tx-danger) 65%, transparent);
+  background: color-mix(in srgb, var(--tx-bg-chrome) 52%, var(--tx-danger) 10%);
+}
+
+.tx-shell__drop-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  min-width: min(20rem, 86vw);
+  max-width: 26rem;
+  padding: 1.5rem 1.75rem 1.35rem;
+  text-align: center;
+  border: 1px solid color-mix(in srgb, var(--tx-border-subtle) 70%, var(--tx-accent) 30%);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--tx-bg-elevated, var(--tx-bg-canvas)) 92%, transparent);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, #000 12%, transparent),
+    0 18px 48px color-mix(in srgb, #000 40%, transparent);
+}
+
+.tx-shell__drop-scrim--valid .tx-shell__drop-panel {
+  border-color: color-mix(in srgb, var(--tx-accent) 45%, var(--tx-border-subtle));
+}
+
+.tx-shell__drop-scrim--invalid .tx-shell__drop-panel {
+  border-color: color-mix(in srgb, var(--tx-danger) 50%, var(--tx-border-subtle));
+}
+
+.tx-shell__drop-mark {
+  display: grid;
+  place-items: center;
+  width: 3rem;
+  height: 3rem;
+  margin-bottom: 2px;
+  color: var(--tx-accent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--tx-accent) 14%, transparent);
+}
+
+.tx-shell__drop-scrim--invalid .tx-shell__drop-mark {
+  color: var(--tx-danger);
+  background: color-mix(in srgb, var(--tx-danger) 14%, transparent);
+}
+
+.tx-shell__drop-title {
+  margin: 0;
+  color: var(--tx-text);
+  font-size: 1.2rem;
+  font-weight: 650;
+  letter-spacing: -0.03em;
+  line-height: 1.25;
+}
+
+.tx-shell__drop-scrim--invalid .tx-shell__drop-title {
+  color: var(--tx-danger);
+}
+
+.tx-shell__drop-file {
+  margin: 0;
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--tx-text-muted);
+  font-size: 0.75rem;
+  font-family: var(--tx-font-mono, ui-monospace, monospace);
+  line-height: 1.4;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tx-shell__drop-lede {
+  margin: 0;
+  color: var(--tx-text-muted);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}
+
+:host ::ng-deep .tx-shell-drop-enter {
+  animation: tx-shell-drop-enter calc(220ms * var(--tx-motion-scale, 1)) var(--tx-ease-out) both;
+}
+
+:host ::ng-deep .tx-shell-drop-leave {
+  animation: tx-shell-drop-leave calc(180ms * var(--tx-motion-leave-scale, var(--tx-motion-scale, 1))) ease-in both;
+}
+
+:host ::ng-deep .tx-shell-drop-enter .tx-shell__drop-panel {
+  animation: tx-shell-drop-panel-enter calc(260ms * var(--tx-motion-scale, 1)) var(--tx-spring, var(--tx-ease-out)) both;
+}
+
+@keyframes tx-shell-drop-enter {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes tx-shell-drop-leave {
+  from {
+    opacity: 1;
+  }
+
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes tx-shell-drop-panel-enter {
+  from {
+    opacity: 0;
+    transform: scale(calc(1 - 0.04 * var(--tx-motion-scale, 1))) translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 .tx-shell__body {

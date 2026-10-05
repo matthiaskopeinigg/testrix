@@ -3,8 +3,8 @@ import { describe, expect, it } from 'vitest';
 import { parseCollectionsFile } from './config-files';
 import { parseEnvironmentsFile } from './environment';
 import { motionScaleForSpeed } from './motion';
-import { parseSessionFile } from './session';
-import { DEFAULT_USER_SETTINGS, mergeUserSettingsPatch, parseSettingsFile, toUserSettings, userSettingsSchema } from './settings';
+import { parseSessionFile, requestViewFromTab, tabChromeFromRequestView } from './session';
+import { DEFAULT_USER_SETTINGS, clampUiZoom, mergeUserSettingsPatch, nudgeUiZoom, parseSettingsFile, toUserSettings, userSettingsSchema } from './settings';
 
 describe('userSettingsSchema', () => {
   it('parses defaults', () => {
@@ -16,6 +16,7 @@ describe('userSettingsSchema', () => {
     expect(parsed.theme).toBe('light');
     expect(parsed.animationSpeed).toBe('fast');
     expect(parsed.closeAnimationSpeed).toBe(DEFAULT_USER_SETTINGS.closeAnimationSpeed);
+    expect(parsed.saveMode).toBe(DEFAULT_USER_SETTINGS.saveMode);
     expect(parsed.fontUi).toBe(DEFAULT_USER_SETTINGS.fontUi);
     expect(parsed.shortcuts.settings).toBe('Ctrl ,');
     expect(parsed.logsFolder).toBe('');
@@ -26,6 +27,16 @@ describe('userSettingsSchema', () => {
     expect(parsed.certificates.verifyTls).toBe(true);
     expect(parsed.certificates.clientCerts).toEqual([]);
     expect(parsed.schemaVersion).toBe(1);
+    expect(parsed.defaultHeaders).toEqual(DEFAULT_USER_SETTINGS.defaultHeaders);
+    expect(parsed.placeholderEmailDomain).toBe('example.test');
+    expect(parsed.defaultApiKeyHeader).toBe('X-Api-Key');
+    expect(parsed.uiZoom).toBe(1);
+    expect(parsed.androidEmulatorActivated).toBe(false);
+    expect(parsed.androidSdkRoot).toBe('');
+    expect(parsed.androidSdkLicenseAcceptedAt).toBeNull();
+    expect(parsed.androidSystemImageTag).toBe('google_apis');
+    expect(parsed.androidSystemImageApi).toBe(34);
+    expect(parsed.androidSystemImageAbi).toBe('');
   });
 
   it('merges partial proxy, DNS, and certificate objects', () => {
@@ -78,6 +89,8 @@ describe('userSettingsSchema', () => {
 describe('parseSessionFile', () => {
   it('returns defaults for empty input', () => {
     expect(parseSessionFile(null).activeRail).toBe('collections');
+    expect(parseSessionFile(null).flowInspectorWidth).toBe(300);
+    expect(parseSessionFile(null).flowInspectorWideWidth).toBe(460);
   });
 
   it('maps the legacy testing rail to services', () => {
@@ -123,6 +136,198 @@ describe('parseSessionFile', () => {
     expect(parsed.groups[0]?.selectedTabIds).toEqual([]);
     expect(parsed.groups[0]?.tabAnchorId).toBeNull();
   });
+
+  it('keeps a folder tab section', () => {
+    const parsed = parseSessionFile({
+      groups: [
+        {
+          id: 'group-1',
+          activeTabId: 't1',
+          tabs: [
+            {
+              id: 't1',
+              nodeId: 'folder-1',
+              kind: 'collection-folder',
+              title: 'Auth',
+              url: '',
+              status: null,
+              folderSection: 'scripts',
+            },
+          ],
+        },
+      ],
+    });
+    expect(parsed.groups[0]?.tabs[0]?.folderSection).toBe('scripts');
+  });
+
+  it('keeps folder script and docs chrome', () => {
+    const parsed = parseSessionFile({
+      groups: [
+        {
+          id: 'group-1',
+          activeTabId: 't1',
+          tabs: [
+            {
+              id: 't1',
+              nodeId: 'folder-1',
+              kind: 'collection-folder',
+              title: 'Auth',
+              url: '',
+              status: null,
+              folderSection: 'docs',
+              folderScriptPane: 'post',
+              folderDocsMode: 'preview',
+            },
+          ],
+        },
+      ],
+    });
+    expect(parsed.groups[0]?.tabs[0]).toMatchObject({
+      folderSection: 'docs',
+      folderScriptPane: 'post',
+      folderDocsMode: 'preview',
+    });
+  });
+
+  it('keeps the plantuml view for a diagram tab', () => {
+    const parsed = parseSessionFile({
+      groups: [
+        {
+          id: 'group-1',
+          activeTabId: 't1',
+          tabs: [
+            {
+              id: 't1',
+              nodeId: 'diagram-1',
+              kind: 'plantuml',
+              title: 'Login',
+              url: '',
+              status: null,
+              plantumlView: 'source',
+              plantumlPreviewZoom: 1.4,
+              plantumlPreviewPanX: 12,
+              plantumlPreviewPanY: -40,
+              plantumlGridZoom: 0.8,
+              plantumlGridPanX: 20,
+              plantumlGridPanY: 64,
+              plantumlBuilderWidth: 480,
+              plantumlBuilderCollapsed: true,
+            },
+          ],
+        },
+      ],
+    });
+    expect(parsed.groups[0]?.tabs[0]).toMatchObject({
+      plantumlView: 'source',
+      plantumlPreviewZoom: 1.4,
+      plantumlPreviewPanX: 12,
+      plantumlPreviewPanY: -40,
+      plantumlGridZoom: 0.8,
+      plantumlGridPanX: 20,
+      plantumlGridPanY: 64,
+      plantumlBuilderWidth: 480,
+      plantumlBuilderCollapsed: true,
+    });
+  });
+
+  it('keeps the history rail and request editor chrome', () => {
+    const parsed = parseSessionFile({
+      activeRail: 'history',
+      requestRunsById: {
+        'http-1': [
+          {
+            id: 'run-1',
+            at: '2026-09-17T00:00:00.000Z',
+            method: 'GET',
+            url: 'https://api.local',
+            status: 200,
+            statusText: 'OK',
+            durationMs: 12,
+            sizeLabel: '2 B',
+            error: null,
+            requestHeaders: [],
+            requestBody: '',
+            responseHeaders: [],
+            responseBody: '{}',
+          },
+        ],
+      },
+      groups: [
+        {
+          id: 'group-1',
+          activeTabId: 't1',
+          tabs: [
+            {
+              id: 't1',
+              nodeId: 'http-1',
+              kind: 'http',
+              title: 'Login',
+              url: 'https://api.local',
+              status: 200,
+              requestSection: 'body',
+              requestScriptPane: 'post',
+              requestDocsMode: 'write',
+              requestSplitRatio: 0.4,
+              requestResponseTab: 'runs',
+            },
+          ],
+        },
+      ],
+    });
+    expect(parsed.activeRail).toBe('history');
+    expect(parsed.requestRunsById['http-1']?.[0]?.id).toBe('run-1');
+    expect(parsed.groups[0]?.tabs[0]).toMatchObject({
+      requestSection: 'body',
+      requestScriptPane: 'post',
+      requestDocsMode: 'write',
+      requestSplitRatio: 0.4,
+      requestResponseTab: 'runs',
+    });
+  });
+
+  it('keeps request editor chrome after the tab is closed', () => {
+    const parsed = parseSessionFile({
+      requestViewsByNodeId: {
+        'http-1': {
+          section: 'headers',
+          scriptPane: 'post',
+          docsMode: 'preview',
+          splitRatio: 0.62,
+          responseTab: 'timeline',
+          responseHidden: true,
+          snippetLang: 'fetch',
+        },
+        'ws-1': { websocketSection: 'auth' },
+      },
+    });
+    expect(parsed.requestViewsByNodeId['http-1']).toMatchObject({
+      section: 'headers',
+      scriptPane: 'post',
+      docsMode: 'preview',
+      splitRatio: 0.62,
+      responseTab: 'timeline',
+      responseHidden: true,
+      snippetLang: 'fetch',
+    });
+    expect(parsed.requestViewsByNodeId['ws-1']?.websocketSection).toBe('auth');
+  });
+
+  it('round-trips request chrome between a tab and a saved view', () => {
+    const view = requestViewFromTab({
+      requestSection: 'scripts',
+      requestScriptPane: 'pre',
+      requestResponseHidden: false,
+      requestSnippetLang: 'httpie',
+      websocketSection: 'headers',
+    });
+    expect(tabChromeFromRequestView(view)).toEqual({
+      requestSection: 'scripts',
+      requestScriptPane: 'pre',
+      requestResponseHidden: false,
+      requestSnippetLang: 'httpie',
+      websocketSection: 'headers',
+    });
+  });
 });
 
 describe('parseEnvironmentsFile', () => {
@@ -130,7 +335,17 @@ describe('parseEnvironmentsFile', () => {
     expect(parseEnvironmentsFile({}).items.length).toBeGreaterThan(0);
   });
 
-  it('migrates legacy rows that only stored a variable count', () => {
+  it('keeps an explicit empty environments list', () => {
+    const parsed = parseEnvironmentsFile({
+      items: [],
+      activeId: null,
+      orderIds: [],
+    });
+    expect(parsed.items).toEqual([]);
+    expect(parsed.activeId).toBeNull();
+  });
+
+  it('does not invent variables when only a count was stored', () => {
     const parsed = parseEnvironmentsFile({
       items: [
         {
@@ -143,12 +358,63 @@ describe('parseEnvironmentsFile', () => {
       activeId: 'env-local',
       orderIds: ['env-local'],
     });
-    expect(parsed.items[0]?.variables.length).toBeGreaterThan(0);
-    expect(
-      parsed.items[0]?.variables.some(
-        (item) => item.kind !== 'folder' && item.key === 'BASE_URL',
-      ),
-    ).toBe(true);
+    expect(parsed.items[0]?.variables).toEqual([]);
+  });
+
+  it('clears unmodified first-run seeded variables', () => {
+    const parsed = parseEnvironmentsFile({
+      items: [
+        {
+          id: 'env-ci',
+          name: 'CI',
+          modifiedAt: '2026-01-01T00:00:00.000Z',
+          variables: [
+            {
+              kind: 'folder',
+              id: 'env-ci-folder-testdata',
+              name: 'testdata',
+              children: [
+                {
+                  id: 'env-ci-testdata-username',
+                  key: 'username',
+                  value: 'ci-user',
+                  enabled: true,
+                  secret: false,
+                },
+                {
+                  id: 'env-ci-testdata-pw',
+                  key: 'pw',
+                  value: 'ci-secret',
+                  enabled: true,
+                  secret: true,
+                },
+              ],
+            },
+            {
+              kind: 'folder',
+              id: 'env-ci-folder-url',
+              name: 'url',
+              children: [
+                {
+                  id: 'env-ci-url-web',
+                  key: 'web',
+                  value: 'http://127.0.0.1:4100',
+                  enabled: true,
+                  secret: false,
+                },
+              ],
+            },
+            { id: 'env-ci-base-url', key: 'BASE_URL', value: 'http://127.0.0.1:4100', enabled: true, secret: false },
+            { id: 'env-ci-api-token', key: 'API_TOKEN', value: 'ci-token', enabled: true, secret: true },
+            { id: 'env-ci-tenant-id', key: 'TENANT_ID', value: 'ci', enabled: true, secret: false },
+            { id: 'env-ci-log-level', key: 'LOG_LEVEL', value: 'error', enabled: true, secret: false },
+          ],
+        },
+      ],
+      activeId: 'env-ci',
+      orderIds: ['env-ci'],
+    });
+    expect(parsed.items[0]?.variables).toEqual([]);
   });
 
   it('keeps nested folders of variables', () => {
@@ -200,6 +466,35 @@ describe('parseEnvironmentsFile', () => {
 describe('parseCollectionsFile', () => {
   it('keeps an empty collections array', () => {
     expect(parseCollectionsFile({}).collections).toEqual([]);
+  });
+
+  it('keeps valid roots when one sibling fails schema', () => {
+    const file = parseCollectionsFile({
+      collections: [
+        {
+          kind: 'http',
+          id: 'http_ok',
+          name: 'Ok',
+          modifiedAt: '2020-01-01T00:00:00.000Z',
+          method: 'GET',
+          status: null,
+        },
+        { kind: 'http', id: 'bad' },
+      ],
+    });
+    expect(file.collections).toHaveLength(1);
+    expect(file.collections[0]?.id).toBe('http_ok');
+  });
+});
+
+describe('clampUiZoom', () => {
+  it('snaps and clamps zoom factors', () => {
+    expect(clampUiZoom(undefined)).toBe(1);
+    expect(clampUiZoom(1.12)).toBe(1.1);
+    expect(clampUiZoom(0.2)).toBe(0.75);
+    expect(clampUiZoom(3)).toBe(1.5);
+    expect(nudgeUiZoom(1, 1)).toBe(1.05);
+    expect(nudgeUiZoom(0.75, -1)).toBe(0.75);
   });
 });
 

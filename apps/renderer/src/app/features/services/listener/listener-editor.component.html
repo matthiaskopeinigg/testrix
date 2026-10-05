@@ -1,0 +1,238 @@
+@if (listener(); as artifact) {
+  <section class="ls-tab" [class.is-running]="isRunning()" [attr.aria-label]="artifact.name">
+    <header class="ls-tab__chrome">
+      <div class="ls-tab__identity">
+        <div class="ls-tab__identity-main">
+          <span class="ls-tab__badge" aria-hidden="true">LS</span>
+          <tx-input
+            class="ls-tab__name"
+            [id]="'ls-name-' + artifact.id"
+            [value]="artifact.name"
+            ariaLabel="Listener name"
+            (valueChange)="patchName($event)"
+          />
+          @if (artifact.tags.length) {
+            <ul class="ls-tab__tags" aria-label="Tags">
+              @for (tag of artifact.tags; track tag) {
+                <li>{{ tag }}</li>
+              }
+            </ul>
+          }
+        </div>
+
+        <div class="ls-tab__actions">
+          <span class="ls-tab__status" [class.is-live]="isRunning()" role="status">
+            {{ isRunning() ? 'Listening' : 'Idle' }}
+          </span>
+          @if (isRunning()) {
+            <tx-hint label="Stop listener" detail="Stops capturing traffic for this listener" placement="bottom">
+              <button type="button" class="ls-tab__run is-cancel" aria-label="Stop listener" (click)="stopCapture()">
+                Stop
+              </button>
+            </tx-hint>
+          } @else {
+            <tx-hint label="Start listener" detail="Arms capture for matching browser or device traffic" placement="bottom">
+              <button type="button" class="ls-tab__run" aria-label="Start listener" (click)="startCapture()">
+                Start
+              </button>
+            </tx-hint>
+          }
+        </div>
+      </div>
+      @if (startError(); as err) {
+        <p class="ls-tab__error" role="alert">{{ err }}</p>
+      }
+    </header>
+
+    <div class="ls-tab__body">
+      <div class="ls-tab__toolbar">
+        <div class="ls-tab__toolbar-main">
+          <tx-select
+            class="ls-tab__mode"
+            [value]="artifact.mode"
+            [options]="modeOptions"
+            ariaLabel="Listener mode"
+            (valueChange)="patchMode($event)"
+          />
+
+          @if (artifact.mode === 'browser') {
+            <tx-token-field
+              class="ls-tab__start"
+              [id]="'ls-start-url-' + artifact.id"
+              label="Start URL"
+              [value]="artifact.startUrl"
+              [variables]="placeholderVariables()"
+              (valueChange)="patchField('startUrl', $event)"
+            />
+          } @else {
+            <tx-select
+              class="ls-tab__start"
+              [value]="artifact.deviceId"
+              [options]="deviceOptions()"
+              ariaLabel="Emulator device"
+              (valueChange)="patchField('deviceId', $event)"
+            />
+          }
+
+          <tx-select
+            class="ls-tab__method"
+            [value]="artifact.filterMethod"
+            [options]="methodOptions"
+            ariaLabel="Capture method filter"
+            (valueChange)="patchField('filterMethod', $event)"
+          />
+          <tx-token-field
+            class="ls-tab__filter-url"
+            [id]="'ls-filter-url-' + artifact.id"
+            label="Capture URL"
+            [value]="artifact.filterUrl"
+            [variables]="placeholderVariables()"
+            (valueChange)="patchField('filterUrl', $event)"
+          />
+          <tx-input
+            class="ls-tab__filter-status"
+            [id]="'ls-filter-status-' + artifact.id"
+            label="Capture status"
+            [value]="artifact.filterStatus"
+            (valueChange)="patchField('filterStatus', $event)"
+          />
+        </div>
+      </div>
+
+      <section class="ls-tab__hits" aria-label="Captured hits">
+        <div class="ls-tab__hits-toolbar">
+          <tx-input
+            class="ls-tab__search"
+            [id]="'ls-search-' + artifact.id"
+            label="Search"
+            placeholder="Filter by method, URL, status…"
+            [value]="searchQuery()"
+            (valueChange)="setSearch($event)"
+          />
+          <tx-select
+            class="ls-tab__sort"
+            [value]="sortBy()"
+            [options]="sortOptions"
+            ariaLabel="Sort network hits"
+            (valueChange)="setSort($event)"
+          />
+          <div class="ls-tab__hits-meta">
+            <span class="ls-tab__hits-count">{{ hits().length }} / {{ activity().length }}</span>
+            @if (activity().length > 0) {
+              <tx-hint label="Clear activity" detail="Removes saved Network hits from this listener" placement="bottom">
+                <button
+                  type="button"
+                  class="ls-tab__clear"
+                  aria-label="Clear activity"
+                  (click)="clearActivity()"
+                >
+                  Clear
+                </button>
+              </tx-hint>
+            }
+          </div>
+        </div>
+
+        @if (artifact.mode === 'browser') {
+          <div class="ls-tab__resource-filters" role="toolbar" aria-label="Resource type filters">
+            @for (item of resourceFilterOptions; track item.value) {
+              <tx-hint [label]="item.label" placement="bottom">
+                <button
+                  type="button"
+                  class="ls-tab__resource-chip"
+                  [class.is-active]="(artifact.filterResource || 'all') === item.value"
+                  [attr.aria-pressed]="(artifact.filterResource || 'all') === item.value"
+                  (click)="patchResourceFilter(item.value)"
+                >
+                  <span>{{ item.label }}</span>
+                  <span class="ls-tab__resource-count">{{ resourceCounts()[item.value] || 0 }}</span>
+                </button>
+              </tx-hint>
+            }
+          </div>
+        }
+
+        <div class="ls-tab__hit-head" role="row">
+          <button
+            type="button"
+            class="ls-tab__hit-col"
+            [class.is-active]="sortBy() === 'method'"
+            aria-label="Sort by method"
+            (click)="setSort('method')"
+          >
+            Method
+          </button>
+          <span class="ls-tab__hit-col is-static">Type</span>
+          <button
+            type="button"
+            class="ls-tab__hit-col"
+            [class.is-active]="sortBy() === 'url'"
+            aria-label="Sort by URL"
+            (click)="setSort('url')"
+          >
+            URL
+          </button>
+          <button
+            type="button"
+            class="ls-tab__hit-col is-end"
+            [class.is-active]="sortBy() === 'status'"
+            aria-label="Sort by status"
+            (click)="setSort('status')"
+          >
+            Status
+          </button>
+          <button
+            type="button"
+            class="ls-tab__hit-col is-end"
+            [class.is-active]="sortBy() === 'time-desc' || sortBy() === 'time-asc'"
+            aria-label="Sort by time"
+            (click)="toggleTimeSort()"
+          >
+            Time
+          </button>
+        </div>
+
+        @if (hits().length === 0) {
+          <tx-empty-state
+            class="ls-tab__empty"
+            title="No hits yet"
+            body="Start the listener and generate matching traffic, or clear search / type filters."
+          />
+        } @else {
+          <ul class="ls-tab__hit-list" role="listbox" aria-label="Network hits">
+            @for (hit of hits(); track trackHit($index, hit)) {
+              <li>
+                <button
+                  type="button"
+                  class="ls-tab__hit"
+                  role="option"
+                  [class.is-selected]="selectedHitId() === hit.id"
+                  [attr.aria-selected]="selectedHitId() === hit.id"
+                  (click)="openHit(hit)"
+                >
+                  <span class="ls-tab__hit-method" [attr.data-method]="hit.method">{{ hit.method }}</span>
+                  <span class="ls-tab__hit-type">{{ resourceLabel(hit) }}</span>
+                  <span class="ls-tab__hit-url">{{ hit.url }}</span>
+                  <span class="ls-tab__hit-status" [attr.data-tone]="statusTone(hit.status)">
+                    {{ hit.status || '—' }}
+                  </span>
+                  <span class="ls-tab__hit-time">{{ formatHitTime(hit.at) }}</span>
+                </button>
+              </li>
+            }
+          </ul>
+        }
+      </section>
+    </div>
+  </section>
+
+  @if (selectedExchange(); as detail) {
+    <div txOverlayHost animate.enter="tx-overlay-enter" animate.leave="tx-overlay-leave">
+      <tx-overlay labelledBy="listener-exchange-title" size="lg" (closed)="closeHit()">
+        <tx-flow-run-exchange [detail]="detail" title="Network exchange" headingId="listener-exchange-title" />
+      </tx-overlay>
+    </div>
+  }
+} @else {
+  <tx-empty-state title="Listener missing" body="This listener was deleted or is not in the workspace." />
+}

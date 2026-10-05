@@ -9,7 +9,7 @@ export interface ShortcutEvent {
 const MODIFIER_KEYS = new Set(['Control', 'Shift', 'Alt', 'Meta', 'OS', 'Hyper', 'Super']);
 
 /**
- * Matches a stored chord such as `Ctrl K` or `Ctrl ,` against a keyboard event.
+ * Matches a stored chord such as `Ctrl K`, `Ctrl Shift C`, or `F1` against a keyboard event.
  */
 export function matchesShortcut(chord: string, event: ShortcutEvent): boolean {
   const parts = chord
@@ -19,7 +19,8 @@ export function matchesShortcut(chord: string, event: ShortcutEvent): boolean {
   if (parts.length === 0) {
     return false;
   }
-  const key = parts[parts.length - 1]?.toLowerCase() ?? '';
+  const rawKey = parts[parts.length - 1] ?? '';
+  const key = rawKey === '+' ? '=' : rawKey.toLowerCase();
   const mods = new Set(parts.slice(0, -1).map((part) => part.toLowerCase()));
   const wantCtrl = mods.has('ctrl') || mods.has('control') || mods.has('cmd') || mods.has('meta');
   const wantAlt = mods.has('alt');
@@ -28,21 +29,23 @@ export function matchesShortcut(chord: string, event: ShortcutEvent): boolean {
   if (wantCtrl !== hasCtrl || wantAlt !== event.altKey) {
     return false;
   }
-  if (wantShift && !event.shiftKey) {
+  if (wantShift !== event.shiftKey) {
     return false;
   }
-  return event.key.toLowerCase() === key;
+  const eventKey = event.key === '+' ? '=' : event.key.toLowerCase();
+  return eventKey === key;
 }
 
 /**
- * Turns a keydown into a stored chord such as `Ctrl K`.
+ * Turns a keydown into a stored chord such as `Ctrl K` or `F1`.
  * Modifier-only presses and unmodified letters return null.
  */
 export function formatShortcut(event: ShortcutEvent): string | null {
   if (MODIFIER_KEYS.has(event.key)) {
     return null;
   }
-  if (!(event.ctrlKey || event.metaKey || event.altKey)) {
+  const isFunctionKey = /^F\d{1,2}$/i.test(event.key);
+  if (!(event.ctrlKey || event.metaKey || event.altKey) && !isFunctionKey) {
     return null;
   }
   const key = normalizeShortcutKey(event.key);
@@ -63,6 +66,8 @@ export function formatShortcut(event: ShortcutEvent): string | null {
 function normalizeShortcutKey(key: string): string {
   if (key === ' ')
     return 'Space';
+  if (key === '=' || key === '+')
+    return '=';
   if (key.length === 1)
     return key.toUpperCase();
   return key;

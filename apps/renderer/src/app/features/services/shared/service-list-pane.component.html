@@ -1,0 +1,73 @@
+<div class="tx-service-pane">
+  @if (templatesOpen()) {
+    <tx-flow-templates-panel />
+  } @else {
+    <tx-service-toolbar
+      [searchId]="serviceId() + '-search'"
+      [placeholder]="'Search ' + noun()"
+      [search]="store().search(serviceId())"
+      [sort]="store().sort(serviceId())"
+      [showTutorial]="serviceId() === 'flows'"
+      [showTemplates]="serviceId() === 'flows'"
+      [showFilter]="serviceId() === 'flows'"
+      [availableTags]="store().availableTags(serviceId())"
+      [selectedTags]="store().tagFilters(serviceId())"
+      (searchChange)="store().setSearch(serviceId(), $event)"
+      (sortChange)="store().cycleSort(serviceId())"
+      (tutorial)="store().ensureTutorialFlows()"
+      (templates)="templatesStore.openPanel()"
+      (tagToggle)="store().toggleTagFilter(serviceId(), $event)"
+      (tagsClear)="store().clearTagFilters(serviceId())"
+    />
+    <div
+      class="tx-service-pane__body"
+      #scroller
+      (click)="handleChromeClick($event)"
+      (contextmenu)="handleEmptyMenu($event)"
+    >
+      <div class="tx-service-pane__content" #flipRoot>
+        @if (store().visibleTree(serviceId()).length === 0) {
+          <tx-empty-state
+            [title]="emptyTitle()"
+            [body]="emptyBody()"
+          >
+            @if (showEmptyPrimary()) {
+              <tx-button variant="primary" (clicked)="emptyPrimary.emit()">New flow</tx-button>
+            }
+          </tx-empty-state>
+        } @else {
+          @for (node of store().visibleTree(serviceId()); track node.id) {
+            <tx-service-tree-node
+              [node]="node"
+              [serviceId]="serviceId()"
+              [expandedIds]="store().expanded(serviceId())"
+              [activeId]="store().activeArtifactId(serviceId())"
+              [selectedIds]="store().selectedIds()"
+              [renamingId]="renamingId()"
+              [dragDisabled]="dragDisabled()"
+              (toggle)="store().toggleExpanded(serviceId(), $event)"
+              (open)="$event.kind === 'artifact' ? store().openArtifact(serviceId(), $event.id, $event.name) : store().toggleExpanded(serviceId(), $event.id)"
+              (selectNode)="handleSelect($event)"
+              (menu)="menu.emit($event)"
+              (rename)="rename.emit($event)"
+              (renameDone)="renameDone.emit()"
+              (dragStarted)="handleDragStarted($event)"
+              (dragMoved)="handleDragMoved($event)"
+              (dragEnded)="handleDragEnded($event)"
+            />
+          }
+        }
+
+        <div
+          class="tx-service-pane__indicator"
+          [class.is-visible]="dnd.isIndicatorVisible()"
+          [class.is-denied]="dnd.isIndicatorDenied()"
+          [style.left.px]="dnd.indicatorLeft()"
+          [style.transform]="'translate3d(0, ' + dnd.indicatorY() + 'px, 0)'"
+          aria-hidden="true"
+        ></div>
+      </div>
+    </div>
+    <p class="tx-service-pane__live" role="status" aria-live="polite">{{ dnd.announcement() }}</p>
+  }
+</div>

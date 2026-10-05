@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs';
 import path from 'node:path';
 
 /**
@@ -12,4 +13,17 @@ export function bundledDir(): string {
 
 export function bundledPath(...segments: string[]): string {
   return path.resolve(bundledDir(), ...segments);
+}
+
+/**
+ * File copied beside the asar as extraResources (`browser/`, `splash/`, `error/`).
+ * Unpackaged runs fall back to the repo path.
+ */
+export function resolveExtraResource(packagedRelative: string, fallback: string): string {
+  const resources = typeof process.resourcesPath === 'string' ? process.resourcesPath : '';
+  if (resources) {
+    const file = path.join(resources, packagedRelative);
+    if (existsSync(file)) return file;
+  }
+  return fallback;
 }

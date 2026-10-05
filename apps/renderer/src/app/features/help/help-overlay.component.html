@@ -75,43 +75,69 @@
             }
           </ul>
         } @else {
-          @if (section() === 'shortcuts') {
-            <div class="tx-help__chords">
-              <div>
-                <h3>Command palette</h3>
-                <tx-hint variant="inline" [keys]="desktop.settings().shortcuts.palette" />
-              </div>
-              <div>
-                <h3>Settings</h3>
-                <tx-hint variant="inline" [keys]="desktop.settings().shortcuts.settings" />
-              </div>
-              <div>
-                <h3>Toggle sidebar</h3>
-                <tx-hint variant="inline" [keys]="desktop.settings().shortcuts.sidebar" />
-              </div>
-              <div>
-                <h3>Help</h3>
-                <tx-hint variant="inline" keys="F1" />
-              </div>
-            </div>
-          }
+          <div class="tx-help__stage" [attr.data-slide]="paneSlideDir()">
+            @for (id of [section()]; track id) {
+              <div
+                class="tx-help__slide"
+                [animate.enter]="paneEnter()"
+                animate.leave="tx-sidebar-pane-out"
+              >
+                @if (id === 'shortcuts') {
+                  <div class="tx-help__chords">
+                    <div>
+                      <h3>Command palette</h3>
+                      <tx-hint variant="inline" [keys]="desktop.settings().shortcuts.palette" />
+                    </div>
+                    <div>
+                      <h3>Settings</h3>
+                      <tx-hint variant="inline" [keys]="desktop.settings().shortcuts.settings" />
+                    </div>
+                    <div>
+                      <h3>Toggle sidebar</h3>
+                      <tx-hint variant="inline" [keys]="desktop.settings().shortcuts.sidebar" />
+                    </div>
+                    <div>
+                      <h3>Help</h3>
+                      <tx-hint variant="inline" [keys]="desktop.settings().shortcuts.help" />
+                    </div>
+                    <div>
+                      <h3>New request</h3>
+                      <tx-hint variant="inline" [keys]="desktop.settings().shortcuts.newRequest" />
+                    </div>
+                    <div>
+                      <h3>Zoom in</h3>
+                      <tx-hint variant="inline" [keys]="desktop.settings().shortcuts.zoomIn" />
+                    </div>
+                    <div>
+                      <h3>Zoom out</h3>
+                      <tx-hint variant="inline" [keys]="desktop.settings().shortcuts.zoomOut" />
+                    </div>
+                    <div>
+                      <h3>Reset zoom</h3>
+                      <tx-hint variant="inline" [keys]="desktop.settings().shortcuts.zoomReset" />
+                    </div>
+                  </div>
+                }
 
-          <div class="tx-help__articles">
-            @for (article of articles(); track article.id) {
-              <article class="tx-help__card" [class.is-flash]="isHighlighted(article.id)">
-                <h3>{{ article.title }}</h3>
-                <p class="tx-help__lead">{{ article.summary }}</p>
-                @for (paragraph of article.body; track paragraph) {
-                  <p>{{ paragraph }}</p>
-                }
-                @if (article.tips.length > 0) {
-                  <ul class="tx-help__tips">
-                    @for (tip of article.tips; track tip) {
-                      <li>{{ tip }}</li>
-                    }
-                  </ul>
-                }
-              </article>
+                <div class="tx-help__articles">
+                  @for (article of articles(); track article.id) {
+                    <article class="tx-help__card" [class.is-flash]="isHighlighted(article.id)">
+                      <h3>{{ article.title }}</h3>
+                      <p class="tx-help__lead">{{ article.summary }}</p>
+                      @for (paragraph of article.body; track paragraph) {
+                        <p>{{ paragraph }}</p>
+                      }
+                      @if (article.tips.length > 0) {
+                        <ul class="tx-help__tips">
+                          @for (tip of article.tips; track tip) {
+                            <li>{{ tip }}</li>
+                          }
+                        </ul>
+                      }
+                    </article>
+                  }
+                </div>
+              </div>
             }
           </div>
         }

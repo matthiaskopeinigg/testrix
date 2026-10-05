@@ -1,0 +1,17 @@
+@if (hasTokens()) {
+  <span class="tx-ph" aria-hidden="true">
+    @for (part of parts(); track $index) {
+      @if (part.kind === 'text') {
+        <span class="tx-ph__text">{{ part.text }}</span>
+      } @else {
+        <span
+          class="tx-ph__token"
+          [class.is-var]="part.kind === 'mustache'"
+          [class.is-path]="part.kind === 'path'"
+          [class.is-unknown]="part.hint === 'Unknown variable'"
+          [class.is-link]="part.clickable"
+          >{{ part.text }}</span>
+      }
+    }
+  </span>
+}

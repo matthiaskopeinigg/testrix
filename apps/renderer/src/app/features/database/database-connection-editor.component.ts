@@ -6,6 +6,7 @@ import {
   formatDatabaseConnectionString,
   parseDatabaseConnectionString,
   parseDatabaseConnectionTabNodeId,
+  usesOracleThin,
   type DatabaseConnection,
   type DatabaseType,
 } from '@testrix/contracts';
@@ -149,6 +150,14 @@ export class DatabaseConnectionEditorComponent {
 
   handleUseSid(checked: boolean): void {
     this.patchDraft({ useSid: checked });
+  }
+
+  isOracleThin(connection: DatabaseConnection): boolean {
+    return usesOracleThin(connection);
+  }
+
+  handleOracleThin(checked: boolean): void {
+    this.patchDraft({ oracleThin: checked });
   }
 
   timeoutValue(value: number | undefined): string {

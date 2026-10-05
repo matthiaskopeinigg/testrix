@@ -1,8 +1,25 @@
+:host {
+  display: block;
+  animation: tx-empty-in calc(380ms * var(--tx-motion-scale, 1)) var(--tx-ease-out) both;
+}
+
 .tx-empty {
   display: flex;
   flex-direction: column;
   gap: 8px;
   color: var(--tx-text-muted);
+}
+
+@keyframes tx-empty-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 .tx-empty__title {

@@ -1,0 +1,29 @@
+{
+  "extends": ["stylelint-config-standard-scss"],
+  "ignoreFiles": ["**/node_modules/**", "**/dist/**", "**/coverage/**", "**/.angular/**"],
+  "rules": {
+    "selector-class-pattern": null,
+    "declaration-empty-line-before": null,
+    "rule-empty-line-before": null,
+    "at-rule-empty-line-before": null,
+    "comment-empty-line-before": null,
+    "custom-property-empty-line-before": null,
+    "scss/double-slash-comment-empty-line-before": null,
+    "declaration-block-no-redundant-longhand-properties": null,
+    "shorthand-property-no-redundant-values": null,
+    "color-hex-length": null,
+    "alpha-value-notation": null,
+    "color-function-alias-notation": null,
+    "color-function-notation": null,
+    "media-feature-range-notation": null,
+    "selector-not-notation": null,
+    "value-keyword-case": null,
+    "property-no-vendor-prefix": null,
+    "selector-no-vendor-prefix": null,
+    "selector-pseudo-element-no-unknown": [true, { "ignorePseudoElements": ["ng-deep"] }],
+    "selector-pseudo-class-no-unknown": [
+      true,
+      { "ignorePseudoClasses": ["host", "host-context", "deep"] }
+    ]
+  }
+}

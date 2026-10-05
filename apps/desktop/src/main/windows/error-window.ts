@@ -2,12 +2,17 @@ import { app, BrowserWindow, ipcMain } from 'electron';
 
 import { IpcChannels } from '@testrix/contracts';
 import {
+  applyWindowIcon,
   bundledPath,
   errorWindowDefaults,
+  resolveExtraResource,
   sandboxedWebPreferences,
   windowIconOption,
   type TestrixError,
 } from '@testrix/electron-core';
+
+import { createIpcHandle } from '../ipc/ipc-handle';
+import { guardWorkbenchContents } from './web-contents-guard';
 
 export type ErrorWindowKind = 'boot' | 'app';
 
@@ -22,10 +27,10 @@ let errorWindow: BrowserWindow | null = null;
 let errorIpcRegistered = false;
 
 function resolveErrorHtmlPath(): string {
-  if (process.env.TESTRIX_ERROR_HTML) {
-    return process.env.TESTRIX_ERROR_HTML;
+  if (process.env['TESTRIX_ERROR_HTML']) {
+    return process.env['TESTRIX_ERROR_HTML'];
   }
-  return bundledPath('../src/error/error.html');
+  return resolveExtraResource('error/error.html', bundledPath('../src/error/error.html'));
 }
 
 function registerErrorIpc(getWindow: () => BrowserWindow | null): void {
@@ -33,14 +38,15 @@ function registerErrorIpc(getWindow: () => BrowserWindow | null): void {
     return;
   }
   errorIpcRegistered = true;
+  const handle = createIpcHandle(ipcMain);
 
-  ipcMain.handle(IpcChannels.errorQuit, () => {
+  handle(IpcChannels.errorQuit, [], () => {
     app.quit();
   });
 
-  ipcMain.handle(IpcChannels.errorRelaunch, () => {
+  handle(IpcChannels.errorRelaunch, [], () => {
     const win = getWindow();
-    if (process.env.TESTRIX_PREVIEW && win && !win.isDestroyed()) {
+    if (process.env['TESTRIX_PREVIEW'] && win && !win.isDestroyed()) {
       win.reload();
       return;
     }
@@ -68,7 +74,9 @@ export function createErrorWindow(options: ErrorWindowOptions): BrowserWindow {
       preload: bundledPath('preload/error.preload.cjs'),
     },
   });
+  applyWindowIcon(win);
 
+  guardWorkbenchContents(win.webContents);
   errorWindow = win;
   win.on('closed', () => {
     if (errorWindow === win) {
@@ -83,7 +91,7 @@ export function createErrorWindow(options: ErrorWindowOptions): BrowserWindow {
     version: options.version,
   };
   if (options.preview) {
-    query.preview = '1';
+    query['preview'] = '1';
   }
 
   win.once('ready-to-show', () => {

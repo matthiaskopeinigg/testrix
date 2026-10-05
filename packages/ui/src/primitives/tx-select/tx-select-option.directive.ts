@@ -1,4 +1,4 @@
-import { Directive, TemplateRef } from '@angular/core';
+import { Directive, inject, TemplateRef } from '@angular/core';
 
 export interface TxSelectOption {
   readonly value: string;
@@ -17,5 +17,5 @@ export interface TxSelectOptionContext {
   standalone: true,
 })
 export class TxSelectOptionDirective {
-  constructor(readonly template: TemplateRef<TxSelectOptionContext>) {}
+  readonly template = inject<TemplateRef<TxSelectOptionContext>>(TemplateRef);
 }

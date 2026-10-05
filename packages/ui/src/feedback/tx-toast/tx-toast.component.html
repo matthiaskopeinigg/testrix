@@ -1,0 +1,48 @@
+<div class="tx-toast-layer" aria-live="polite" aria-relevant="additions">
+  @for (toast of toasts.items(); track toast.id) {
+    <div
+      class="tx-toast"
+      [class.tx-toast--meter]="toast.progress !== undefined"
+      role="status"
+      animate.enter="tx-toast-enter"
+      animate.leave="tx-toast-leave"
+    >
+      <div class="tx-toast__copy">
+        <div class="tx-toast__headline">
+          <span class="tx-toast__message">{{ toast.message }}</span>
+          @if (toast.progress !== undefined && toast.progress !== null) {
+            <span class="tx-toast__percent">{{ toast.progress }}%</span>
+          }
+        </div>
+        @if (toast.progress !== undefined) {
+          <div
+            class="tx-toast__track"
+            role="progressbar"
+            aria-valuemin="0"
+            aria-valuemax="100"
+            [attr.aria-valuenow]="toast.progress ?? null"
+            [attr.aria-label]="toast.message"
+          >
+            <div
+              class="tx-toast__fill"
+              [class.is-indeterminate]="toast.progress === null"
+              [style.width.%]="toast.progress === null ? 32 : toast.progress"
+            ></div>
+          </div>
+        }
+      </div>
+      @if (toast.dismissLabel; as dismissLabel) {
+        <button type="button" class="tx-toast__action tx-toast__action--quiet" (click)="toasts.dismiss(toast.id)">
+          {{ dismissLabel }}
+        </button>
+      }
+      @if (toast.action; as action) {
+        <tx-hint [label]="action.label" placement="top">
+          <button type="button" class="tx-toast__action" (click)="action.onClick()">
+            {{ action.label }}
+          </button>
+        </tx-hint>
+      }
+    </div>
+  }
+</div>

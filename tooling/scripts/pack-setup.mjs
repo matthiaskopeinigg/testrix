@@ -3,14 +3,20 @@
  * Builds the Setup portable and appends payload.zip with a TESTRIXPK footer.
  */
 import { spawnSync } from 'node:child_process';
-import { openSync, readFileSync, writeFileSync, appendFileSync, existsSync, statSync } from 'node:fs';
+import { readFileSync, appendFileSync, existsSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
-const platform = (process.argv.find((arg) => arg.startsWith('--platform=')) ?? '--platform=win').split('=')[1];
+const platform = (
+  process.argv.find((arg) => arg.startsWith('--platform=')) ?? '--platform=win'
+).split('=')[1];
 const zipPath = path.join(root, 'apps/setup/resources/payload.zip');
 
+spawnSync(process.execPath, [path.join(root, 'tooling/scripts/sync-brand-assets.mjs')], {
+  cwd: root,
+  stdio: 'inherit',
+});
 spawnSync(process.execPath, [path.join(root, 'tooling/scripts/bundle-setup.mjs')], {
   cwd: root,
   stdio: 'inherit',
@@ -26,26 +32,43 @@ if (pack.status !== 0) {
   process.exit(pack.status ?? 1);
 }
 
-if (platform !== 'win' || !existsSync(zipPath)) {
-  console.log('Setup packed. Append payload skipped (non-Windows or missing payload.zip).');
+if (platform !== 'win') {
+  console.log('Setup packed. Append payload skipped (non-Windows).');
   process.exit(0);
+}
+if (!existsSync(zipPath)) {
+  console.error(`Missing ${zipPath}. Run electron:build:win:payload first.`);
+  process.exit(1);
 }
 
 const setupDir = path.join(root, 'release/setup-shell-build');
-const artifact = path.join(setupDir, 'Testrix-Setup.exe');
+const artifact = path.join(setupDir, 'Testrix.exe');
 if (!existsSync(artifact)) {
-  console.warn('Testrix-Setup.exe not found; skip append.');
-  process.exit(0);
+  console.error(`Missing ${artifact} after pack:win.`);
+  process.exit(1);
+}
+
+function appendWithRetry(file, data) {
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    try {
+      appendFileSync(file, data);
+      return;
+    } catch (error) {
+      const code = error && typeof error === 'object' && 'code' in error ? error.code : '';
+      if (code !== 'EBUSY' && code !== 'EPERM') throw error;
+      if (attempt === 7) throw error;
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 750);
+    }
+  }
 }
 
 const payload = readFileSync(zipPath);
 const offset = statSync(artifact).size;
-appendFileSync(artifact, payload);
-const footer = Buffer.alloc(8 + 8 + 8);
+appendWithRetry(artifact, payload);
+const magic = 'TESTRIXPK';
+const footer = Buffer.alloc(8 + 8 + magic.length);
 footer.writeBigUInt64LE(BigInt(offset), 0);
 footer.writeBigUInt64LE(BigInt(payload.length), 8);
-footer.write('TESTRIXPK', 16, 'ascii');
-appendFileSync(artifact, footer);
+footer.write(magic, 16, 'ascii');
+appendWithRetry(artifact, footer);
 console.log('Appended payload to', artifact);
-void openSync;
-void writeFileSync;

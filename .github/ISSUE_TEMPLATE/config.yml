@@ -1,0 +1,11 @@
+blank_issues_enabled: true
+contact_links:
+  - name: In-app Help
+    url: https://github.com/matthiaskopeinigg/testrix-workspace/blob/main/README.md
+    about: Product details live in the app. Press F1 or open Help on the activity rail.
+  - name: Security report
+    url: https://github.com/matthiaskopeinigg/testrix-workspace/security/advisories/new
+    about: Report a vulnerability privately. Do not file a public issue.
+  - name: How to get help
+    url: https://github.com/matthiaskopeinigg/testrix-workspace/blob/main/README.md
+    about: F1 in the app, or a GitHub Issue.

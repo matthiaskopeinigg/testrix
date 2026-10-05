@@ -1,0 +1,1045 @@
+<div
+  class="tx-request-editor"
+  [class.has-response]="showResponsePane()"
+  [style.--tx-request-split]="splitRatio()"
+>
+  @if (isReadonly()) {
+    <p class="tx-request-editor__banner">History snapshot — editing is off. Send still runs the captured request.</p>
+  }
+
+  <header class="tx-folder-editor__identity">
+    <span class="tx-folder-editor__icon" aria-hidden="true">
+      <svg width="16" height="16" viewBox="0 0 14 14">
+        <path d="M2.5 7h9M8 3.5 11.5 7 8 10.5" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" />
+      </svg>
+    </span>
+    <div class="tx-folder-editor__titles">
+      <p class="tx-folder-editor__meta">{{ pathLabel() }}</p>
+    </div>
+    @if (tags().length > 0) {
+      <ul class="tx-folder-editor__chips" aria-label="Tags">
+        @for (tag of tags(); track tag) {
+          <li>{{ tag }}</li>
+        }
+      </ul>
+    }
+  </header>
+
+  @if (urlIngestPreview(); as ingest) {
+    <div class="tx-request-editor__ingest" role="status" aria-live="polite">
+      <span class="tx-request-editor__ingest-label">{{ ingest.label }}</span>
+      <span class="tx-request-editor__ingest-detail">{{ ingest.detail }}</span>
+      <div class="tx-request-editor__ingest-actions">
+        <button type="button" class="tx-request-editor__ghost" (click)="dismissUrlIngest()">Dismiss</button>
+        <button type="button" class="tx-request-editor__send" (click)="applyUrlIngest()">Apply</button>
+      </div>
+    </div>
+  }
+
+  <header class="tx-request-editor__urlbar" aria-label="Request URL">
+    <div class="tx-request-editor__method-wrap">
+      <tx-select
+        class="tx-request-editor__method"
+        variant="bare"
+        [tone]="method()"
+        [value]="method()"
+        [options]="methodOptions"
+        ariaLabel="HTTP method"
+        (valueChange)="handleMethodChange($event)"
+      />
+    </div>
+    <div class="tx-request-editor__url-field">
+      <tx-placeholder-highlight [value]="url()" [variables]="completeVariables()" [pathParams]="true" />
+      <input
+        class="tx-request-editor__url"
+        type="text"
+        [class.has-tokens]="urlHasTokens()"
+        [value]="url()"
+        (input)="handleUrlInput($event)"
+        (paste)="handleUrlPaste($event)"
+        (keydown)="handleUrlKey($event)"
+        (click)="handleUrlClick($event)"
+        aria-label="Request URL"
+        spellcheck="false"
+        autocomplete="off"
+        placeholder="https://api.example.com/:id"
+      />
+    </div>
+    <tx-hint label="Resolved preview" placement="bottom">
+      <button type="button" class="tx-request-editor__ghost" (click)="handleOverlay('preview')">Preview</button>
+    </tx-hint>
+    <tx-hint label="Code snippet" placement="bottom">
+      <button type="button" class="tx-request-editor__ghost" (click)="handleOverlay('code')">Code</button>
+    </tx-hint>
+    @if (hasResponseContent()) {
+      <tx-hint [label]="showResponsePane() ? 'Hide response' : 'Open response'" placement="bottom">
+        <button
+          type="button"
+          class="tx-request-editor__ghost"
+          (click)="toggleResponse()"
+          [attr.aria-label]="showResponsePane() ? 'Hide response' : 'Open response'"
+        >
+          {{ showResponsePane() ? 'Hide' : 'Open' }}
+        </button>
+      </tx-hint>
+    }
+    @if (isManualSave() && dirty()) {
+      <tx-hint label="Discard changes" detail="Revert to the last saved request" placement="bottom">
+        <button type="button" class="tx-request-editor__ghost" (click)="discardDraft()" aria-label="Discard unsaved changes">
+          Discard
+        </button>
+      </tx-hint>
+      <tx-hint label="Save" detail="Ctrl+S — write the request to the collection" placement="bottom">
+        <button type="button" class="tx-request-editor__send" (click)="saveDraft()" aria-label="Save request">
+          Save
+        </button>
+      </tx-hint>
+    }
+    <tx-hint [label]="sendState() === 'sending' ? 'Cancel request' : 'Send request'" keys="Ctrl Enter" placement="bottom">
+      <button
+        type="button"
+        class="tx-request-editor__send"
+        [class.is-cancel]="sendState() === 'sending'"
+        [attr.aria-label]="sendState() === 'sending' ? 'Cancel request' : 'Send request'"
+        (click)="handleSend()"
+      >
+        {{ sendState() === 'sending' ? 'Cancel' : 'Send' }}
+      </button>
+    </tx-hint>
+  </header>
+
+  <div class="tx-folder-editor__head" role="tablist" aria-label="Request sections">
+    @for (item of sections; track item.id) {
+      <button
+        type="button"
+        class="tx-folder-editor__tab"
+        role="tab"
+        [class.is-active]="section() === item.id"
+        [attr.aria-selected]="section() === item.id"
+        (click)="handleSection(item.id)"
+      >
+        {{ item.label }}
+        @if (sectionCount(item.id) > 0) {
+          <span class="tx-folder-editor__count">{{ sectionCount(item.id) }}</span>
+        }
+      </button>
+    }
+  </div>
+
+  <div
+    class="tx-request-editor__body"
+    [style.grid-template-rows]="showResponsePane() ? splitRows() : null"
+  >
+  <div class="tx-request-editor__request">
+    <div class="tx-folder-editor__pane" role="tabpanel">
+      <div class="tx-folder-editor__pane-stage" [attr.data-slide]="sectionSlideDir()">
+        @for (id of [section()]; track id) {
+          <div class="tx-folder-editor__pane-body" [animate.enter]="sectionPaneEnter()" animate.leave="tx-folder-pane-out">
+            @switch (id) {
+              @case ('overview') {
+                <div class="tx-folder-editor__section">
+                  <div class="tx-request-editor__overview">
+                    <dl class="tx-folder-editor__stats">
+                      <div>
+                        <dt>Method</dt>
+                        <dd>{{ method() }}</dd>
+                      </div>
+                      <div>
+                        <dt>Auth</dt>
+                        <dd>{{ authMode() }}</dd>
+                      </div>
+                      <div>
+                        <dt>Headers</dt>
+                        <dd>{{ headerCount() }}</dd>
+                      </div>
+                      <div>
+                        <dt>Last run</dt>
+                        <dd>{{ lastRun() ? (lastRun()!.status || 'Error') : 'None' }}</dd>
+                      </div>
+                    </dl>
+                    <p class="tx-folder-editor__hint">{{ url() || 'No URL yet' }}</p>
+                    @for (hint of overviewOutcomes(); track hint.id) {
+                      <div class="tx-request-editor__outcome">
+                        <p class="tx-request-editor__outcome-text">{{ hint.message }}</p>
+                        <button type="button" class="tx-request-editor__jump" (click)="handleOutcomeHint(hint)">
+                          {{ hint.actionLabel }}
+                        </button>
+                      </div>
+                    }
+                    @if (lastRun(); as run) {
+                      <section class="tx-folder-editor__card">
+                        <h2 class="tx-folder-editor__subtitle">Last run</h2>
+                        <p class="tx-folder-editor__hint">{{ run.status || 'Error' }} · {{ run.durationMs }} ms · {{ run.sizeLabel }}</p>
+                        <button type="button" class="tx-folder-editor__ghost" (click)="handleRestoreRun(run); handleResponseTab('pretty')">
+                          Show in response
+                        </button>
+                      </section>
+                    }
+                    <div class="tx-request-editor__jumps">
+                      <button type="button" class="tx-request-editor__jump" (click)="handleSection('params')">Params</button>
+                      <button type="button" class="tx-request-editor__jump" (click)="handleSection('headers')">Headers</button>
+                      <button type="button" class="tx-request-editor__jump" (click)="handleSection('body')">Body</button>
+                      <button type="button" class="tx-request-editor__jump" (click)="handleSection('auth')">Auth</button>
+                    </div>
+                    <tx-tags-input
+                      id="request-tags"
+                      [tags]="tags()"
+                      [readonly]="isReadonly()"
+                      (tagsChange)="handleTagsChange($event)"
+                    />
+                    <tx-input id="request-description" label="Description" multiline [rows]="5" [value]="description()" (valueChange)="handleDescription($event)" />
+                    @if (examples().length > 0) {
+                      <h2 class="tx-folder-editor__subtitle">Examples</h2>
+                      <ul class="tx-request-editor__runs">
+                        @for (example of examples(); track example.id) {
+                          <li>
+                            <button type="button" class="tx-request-editor__jump" (click)="handleRestoreExample(example)">
+                              {{ example.name }} · {{ example.status }}
+                            </button>
+                          </li>
+                        }
+                      </ul>
+                    }
+                  </div>
+                </div>
+              }
+              @case ('params') {
+                <div class="tx-folder-editor__section">
+                  <p class="tx-folder-editor__hint">Path tokens like <code>:id</code> stay in sync with the URL. Query rows rewrite the <code>?</code> string.</p>
+                  <section class="tx-request-editor__kv-block" aria-labelledby="request-path-heading">
+                    <h2 id="request-path-heading" class="tx-folder-editor__subtitle">Path</h2>
+                    <tx-request-kv-table
+                      label="Path params"
+                      [rows]="pathParams()"
+                      [completeVariables]="completeVariables()"
+                      (rowsChange)="handlePath($event)"
+                    />
+                  </section>
+                  <section class="tx-request-editor__kv-block" aria-labelledby="request-query-heading">
+                    <h2 id="request-query-heading" class="tx-folder-editor__subtitle">Query</h2>
+                    <tx-request-kv-table
+                      label="Query"
+                      inheritedKind="params"
+                      [inherited]="inheritedParams()"
+                      [completeVariables]="completeVariables()"
+                      [rows]="queryParams()"
+                      (rowsChange)="handleQuery($event)"
+                      (inheritedActivate)="handleInherited($event, 'overview')"
+                    />
+                  </section>
+                </div>
+              }
+              @case ('headers') {
+                <div class="tx-folder-editor__section">
+                  <p class="tx-folder-editor__hint">A request header with the same name wins over folder and Settings defaults.</p>
+                  <tx-request-kv-table
+                    label="Headers"
+                    inheritedKind="headers"
+                    [inherited]="inheritedHeaders()"
+                    [completeVariables]="completeVariables()"
+                    [headerComplete]="true"
+                    [extraHeaderNames]="apiKeyHeaderNames()"
+                    [rows]="headers()"
+                    (rowsChange)="handleHeaders($event)"
+                    (inheritedActivate)="handleInherited($event, 'headers')"
+                  />
+                </div>
+              }
+              @case ('body') {
+                <div class="tx-folder-editor__section tx-request-editor__body-section">
+                  @if (bodyDisabled()) {
+                    <p class="tx-folder-editor__hint">GET and HEAD typically have no body. The engine will omit it.</p>
+                  }
+                  <div class="tx-request-editor__body-toolbar">
+                    <div class="tx-folder-editor__field">
+                      <span class="tx-folder-editor__label">Mode</span>
+                      <tx-select [value]="bodyMode()" [options]="bodyModeOptions" ariaLabel="Body mode" (valueChange)="handleBodyMode($event)" />
+                    </div>
+                    @if (canFormatBody()) {
+                      <tx-hint label="Format document" keys="Shift Alt F" placement="bottom">
+                        <button type="button" class="tx-folder-editor__ghost" [disabled]="isReadonly()" (click)="handleFormatBody()">Format</button>
+                      </tx-hint>
+                    }
+                  </div>
+                  @if (bodyMode() === 'none') {
+                    <tx-empty-state title="No body" body="Pick JSON, text, form, GraphQL, or binary.">
+                      <button type="button" class="tx-request-editor__help-chip" (click)="handleWhatsThis('body')">What's this?</button>
+                    </tx-empty-state>
+                  } @else if (bodyMode() === 'graphql') {
+                    <div class="tx-request-editor__gql">
+                      <div class="tx-request-editor__gql-pane">
+                        <span class="tx-folder-editor__label">Query</span>
+                        <div class="tx-request-editor__body-editor">
+                          <tx-code-editor
+                            #gqlQueryEditor
+                            language="graphql"
+                            [value]="graphqlQuery()"
+                            [readonly]="isReadonly()"
+                            [variables]="completeVariables()"
+                            ariaLabel="GraphQL query"
+                            (valueChange)="handleGraphql('query', $event)"
+                          />
+                        </div>
+                      </div>
+                      <div class="tx-request-editor__gql-pane">
+                        <span class="tx-folder-editor__label">Variables</span>
+                        <div class="tx-request-editor__body-editor">
+                          <tx-code-editor
+                            #gqlVarsEditor
+                            language="json"
+                            [value]="graphqlVariables()"
+                            [readonly]="isReadonly()"
+                            [variables]="completeVariables()"
+                            ariaLabel="GraphQL variables"
+                            (valueChange)="handleGraphql('variables', $event)"
+                          />
+                        </div>
+                      </div>
+                      <tx-token-field id="gql-op" label="Operation name" [value]="graphqlOperation()" [variables]="completeVariables()" [readonly]="isReadonly()" (valueChange)="handleGraphql('operation', $event)" />
+                    </div>
+                  } @else if (bodyMode() === 'form-data' || bodyMode() === 'urlencoded') {
+                    <table class="tx-request-editor__headers" aria-label="Form rows">
+                      <thead>
+                        <tr>
+                          <th>Key</th>
+                          <th>Value</th>
+                          @if (bodyMode() === 'form-data') {
+                            <th>Kind</th>
+                          }
+                        </tr>
+                      </thead>
+                      <tbody>
+                        @for (row of formRows(); track row.id) {
+                          <tr>
+                            <td>
+                              <tx-token-field
+                                variant="cell"
+                                [value]="row.key"
+                                placeholder="Key"
+                                [variables]="completeVariables()"
+                                [readonly]="isReadonly()"
+                                (valueChange)="handleFormField(row.id, 'key', $event)"
+                              />
+                            </td>
+                            <td>
+                              <tx-token-field
+                                variant="cell"
+                                [value]="row.value"
+                                placeholder="Value"
+                                [variables]="completeVariables()"
+                                [readonly]="isReadonly()"
+                                (valueChange)="handleFormField(row.id, 'value', $event)"
+                              />
+                            </td>
+                    @if (bodyMode() === 'form-data') {
+                      <td>
+                        <select class="tx-request-editor__headers-cell" [value]="row.kind" (change)="handleFormKind(row.id, formValue($event))">
+                                  <option value="text">Text</option>
+                                  <option value="file">File</option>
+                                </select>
+                                @if (row.kind === 'file') {
+                                  <input type="file" (change)="handleFormFile(row.id, $event)" />
+                                }
+                              </td>
+                            }
+                          </tr>
+                        }
+                      </tbody>
+                    </table>
+                  } @else if (bodyMode() === 'binary') {
+                    <tx-token-field id="bin-name" label="File name" [value]="binaryName()" [variables]="completeVariables()" [readonly]="isReadonly()" (valueChange)="handleBinaryMeta('name', $event)" />
+                    <tx-token-field id="bin-type" label="Content-Type" [value]="binaryType()" [variables]="completeVariables()" [readonly]="isReadonly()" (valueChange)="handleBinaryMeta('type', $event)" />
+                    <input type="file" (change)="handleBinaryFile($event)" aria-label="Binary file" />
+                    <tx-token-field id="bin-b64" label="Base64" [multiline]="true" [rows]="6" [value]="binaryBase64()" [variables]="completeVariables()" [readonly]="isReadonly()" (valueChange)="handleBinaryMeta('base64', $event)" />
+                  } @else {
+                    <div class="tx-request-editor__body-editor">
+                      <tx-code-editor
+                        #bodyEditor
+                        [language]="bodyLanguage()"
+                        [value]="bodyText()"
+                        [readonly]="isReadonly()"
+                        [variables]="completeVariables()"
+                        [ariaLabel]="bodyMode() + ' body'"
+                        (valueChange)="handleBodyValue($event)"
+                      />
+                    </div>
+                  }
+                </div>
+              }
+              @case ('auth') {
+                <div class="tx-folder-editor__section tx-folder-editor__section--narrow">
+                  <tx-select [value]="authMode()" [options]="authModeOptions" ariaLabel="Auth type" (valueChange)="handleAuthMode($event)" />
+                  @if (authMode() === 'oauth2') {
+                    <div class="tx-folder-editor__field">
+                      <span class="tx-folder-editor__label">Grant</span>
+                      <tx-select [value]="auth().grantType" [options]="grantOptions" ariaLabel="OAuth grant" (valueChange)="handleGrantType($event)" />
+                    </div>
+                  }
+                  <div class="tx-folder-editor__auth-stage" [attr.data-slide]="authSlideDir()">
+                    @for (key of [authSlideKey()]; track key) {
+                      <div class="tx-folder-editor__auth-body" [animate.enter]="authPaneEnter()" animate.leave="tx-folder-pane-out">
+                        @if (authMode() === 'inherit') {
+                          <button type="button" class="tx-request-editor__jump" (click)="handleInheritedAuth()">{{ inheritedAuthLabel() }}</button>
+                          <p class="tx-folder-editor__hint">Uses the nearest folder auth on the path to this request. Click to open that folder.</p>
+                          <button type="button" class="tx-request-editor__help-chip" (click)="handleWhatsThis('auth')">What's this?</button>
+                        }
+                        @if (authMode() === 'none') {
+                          <p class="tx-folder-editor__hint">This request sends no Authorization header of its own.</p>
+                          <button type="button" class="tx-request-editor__help-chip" (click)="handleWhatsThis('auth')">What's this?</button>
+                        }
+                        @if (authMode() === 'bearer') {
+                          <tx-token-field id="req-token" label="Token" [value]="auth().token" [variables]="completeVariables()" [readonly]="isReadonly()" (valueChange)="handleAuthField('token', $event)" />
+                        }
+                        @if (authMode() === 'basic' || authMode() === 'digest' || (authMode() === 'oauth2' && auth().grantType === 'password')) {
+                          <tx-token-field id="req-user" label="Username" [value]="auth().username" [variables]="completeVariables()" [readonly]="isReadonly()" (valueChange)="handleAuthField('username', $event)" />
+                          <tx-token-field id="req-pass" label="Password" [value]="auth().password" [variables]="completeVariables()" [readonly]="isReadonly()" (valueChange)="handleAuthField('password', $event)" />
+                        }
+                        @if (authMode() === 'digest') {
+                          <tx-token-field id="req-realm" label="Realm" [value]="auth().realm" [variables]="completeVariables()" [readonly]="isReadonly()" (valueChange)="handleAuthField('realm', $event)" />
+                        }
+                        @if (authMode() === 'apikey') {
+                          <tx-token-field id="req-apikey" label="Key" [value]="auth().apiKey" [variables]="completeVariables()" [readonly]="isReadonly()" (valueChange)="handleAuthField('apiKey', $event)" />
+                          <tx-token-field id="req-apikey-name" label="Header or param name" [value]="auth().apiKeyHeader" [variables]="completeVariables()" [readonly]="isReadonly()" (valueChange)="handleAuthField('apiKeyHeader', $event)" />
+                          <div class="tx-folder-editor__field">
+                            <span class="tx-folder-editor__label">Add to</span>
+                            <tx-select [value]="auth().apiKeyIn" [options]="apiKeyInOptions" ariaLabel="API key location" (valueChange)="handleApiKeyIn($event)" />
+                          </div>
+                        }
+                        @if (authMode() === 'oauth2') {
+                          @if (auth().grantType === 'authorization_code') {
+                            <tx-token-field id="req-auth-url" label="Authorization URL" [value]="auth().authUrl" [variables]="completeVariables()" [readonly]="isReadonly()" (valueChange)="handleAuthField('authUrl', $event)" />
+                            <tx-check variant="inline" label="PKCE (S256)" [checked]="auth().pkce" (checkedChange)="handleAuthField('pkce', $event)" />
+                          }
+                          @if (auth().grantType === 'device_code') {
+                            <tx-token-field id="req-device-url" label="Device authorization URL" [value]="auth().deviceAuthUrl" [variables]="completeVariables()" [readonly]="isReadonly()" (valueChange)="handleAuthField('deviceAuthUrl', $event)" />
+                          }
+                          <tx-token-field id="req-token-url" label="Token URL" [value]="auth().tokenUrl" [variables]="completeVariables()" [readonly]="isReadonly()" (valueChange)="handleAuthField('tokenUrl', $event)" />
+                          <tx-token-field id="req-client" label="Client ID" [value]="auth().clientId" [variables]="completeVariables()" [readonly]="isReadonly()" (valueChange)="handleAuthField('clientId', $event)" />
+                          <tx-token-field id="req-secret" label="Client secret" [value]="auth().clientSecret" [variables]="completeVariables()" [readonly]="isReadonly()" (valueChange)="handleAuthField('clientSecret', $event)" />
+                          <tx-token-field id="req-scope" label="Scope" [value]="auth().scope" [variables]="completeVariables()" [readonly]="isReadonly()" (valueChange)="handleAuthField('scope', $event)" />
+                          <tx-token-field id="req-audience" label="Audience" [value]="auth().audience" [variables]="completeVariables()" [readonly]="isReadonly()" (valueChange)="handleAuthField('audience', $event)" />
+                          <tx-token-field id="req-access" label="Access token" [value]="auth().accessToken" [variables]="completeVariables()" [readonly]="isReadonly()" (valueChange)="handleAuthField('accessToken', $event)" />
+                          <tx-token-field id="req-refresh" label="Refresh token" [value]="auth().refreshToken" [variables]="completeVariables()" [readonly]="isReadonly()" (valueChange)="handleAuthField('refreshToken', $event)" />
+                        }
+                      </div>
+                    }
+                  </div>
+                </div>
+              }
+              @case ('scripts') {
+                <div class="tx-folder-editor__scripts">
+                  <div class="tx-folder-editor__script-main">
+                    <div class="tx-folder-editor__subhead">
+                      <div class="tx-folder-editor__docs-head" role="tablist" aria-label="Script event">
+                        <button type="button" class="tx-folder-editor__tab" role="tab" [class.is-active]="scriptPane() === 'pre'" [attr.aria-selected]="scriptPane() === 'pre'" (click)="handleScriptPane('pre')">
+                          Pre-request
+                        </button>
+                        <button type="button" class="tx-folder-editor__tab" role="tab" [class.is-active]="scriptPane() === 'post'" [attr.aria-selected]="scriptPane() === 'post'" (click)="handleScriptPane('post')">
+                          Tests
+                        </button>
+                      </div>
+                      <tx-hint label="Clear this script" placement="bottom">
+                        <button type="button" class="tx-folder-editor__ghost" [disabled]="isReadonly()" (click)="handleClearScript()">Clear</button>
+                      </tx-hint>
+                    </div>
+                    <div class="tx-folder-editor__script-stage" [attr.data-slide]="scriptSlideDir()">
+                      @for (pane of [scriptPane()]; track pane) {
+                        <div
+                          class="tx-folder-editor__script-body"
+                          [animate.enter]="scriptPaneEnter()"
+                          animate.leave="tx-folder-pane-out"
+                        >
+                          <div class="tx-folder-editor__code">
+                            <pre #scriptGutter class="tx-folder-editor__gutter" aria-hidden="true">{{ scriptLineNumbers().join('\n') }}</pre>
+                            <div class="tx-folder-editor__code-field">
+                              <textarea
+                                #scriptArea
+                                class="tx-folder-editor__code-input"
+                                [class.has-tokens]="scriptHasTokens()"
+                                [value]="scriptValue()"
+                                (input)="handleScriptInput($event)"
+                                (keydown)="handleScriptKey($event)"
+                                (scroll)="handleScriptScroll($event)"
+                                spellcheck="false"
+                                wrap="off"
+                                [readOnly]="isReadonly()"
+                                [attr.aria-label]="pane === 'pre' ? 'Pre-request script' : 'Test script'"
+                                [placeholder]="scriptPlaceholder()"
+                              ></textarea>
+                              <tx-placeholder-highlight
+                                [value]="scriptValue()"
+                                [variables]="completeVariables()"
+                                [multiline]="true"
+                              />
+                            </div>
+                          </div>
+                          <footer class="tx-folder-editor__code-foot">
+                            <span>JavaScript</span>
+                            <span>{{ scriptLines() }} {{ scriptLines() === 1 ? 'line' : 'lines' }}</span>
+                            <span>{{ scriptHint() }}</span>
+                          </footer>
+                        </div>
+                      }
+                    </div>
+                  </div>
+                  <aside class="tx-folder-editor__snippets" aria-label="Script snippets">
+                    <h2>Snippets</h2>
+                    <p>Click to insert at the cursor. <code>pm</code> is an alias for <code>tx</code>.</p>
+                    <ul>
+                      @for (snippet of snippets(); track snippet.id) {
+                        <li>
+                          <button type="button" [disabled]="isReadonly()" (click)="handleInsertSnippet(snippet)">
+                            <span>{{ snippet.label }}</span>
+                            <code>{{ snippet.detail }}</code>
+                          </button>
+                        </li>
+                      }
+                    </ul>
+                  </aside>
+                </div>
+              }
+              @case ('settings') {
+                <div class="tx-folder-editor__section tx-folder-editor__section--narrow">
+                  <section class="tx-folder-editor__card">
+                    <h2 class="tx-folder-editor__subtitle">Request</h2>
+                    <div class="tx-folder-editor__flags">
+                      <tx-check variant="block" label="Follow redirects" [checked]="followRedirects()" (checkedChange)="handleSetting('followRedirects', $event)" />
+                      <tx-check
+                        variant="block"
+                        label="Use workspace TLS default"
+                        [checked]="verifyTlsInherit()"
+                        (checkedChange)="handleVerifyTlsInherit($event)"
+                      />
+                      @if (!verifyTlsInherit()) {
+                        <tx-check variant="block" label="Verify TLS" [checked]="verifyTls()" (checkedChange)="handleSetting('verifyTls', $event)" />
+                      }
+                    </div>
+                    <p class="tx-folder-editor__hint">
+                      Workspace default lives in Settings → Certificates.
+                      <button type="button" class="tx-request-editor__jump" (click)="shell.openSettings('certificates', 'tls-verify')">Open Certificates</button>
+                    </p>
+                    <tx-input id="req-timeout" label="Timeout (ms)" [value]="timeoutMs()" (valueChange)="handleTimeout($event)" />
+                  </section>
+                  <section class="tx-folder-editor__card">
+                    <h2 class="tx-folder-editor__subtitle">Cookies</h2>
+                    <div class="tx-folder-editor__flags">
+                      <tx-check variant="block" label="Send cookies from the workspace jar" [checked]="sendCookies()" (checkedChange)="handleSetting('sendCookies', $event)" />
+                      <tx-check variant="block" label="Save Set-Cookie to the workspace jar" [checked]="storeCookies()" (checkedChange)="handleSetting('storeCookies', $event)" />
+                    </div>
+                  </section>
+                </div>
+              }
+              @case ('docs') {
+                <tx-docs-editor
+                  [value]="docs()"
+                  [mode]="docsMode()"
+                  [readonly]="isReadonly()"
+                  ariaLabel="Request docs"
+                  emptyBody="Write markdown for this request."
+                  (valueChange)="handleDocsValue($event)"
+                  (modeChange)="handleDocsMode($event)"
+                />
+              }
+            }
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+
+  @if (showResponsePane()) {
+  <div
+    class="tx-request-editor__console-stage"
+    animate.enter="tx-request-response-in"
+    animate.leave="tx-request-response-out"
+  >
+  <div class="tx-request-editor__console-clip">
+  <div
+    class="tx-request-editor__sash"
+    role="separator"
+    aria-orientation="horizontal"
+    aria-label="Resize response pane"
+    tabindex="0"
+    (pointerdown)="handleResizeStart($event)"
+    (dblclick)="hideResponse()"
+  ></div>
+
+  <div class="tx-request-editor__response" [class.is-sending]="sendState() === 'sending'">
+    <div
+      class="tx-request-editor__head tx-request-editor__head--response"
+      (pointerdown)="handleResizeStart($event)"
+      (dblclick)="hideResponse()"
+    >
+      <div class="tx-request-editor__response-meta">
+        @if (response(); as res) {
+          <span class="tx-request-editor__status" [attr.data-tone]="statusTone(res.status)">{{ res.status || 'ERR' }} {{ res.statusText }}</span>
+          <span class="tx-request-editor__chip" data-tone="time">{{ res.durationMs }} ms</span>
+          <span class="tx-request-editor__chip" data-tone="size">{{ res.sizeLabel }}</span>
+          @if (responseContentType()) {
+            <span class="tx-request-editor__chip" data-tone="type">{{ responseContentType().split(';')[0] }}</span>
+          }
+          @if (res.httpVersion) {
+            <span class="tx-request-editor__chip" data-tone="http">{{ res.httpVersion }}</span>
+          }
+          @if (networkSettingsLink(); as link) {
+            @if (sendError()) {
+              <button type="button" class="tx-request-editor__jump" (click)="handleSend()">Retry</button>
+            }
+            <button type="button" class="tx-request-editor__jump" (click)="openNetworkSettingsLink()">{{ link.label }}</button>
+          }
+        } @else if (sendState() === 'sending') {
+          <span class="tx-request-editor__status is-pending">Sending</span>
+        } @else {
+          <span class="tx-request-editor__stat">Response</span>
+        }
+      </div>
+      <div class="tx-request-editor__response-actions">
+        <tx-hint [label]="copied() ? 'Copied' : 'Copy'" placement="bottom">
+          <button type="button" class="tx-request-editor__copy" [disabled]="!response()" (click)="handleCopy()">{{ copied() ? 'Copied' : 'Copy' }}</button>
+        </tx-hint>
+        @if (response() && !isReadonly()) {
+          <tx-hint label="Save as example" placement="bottom">
+            <button type="button" class="tx-request-editor__copy" (click)="handleSaveExample()">Save</button>
+          </tx-hint>
+        }
+        @if (canShowDiff()) {
+          <tx-hint label="Compare with previous run" placement="bottom">
+            <button type="button" class="tx-request-editor__copy" (click)="handleComparePrevious()">Compare</button>
+          </tx-hint>
+        }
+        <tx-hint label="Hide response" placement="bottom">
+          <button type="button" class="tx-request-editor__copy" (click)="hideResponse()" aria-label="Hide response">Hide</button>
+        </tx-hint>
+      </div>
+      <div class="tx-request-editor__tabs" role="tablist" aria-label="Response sections">
+        @for (id of primaryResponseTabs(); track id) {
+          <button type="button" class="tx-request-editor__tab" role="tab" [class.is-active]="responseTab() === id" (click)="handleResponseTab(id)">
+            {{ responseTabLabel(id) }}
+            @if (id === 'headers' && response(); as res) {
+              <span class="tx-request-editor__count">{{ res.headers.length }}</span>
+            }
+            @if (id === 'redirects' && responseRedirects().length > 0) {
+              <span class="tx-request-editor__count">{{ responseRedirects().length }}</span>
+            }
+            @if (id === 'runs' && runs().length > 0) {
+              <span class="tx-request-editor__count">{{ runs().length }}</span>
+            }
+          </button>
+        }
+        @if (overflowResponseTabs().length > 0) {
+          <div class="tx-request-editor__response-more">
+            <button
+              type="button"
+              class="tx-request-editor__tab tx-request-editor__tab--more"
+              [class.is-active]="responseMoreActive() || responseMoreOpen()"
+              aria-haspopup="menu"
+              [attr.aria-expanded]="responseMoreOpen()"
+              (click)="toggleResponseMore()"
+            >
+              More
+            </button>
+            @if (responseMoreOpen()) {
+              <div class="tx-request-editor__response-more-menu tx-menu" role="menu">
+                @for (id of overflowResponseTabs(); track id) {
+                  <button
+                    type="button"
+                    class="tx-request-editor__response-more-item"
+                    role="menuitem"
+                    [class.is-active]="responseTab() === id"
+                    (click)="handleResponseMoreTab(id)"
+                  >
+                    {{ responseTabLabel(id) }}
+                    @if (id === 'cookies' && responseCookies().length > 0) {
+                      <span class="tx-request-editor__count">{{ responseCookies().length }}</span>
+                    }
+                  </button>
+                }
+              </div>
+            }
+          </div>
+        }
+      </div>
+    </div>
+    <div class="tx-request-editor__pane" role="tabpanel">
+      @if (sendState() === 'sending' && !response()) {
+        <div class="tx-request-editor__idle">
+          <tx-empty-state title="Sending" body="Cancel from the URL bar if this hangs." />
+        </div>
+      } @else if (response(); as res) {
+        <div class="tx-folder-editor__pane-stage" [attr.data-slide]="responseSlideDir()">
+          @for (id of [responseTab()]; track id) {
+            <div
+              class="tx-folder-editor__pane-body tx-request-editor__pane-body"
+              [animate.enter]="responsePaneEnter()"
+              animate.leave="tx-folder-pane-out"
+            >
+              @switch (id) {
+          @case ('pretty') {
+            <div class="tx-request-editor__pretty">
+              <tx-code-editor
+                [language]="prettyLanguage()"
+                [value]="pretty()"
+                [readonly]="true"
+                [wrap]="true"
+                [lint]="false"
+                [complete]="false"
+                [placeholders]="false"
+                ariaLabel="Pretty response"
+              />
+            </div>
+          }
+          @case ('raw') {
+            <tx-code-highlight
+              class="tx-request-editor__code"
+              [value]="res.body"
+              [language]="prettyLanguage()"
+              ariaLabel="Raw response"
+            />
+          }
+          @case ('preview') {
+            @if (canPreview() && previewSrc(); as html) {
+              <iframe class="tx-request-editor__preview" sandbox title="Response preview" [srcdoc]="html"></iframe>
+            } @else {
+              <div class="tx-request-editor__idle">
+                <tx-empty-state title="No preview" body="HTML, XML, and SVG bodies show a visual preview here." />
+              </div>
+            }
+          }
+          @case ('headers') {
+            <table class="tx-request-editor__headers" aria-label="Response headers">
+              <thead>
+                <tr>
+                  <th>Header</th>
+                  <th>Value</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (row of res.headers; track row.id) {
+                  <tr>
+                    <td><input class="tx-request-editor__headers-cell" type="text" [value]="row.key" readonly /></td>
+                    <td><input class="tx-request-editor__headers-cell" type="text" [value]="row.value" readonly /></td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          }
+          @case ('cookies') {
+            @if (responseCookies().length === 0 && jarCookies().length === 0) {
+              <div class="tx-request-editor__idle">
+                <tx-empty-state title="No cookies" body="Set-Cookie headers land in the workspace jar when Store cookies is on.">
+                  <button type="button" class="tx-request-editor__help-chip" (click)="handleWhatsThis('cookies')">What's this?</button>
+                </tx-empty-state>
+              </div>
+            } @else {
+              @if (responseCookies().length > 0) {
+                <h3 class="tx-request-editor__pane-title">This response</h3>
+                <table class="tx-request-editor__headers" aria-label="Response cookies">
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>Value</th>
+                      <th>Domain</th>
+                      <th>Path</th>
+                      <th>Expires</th>
+                      <th>Flags</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (cookie of responseCookies(); track cookie.name + cookie.domain + cookie.path) {
+                      <tr>
+                        <td><input class="tx-request-editor__headers-cell" type="text" [value]="cookie.name" readonly /></td>
+                        <td><input class="tx-request-editor__headers-cell" type="text" [value]="cookie.value" readonly /></td>
+                        <td><input class="tx-request-editor__headers-cell" type="text" [value]="cookie.domain" readonly /></td>
+                        <td><input class="tx-request-editor__headers-cell" type="text" [value]="cookie.path" readonly /></td>
+                        <td><input class="tx-request-editor__headers-cell" type="text" [value]="cookie.expires" readonly /></td>
+                        <td><input class="tx-request-editor__headers-cell" type="text" [value]="cookieFlags(cookie)" readonly /></td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              }
+              <div class="tx-request-editor__pane-head">
+                <h3 class="tx-request-editor__pane-title">Workspace jar</h3>
+                <tx-hint label="Cookie & auth jar" detail="Browse and edit workspace cookies and collection auth" placement="bottom">
+                  <button type="button" class="tx-request-editor__copy" (click)="openCookieJar()">Open jar</button>
+                </tx-hint>
+              </div>
+              @if (jarCookies().length === 0) {
+                <p class="tx-request-editor__hint">Empty. Stored cookies from this workspace appear here. Open the jar to manage cookies and auth.</p>
+              } @else {
+                <table class="tx-request-editor__headers" aria-label="Workspace cookie jar">
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>Value</th>
+                      <th>Domain</th>
+                      <th>Path</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (cookie of jarCookies(); track cookie.id) {
+                      <tr>
+                        <td><input class="tx-request-editor__headers-cell" type="text" [value]="cookie.name" readonly /></td>
+                        <td><input class="tx-request-editor__headers-cell" type="text" [value]="cookie.value" readonly /></td>
+                        <td><input class="tx-request-editor__headers-cell" type="text" [value]="cookie.domain" readonly /></td>
+                        <td><input class="tx-request-editor__headers-cell" type="text" [value]="cookie.path" readonly /></td>
+                        <td>
+                          <button type="button" class="tx-request-editor__copy" (click)="handleRemoveJarCookie(cookie.id)" aria-label="Remove cookie">Remove</button>
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              }
+            }
+          }
+          @case ('timeline') {
+            <div class="tx-request-editor__timeline">
+              <p class="tx-request-editor__timeline-total">Total: {{ responseTiming().totalMs || res.durationMs }} ms</p>
+              <div class="tx-request-editor__waterfall" role="img" aria-label="Request timing waterfall">
+                @for (phase of timelinePhases; track phase.id) {
+                  @if (responseTiming()[phase.id] > 0) {
+                    <span class="tx-request-editor__waterfall-seg" [attr.data-tone]="phase.tone" [style.flex-grow]="responseTiming()[phase.id]"></span>
+                  }
+                }
+              </div>
+              <ul class="tx-request-editor__legend">
+                @for (phase of timelinePhases; track phase.id) {
+                  <li>
+                    <span class="tx-request-editor__swatch" [attr.data-tone]="phase.tone"></span>
+                    {{ phase.label }}
+                    <strong>{{ responseTiming()[phase.id] }} ms</strong>
+                  </li>
+                }
+              </ul>
+              @if (responseRedirects().length > 0) {
+                <h3 class="tx-request-editor__pane-title">Redirect hops</h3>
+                <ol class="tx-request-editor__hops">
+                  @for (hop of responseRedirects(); track hop.url + hop.status) {
+                    <li class="tx-request-editor__hop">
+                      <div class="tx-request-editor__hop-track" aria-hidden="true">
+                        <span class="tx-request-editor__hop-fill" [style.width.%]="hopShare(hop.durationMs)"></span>
+                      </div>
+                      <p class="tx-request-editor__hop-meta">
+                        <span class="tx-request-editor__hop-status">{{ hop.status }}</span>
+                        <span aria-hidden="true">→</span>
+                        <span>{{ redirectTarget(hop.location) }}</span>
+                        <span class="tx-request-editor__hop-ms">{{ hop.durationMs }} ms</span>
+                      </p>
+                    </li>
+                  }
+                </ol>
+              }
+            </div>
+          }
+          @case ('redirects') {
+            @if (responseRedirects().length === 0) {
+              <div class="tx-request-editor__idle">
+                <tx-empty-state title="No redirects" body="This response did not follow any 3xx hops." />
+              </div>
+            } @else {
+              <ol class="tx-request-editor__hops tx-request-editor__hops--pane">
+                @for (hop of responseRedirects(); track hop.url + hop.status) {
+                  <li class="tx-request-editor__hop">
+                    <div class="tx-request-editor__hop-track" aria-hidden="true">
+                      <span class="tx-request-editor__hop-fill" [style.width.%]="hopShare(hop.durationMs)"></span>
+                    </div>
+                    <p class="tx-request-editor__hop-meta">
+                      <span class="tx-request-editor__hop-status">{{ hop.status }}</span>
+                      <span aria-hidden="true">→</span>
+                      <span>{{ redirectTarget(hop.location) }}</span>
+                      <span class="tx-request-editor__hop-ms">{{ hop.durationMs }} ms</span>
+                    </p>
+                    <span class="tx-request-editor__hop-from">{{ hop.url }}</span>
+                  </li>
+                }
+              </ol>
+            }
+          }
+          @case ('diff') {
+            @if (!canShowDiff()) {
+              <div class="tx-request-editor__idle">
+                <tx-empty-state title="Nothing to compare" body="Send at least twice, or keep the current response and one earlier run." />
+              </div>
+            } @else {
+              <div class="tx-request-editor__diff-pane">
+                <header class="tx-request-editor__diff-toolbar">
+                  <label class="tx-request-editor__diff-pick">
+                    <span>Before</span>
+                    <tx-select
+                      [value]="resolvedDiffLeftId()"
+                      [options]="diffSourceOptions()"
+                      ariaLabel="Diff before"
+                      (valueChange)="handleDiffLeft($event)"
+                    />
+                  </label>
+                  <span class="tx-request-editor__diff-arrow" aria-hidden="true">→</span>
+                  <label class="tx-request-editor__diff-pick">
+                    <span>After</span>
+                    <tx-select
+                      [value]="resolvedDiffRightId()"
+                      [options]="diffSourceOptions()"
+                      ariaLabel="Diff after"
+                      (valueChange)="handleDiffRight($event)"
+                    />
+                  </label>
+                </header>
+                @if (diffSameSource()) {
+                  <div class="tx-request-editor__idle">
+                    <tx-empty-state title="Same source" body="Pick two different runs or include the current response." />
+                  </div>
+                } @else {
+                  <div class="tx-request-editor__diff-scroll">
+                    <section class="tx-request-editor__diff-section" aria-label="Headers diff">
+                      <h3 class="tx-request-editor__diff-section-title">Headers</h3>
+                      @if (responseHeaderDiffRows().length === 0) {
+                        <p class="tx-request-editor__diff-empty">No headers on either side.</p>
+                      } @else {
+                        <div class="tx-request-editor__diff-board" tabindex="0" role="table" aria-label="Header diff">
+                          <div class="tx-request-editor__diff-heads" role="row">
+                            <div class="tx-request-editor__diff-head" role="columnheader">Before</div>
+                            <div class="tx-request-editor__diff-head" role="columnheader">After</div>
+                          </div>
+                          <div class="tx-request-editor__diff-body">
+                            @for (row of responseHeaderDiffRows(); track $index) {
+                              <div class="tx-request-editor__diff-row" role="row">
+                                <div class="tx-request-editor__diff-cell" role="cell" [attr.data-kind]="row.left.kind">
+                                  <span class="tx-request-editor__diff-no">{{ row.left.lineNo ?? '' }}</span>
+                                  <pre class="tx-request-editor__diff-text">{{ row.left.text }}</pre>
+                                </div>
+                                <div class="tx-request-editor__diff-cell" role="cell" [attr.data-kind]="row.right.kind">
+                                  <span class="tx-request-editor__diff-no">{{ row.right.lineNo ?? '' }}</span>
+                                  <pre class="tx-request-editor__diff-text">{{ row.right.text }}</pre>
+                                </div>
+                              </div>
+                            }
+                          </div>
+                        </div>
+                      }
+                    </section>
+                    <section class="tx-request-editor__diff-section" aria-label="Body diff">
+                      <h3 class="tx-request-editor__diff-section-title">Body</h3>
+                      @if (responseDiffRows().length === 0) {
+                        <p class="tx-request-editor__diff-empty">No body on either side.</p>
+                      } @else {
+                        <div class="tx-request-editor__diff-board" tabindex="0" role="table" aria-label="Body diff">
+                          <div class="tx-request-editor__diff-heads" role="row">
+                            <div class="tx-request-editor__diff-head" role="columnheader">Before</div>
+                            <div class="tx-request-editor__diff-head" role="columnheader">After</div>
+                          </div>
+                          <div class="tx-request-editor__diff-body">
+                            @for (row of responseDiffRows(); track $index) {
+                              <div class="tx-request-editor__diff-row" role="row">
+                                <div class="tx-request-editor__diff-cell" role="cell" [attr.data-kind]="row.left.kind">
+                                  <span class="tx-request-editor__diff-no">{{ row.left.lineNo ?? '' }}</span>
+                                  <pre class="tx-request-editor__diff-text">{{ row.left.text }}</pre>
+                                </div>
+                                <div class="tx-request-editor__diff-cell" role="cell" [attr.data-kind]="row.right.kind">
+                                  <span class="tx-request-editor__diff-no">{{ row.right.lineNo ?? '' }}</span>
+                                  <pre class="tx-request-editor__diff-text">{{ row.right.text }}</pre>
+                                </div>
+                              </div>
+                            }
+                          </div>
+                        </div>
+                      }
+                    </section>
+                  </div>
+                }
+              </div>
+            }
+          }
+          @case ('runs') {
+            @if (runs().length === 0) {
+              <div class="tx-request-editor__idle">
+                <tx-empty-state title="No runs" body="The last 20 sends for this request are listed here." />
+              </div>
+            } @else {
+              <div class="tx-request-editor__runs">
+                @for (group of runGroups(); track group.label) {
+                  <section class="tx-request-editor__runs-group">
+                    <h3 class="tx-request-editor__runs-day">{{ group.label }}</h3>
+                    <ul class="tx-request-editor__runs-list" role="list">
+                      @for (run of group.runs; track run.id) {
+                        <li class="tx-request-editor__runs-item" [attr.data-tone]="runTone(run)">
+                          <div class="tx-request-editor__runs-main">
+                            <span class="tx-request-editor__status" [attr.data-tone]="statusTone(run.status)">
+                              {{ run.error ? 'ERR' : (run.status || 'ERR') }} {{ run.statusText }}
+                            </span>
+                            <span class="tx-request-editor__runs-when">{{ formatRunWhen(run.at) }}</span>
+                            <span class="tx-request-editor__runs-meta">{{ run.durationMs }} ms · {{ run.sizeLabel }}</span>
+                            <tx-hint class="tx-request-editor__runs-url-hint" [label]="run.url || 'No URL'" placement="top">
+                              <span class="tx-request-editor__runs-url">{{ run.url || '—' }}</span>
+                            </tx-hint>
+                          </div>
+                          <tx-hint label="Show in response" placement="left">
+                            <button type="button" class="tx-request-editor__runs-apply" (click)="handleRestoreRun(run)">
+                              Apply
+                            </button>
+                          </tx-hint>
+                        </li>
+                      }
+                    </ul>
+                  </section>
+                }
+              </div>
+            }
+          }
+              }
+            </div>
+          }
+        </div>
+      }
+    </div>
+  </div>
+  </div>
+  </div>
+  } @else if (hasResponseContent()) {
+    <div
+      class="tx-request-editor__dock-stage"
+      animate.enter="tx-request-console-in"
+      animate.leave="tx-request-console-out"
+    >
+      <div class="tx-request-editor__console-clip">
+        <tx-hint class="tx-request-editor__dock-hint" label="Open response" placement="top" stretch>
+          <button type="button" class="tx-request-editor__dock" (click)="revealResponse()" aria-label="Open response">
+            <span>Response</span>
+            <span>Open</span>
+          </button>
+        </tx-hint>
+      </div>
+    </div>
+  }
+  </div>
+</div>
+
+<ng-template
+  cdkConnectedOverlay
+  [cdkConnectedOverlayOrigin]="overlayOrigin()"
+  [cdkConnectedOverlayOpen]="completeOpen()"
+  [cdkConnectedOverlayPositions]="completePositions"
+  [cdkConnectedOverlayMinWidth]="240"
+  [cdkConnectedOverlayPush]="true"
+  [cdkConnectedOverlayViewportMargin]="8"
+>
+  <tx-placeholder-suggest [items]="completeItems()" [index]="completeIndex()" (pick)="handleCompletePick($event)" />
+</ng-template>
+
+@if (overlay() === 'preview') {
+  <tx-overlay labelledBy="request-preview-title" animate.enter="tx-overlay-enter" animate.leave="tx-overlay-leave" (closed)="handleOverlay(null)">
+    <div class="tx-request-editor__modal">
+      <h2 id="request-preview-title">Resolved request</h2>
+      <pre class="tx-request-editor__code">{{ previewText() }}</pre>
+    </div>
+  </tx-overlay>
+}
+@if (overlay() === 'code') {
+  <tx-overlay labelledBy="request-code-title" animate.enter="tx-overlay-enter" animate.leave="tx-overlay-leave" (closed)="handleOverlay(null)">
+    <div class="tx-request-editor__modal">
+      <h2 id="request-code-title">Snippet</h2>
+      <tx-select [value]="snippetLang()" [options]="snippetLangOptions" ariaLabel="Snippet language" (valueChange)="handleSnippetLang($event)" />
+      <pre class="tx-request-editor__code">{{ snippetText() }}</pre>
+    </div>
+  </tx-overlay>
+}

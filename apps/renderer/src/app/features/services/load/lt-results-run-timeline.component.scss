@@ -1,0 +1,114 @@
+:host {
+  display: block;
+}
+
+.lt-run-timeline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+.lt-run-timeline__hint {
+  flex: 1 1 100%;
+  margin: 0 0 0.15rem;
+  color: var(--tx-muted);
+  font-size: 0.72rem;
+}
+
+.lt-run-timeline__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.28rem 0.5rem;
+  border: 1px solid color-mix(in srgb, var(--tx-border) 80%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--tx-panel) 70%, transparent);
+  color: inherit;
+  cursor: pointer;
+  font-size: 0.74rem;
+  transition: border-color 0.15s ease, background 0.15s ease;
+
+  &:hover {
+    border-color: color-mix(in srgb, var(--tx-accent) 55%, transparent);
+  }
+
+  &.is-active {
+    border-color: var(--tx-accent);
+    background: color-mix(in srgb, var(--tx-accent) 14%, transparent);
+  }
+
+  &.is-pinned {
+    border-color: color-mix(in srgb, var(--tx-warning, #e6b800) 60%, transparent);
+  }
+
+  &.is-compare-a {
+    border-color: color-mix(in srgb, var(--tx-secondary, #8b7bff) 65%, transparent);
+  }
+
+  &.is-compare-b {
+    border-color: color-mix(in srgb, var(--tx-accent) 70%, transparent);
+  }
+}
+
+.lt-run-timeline__slot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: #fff;
+
+  &.is-a {
+    background: var(--tx-secondary, #8b7bff);
+  }
+
+  &.is-b {
+    background: var(--tx-accent);
+  }
+}
+
+.lt-run-timeline__pin {
+  color: var(--tx-warning, #e6b800);
+  font-size: 0.8rem;
+  line-height: 1;
+}
+
+.lt-run-timeline__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--tx-muted);
+
+  &.is-pass {
+    background: var(--tx-success, #3dd68c);
+  }
+
+  &.is-fail {
+    background: var(--tx-danger, #e5484d);
+  }
+}
+
+.lt-run-timeline__label {
+  font-variant-numeric: tabular-nums;
+}
+
+.lt-run-timeline__rate {
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+
+  &[data-tone='success'] {
+    color: var(--tx-success, #3dd68c);
+  }
+
+  &[data-tone='error'] {
+    color: var(--tx-danger, #e5484d);
+  }
+
+  &[data-tone='warning'] {
+    color: var(--tx-warning, #e6b800);
+  }
+}

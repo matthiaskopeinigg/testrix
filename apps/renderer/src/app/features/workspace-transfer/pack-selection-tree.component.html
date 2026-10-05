@@ -1,0 +1,17 @@
+@if (nodes().length === 0) {
+  <p class="tx-pack-tree__empty">Nothing to include in this category.</p>
+} @else {
+  <div class="tx-pack-tree" role="tree" aria-label="Pack selection">
+    @for (node of nodes(); track node.id) {
+      <tx-pack-selection-tree-node
+        [node]="node"
+        [depth]="0"
+        [nodes]="nodes()"
+        [selectedIds]="selectedIds()"
+        [expandedIds]="expandedIds()"
+        (selectedIdsChange)="selectedIdsChange.emit($event)"
+        (expandedIdsChange)="expandedIdsChange.emit($event)"
+      />
+    }
+  </div>
+}

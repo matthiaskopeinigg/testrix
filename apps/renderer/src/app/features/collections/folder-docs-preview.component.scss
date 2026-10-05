@@ -1,0 +1,138 @@
+:host {
+  display: block;
+  min-height: 0;
+}
+
+.tx-docs-preview__empty {
+  margin: 0;
+  padding: 24px 16px;
+  color: var(--tx-text-faint);
+  font-size: 12px;
+}
+
+.tx-docs-preview {
+  max-width: 46rem;
+  padding: 20px 22px 36px;
+  color: var(--tx-text-primary);
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.tx-docs-preview h1,
+.tx-docs-preview h2,
+.tx-docs-preview h3 {
+  margin: 0 0 10px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.tx-docs-preview h1 {
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--tx-border-subtle);
+  font-size: 22px;
+}
+
+.tx-docs-preview h2 {
+  margin-top: 22px;
+  font-size: 16px;
+}
+
+.tx-docs-preview h3 {
+  margin-top: 16px;
+  font-size: 13px;
+}
+
+.tx-docs-preview p,
+.tx-docs-preview ul,
+.tx-docs-preview ol,
+.tx-docs-preview blockquote,
+.tx-docs-preview .tx-docs-preview__code,
+.tx-docs-preview .tx-docs-preview__table-wrap {
+  margin: 0 0 14px;
+}
+
+.tx-docs-preview li + li {
+  margin-top: 4px;
+}
+
+.tx-docs-preview code {
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--tx-text-primary) 8%, transparent);
+  font-family: var(--tx-font-mono);
+  font-size: 12px;
+}
+
+.tx-docs-preview__code {
+  overflow: hidden;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--tx-text-primary) 6%, transparent);
+}
+
+.tx-docs-preview__code figcaption {
+  padding: 6px 12px 0;
+  color: var(--tx-text-faint);
+  font-family: var(--tx-font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.tx-docs-preview pre {
+  margin: 0;
+  padding: 12px;
+  overflow: auto;
+}
+
+.tx-docs-preview pre code {
+  padding: 0;
+  background: transparent;
+}
+
+.tx-docs-preview a {
+  color: var(--tx-accent);
+  text-decoration: none;
+}
+
+.tx-docs-preview a:hover {
+  text-decoration: underline;
+}
+
+.tx-docs-preview blockquote {
+  padding: 0 0 0 12px;
+  border-left: 2px solid var(--tx-accent);
+  color: var(--tx-text-muted);
+}
+
+.tx-docs-preview hr {
+  margin: 18px 0;
+  border: 0;
+  border-top: 1px solid var(--tx-border-subtle);
+}
+
+.tx-docs-preview s {
+  color: var(--tx-text-muted);
+}
+
+.tx-docs-preview__table-wrap {
+  overflow: auto;
+}
+
+.tx-docs-preview table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.tx-docs-preview th,
+.tx-docs-preview td {
+  padding: 8px 10px;
+  border: 1px solid var(--tx-border-subtle);
+  text-align: left;
+}
+
+.tx-docs-preview th {
+  background: color-mix(in srgb, var(--tx-text-primary) 5%, transparent);
+  font-size: 11px;
+  font-weight: 700;
+}

@@ -1,6 +1,11 @@
-import { Injectable, computed, signal } from '@angular/core';
+import { Injectable, computed, effect, inject, signal } from '@angular/core';
 import {
-  sanitizeSelectionEntry,
+  prependRequestRun,
+  requestViewFromTab,
+  tabChromeFromRequestView,
+  DEFAULT_LISTENER_UI,
+  DEFAULT_INTERCEPT_UI,
+  type CollectionFolderNode,
   type CollectionNode,
   type DatabaseConnection,
   type DatabaseDiagramTabTarget,
@@ -9,7 +14,19 @@ import {
   type HttpMethod,
   type SavedDatabaseQuery,
   type SessionFile,
-  type SessionGroup,
+  type SessionListenerUi,
+  type SessionInterceptUi,
+  type SessionRequestView,
+  type SessionResultsDock,
+  type FolderTabSection,
+  type FolderScriptPane,
+  type FolderDocsMode,
+  type RequestResponseTab,
+  type RequestRunSnapshot,
+  type RequestTabSection,
+  type WebsocketTabSection,
+  type HistoryEntry,
+  type ServiceItem,
   type ToolItem,
   databaseConnectionTabNodeId,
   databaseDiagramTabNodeId,
@@ -17,11 +34,37 @@ import {
   databaseTableTabNodeId,
 } from '@testrix/contracts';
 
+import { DesktopApiService } from '../../core/desktop-api.service';
+import { DirtyTabsRegistry } from '../../core/dirty-tabs.registry';
+import { ShellStateService } from '../../core/shell-state.service';
+import { HttpInflightRegistry } from '../../core/http-inflight.registry';
 import {
   applyPointerSelect,
   emptySelection,
   shouldKeepPointerSelection,
 } from '../../core/range-select';
+import {
+  bumpIdSequences,
+  environmentFocusPatch,
+  groupFromSession,
+  interceptUiFromSession,
+  listenerUiFromSession,
+  nextGroupId,
+  nextTabId,
+  selectionForTabs,
+  serviceSectionsFromSession,
+  tabFromDatabaseConnection,
+  tabFromDatabaseDiagram,
+  tabFromDatabaseQuery,
+  tabFromDatabaseTable,
+  tabFromEmulatorDevice,
+  tabFromEnvironment,
+  tabFromFolder,
+  tabFromNode,
+  tabFromService,
+  tabFromTool,
+  viewsFromSession,
+} from './workbench-tabs';
 
 /** Open workbench document backed by a collection leaf, environment, or tool. */
 export interface WorkbenchTab {
@@ -30,16 +73,67 @@ export interface WorkbenchTab {
   readonly kind:
     | 'http'
     | 'websocket'
+    | 'collection-folder'
     | 'environment'
     | 'tool'
+    | 'service'
+    | 'flow'
+    | 'flow-template'
+    | 'load'
+    | 'regression'
+    | 'emulator'
+    | 'mock-endpoint'
+    | 'listener-session'
+    | 'intercept-rule'
     | 'database-connection'
     | 'database-query'
     | 'database-table'
-    | 'database-diagram';
+    | 'database-diagram'
+    | 'history'
+    | 'plantuml'
+    | 'collab-review';
   readonly title: string;
   readonly method?: HttpMethod;
   readonly url: string;
   readonly status: number | null;
+  readonly folderSection?: FolderTabSection;
+  readonly folderScriptPane?: FolderScriptPane;
+  readonly folderDocsMode?: FolderDocsMode;
+  readonly requestSection?: RequestTabSection;
+  readonly requestScriptPane?: FolderScriptPane;
+  readonly requestDocsMode?: FolderDocsMode;
+  readonly requestSplitRatio?: number;
+  readonly requestResponseTab?: RequestResponseTab;
+  readonly requestResponseHidden?: boolean;
+  readonly requestSnippetLang?: 'curl' | 'fetch' | 'httpie';
+  /** Load / Regression results dock collapsed (session-persisted). */
+  readonly resultsDockHidden?: boolean;
+  /** PlantUML editor: Grid, Source, or Build. */
+  readonly plantumlView?: 'grid' | 'source' | 'build';
+  readonly plantumlGridZoom?: number;
+  readonly plantumlGridPanX?: number;
+  readonly plantumlGridPanY?: number;
+  readonly plantumlPreviewZoom?: number;
+  readonly plantumlPreviewPanX?: number;
+  readonly plantumlPreviewPanY?: number;
+  readonly plantumlBuilderWidth?: number;
+  readonly plantumlBuilderCollapsed?: boolean;
+  readonly serviceSection?: string;
+  /** Flow Design outline rail. */
+  readonly flowOutlineOpen?: boolean;
+  /** Selected graph node ids in the active flow scenario. */
+  readonly flowSelectedNodeIds?: string[];
+  /** Active scenario id for this flow tab. */
+  readonly flowScenarioId?: string;
+  readonly websocketSection?: WebsocketTabSection;
+  readonly environmentFocusKey?: string;
+  readonly environmentFocusNonce?: number;
+  readonly readonly?: boolean;
+  /** Prefill for Replay tabs opened from History (not persisted meaningfully). */
+  readonly replaySeed?: {
+    readonly headers: readonly { readonly key: string; readonly value: string }[];
+    readonly body: string;
+  };
 }
 
 /** One VS Code-style editor group with its own tab strip. */
@@ -54,142 +148,6 @@ export interface WorkbenchGroup {
 /** Id of the right-edge drop list used to create a split pane. */
 export const WORKBENCH_SPLIT_RIGHT_ID = 'workbench-split-right';
 
-let tabSeq = 0;
-let groupSeq = 0;
-
-function nextTabId(nodeId: string): string {
-  tabSeq += 1;
-  return `tab-${nodeId}-${tabSeq}`;
-}
-
-function nextGroupId(): string {
-  groupSeq += 1;
-  return `group-${groupSeq}`;
-}
-
-function mockUrlForNode(node: CollectionNode): string {
-  const slug = node.name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '');
-  if (node.kind === 'websocket') {
-    return `wss://api.local/${slug || 'socket'}`;
-  }
-  return `https://api.local/${slug || 'request'}`;
-}
-
-function tabFromNode(node: CollectionNode): WorkbenchTab | null {
-  if (node.kind === 'http') {
-    return {
-      id: nextTabId(node.id),
-      nodeId: node.id,
-      kind: 'http',
-      title: node.name,
-      method: node.method,
-      url: mockUrlForNode(node),
-      status: node.status,
-    };
-  }
-  if (node.kind === 'websocket') {
-    return {
-      id: nextTabId(node.id),
-      nodeId: node.id,
-      kind: 'websocket',
-      title: node.name,
-      url: mockUrlForNode(node),
-      status: null,
-    };
-  }
-  return null;
-}
-
-function tabFromEnvironment(env: Environment): WorkbenchTab {
-  return {
-    id: nextTabId(env.id),
-    nodeId: env.id,
-    kind: 'environment',
-    title: env.name,
-    url: '',
-    status: null,
-  };
-}
-
-function tabFromTool(tool: ToolItem): WorkbenchTab {
-  return {
-    id: nextTabId(tool.id),
-    nodeId: tool.id,
-    kind: 'tool',
-    title: tool.label,
-    url: '',
-    status: null,
-  };
-}
-
-function tabFromDatabaseConnection(connection: DatabaseConnection): WorkbenchTab {
-  return {
-    id: nextTabId(connection.id),
-    nodeId: databaseConnectionTabNodeId(connection.id),
-    kind: 'database-connection',
-    title: connection.name,
-    url: '',
-    status: null,
-  };
-}
-
-function tabFromDatabaseQuery(query: SavedDatabaseQuery): WorkbenchTab {
-  return {
-    id: nextTabId(query.id),
-    nodeId: databaseQueryTabNodeId(query.id),
-    kind: 'database-query',
-    title: query.name,
-    url: '',
-    status: null,
-  };
-}
-
-function tabFromDatabaseTable(target: DatabaseTableTabTarget, title: string): WorkbenchTab {
-  const nodeId = databaseTableTabNodeId(target);
-  return {
-    id: nextTabId(nodeId),
-    nodeId,
-    kind: 'database-table',
-    title,
-    url: '',
-    status: null,
-  };
-}
-
-function tabFromDatabaseDiagram(target: DatabaseDiagramTabTarget, title: string): WorkbenchTab {
-  const nodeId = databaseDiagramTabNodeId(target);
-  return {
-    id: nextTabId(nodeId),
-    nodeId,
-    kind: 'database-diagram',
-    title,
-    url: '',
-    status: null,
-  };
-}
-
-function selectionForTabs(
-  tabs: readonly WorkbenchTab[],
-  ids: readonly string[],
-  anchorId: string | null,
-): Pick<WorkbenchGroup, 'selectedTabIds' | 'tabAnchorId'> {
-  const cleaned = sanitizeSelectionEntry({ ids: [...ids], anchorId }, new Set(tabs.map((tab) => tab.id)));
-  return { selectedTabIds: cleaned.ids, tabAnchorId: cleaned.anchorId };
-}
-
-function groupFromSession(group: SessionGroup): WorkbenchGroup {
-  return {
-    id: group.id,
-    tabs: group.tabs.map((tab) => ({ ...tab })),
-    activeTabId: group.activeTabId,
-    ...selectionForTabs(group.tabs, group.selectedTabIds ?? [], group.tabAnchorId ?? null),
-  };
-}
-
-/** Preview while dragging a tab onto a split drop zone. */
 export interface WorkbenchSplitPreview {
   readonly side: 'right';
   readonly fromGroupId: string;
@@ -206,6 +164,10 @@ export interface WorkbenchTabDropCue {
 
 @Injectable({ providedIn: 'root' })
 export class WorkbenchStore {
+  private readonly desktop = inject(DesktopApiService);
+  private readonly httpInflight = inject(HttpInflightRegistry);
+  private readonly dirtyTabs = inject(DirtyTabsRegistry);
+  private readonly shell = inject(ShellStateService);
   readonly groups = signal<readonly WorkbenchGroup[]>([]);
   readonly focusedGroupId = signal<string | null>(null);
   readonly justOpenedId = signal<string | null>(null);
@@ -213,24 +175,128 @@ export class WorkbenchStore {
   readonly panelEpochs = signal<Readonly<Record<string, number>>>({});
   /** Horizontal split sizes as fractions that sum to 1. */
   readonly splitSizes = signal<readonly number[]>([1]);
+  readonly requestRunsById = signal<Readonly<Record<string, readonly RequestRunSnapshot[]>>>({});
+  /** Results/response dock open state keyed by artifact node id (survives tab close). */
+  readonly resultsDockByNodeId = signal<Readonly<Record<string, SessionResultsDock>>>({});
+  /** Request and websocket editor chrome keyed by collection or history node id. */
+  readonly requestViewsByNodeId = signal<Readonly<Record<string, SessionRequestView>>>({});
+  /** Listener Network search/sort keyed by listener node id (survives tab close). */
+  readonly listenerUiById = signal<Readonly<Record<string, SessionListenerUi>>>({});
+  /** Interceptor Activity search/sort keyed by intercept node id (survives tab close). */
+  readonly interceptUiById = signal<Readonly<Record<string, SessionInterceptUi>>>({});
+  /** Last open section keyed by service artifact node id (survives tab close). */
+  readonly serviceSectionByNodeId = signal<Readonly<Record<string, string>>>({});
   /** Postman-style split zone while dragging a tab to the right edge. */
   readonly splitPreview = signal<WorkbenchSplitPreview | null>(null);
   /** Pointer-based tab insert caret while dragging. */
   readonly tabDropCue = signal<WorkbenchTabDropCue | null>(null);
   readonly dragTabIds = signal<readonly string[]>([]);
+  /** Start request consumed by the open emulator device tab. */
+  readonly emulatorBoot = signal<{ readonly deviceId: string; readonly coldBoot: boolean } | null>(null);
 
   private openAnimTimer: ReturnType<typeof setTimeout> | null = null;
 
+  private readonly closedTabsStack = signal<
+    readonly { readonly groupId: string; readonly tab: WorkbenchTab }[]
+  >([]);
+
   readonly hasTabs = computed(() => this.groups().some((group) => group.tabs.length > 0));
 
+  readonly lastClosedTab = computed(() => this.closedTabsStack()[0]?.tab ?? null);
+
   restoreSession(session: SessionFile): void {
+    this.closedTabsStack.set([]);
     this.groups.set(session.groups.map(groupFromSession));
     this.focusedGroupId.set(session.focusedGroupId);
     this.splitSizes.set(session.splitSizes.length > 0 ? session.splitSizes : [1]);
-    this.bumpSeqFromSession(session.groups);
+    this.requestRunsById.set(session.requestRunsById ?? {});
+    this.resultsDockByNodeId.set(session.resultsDockByNodeId ?? {});
+    this.requestViewsByNodeId.set(viewsFromSession(session));
+    this.listenerUiById.set(listenerUiFromSession(session));
+    this.interceptUiById.set(interceptUiFromSession(session));
+    this.serviceSectionByNodeId.set(serviceSectionsFromSession(session));
+    bumpIdSequences(session.groups);
   }
 
-  toSessionPatch(): Pick<SessionFile, 'groups' | 'focusedGroupId' | 'splitSizes'> {
+  patchTab(tabId: string, patch: Partial<WorkbenchTab>): void {
+    const viewPatch = requestViewFromTab(patch);
+    if (Object.keys(viewPatch).length > 0) {
+      const nodeId = this.nodeIdForTab(tabId);
+      if (nodeId)
+        this.requestViewsByNodeId.update((map) => ({
+          ...map,
+          [nodeId]: { ...map[nodeId], ...viewPatch },
+        }));
+    }
+    if (typeof patch.serviceSection === 'string') {
+      const nodeId = this.nodeIdForTab(tabId);
+      if (nodeId)
+        this.serviceSectionByNodeId.update((map) => ({
+          ...map,
+          [nodeId]: patch.serviceSection as string,
+        }));
+    }
+    this.groups.update((groups) =>
+      groups.map((group) => ({
+        ...group,
+        tabs: group.tabs.map((tab) => (tab.id === tabId ? { ...tab, ...patch } : tab)),
+      })),
+    );
+  }
+
+  isResultsDockHidden(nodeId: string): boolean {
+    return this.resultsDockByNodeId()[nodeId]?.hidden === true;
+  }
+
+  setResultsDockHidden(nodeId: string, hidden: boolean): void {
+    this.resultsDockByNodeId.update((map) => ({
+      ...map,
+      [nodeId]: { hidden },
+    }));
+  }
+
+  listenerUi(nodeId: string): SessionListenerUi {
+    return this.listenerUiById()[nodeId] ?? { ...DEFAULT_LISTENER_UI };
+  }
+
+  patchListenerUi(nodeId: string, patch: Partial<SessionListenerUi>): void {
+    this.listenerUiById.update((map) => ({
+      ...map,
+      [nodeId]: {
+        ...DEFAULT_LISTENER_UI,
+        ...map[nodeId],
+        ...patch,
+      },
+    }));
+  }
+
+  interceptUi(nodeId: string): SessionInterceptUi {
+    return this.interceptUiById()[nodeId] ?? { ...DEFAULT_INTERCEPT_UI };
+  }
+
+  patchInterceptUi(nodeId: string, patch: Partial<SessionInterceptUi>): void {
+    this.interceptUiById.update((map) => ({
+      ...map,
+      [nodeId]: {
+        ...DEFAULT_INTERCEPT_UI,
+        ...map[nodeId],
+        ...patch,
+      },
+    }));
+  }
+
+  toSessionPatch(): Pick<
+    SessionFile,
+    | 'groups'
+    | 'focusedGroupId'
+    | 'splitSizes'
+    | 'requestRunsById'
+    | 'resultsDockByNodeId'
+    | 'requestViewsByNodeId'
+    | 'listenerUiById'
+    | 'interceptUiById'
+    | 'serviceSectionByNodeId'
+  > {
     return {
       groups: this.groups().map((group) => ({
         id: group.id,
@@ -241,6 +307,14 @@ export class WorkbenchStore {
       })),
       focusedGroupId: this.focusedGroupId(),
       splitSizes: [...this.splitSizes()],
+      requestRunsById: Object.fromEntries(
+        Object.entries(this.requestRunsById()).map(([id, runs]) => [id, [...runs]]),
+      ),
+      resultsDockByNodeId: { ...this.resultsDockByNodeId() },
+      requestViewsByNodeId: { ...this.requestViewsByNodeId() },
+      listenerUiById: { ...this.listenerUiById() },
+      interceptUiById: { ...this.interceptUiById() },
+      serviceSectionByNodeId: { ...this.serviceSectionByNodeId() },
     };
   }
 
@@ -253,6 +327,26 @@ export class WorkbenchStore {
     return groups.find((group) => group.id === id) ?? groups[0] ?? null;
   });
 
+  readonly activeTab = computed(() => {
+    const group = this.focusedGroup();
+    if (!group?.activeTabId)
+      return null;
+    return group.tabs.find((tab) => tab.id === group.activeTabId) ?? null;
+  });
+
+  private readonly softRailEffect = effect(() => {
+    const tab = this.activeTab();
+    if (tab?.kind === 'history') {
+      this.shell.setSoftRailHighlight('history');
+      return;
+    }
+    if (tab?.kind === 'environment') {
+      this.shell.setSoftRailHighlight('environments');
+      return;
+    }
+    this.shell.setSoftRailHighlight(null);
+  });
+
   readonly openNodeIds = computed(() => {
     const ids = new Set<string>();
     for (const group of this.groups()) {
@@ -262,6 +356,28 @@ export class WorkbenchStore {
     }
     return ids;
   });
+
+  readonly tabCount = computed(() =>
+    this.groups().reduce((sum, group) => sum + group.tabs.length, 0),
+  );
+
+  /** Closes every tab that is not the active tab in its editor group. */
+  closeInactiveTabs(): void {
+    for (const group of this.groups()) {
+      if (!group.activeTabId)
+        continue;
+      const inactive = group.tabs.filter((tab) => tab.id !== group.activeTabId).map((tab) => tab.id);
+      this.closeMany(group.id, inactive);
+    }
+  }
+
+  /** Closes all tabs in the focused group except the active one. */
+  closeAllButCurrent(): void {
+    const group = this.focusedGroup();
+    if (!group?.activeTabId)
+      return;
+    this.closeOthers(group.id, group.activeTabId);
+  }
 
   readonly activeNodeId = computed(() => {
     const group = this.focusedGroup();
@@ -365,6 +481,19 @@ export class WorkbenchStore {
     return [sourceId];
   }
 
+  private nodeIdForTab(tabId: string): string | null {
+    for (const group of this.groups()) {
+      const tab = group.tabs.find((item) => item.id === tabId);
+      if (tab)
+        return tab.nodeId;
+    }
+    return null;
+  }
+
+  private withSavedRequestView<T extends WorkbenchTab>(tab: T): T {
+    return { ...tab, ...tabChromeFromRequestView(this.requestViewsByNodeId()[tab.nodeId]) };
+  }
+
   private patchGroup(groupId: string, patch: Partial<WorkbenchGroup>): void {
     this.groups.update((list) =>
       list.map((group) => (group.id === groupId ? { ...group, ...patch } : group)),
@@ -393,10 +522,17 @@ export class WorkbenchStore {
    * Opens a tab in the focused group, or focuses an existing tab for that node.
    */
   openFromNode(node: CollectionNode): void {
-    const draft = tabFromNode(node);
-    if (!draft) {
+    const base = tabFromNode(node);
+    if (!base) {
       return;
     }
+    const viewed = this.withSavedRequestView(base);
+    const draft: WorkbenchTab =
+      viewed.kind === 'http' &&
+      viewed.requestResponseHidden === undefined &&
+      this.resultsDockByNodeId()[node.id]
+        ? { ...viewed, requestResponseHidden: this.isResultsDockHidden(node.id) }
+        : viewed;
 
     const groups = this.groups();
     for (const group of groups) {
@@ -443,9 +579,79 @@ export class WorkbenchStore {
   }
 
   /**
-   * Opens a tab for an environment, or focuses an existing one.
+   * Opens a folder settings tab from the collections context menu.
    */
-  openFromEnvironment(env: Environment): void {
+  openFromCollectionFolder(node: CollectionFolderNode, section?: FolderTabSection): void {
+    this.openOrFocusDatabaseTab('collection-folder', node.id, () => ({
+      ...tabFromFolder(node),
+      folderSection: section,
+    }));
+    if (!section)
+      return;
+    for (const group of this.groups()) {
+      const existing = group.tabs.find(
+        (tab) => tab.kind === 'collection-folder' && tab.nodeId === node.id,
+      );
+      if (existing)
+        this.patchTab(existing.id, { folderSection: section });
+    }
+  }
+
+  runsFor(requestId: string): readonly RequestRunSnapshot[] {
+    return this.requestRunsById()[requestId] ?? [];
+  }
+
+  prependRun(requestId: string, snapshot: RequestRunSnapshot): void {
+    this.requestRunsById.update((current) => ({
+      ...current,
+      [requestId]: prependRequestRun(current[requestId] ?? [], snapshot),
+    }));
+  }
+
+  /**
+   * Opens a read-only history snapshot tab.
+   */
+  openFromHistory(entry: HistoryEntry): void {
+    this.openOrFocusDatabaseTab('history', entry.id, () =>
+      this.withSavedRequestView({
+        id: nextTabId(entry.id),
+        nodeId: entry.id,
+        kind: 'history',
+        title: entry.requestName || entry.url || 'History',
+        method: entry.method,
+        url: entry.url,
+        status: entry.status,
+        readonly: true,
+      }),
+    );
+  }
+
+  /**
+   * Opens a new editable HTTP tab prefilled from a history snapshot.
+   */
+  openEditableFromHistory(entry: HistoryEntry): void {
+    const nodeId = `replay-${entry.id}-${Date.now()}`;
+    this.appendTab({
+      id: nextTabId(nodeId),
+      nodeId,
+      kind: 'http',
+      title: entry.requestName ? `${entry.requestName} (replay)` : 'Replay',
+      method: entry.method,
+      url: entry.url,
+      status: null,
+      replaySeed: {
+        headers: entry.requestHeaders.map((row) => ({ key: row.key, value: row.value })),
+        body: entry.requestBody,
+      },
+    });
+  }
+
+  /**
+   * Opens a tab for an environment, or focuses an existing one.
+   * When `focusKey` is set, the editor selects that variable.
+   */
+  openFromEnvironment(env: Environment, focusKey?: string): void {
+    const focus = environmentFocusPatch(focusKey);
     const groups = this.groups();
     for (const group of groups) {
       const existing = group.tabs.find(
@@ -454,11 +660,13 @@ export class WorkbenchStore {
       if (existing) {
         this.focusGroup(group.id);
         this.activate(group.id, existing.id);
+        if (focus.environmentFocusKey)
+          this.patchTab(existing.id, focus);
         return;
       }
     }
 
-    const draft = tabFromEnvironment(env);
+    const draft = { ...tabFromEnvironment(env), ...focus };
     if (groups.length === 0) {
       const groupId = nextGroupId();
       this.groups.set([this.makeGroup(groupId, [draft], draft.id)]);
@@ -528,6 +736,181 @@ export class WorkbenchStore {
         if (group.id !== focused.id) {
           return group;
         }
+        return {
+          ...group,
+          tabs: [...group.tabs, draft],
+          activeTabId: draft.id,
+          selectedTabIds: [draft.id],
+          tabAnchorId: draft.id,
+        };
+      }),
+    );
+    this.focusGroup(focused.id);
+    this.bumpPanel(focused.id);
+    this.markJustOpened(draft.id);
+  }
+
+  /**
+   * Opens a service artifact tab, or focuses an existing one.
+   */
+  openFromServiceArtifact(
+    kind: WorkbenchTab['kind'],
+    nodeId: string,
+    title: string,
+    serviceSection?: string,
+  ): void {
+    const savedSection = this.serviceSectionByNodeId()[nodeId];
+    this.openOrFocusDatabaseTab(kind, nodeId, () => ({
+      id: nextTabId(nodeId),
+      nodeId,
+      kind,
+      title,
+      url: '',
+      status: null,
+      serviceSection: savedSection ?? serviceSection,
+      resultsDockHidden: this.isResultsDockHidden(nodeId),
+    }));
+  }
+
+  /** Opens a flow template editor tab, or focuses an existing one. */
+  openFromFlowTemplate(templateId: string, title: string): void {
+    this.openOrFocusDatabaseTab('flow-template', templateId, () => ({
+      id: nextTabId(templateId),
+      nodeId: templateId,
+      kind: 'flow-template',
+      title,
+      url: '',
+      status: null,
+    }));
+  }
+
+  renameFlowTemplateTabs(templateId: string, title: string): void {
+    this.groups.update((groups) =>
+      groups.map((group) => ({
+        ...group,
+        tabs: group.tabs.map((tab) =>
+          tab.kind === 'flow-template' && tab.nodeId === templateId ? { ...tab, title } : tab,
+        ),
+      })),
+    );
+  }
+
+  closeFlowTemplateTabs(templateIds: readonly string[]): void {
+    this.closeTabsByNodeIds(templateIds, ['flow-template']);
+  }
+
+  /** Opens a saved PlantUML diagram tab, or focuses an existing one. */
+  openFromPlantuml(diagramId: string, title: string): void {
+    this.openOrFocusDatabaseTab('plantuml', diagramId, () => ({
+      id: nextTabId(diagramId),
+      nodeId: diagramId,
+      kind: 'plantuml',
+      title,
+      url: '',
+      status: null,
+    }));
+  }
+
+  renamePlantumlTabs(diagramId: string, title: string): void {
+    this.groups.update((groups) =>
+      groups.map((group) => ({
+        ...group,
+        tabs: group.tabs.map((tab) =>
+          tab.kind === 'plantuml' && tab.nodeId === diagramId ? { ...tab, title } : tab,
+        ),
+      })),
+    );
+  }
+
+  closePlantumlTabs(diagramIds: readonly string[]): void {
+    this.closeTabsByNodeIds(diagramIds, ['plantuml']);
+  }
+
+  renameServiceTabs(nodeId: string, title: string): void {
+    this.groups.update((groups) =>
+      groups.map((group) => ({
+        ...group,
+        tabs: group.tabs.map((tab) => (tab.nodeId === nodeId ? { ...tab, title } : tab)),
+      })),
+    );
+  }
+
+  closeServiceTabs(nodeIds: readonly string[]): void {
+    this.closeTabsByNodeIds(nodeIds, [
+      'flow',
+      'load',
+      'regression',
+      'mock-endpoint',
+      'listener-session',
+      'intercept-rule',
+    ]);
+  }
+
+  /**
+   * Opens one Emulator console tab per device, or focuses the existing tab.
+   */
+  openFromEmulatorDevice(device: { readonly id: string; readonly name: string }): void {
+    this.openOrFocusDatabaseTab('emulator', device.id, () => tabFromEmulatorDevice(device));
+  }
+
+  /** Opens the device tab and asks it to start, including first-time tool install. */
+  requestEmulatorBoot(device: { readonly id: string; readonly name: string }, coldBoot = false): void {
+    this.openFromEmulatorDevice(device);
+    this.emulatorBoot.set({ deviceId: device.id, coldBoot });
+  }
+
+  clearEmulatorBoot(): void {
+    this.emulatorBoot.set(null);
+  }
+
+  renameEmulatorDeviceTabs(deviceId: string, title: string): void {
+    this.groups.update((list) =>
+      list.map((group) => ({
+        ...group,
+        tabs: group.tabs.map((tab) =>
+          tab.kind === 'emulator' && tab.nodeId === deviceId ? { ...tab, title } : tab,
+        ),
+      })),
+    );
+  }
+
+  closeEmulatorDeviceTabs(deviceIds: readonly string[]): void {
+    this.closeTabsByNodeIds(deviceIds, ['emulator']);
+  }
+
+  /**
+   * Opens a mocked service preview tab, or focuses an existing one.
+   */
+  openFromService(service: ServiceItem): void {
+    const groups = this.groups();
+    for (const group of groups) {
+      const existing = group.tabs.find((tab) => tab.kind === 'service' && tab.nodeId === service.id);
+      if (existing) {
+        this.focusGroup(group.id);
+        this.activate(group.id, existing.id);
+        return;
+      }
+    }
+
+    const draft = tabFromService(service);
+    if (groups.length === 0) {
+      const groupId = nextGroupId();
+      this.groups.set([this.makeGroup(groupId, [draft], draft.id)]);
+      this.focusedGroupId.set(groupId);
+      this.splitSizes.set([1]);
+      this.bumpPanel(groupId);
+      this.markJustOpened(draft.id);
+      return;
+    }
+
+    const focused = this.focusedGroup();
+    if (!focused)
+      return;
+
+    this.groups.update((list) =>
+      list.map((group) => {
+        if (group.id !== focused.id)
+          return group;
         return {
           ...group,
           tabs: [...group.tabs, draft],
@@ -665,6 +1048,47 @@ export class WorkbenchStore {
     this.patchGroup(groupId, { activeTabId: tabId });
   }
 
+  /** Reopens the most recently closed tab, if any. */
+  reopenLastClosed(): boolean {
+    const record = this.closedTabsStack()[0];
+    if (!record)
+      return false;
+    this.closedTabsStack.update((stack) => stack.slice(1));
+    const draft: WorkbenchTab = { ...record.tab, id: nextTabId(record.tab.nodeId) };
+    const groups = this.groups();
+    const targetGroup = groups.find((group) => group.id === record.groupId);
+    if (targetGroup) {
+      this.groups.update((list) =>
+        list.map((group) =>
+          group.id === targetGroup.id
+            ? {
+                ...group,
+                tabs: [...group.tabs, draft],
+                activeTabId: draft.id,
+                selectedTabIds: [draft.id],
+                tabAnchorId: draft.id,
+              }
+            : group,
+        ),
+      );
+      this.focusGroup(targetGroup.id);
+      this.bumpPanel(targetGroup.id);
+      this.markJustOpened(draft.id);
+      return true;
+    }
+    if (groups.length === 0) {
+      const groupId = nextGroupId();
+      this.groups.set([this.makeGroup(groupId, [draft], draft.id)]);
+      this.focusedGroupId.set(groupId);
+      this.splitSizes.set([1]);
+      this.bumpPanel(groupId);
+      this.markJustOpened(draft.id);
+      return true;
+    }
+    this.appendTab(draft);
+    return true;
+  }
+
   close(groupId: string, tabId: string): void {
     const groups = this.groups();
     const groupIndex = groups.findIndex((group) => group.id === groupId);
@@ -678,7 +1102,16 @@ export class WorkbenchStore {
       return;
     }
 
-    const nextTabs = group.tabs.filter((tab) => tab.id !== tabId);
+    const tab = group.tabs[tabIndex];
+    this.closedTabsStack.update((stack) => [{ groupId, tab }, ...stack].slice(0, 16));
+    this.disconnectSocket(tab);
+    const inflight = this.httpInflight.abortIdFor(tabId);
+    if (inflight)
+      void this.desktop.api.http.abort(inflight);
+    this.httpInflight.clear(tabId);
+    this.dirtyTabs.clear(tabId);
+
+    const nextTabs = group.tabs.filter((item) => item.id !== tabId);
     if (nextTabs.length === 0) {
       const nextGroups = groups.filter((item) => item.id !== groupId);
       if (nextGroups.length === 0) {
@@ -764,11 +1197,15 @@ export class WorkbenchStore {
   }
 
   closeCollectionTabs(nodeIds: readonly string[]): void {
-    this.closeTabsByNodeIds(nodeIds, ['http', 'websocket']);
+    this.closeTabsByNodeIds(nodeIds, ['http', 'websocket', 'collection-folder']);
   }
 
   closeEnvironmentTabs(envIds: readonly string[]): void {
     this.closeTabsByNodeIds(envIds, ['environment']);
+  }
+
+  closeHistoryTabs(entryIds: readonly string[]): void {
+    this.closeTabsByNodeIds(entryIds, ['history']);
   }
 
   private closeTabsByNodeIds(
@@ -780,6 +1217,15 @@ export class WorkbenchStore {
       return;
     }
     const groups = this.groups();
+    for (const group of groups) {
+      for (const tab of group.tabs) {
+        if (!removing.has(tab.nodeId))
+          continue;
+        if (kinds && !kinds.includes(tab.kind))
+          continue;
+        this.disconnectSocket(tab);
+      }
+    }
     const nextGroups: WorkbenchGroup[] = [];
     for (const group of groups) {
       const tabs = group.tabs.filter((tab) => {
@@ -1052,19 +1498,25 @@ export class WorkbenchStore {
     return Array.from({ length: count }, () => 1 / count);
   }
 
-  private bumpSeqFromSession(groups: readonly SessionGroup[]): void {
-    for (const group of groups) {
-      const groupMatch = /^group-(\d+)$/.exec(group.id);
-      if (groupMatch) {
-        groupSeq = Math.max(groupSeq, Number(groupMatch[1]));
-      }
-      for (const tab of group.tabs) {
-        const tabMatch = /-(\d+)$/.exec(tab.id);
-        if (tabMatch) {
-          tabSeq = Math.max(tabSeq, Number(tabMatch[1]));
-        }
-      }
-    }
+  openCollabReview(): void {
+    this.openOrFocusDatabaseTab('collab-review', 'review', () => ({
+      id: nextTabId('review'),
+      nodeId: 'review',
+      kind: 'collab-review',
+      title: 'Review',
+      url: '',
+      status: null,
+    }));
+  }
+
+  closeCollabReview(): void {
+    const targets = this.groups().flatMap((group) =>
+      group.tabs
+        .filter((tab) => tab.kind === 'collab-review')
+        .map((tab) => ({ groupId: group.id, tabId: tab.id })),
+    );
+    for (const target of targets)
+      this.close(target.groupId, target.tabId);
   }
 
   private openOrFocusDatabaseTab(
@@ -1085,6 +1537,12 @@ export class WorkbenchStore {
   }
 
   private appendTab(draft: WorkbenchTab): void {
+    if (draft.serviceSection) {
+      this.serviceSectionByNodeId.update((map) => ({
+        ...map,
+        [draft.nodeId]: draft.serviceSection as string,
+      }));
+    }
     const groups = this.groups();
     if (groups.length === 0) {
       const groupId = nextGroupId();
@@ -1133,11 +1591,30 @@ export class WorkbenchStore {
       this.openAnimTimer = null;
     }
     this.justOpenedId.set(tabId);
+    const tab = this.findTabById(tabId);
+    if (tab?.kind === 'http' || tab?.kind === 'history') {
+      this.shell.maybeCollapseSidebarForRequest(this.desktop.settings().focusWhileEditing);
+    }
     this.openAnimTimer = setTimeout(() => {
       if (this.justOpenedId() === tabId) {
         this.justOpenedId.set(null);
       }
       this.openAnimTimer = null;
     }, 720);
+  }
+
+  private findTabById(tabId: string): WorkbenchTab | undefined {
+    for (const group of this.groups()) {
+      const tab = group.tabs.find((item) => item.id === tabId);
+      if (tab)
+        return tab;
+    }
+    return undefined;
+  }
+
+  private disconnectSocket(tab: WorkbenchTab | undefined): void {
+    if (tab?.kind !== 'websocket')
+      return;
+    void this.desktop.api.websocket.disconnect(tab.id);
   }
 }

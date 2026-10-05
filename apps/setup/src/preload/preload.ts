@@ -1,6 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron';
 
-import { SetupIpcChannels, type SetupDesktopApi } from '@testrix/contracts';
+import { SetupIpcChannels, type SetupDesktopApi } from '@testrix/contracts/setup-api';
 
 const api: SetupDesktopApi = {
   getMeta: () => ipcRenderer.invoke(SetupIpcChannels.getMeta),

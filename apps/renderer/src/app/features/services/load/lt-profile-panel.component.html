@@ -1,0 +1,52 @@
+<div class="lt-profile">
+  <header class="lt-profile__header">
+    <div>
+      <h2 class="lt-profile__title">Profile</h2>
+      <p class="lt-profile__hint">Choose a preset or tune virtual users, duration, and ramp-up.</p>
+    </div>
+  </header>
+
+  <div class="lt-profile__presets" role="group" aria-label="Load presets">
+    @for (preset of presets; track preset.id) {
+      <button
+        type="button"
+        class="lt-profile__preset"
+        [class.is-active]="isActive(preset)"
+        (click)="handlePreset(preset)"
+      >
+        <strong>{{ preset.label }}</strong>
+        <span>{{ preset.virtualUsers }} VU · {{ preset.durationSec }}s · ramp {{ preset.rampUpSec }}s</span>
+        <em class="lt-profile__preset-desc">{{ preset.description }}</em>
+      </button>
+    }
+  </div>
+
+  <tx-check
+    variant="inline"
+    label="Apply suggested thresholds"
+    detail="Copy the preset's error-rate and p95 limits when applied"
+    [checked]="applySuggestedThresholds()"
+    (checkedChange)="toggleSuggestedThresholds($event)"
+  />
+
+  <section class="lt-profile__card" aria-label="Custom profile">
+    <tx-input
+      id="lt-vu"
+      label="Virtual users"
+      [value]="'' + virtualUsers()"
+      (valueChange)="handleNumber('virtualUsers', $event)"
+    />
+    <tx-input
+      id="lt-duration"
+      label="Duration (sec)"
+      [value]="'' + durationSec()"
+      (valueChange)="handleNumber('durationSec', $event)"
+    />
+    <tx-input
+      id="lt-ramp"
+      label="Ramp-up (sec)"
+      [value]="'' + rampUpSec()"
+      (valueChange)="handleNumber('rampUpSec', $event)"
+    />
+  </section>
+</div>

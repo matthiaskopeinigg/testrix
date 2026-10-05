@@ -1,0 +1,79 @@
+<div class="lt-overview">
+  <header class="lt-overview__hero">
+    <div>
+      <h2 class="lt-overview__title">Overview</h2>
+      <p class="lt-overview__subtitle">Target, profile, and the most recent load run at a glance.</p>
+    </div>
+  </header>
+
+  <div class="lt-overview__layout">
+    <section class="lt-overview-card" aria-label="About this load test">
+      <h3 class="lt-overview-card__title">About</h3>
+      @if (tags().length) {
+        <div class="lt-overview-about__tags">
+          @for (tag of tags(); track tag) {
+            <span class="lt-overview-tag">{{ tag }}</span>
+          }
+        </div>
+      }
+      @if (description()) {
+        <p class="lt-overview-about__desc">{{ description() }}</p>
+      } @else {
+        <p class="lt-overview-about__hint">Add a description on the Docs tab.</p>
+      }
+    </section>
+
+    <section class="lt-overview-card" aria-label="Last run">
+      <div class="lt-overview-card__head">
+        <h3 class="lt-overview-card__title">Last run</h3>
+        <div class="lt-overview-card__head-tags">
+          @if (lastRunHealth(); as health) {
+            <span class="lt-overview-health" [attr.data-tone]="health.tone">{{ health.label }} · {{ health.score }}</span>
+          }
+          @if (lastRun(); as run) {
+            <span class="lt-overview-status" [attr.data-ok]="!run.error">{{ run.status ?? (run.error ? 'failed' : 'passed') }}</span>
+          }
+        </div>
+      </div>
+      @if (lastRun(); as run) {
+        <p class="lt-overview-run__time">{{ formatWhen(run.at) }}</p>
+        <div class="lt-overview-run__stats">
+          @for (stat of lastRunStats(); track stat.label) {
+            <article class="lt-overview-run-stat">
+              <span>{{ stat.label }}</span>
+              <strong>{{ stat.value }}</strong>
+            </article>
+          }
+        </div>
+        @if (run.error) {
+          <p class="lt-overview-run__error">{{ run.error }}</p>
+        }
+        <div class="lt-overview-run__footer">
+          <p>{{ runs().length }} saved run{{ runs().length === 1 ? '' : 's' }}</p>
+          <tx-button variant="ghost" (clicked)="openResults.emit()">Open results</tx-button>
+        </div>
+      } @else {
+        <div class="lt-overview-empty">
+          <p class="lt-overview-empty__title">No runs yet</p>
+          <p class="lt-overview-empty__hint">Run this load test from the toolbar to capture latency and throughput.</p>
+        </div>
+      }
+    </section>
+  </div>
+
+  <section class="lt-overview-config" aria-label="Configuration summary">
+    <div class="lt-overview-config__head">
+      <h3 class="lt-overview-card__title">Configuration</h3>
+      <p>Jump to a section to edit settings.</p>
+    </div>
+    <div class="lt-overview-config__grid">
+      @for (card of configCards(); track card.label) {
+        <button type="button" class="lt-overview-config-card" (click)="sectionSelect.emit(card.section)">
+          <span class="lt-overview-config-card__label">{{ card.label }}</span>
+          <span class="lt-overview-config-card__value">{{ card.value }}</span>
+          <span class="lt-overview-config-card__chevron" aria-hidden="true">›</span>
+        </button>
+      }
+    </div>
+  </section>
+</div>

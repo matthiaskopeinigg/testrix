@@ -1,0 +1,17 @@
+<section class="lt-latency-bars" aria-label="Latency distribution">
+  @if (empty()) {
+    <p class="lt-latency-bars__empty">No latency samples yet.</p>
+  } @else {
+    <ul class="lt-latency-bars__list">
+      @for (row of rows(); track row.label) {
+        <li class="lt-latency-bars__row" [attr.data-health]="row.level">
+          <span class="lt-latency-bars__label">{{ row.label }}</span>
+          <div class="lt-latency-bars__track">
+            <span class="lt-latency-bars__fill" [style.width.%]="row.width"></span>
+          </div>
+          <span class="lt-latency-bars__value">{{ row.value }} ms</span>
+        </li>
+      }
+    </ul>
+  }
+</section>

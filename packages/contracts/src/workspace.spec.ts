@@ -10,6 +10,8 @@ import {
   parseWorkspacesFile,
   removeWorkspaceFromCatalog,
   shouldMigrateLegacyLayout,
+  TESTING_WORKSPACE_ID,
+  withTestingWorkspace,
 } from './workspace';
 
 describe('parseWorkspacesFile', () => {
@@ -50,13 +52,23 @@ describe('parseWorkspacesFile', () => {
 });
 
 describe('workspace helpers', () => {
-  it('allocates a unique UUID folder and increments catalog ids', () => {
+  it('allocates unique UUID folder and catalog ids', () => {
     const folder = nextWorkspaceFolder(['workspace-1']);
     expect(folder).toMatch(
       /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
     );
     expect(folder).not.toBe('workspace-1');
-    expect(nextWorkspaceId(['ws_1', 'ws_2'])).toBe('ws_3');
+    const id = nextWorkspaceId(['ws_1', 'ws_2']);
+    expect(id).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+    );
+    expect(nextWorkspaceId()).not.toBe(id);
+  });
+
+  it('adds the Testing workspace once', () => {
+    const seeded = withTestingWorkspace(createDefaultWorkspacesFile());
+    expect(seeded.items.some((item) => item.id === TESTING_WORKSPACE_ID)).toBe(true);
+    expect(withTestingWorkspace(seeded)).toBe(seeded);
   });
 
   it('does not migrate when configs/settings.json already exists', () => {
@@ -148,6 +160,10 @@ describe('sanitizeSessionForWorkspace', () => {
           ],
         },
       ],
+      requestViewsByNodeId: {
+        'http-login': { section: 'auth' },
+        'http-gone': { section: 'body' },
+      },
       selection: {
         collections: { ids: ['http-login', 'http-gone'], anchorId: 'http-gone' },
         environments: { ids: ['env-local', 'env-other'], anchorId: 'env-other' },
@@ -164,6 +180,7 @@ describe('sanitizeSessionForWorkspace', () => {
     expect(next.selection.environments.ids).toEqual(['env-local']);
     expect(next.selection.environmentNodes['env-other']).toBeUndefined();
     expect(next.selection.environmentNodes['env-local']?.paneId).toBe('a');
+    expect(next.requestViewsByNodeId).toEqual({ 'http-login': { section: 'auth' } });
   });
 
   it('keeps tool tabs across workspace switches', () => {
@@ -190,5 +207,147 @@ describe('sanitizeSessionForWorkspace', () => {
     };
     const next = sanitizeSessionForWorkspace(session, new Set(), new Set());
     expect(next.groups[0]?.tabs.map((tab) => tab.nodeId)).toEqual(['uuid-generator']);
+  });
+
+  it('keeps catalog service tabs', () => {
+    const session = {
+      ...DEFAULT_SESSION_FILE,
+      groups: [
+        {
+          id: 'g1',
+          activeTabId: 't-flows',
+          selectedTabIds: ['t-flows'],
+          tabAnchorId: 't-flows',
+          tabs: [
+            {
+              id: 't-flows',
+              nodeId: 'flows',
+              kind: 'service' as const,
+              title: 'Flows',
+              url: '',
+              status: null,
+            },
+          ],
+        },
+      ],
+    };
+    const next = sanitizeSessionForWorkspace(session, new Set(), new Set());
+    expect(next.groups[0]?.tabs.map((tab) => tab.nodeId)).toEqual(['flows']);
+  });
+
+  it('drops stale service artifact tabs', () => {
+    const session = {
+      ...DEFAULT_SESSION_FILE,
+      groups: [
+        {
+          id: 'g1',
+          activeTabId: 't-flow',
+          selectedTabIds: ['t-flow'],
+          tabAnchorId: 't-flow',
+          tabs: [
+            {
+              id: 't-flow',
+              nodeId: 'flow-gone',
+              kind: 'flow' as const,
+              title: 'Gone flow',
+              url: '',
+              status: null,
+            },
+            {
+              id: 't-keep',
+              nodeId: 'flow-keep',
+              kind: 'flow' as const,
+              title: 'Keep flow',
+              url: '',
+              status: null,
+            },
+          ],
+        },
+      ],
+    };
+    const next = sanitizeSessionForWorkspace(
+      session,
+      new Set(),
+      new Set(),
+      new Set(),
+      new Set(),
+      new Set(),
+      new Set(),
+      { flow: new Set(['flow-keep']) },
+    );
+    expect(next.groups[0]?.tabs.map((tab) => tab.nodeId)).toEqual(['flow-keep']);
+  });
+
+  it('keeps plantuml tabs that still exist and drops stale tool plantuml tabs', () => {
+    const session = {
+      ...DEFAULT_SESSION_FILE,
+      groups: [
+        {
+          id: 'g1',
+          activeTabId: 't1',
+          selectedTabIds: ['t1'],
+          tabAnchorId: 't1',
+          tabs: [
+            {
+              id: 't1',
+              nodeId: 'diagram-1',
+              kind: 'plantuml' as const,
+              title: 'Diagram',
+              url: '',
+              status: null,
+            },
+            {
+              id: 't2',
+              nodeId: 'plantuml',
+              kind: 'tool' as const,
+              title: 'PlantUML',
+              url: '',
+              status: null,
+            },
+            {
+              id: 't3',
+              nodeId: 'gone',
+              kind: 'plantuml' as const,
+              title: 'Gone',
+              url: '',
+              status: null,
+            },
+          ],
+        },
+      ],
+    };
+    const next = sanitizeSessionForWorkspace(
+      session,
+      new Set(),
+      new Set(),
+      new Set(),
+      new Set(),
+      new Set(),
+      new Set(),
+      {},
+      new Set(['diagram-1']),
+    );
+    expect(next.groups[0]?.tabs.map((tab) => tab.nodeId)).toEqual(['diagram-1']);
+  });
+
+  it('keeps listener Network UI for living listeners and drops stale ids', () => {
+    const session = {
+      ...DEFAULT_SESSION_FILE,
+      listenerUiById: {
+        'ls-keep': { search: 'api', sort: 'status' as const },
+        'ls-gone': { search: 'x', sort: 'url' as const },
+      },
+    };
+    const next = sanitizeSessionForWorkspace(
+      session,
+      new Set(),
+      new Set(),
+      new Set(),
+      new Set(),
+      new Set(),
+      new Set(),
+      { 'listener-session': new Set(['ls-keep']) },
+    );
+    expect(next.listenerUiById).toEqual({ 'ls-keep': { search: 'api', sort: 'status' } });
   });
 });

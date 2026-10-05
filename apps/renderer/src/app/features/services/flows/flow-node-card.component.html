@@ -1,0 +1,112 @@
+<div
+  class="tx-flow-node"
+  role="option"
+  [attr.tabindex]="tabIndex()"
+  [attr.aria-selected]="selected()"
+  [class.is-selected]="selected()"
+  [class.is-active]="active()"
+  [class.is-container]="isContainer()"
+  [class.is-group]="isFrame()"
+  [class.is-note]="isNote()"
+  [class.is-terminal]="isTerminal()"
+  [class.is-start]="isStart()"
+  [class.is-end]="isEnd()"
+  [class.is-off]="!node().enabled"
+  [class.is-retry-pulse-a]="node().kind === 'retry' && status() === 'running' && pulse() % 2 === 1"
+  [class.is-retry-pulse-b]="node().kind === 'retry' && status() === 'running' && pulse() > 0 && pulse() % 2 === 0"
+  [attr.data-node-id]="node().id"
+  [attr.data-kind]="node().kind"
+  [attr.data-status]="status()"
+  [attr.data-pulse]="pulse()"
+  [attr.aria-label]="label()"
+  [style.left.px]="placement().x"
+  [style.top.px]="placement().y"
+  [style.width.px]="placement().width"
+  [style.height.px]="placement().height"
+>
+  @if (isTerminal()) {
+    @if (isEnd()) {
+      <span class="tx-flow-node__port tx-flow-node__port--in" data-port-in aria-hidden="true"></span>
+    }
+    <span class="tx-flow-node__terminal-dot" aria-hidden="true"></span>
+    <span class="tx-flow-node__terminal-label">{{ isStart() ? 'Start' : 'End' }}</span>
+    @for (port of placement().outPorts; track port.port) {
+      <span
+        class="tx-flow-node__port tx-flow-node__port--out"
+        [attr.data-port]="port.port"
+        [attr.data-port-node]="node().id"
+        [style.top.px]="port.y - placement().y"
+      ></span>
+    }
+  } @else {
+    @if (status(); as runStatus) {
+      <span class="tx-flow-node__beacon" [attr.data-status]="runStatus" aria-hidden="true"></span>
+    }
+
+    @if (!isNote() && !isFrame()) {
+      <span class="tx-flow-node__port tx-flow-node__port--in" data-port-in aria-hidden="true"></span>
+    }
+
+    <div class="tx-flow-node__head">
+      @if (order() > 0) {
+        <span class="tx-flow-node__order">{{ order() }}</span>
+      }
+      @if (!isNote() && !isFrame()) {
+        <span class="tx-flow-node__chip">{{ descriptor().chip }}</span>
+      }
+      <span class="tx-flow-node__title">{{ label() }}</span>
+      @if (statusLabel(); as tag) {
+        <span class="tx-flow-node__status">{{ tag }}</span>
+      }
+    </div>
+
+    @if (subtitle()) {
+      <p class="tx-flow-node__sub">{{ subtitle() }}</p>
+    }
+
+    @if (status() === 'error' && errorMessage()) {
+      <tx-hint stretch [label]="errorMessage()" placement="bottom">
+        <p class="tx-flow-node__error">{{ errorMessage() }}</p>
+      </tx-hint>
+    }
+
+    @if (hasExchange()) {
+      <tx-hint label="View request / response captured by this node" placement="bottom">
+        <button
+          type="button"
+          class="tx-flow-node__exchange"
+          aria-label="View request and response"
+          (pointerdown)="$event.stopPropagation()"
+          (click)="handleViewExchange($event)"
+        >
+          <span class="tx-flow-node__exchange-icon" aria-hidden="true">⇄</span>
+          Exchange
+        </button>
+      </tx-hint>
+    }
+
+    @for (port of placement().outPorts; track port.port) {
+      <span
+        class="tx-flow-node__port tx-flow-node__port--out"
+        [attr.data-port]="port.port"
+        [attr.data-port-node]="node().id"
+        [attr.aria-label]="port.port + ' output'"
+        [style.top.px]="port.y - placement().y"
+      >
+        @if (port.port !== 'next') {
+          <small class="tx-flow-node__port-label">{{ port.port }}</small>
+        }
+      </span>
+    }
+
+    @if (isFrame() && selected()) {
+      <button
+        type="button"
+        class="tx-flow-node__resize"
+        data-resize="se"
+        aria-label="Resize group"
+        (pointerdown)="handleResizePointerDown($event, 'se')"
+      ></button>
+    }
+  }
+</div>

@@ -1,4 +1,4 @@
-import { applyClauseSuggestion, clauseGhost, pairSqlKey, sqlTokenAt, unpairSqlKey } from './database-clause-complete';
+import { applyClauseSuggestion, pairSqlKey, sqlTokenAt, unpairSqlKey } from './database-clause-complete';
 
 export { applyClauseSuggestion, pairSqlKey, sqlTokenAt, unpairSqlKey };
 

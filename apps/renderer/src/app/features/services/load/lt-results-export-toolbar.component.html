@@ -1,0 +1,23 @@
+<div class="lt-export-toolbar" aria-label="Run export actions">
+  <tx-hint label="Copy run JSON to clipboard" placement="bottom">
+    <tx-button variant="ghost" [disabled]="!record()" (clicked)="handleCopyJson()">Copy JSON</tx-button>
+  </tx-hint>
+  <tx-hint label="Copy a plain-text report" placement="bottom">
+    <tx-button variant="ghost" [disabled]="!canScriptExport()" (clicked)="handleCopyReport()">Copy report</tx-button>
+  </tx-hint>
+  <tx-hint label="Download run JSON" placement="bottom">
+    <tx-button variant="ghost" [disabled]="!record()" (clicked)="handleDownload()">JSON</tx-button>
+  </tx-hint>
+  <tx-hint label="Download an HTML report" placement="bottom">
+    <tx-button variant="ghost" [disabled]="!canScriptExport()" (clicked)="handleSaveHtml()">HTML</tx-button>
+  </tx-hint>
+  <tx-hint label="Download a k6 script" placement="bottom">
+    <tx-button variant="ghost" [disabled]="!canScriptExport()" (clicked)="handleSaveK6()">k6</tx-button>
+  </tx-hint>
+  <tx-hint label="Download a Gatling simulation stub" placement="bottom">
+    <tx-button variant="ghost" [disabled]="!canScriptExport()" (clicked)="handleSaveGatling()">Gatling</tx-button>
+  </tx-hint>
+  @if (feedback()) {
+    <span class="lt-export-toolbar__feedback" role="status">{{ feedback() }}</span>
+  }
+</div>

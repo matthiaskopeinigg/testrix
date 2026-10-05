@@ -1,0 +1,413 @@
+@if (missing()) {
+  <div class="tx-history-viewer tx-history-viewer--missing" animate.enter="tx-history-enter">
+    <tx-empty-state
+      title="History entry missing"
+      body="This tab points to a snapshot that no longer exists. Close the tab or pick another item from History."
+    />
+  </div>
+} @else {
+  @for (item of entryList(); track item.id) {
+    <div class="tx-history-viewer" animate.enter="tx-history-enter">
+      <header class="tx-history-viewer__chrome">
+        <div class="tx-history-viewer__identity">
+          <span class="tx-history-viewer__method" [attr.data-method]="method()">{{ method() }}</span>
+          <div class="tx-history-viewer__url-wrap">
+            @if (requestName()) {
+              <span class="tx-history-viewer__name">{{ requestName() }}</span>
+            }
+            <span class="tx-history-viewer__url">{{ url() || '(empty URL)' }}</span>
+          </div>
+          <span class="tx-history-viewer__status" [attr.data-tone]="statusTone()">
+            <span class="tx-history-viewer__status-dot" aria-hidden="true"></span>
+            <span class="tx-history-viewer__status-code">{{ statusCode() }}</span>
+            <span class="tx-history-viewer__status-text">{{ statusText() }}</span>
+          </span>
+        </div>
+
+        <div class="tx-history-viewer__toolbar" role="toolbar" aria-label="History actions">
+          <tx-hint label="Copy URL" placement="bottom">
+            <button
+              type="button"
+              class="tx-history-viewer__icon-btn"
+              aria-label="Copy URL"
+              [disabled]="!url()"
+              [class.is-copied]="copiedKey() === 'url'"
+              (click)="handleCopyUrl()"
+            >
+              @if (copiedKey() === 'url') {
+                <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+                  <path d="M3.5 7.2 5.8 9.5 10.5 4.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              } @else {
+                <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+                  <rect x="4.5" y="4.5" width="7" height="7" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.35" />
+                  <path d="M3 9.5V3.8A1.3 1.3 0 0 1 4.3 2.5H9.5" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" />
+                </svg>
+              }
+            </button>
+          </tx-hint>
+          <tx-hint label="Replay as editable request" placement="bottom">
+            <button
+              type="button"
+              class="tx-history-viewer__icon-btn is-accent"
+              aria-label="Replay as editable request"
+              (click)="handleReplay()"
+            >
+              <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+                <path d="M4.2 3.2v7.6L11 7 4.2 3.2z" fill="currentColor" />
+              </svg>
+              <span>Replay</span>
+            </button>
+          </tx-hint>
+          @if (canComparePrevious()) {
+            <tx-hint label="Compare response with previous run" placement="bottom">
+              <button
+                type="button"
+                class="tx-history-viewer__icon-btn"
+                [class.is-accent]="compareOpen()"
+                aria-label="Compare with previous history entry"
+                (click)="handleToggleCompare()"
+              >
+                Compare
+              </button>
+            </tx-hint>
+          }
+          <span class="tx-history-viewer__rule" aria-hidden="true"></span>
+          <tx-hint label="Delete from history" placement="bottom">
+            <button
+              type="button"
+              class="tx-history-viewer__icon-btn is-danger"
+              aria-label="Delete history entry"
+              (click)="handleDelete()"
+            >
+              <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+                <path d="M3.5 4h7M5.2 4V3.2A1 1 0 0 1 6.2 2.2h1.6a1 1 0 0 1 1 1V4M4.2 4l.4 6.2A1 1 0 0 0 5.6 11.2h2.8a1 1 0 0 0 1-.99L10 4" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </button>
+          </tx-hint>
+        </div>
+      </header>
+
+      <div class="tx-history-viewer__metrics" aria-label="Run stats">
+        <div class="tx-history-viewer__metric">
+          <span class="tx-history-viewer__metric-label">Duration</span>
+          <span class="tx-history-viewer__metric-value">{{ durationLabel() }}</span>
+        </div>
+        <div class="tx-history-viewer__metric">
+          <span class="tx-history-viewer__metric-label">Size</span>
+          <span class="tx-history-viewer__metric-value">{{ sizeLabel() }}</span>
+        </div>
+        <div class="tx-history-viewer__metric">
+          <span class="tx-history-viewer__metric-label">Req headers</span>
+          <span class="tx-history-viewer__metric-value">{{ requestHeaders().length }}</span>
+        </div>
+        <div class="tx-history-viewer__metric">
+          <span class="tx-history-viewer__metric-label">Res headers</span>
+          <span class="tx-history-viewer__metric-value">{{ responseHeaders().length }}</span>
+        </div>
+        <div class="tx-history-viewer__metric">
+          <span class="tx-history-viewer__metric-label">Started</span>
+          <span class="tx-history-viewer__metric-value">{{ startedLabel() }}</span>
+        </div>
+        <div class="tx-history-viewer__metric">
+          <span class="tx-history-viewer__metric-label">Finished</span>
+          <span class="tx-history-viewer__metric-value">{{ finishedLabel() }}</span>
+        </div>
+        @if (contentType()) {
+          <div class="tx-history-viewer__metric tx-history-viewer__metric--wide">
+            <span class="tx-history-viewer__metric-label">Content-Type</span>
+            <span class="tx-history-viewer__metric-value">{{ contentType() }}</span>
+          </div>
+        }
+        <div class="tx-history-viewer__metric tx-history-viewer__metric--id">
+          <span class="tx-history-viewer__metric-label">Entry</span>
+          <span class="tx-history-viewer__metric-value">{{ shortId() }}</span>
+        </div>
+      </div>
+
+      @if (errorText()) {
+        <div class="tx-history-viewer__error" role="alert" animate.enter="tx-history-reveal">
+          <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+            <circle cx="7" cy="7" r="5.2" fill="none" stroke="currentColor" stroke-width="1.35" />
+            <path d="M7 4.2v3.4M7 9.6h.01" stroke="currentColor" stroke-width="1.45" stroke-linecap="round" />
+          </svg>
+          <span>{{ errorText() }}</span>
+        </div>
+      }
+
+      <div class="tx-history-viewer__body">
+        <section class="tx-history-viewer__pane" [class.is-collapsed]="isCollapsed('request')">
+          <button
+            type="button"
+            class="tx-history-viewer__pane-head"
+            [attr.aria-expanded]="!isCollapsed('request')"
+            (click)="handleToggle('request')"
+          >
+            <svg class="tx-history-viewer__chevron" [class.is-collapsed]="isCollapsed('request')" width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
+              <path d="M4.2 2.4 7.8 6 4.2 9.6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+            <h3>Request</h3>
+            <span class="tx-history-viewer__pane-meta">{{ requestHeaders().length }} headers · {{ queryParams().length }} params</span>
+          </button>
+
+          @if (!isCollapsed('request')) {
+            <div class="tx-history-viewer__pane-body" animate.enter="tx-history-reveal" animate.leave="tx-history-hide">
+              <div class="tx-history-viewer__block">
+                <div class="tx-history-viewer__block-bar">
+                  <button
+                    type="button"
+                    class="tx-history-viewer__block-toggle"
+                    [attr.aria-expanded]="!isCollapsed('headers')"
+                    (click)="handleToggle('headers')"
+                  >
+                    <svg class="tx-history-viewer__chevron is-sm" [class.is-collapsed]="isCollapsed('headers')" width="10" height="10" viewBox="0 0 12 12" aria-hidden="true">
+                      <path d="M4.2 2.4 7.8 6 4.2 9.6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                    <h4>Headers</h4>
+                    <span class="tx-history-viewer__count">{{ requestHeaders().length }}</span>
+                  </button>
+                  @if (!isCollapsed('headers') && requestHeaders().length > 0) {
+                    <button
+                      type="button"
+                      class="tx-history-viewer__copy"
+                      [class.is-copied]="copiedKey() === 'reqHeaders'"
+                      (click)="handleCopy(requestHeadersText(), 'reqHeaders')"
+                    >
+                      {{ copiedKey() === 'reqHeaders' ? 'Copied' : 'Copy' }}
+                    </button>
+                  }
+                </div>
+                @if (!isCollapsed('headers')) {
+                  <div animate.enter="tx-history-reveal" animate.leave="tx-history-hide">
+                    @if (requestHeaders().length > 0) {
+                      <div class="tx-history-viewer__pairs">
+                        @for (header of requestHeaders(); track header.key + ':' + $index) {
+                          <div class="tx-history-viewer__pair">
+                            <span class="tx-history-viewer__pair-key">{{ header.key }}</span>
+                            <span class="tx-history-viewer__pair-value">{{ header.value }}</span>
+                          </div>
+                        }
+                      </div>
+                    } @else {
+                      <p class="tx-history-viewer__empty">No headers were sent.</p>
+                    }
+                  </div>
+                }
+              </div>
+
+              <div class="tx-history-viewer__block">
+                <div class="tx-history-viewer__block-bar">
+                  <button
+                    type="button"
+                    class="tx-history-viewer__block-toggle"
+                    [attr.aria-expanded]="!isCollapsed('params')"
+                    (click)="handleToggle('params')"
+                  >
+                    <svg class="tx-history-viewer__chevron is-sm" [class.is-collapsed]="isCollapsed('params')" width="10" height="10" viewBox="0 0 12 12" aria-hidden="true">
+                      <path d="M4.2 2.4 7.8 6 4.2 9.6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                    <h4>Query</h4>
+                    <span class="tx-history-viewer__count">{{ queryParams().length }}</span>
+                  </button>
+                  @if (!isCollapsed('params') && queryParams().length > 0) {
+                    <button
+                      type="button"
+                      class="tx-history-viewer__copy"
+                      [class.is-copied]="copiedKey() === 'reqParams'"
+                      (click)="handleCopy(queryParamsText(), 'reqParams')"
+                    >
+                      {{ copiedKey() === 'reqParams' ? 'Copied' : 'Copy' }}
+                    </button>
+                  }
+                </div>
+                @if (!isCollapsed('params')) {
+                  <div animate.enter="tx-history-reveal" animate.leave="tx-history-hide">
+                    @if (queryParams().length > 0) {
+                      <div class="tx-history-viewer__pairs">
+                        @for (param of queryParams(); track param.key + ':' + $index) {
+                          <div class="tx-history-viewer__pair">
+                            <span class="tx-history-viewer__pair-key">{{ param.key }}</span>
+                            <span class="tx-history-viewer__pair-value">{{ param.value }}</span>
+                          </div>
+                        }
+                      </div>
+                    } @else {
+                      <p class="tx-history-viewer__empty">No query parameters.</p>
+                    }
+                  </div>
+                }
+              </div>
+
+              <div class="tx-history-viewer__block">
+                <div class="tx-history-viewer__block-bar">
+                  <button
+                    type="button"
+                    class="tx-history-viewer__block-toggle"
+                    [attr.aria-expanded]="!isCollapsed('requestBody')"
+                    (click)="handleToggle('requestBody')"
+                  >
+                    <svg class="tx-history-viewer__chevron is-sm" [class.is-collapsed]="isCollapsed('requestBody')" width="10" height="10" viewBox="0 0 12 12" aria-hidden="true">
+                      <path d="M4.2 2.4 7.8 6 4.2 9.6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                    <h4>Body</h4>
+                  </button>
+                  @if (!isCollapsed('requestBody') && requestBody()) {
+                    <button
+                      type="button"
+                      class="tx-history-viewer__copy"
+                      [class.is-copied]="copiedKey() === 'reqBody'"
+                      (click)="handleCopy(requestBodyFormatted(), 'reqBody')"
+                    >
+                      {{ copiedKey() === 'reqBody' ? 'Copied' : 'Copy' }}
+                    </button>
+                  }
+                </div>
+                @if (!isCollapsed('requestBody')) {
+                  <div animate.enter="tx-history-reveal" animate.leave="tx-history-hide">
+                    @if (requestBody()) {
+                      @if (requestBodyTruncated()) {
+                        <p class="tx-history-viewer__note">Stored body was truncated for history.</p>
+                      }
+                      <tx-code-highlight
+                        class="tx-history-viewer__code"
+                        [value]="requestBodyFormatted()"
+                        [language]="requestBodyLanguage()"
+                        ariaLabel="Request body"
+                      />
+                    } @else {
+                      <p class="tx-history-viewer__empty">No request body.</p>
+                    }
+                  </div>
+                }
+              </div>
+            </div>
+          }
+        </section>
+
+        <section class="tx-history-viewer__pane" [class.is-collapsed]="isCollapsed('response')">
+          <button
+            type="button"
+            class="tx-history-viewer__pane-head"
+            [attr.aria-expanded]="!isCollapsed('response')"
+            (click)="handleToggle('response')"
+          >
+            <svg class="tx-history-viewer__chevron" [class.is-collapsed]="isCollapsed('response')" width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
+              <path d="M4.2 2.4 7.8 6 4.2 9.6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+            <h3>Response</h3>
+            <span class="tx-history-viewer__pane-meta">{{ responseHeaders().length }} headers · {{ sizeLabel() }}</span>
+          </button>
+
+          @if (!isCollapsed('response')) {
+            <div class="tx-history-viewer__pane-body" animate.enter="tx-history-reveal" animate.leave="tx-history-hide">
+              @if (compareOpen() && compareRows().length > 0) {
+                <div class="tx-history-viewer__block" aria-label="Response body compare">
+                  <div class="tx-history-viewer__block-bar">
+                    <h4>Compare with previous</h4>
+                  </div>
+                  <div class="tx-history-viewer__pairs">
+                    @for (row of compareRows(); track $index) {
+                      <div class="tx-history-viewer__pair">
+                        <span class="tx-history-viewer__pair-key">Before</span>
+                        <span class="tx-history-viewer__pair-value">{{ row.left.text }}</span>
+                      </div>
+                      <div class="tx-history-viewer__pair">
+                        <span class="tx-history-viewer__pair-key">After</span>
+                        <span class="tx-history-viewer__pair-value">{{ row.right.text }}</span>
+                      </div>
+                    }
+                  </div>
+                </div>
+              }
+              <div class="tx-history-viewer__block">
+                <div class="tx-history-viewer__block-bar">
+                  <button
+                    type="button"
+                    class="tx-history-viewer__block-toggle"
+                    [attr.aria-expanded]="!isCollapsed('responseHeaders')"
+                    (click)="handleToggle('responseHeaders')"
+                  >
+                    <svg class="tx-history-viewer__chevron is-sm" [class.is-collapsed]="isCollapsed('responseHeaders')" width="10" height="10" viewBox="0 0 12 12" aria-hidden="true">
+                      <path d="M4.2 2.4 7.8 6 4.2 9.6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                    <h4>Headers</h4>
+                    <span class="tx-history-viewer__count">{{ responseHeaders().length }}</span>
+                  </button>
+                  @if (!isCollapsed('responseHeaders') && responseHeaders().length > 0) {
+                    <button
+                      type="button"
+                      class="tx-history-viewer__copy"
+                      [class.is-copied]="copiedKey() === 'resHeaders'"
+                      (click)="handleCopy(responseHeadersText(), 'resHeaders')"
+                    >
+                      {{ copiedKey() === 'resHeaders' ? 'Copied' : 'Copy' }}
+                    </button>
+                  }
+                </div>
+                @if (!isCollapsed('responseHeaders')) {
+                  <div animate.enter="tx-history-reveal" animate.leave="tx-history-hide">
+                    @if (responseHeaders().length > 0) {
+                      <div class="tx-history-viewer__pairs">
+                        @for (header of responseHeaders(); track header.key + ':' + $index) {
+                          <div class="tx-history-viewer__pair">
+                            <span class="tx-history-viewer__pair-key">{{ header.key }}</span>
+                            <span class="tx-history-viewer__pair-value">{{ header.value }}</span>
+                          </div>
+                        }
+                      </div>
+                    } @else {
+                      <p class="tx-history-viewer__empty">No headers were returned.</p>
+                    }
+                  </div>
+                }
+              </div>
+
+              <div class="tx-history-viewer__block">
+                <div class="tx-history-viewer__block-bar">
+                  <button
+                    type="button"
+                    class="tx-history-viewer__block-toggle"
+                    [attr.aria-expanded]="!isCollapsed('responseBody')"
+                    (click)="handleToggle('responseBody')"
+                  >
+                    <svg class="tx-history-viewer__chevron is-sm" [class.is-collapsed]="isCollapsed('responseBody')" width="10" height="10" viewBox="0 0 12 12" aria-hidden="true">
+                      <path d="M4.2 2.4 7.8 6 4.2 9.6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                    <h4>Body</h4>
+                  </button>
+                  @if (!isCollapsed('responseBody') && responseBody()) {
+                    <button
+                      type="button"
+                      class="tx-history-viewer__copy"
+                      [class.is-copied]="copiedKey() === 'resBody'"
+                      (click)="handleCopy(responseBodyFormatted(), 'resBody')"
+                    >
+                      {{ copiedKey() === 'resBody' ? 'Copied' : 'Copy' }}
+                    </button>
+                  }
+                </div>
+                @if (!isCollapsed('responseBody')) {
+                  <div animate.enter="tx-history-reveal" animate.leave="tx-history-hide">
+                    @if (responseBody()) {
+                      @if (responseBodyTruncated()) {
+                        <p class="tx-history-viewer__note">Stored body was truncated for history.</p>
+                      }
+                      <tx-code-highlight
+                        class="tx-history-viewer__code"
+                        [value]="responseBodyFormatted()"
+                        [language]="responseBodyLanguage()"
+                        ariaLabel="Response body"
+                      />
+                    } @else {
+                      <p class="tx-history-viewer__empty">No response body.</p>
+                    }
+                  </div>
+                }
+              </div>
+            </div>
+          }
+        </section>
+      </div>
+    </div>
+  }
+}

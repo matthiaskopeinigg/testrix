@@ -1,0 +1,621 @@
+<div
+  #viewport
+  class="tx-seq-grid"
+  role="application"
+  aria-label="Sequence grid canvas"
+  aria-keyshortcuts="Delete Control+A Escape"
+  tabindex="0"
+  [class.is-panning]="isPanning()"
+  [class.is-reordering]="!!laneDrag()"
+  [class.is-drawing]="!!messageDrag()"
+  [class.is-note-dragging]="!!noteDrag()?.moved"
+  [class.is-frame-dragging]="!!frameDrag()?.moved"
+  [class.is-order-dragging]="!!orderDrag()?.moved && !orderDrag()?.settling"
+  (click)="handleCanvasClick()"
+  (contextmenu)="handleCanvasContextMenu($event)"
+  (wheel)="handleWheel($event)"
+  (pointerdown)="handlePointerDown($event)"
+  (pointermove)="handlePointerMove($event)"
+  (pointerup)="handlePointerUp($event)"
+  (pointercancel)="handlePointerUp($event)"
+  (auxclick)="handleAuxClick($event)"
+  (keydown)="handleKey($event)"
+>
+  <div class="tx-seq-grid__stage" [style.transform]="transform()">
+    <div class="tx-seq-grid__world">
+      <button
+        type="button"
+        class="tx-seq-grid__title"
+        [class.is-placeholder]="!model().title"
+        [style.left.px]="dividerLeft()"
+        [style.width.px]="dividerWidth()"
+        (click)="openTitleMenu($event)"
+        (contextmenu)="openTitleMenu($event)"
+      >{{ breaks(model().title) || 'Add title' }}</button>
+
+      @for (lane of lanes(); track lane.participant.id) {
+        <div
+          class="tx-seq-grid__lane"
+          [class.is-selected]="isSelected(lane.participant.id)"
+          [class.is-dragging]="lane.isDragging"
+          [class.is-message-target]="messageDrag()?.toId === lane.participant.id"
+          [style.left.px]="lane.x"
+          [style.top.px]="diagram().laneTop"
+          [style.width.px]="lane.width"
+          [style.height.px]="lane.height"
+        >
+          <button
+            type="button"
+            class="tx-seq-grid__box tx-seq-grid__box--head"
+            [class.is-actor]="lane.isActor"
+            [class.has-color]="!!lane.tint"
+            [style.background-color]="lane.bg"
+            [style.border-color]="lane.border"
+            [style.color]="lane.fg"
+            [style.min-height.px]="headMin(lane.isActor)"
+            [attr.aria-label]="breaks(lane.participant.name)"
+            (pointerdown)="handleLanePointerDown(lane.participant.id, $event)"
+            (click)="selectNode(lane.participant.id, $event)"
+            (contextmenu)="handleNodeContextMenu(lane.participant, $event)"
+          >
+            @if (lane.isActor) {
+              <svg class="tx-seq-grid__actor" viewBox="-4 -4 44 70" aria-hidden="true">
+                <circle cx="18" cy="8" r="8" fill="none" stroke-width="1.4" />
+                <path d="M18 16 V43 M5 24 H31 M18 43 L5 58 M18 43 L31 58" fill="none" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            }
+            <span class="tx-seq-grid__box-name">{{ breaks(lane.participant.name) }}</span>
+          </button>
+
+          <button
+            type="button"
+            class="tx-seq-grid__lifeline"
+            [attr.aria-label]="breaks(lane.participant.name) + ' lifeline'"
+            (pointerdown)="handleLifelinePointerDown(lane.participant.id, $event)"
+            (click)="selectNode(lane.participant.id, $event)"
+            (contextmenu)="handleLineContextMenu(lane.participant, $event)"
+          >
+            <span
+              class="tx-seq-grid__lifeline-stroke"
+              [class.is-dotted]="lane.lineStyle === 'dotted'"
+              [class.is-dashed]="lane.lineStyle === 'dashed'"
+              [class.is-solid]="lane.lineStyle === 'solid' || lane.lineStyle === 'bold'"
+              [style.border-left-width.px]="lane.lineWidth"
+              [style.border-left-color]="lane.lineColor"
+              aria-hidden="true"
+            ></span>
+          </button>
+
+          @if (!lane.hideFoot) {
+            <button
+              type="button"
+              class="tx-seq-grid__box tx-seq-grid__box--foot"
+              [class.is-actor]="lane.isActor"
+              [class.has-color]="!!lane.tint"
+              [style.background-color]="lane.bg"
+              [style.border-color]="lane.border"
+              [style.color]="lane.fg"
+              [style.min-height.px]="footMin(lane.isActor, lane.participant.name)"
+              [attr.aria-label]="breaks(lane.participant.name) + ' (foot)'"
+              (pointerdown)="handleLanePointerDown(lane.participant.id, $event)"
+              (click)="selectNode(lane.participant.id, $event)"
+              (contextmenu)="handleNodeContextMenu(lane.participant, $event)"
+            >
+              @if (lane.isActor) {
+                <svg class="tx-seq-grid__actor tx-seq-grid__actor--foot" viewBox="-4 -4 44 70" aria-hidden="true">
+                  <circle cx="18" cy="8" r="8" fill="none" stroke-width="1.4" />
+                  <path d="M18 16 V43 M5 24 H31 M18 43 L5 58 M18 43 L31 58" fill="none" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              }
+              <span class="tx-seq-grid__box-name">{{ breaks(lane.participant.name) }}</span>
+            </button>
+          }
+        </div>
+      }
+
+      @for (frame of frames(); track frame.id) {
+        <div
+          class="tx-seq-grid__frame-hit"
+          [class.is-active]="frameDrag()?.id === frame.id"
+          [style.left.px]="frame.left"
+          [style.top.px]="frame.y"
+          [style.width.px]="frame.width"
+          [style.height.px]="frame.height"
+          (contextmenu)="handleFrameContextMenu(frame.id, $event)"
+        >
+          <div
+            class="tx-seq-grid__frame-body"
+            (pointerdown)="passFramePointer($event)"
+            (click)="handleFrameBodyClick(frame.id, $event)"
+          ></div>
+          <button
+            type="button"
+            class="tx-seq-grid__frame-edge tx-seq-grid__frame-edge--top"
+            aria-label="Resize top"
+            (pointerdown)="startFrameDrag(frame.id, 'start', $event)"
+          ></button>
+          <button
+            type="button"
+            class="tx-seq-grid__frame-edge tx-seq-grid__frame-edge--bottom"
+            aria-label="Resize bottom"
+            (pointerdown)="startFrameDrag(frame.id, 'end', $event)"
+          ></button>
+        </div>
+      }
+
+      @for (bar of diagram().activations; track bar.id) {
+        <button
+          type="button"
+          class="tx-seq-grid__activation"
+          [style.left.px]="activationLeft(bar) - 4"
+          [style.top.px]="bar.y"
+          [style.height.px]="bar.height"
+          aria-label="Activation"
+          (contextmenu)="handleActivationContextMenu(bar, $event)"
+        ></button>
+      }
+
+      @for (frame of frames(); track frame.id) {
+        <div
+          class="tx-seq-grid__frame"
+          [class.is-selected]="isSelected(frame.id)"
+          [class.is-loop]="frame.kind === 'loop'"
+          [class.is-group]="frame.kind === 'group'"
+          [class.is-alt]="frame.kind === 'alt'"
+          [class.is-active]="frameDrag()?.id === frame.id"
+          [style.left.px]="frame.left"
+          [style.top.px]="frame.y"
+          [style.width.px]="frame.width"
+          [style.height.px]="frame.height"
+        >
+          <button
+            type="button"
+            class="tx-seq-grid__frame-tab"
+            (pointerdown)="startFrameDrag(frame.id, 'move', $event)"
+            [attr.aria-label]="frame.kind + ' ' + frame.label"
+            (click)="selectNode(frame.id, $event)"
+          >
+            <svg
+              class="tx-seq-grid__frame-tab-shape"
+              [attr.width]="frame.kindWidth + 10"
+              height="20"
+              [attr.viewBox]="'0 0 ' + (frame.kindWidth + 10) + ' 20'"
+              aria-hidden="true"
+            >
+              <polygon
+                fill="#1e222a"
+                stroke="#5f6368"
+                [attr.points]="'0.5,0.5 ' + frame.kindWidth + ',0.5 ' + (frame.kindWidth + 9.5) + ',19.5 0.5,19.5'"
+              />
+            </svg>
+            <b class="tx-seq-grid__frame-kind" [style.width.px]="frame.kindWidth">{{ frame.kind }}</b>
+            @if (frame.tabLabel) {
+              <span class="tx-seq-grid__frame-guard">{{ frame.tabLabel }}</span>
+            }
+          </button>
+          @for (mark of frame.elseMarks; track mark.id) {
+            <span class="tx-seq-grid__frame-else" [style.top.px]="mark.y - frame.y">
+              <button
+                type="button"
+                class="tx-seq-grid__frame-else-label"
+                [class.is-selected]="isSelected(mark.id)"
+                [class.is-blank]="!mark.label"
+                [attr.aria-label]="mark.label ? 'else ' + mark.label : 'else'"
+                (click)="selectNode(mark.id, $event)"
+                (contextmenu)="handleElseContextMenu(mark.id, $event)"
+              >@if (mark.label) { [{{ mark.label }}] }</button>
+            </span>
+          }
+        </div>
+      }
+
+      @for (note of diagram().notes; track note.id) {
+        <button
+          type="button"
+          class="tx-seq-grid__note"
+          [class.is-selected]="isSelected(note.id)"
+          [class.is-active]="noteDrag()?.id === note.id"
+          [style.left.px]="noteBox(note).left"
+          [style.top.px]="note.y"
+          [style.width.px]="noteBox(note).width"
+          [style.height.px]="note.height"
+          [attr.aria-label]="'Note ' + note.text"
+          (pointerdown)="startNoteDrag(note.id, $event)"
+          (click)="selectNode(note.id, $event)"
+          (contextmenu)="handleNoteContextMenu(note.id, $event)"
+        >{{ note.text }}</button>
+      }
+
+      @for (row of diagram().messages; track row.id) {
+        <div
+          class="tx-seq-grid__msg"
+          [class.is-self]="row.self"
+          [class.is-selected]="isSelected(row.id)"
+          [class.is-ordering]="orderDrag()?.id === row.id && orderDrag()?.moved && !orderDrag()?.settling"
+          [style.left.px]="messageLeft(row)"
+          [style.top.px]="orderTop(row.id, row.y)"
+          [style.width.px]="messageWidth(row)"
+          [style.height.px]="row.height"
+        >
+          <button
+            type="button"
+            class="tx-seq-grid__msg-hit"
+            [attr.aria-label]="'Edit ' + (row.numberLabel ? row.numberLabel + ' ' + row.label : row.label)"
+            (pointerdown)="startOrderDrag(row.id, $event)"
+            (click)="selectMessage($event)"
+            (contextmenu)="handleMessageContextMenu($event)"
+          ></button>
+          <span class="tx-seq-grid__msg-edit" aria-hidden="true">Edit</span>
+          <svg class="tx-seq-grid__msg-line" [attr.viewBox]="'0 0 ' + messageWidth(row) + ' ' + row.height" aria-hidden="true">
+            @if (row.self) {
+              <path [attr.d]="selfPath(row)" fill="none" stroke="currentColor" stroke-width="1.25" />
+              <polygon [attr.points]="'0,' + (row.height - 8) + ' 8,' + (row.height - 12) + ' 8,' + (row.height - 4)" fill="currentColor" />
+            } @else {
+              <line
+                [attr.x1]="shaftEnd(row, 'from')"
+                [attr.x2]="shaftEnd(row, 'to')"
+                [attr.y1]="row.height - 8"
+                [attr.y2]="row.height - 8"
+                stroke="currentColor"
+                stroke-width="1.25"
+                [attr.stroke-dasharray]="row.dashed ? '2 2' : null"
+              />
+              @if (row.openHead) {
+                <polyline
+                  [attr.points]="arrowPoints(row)"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.25"
+                />
+              } @else {
+                <polygon [attr.points]="arrowPoints(row)" fill="currentColor" />
+              }
+            }
+          </svg>
+          @if (row.self && row.numberLabel) {
+            <span class="tx-seq-grid__msg-num tx-seq-grid__msg-num--self">{{ row.numberLabel }}</span>
+          }
+          <span class="tx-seq-grid__msg-text" [style.left.px]="row.self ? 48 : 7">
+            @if (!row.self && row.numberLabel) {
+              <span class="tx-seq-grid__msg-num">{{ row.numberLabel }}</span>
+            }
+            <span class="tx-seq-grid__msg-label">{{ row.label }}</span>
+          </span>
+        </div>
+      }
+
+      @for (section of diagram().dividers; track section.id) {
+        <button
+          type="button"
+          class="tx-seq-grid__section"
+          [class.is-selected]="isSelected(section.id)"
+          [class.is-ordering]="orderDrag()?.id === section.id && orderDrag()?.moved && !orderDrag()?.settling"
+          [style.top.px]="orderTop(section.id, section.y)"
+          [style.left.px]="dividerLeft()"
+          [style.width.px]="dividerWidth()"
+          [style.height.px]="section.height"
+          [attr.aria-label]="section.label + ' section'"
+          (pointerdown)="startOrderDrag(section.id, $event)"
+          (click)="selectNode(section.id, $event)"
+          (contextmenu)="handleSectionContextMenu(section.id, $event)"
+        >
+          <span class="tx-seq-grid__section-frame">
+            <span class="tx-seq-grid__section-rail" aria-hidden="true"></span>
+            <span class="tx-seq-grid__section-label">{{ section.label }}</span>
+          </span>
+        </button>
+      }
+
+      @if (frameDrag(); as framing) {
+        @if (framing.moved) {
+          <div
+            class="tx-seq-grid__frame-guide"
+            [style.top.px]="framing.guideY"
+            [style.left.px]="dividerLeft()"
+            [style.width.px]="dividerWidth()"
+            aria-hidden="true"
+          ></div>
+        }
+      }
+      @if (orderDrag(); as ordering) {
+        @if (ordering.moved && !ordering.settling) {
+          <div
+            class="tx-seq-grid__frame-guide"
+            [style.top.px]="ordering.guideY"
+            [style.left.px]="dividerLeft()"
+            [style.width.px]="dividerWidth()"
+            aria-hidden="true"
+          ></div>
+        }
+      }
+
+      @if (messageDraft(); as draft) {
+        <svg
+          class="tx-seq-grid__draft"
+          [attr.viewBox]="'0 0 ' + draft.width + ' 16'"
+          [style.left.px]="draft.left"
+          [style.top.px]="draft.y - 8"
+          [style.width.px]="draft.width"
+          aria-hidden="true"
+        >
+          @if (draft.headAtEnd) {
+            <line [attr.x1]="0" [attr.x2]="draft.width - 9" y1="8" y2="8" />
+            <polygon [attr.points]="draft.width + ',8 ' + (draft.width - 8) + ',4 ' + (draft.width - 8) + ',12'" />
+          } @else {
+            <line x1="9" [attr.x2]="draft.width" y1="8" y2="8" />
+            <polygon points="0,8 8,4 8,12" />
+          }
+        </svg>
+      }
+
+      @if (lanes().length === 0 && diagram().dividers.length === 0 && diagram().messages.length === 0) {
+        <div class="tx-seq-grid__hint" aria-hidden="true">
+          <p>Right-click to add</p>
+        </div>
+      }
+    </div>
+  </div>
+</div>
+
+<ng-template #canvasMenu>
+  <div class="tx-menu tx-seq-grid__menu" role="menu">
+    @if (menuState()?.kind === 'canvas') {
+      @if (menuPanel() === 'root') {
+        <button type="button" class="tx-seq-grid__menu-item" role="menuitem" (click)="openAddPanel()">
+          Add
+        </button>
+      } @else {
+        <button type="button" class="tx-seq-grid__menu-item" role="menuitem" (click)="closeToRootPanel()">
+          ← Back
+        </button>
+        <span class="tx-seq-grid__menu-rule" aria-hidden="true"></span>
+        <button type="button" class="tx-seq-grid__menu-item" role="menuitem" (click)="addActor()">
+          Actor
+        </button>
+        <button type="button" class="tx-seq-grid__menu-item" role="menuitem" (click)="addParticipantNode()">
+          Participant
+        </button>
+        @if (!model().title.trim()) {
+          <button type="button" class="tx-seq-grid__menu-item" role="menuitem" (click)="addTitleNode()">
+            Title
+          </button>
+        }
+        <button type="button" class="tx-seq-grid__menu-item" role="menuitem" (click)="addSectionNode()">
+          Section
+        </button>
+        <button type="button" class="tx-seq-grid__menu-item" role="menuitem" (click)="addNoteNode()">
+          Note
+        </button>
+        <button type="button" class="tx-seq-grid__menu-item" role="menuitem" (click)="addAltNode()">
+          Alt
+        </button>
+        <button type="button" class="tx-seq-grid__menu-item" role="menuitem" (click)="addElseNode()">
+          Else
+        </button>
+        <button type="button" class="tx-seq-grid__menu-item" role="menuitem" (click)="addLoopNode()">
+          Loop
+        </button>
+        <button type="button" class="tx-seq-grid__menu-item" role="menuitem" (click)="addGroupNode()">
+          Group
+        </button>
+      }
+    } @else if (menuState()?.kind === 'line' && menuParticipant(); as participant) {
+      @if (menuPanel() === 'root') {
+        <button type="button" class="tx-seq-grid__menu-item" role="menuitem" (click)="openLineColorPanel()">
+          Color…
+        </button>
+        <button type="button" class="tx-seq-grid__menu-item" role="menuitem" (click)="openLineStylePanel()">
+          Line type…
+        </button>
+        <span class="tx-seq-grid__menu-rule" aria-hidden="true"></span>
+        <p class="tx-seq-grid__menu-label">
+          {{ lineStyleLabel(participant.lineStyle) }}
+          ·
+          {{ participant.lineColor?.replace(/^#/, '') || 'white' }}
+        </p>
+      } @else if (menuPanel() === 'line-color') {
+        <button type="button" class="tx-seq-grid__menu-item" role="menuitem" (click)="closeToRootPanel()">
+          ← Back
+        </button>
+        <span class="tx-seq-grid__menu-rule" aria-hidden="true"></span>
+        <p class="tx-seq-grid__menu-label">Line color</p>
+        <div class="tx-seq-grid__swatch-row" role="group" aria-label="Line color">
+          @for (preset of lineColorPresets; track preset.id) {
+            <button
+              type="button"
+              class="tx-seq-grid__swatch"
+              role="menuitem"
+              [class.is-active]="(participant.lineColor ?? '') === preset.value || (!participant.lineColor && preset.id === 'white')"
+              [class.is-clear]="!preset.hex"
+              [style.background-color]="preset.hex || null"
+              [attr.aria-label]="preset.label"
+              (click)="setLineColor(preset.value)"
+            ></button>
+          }
+        </div>
+      } @else if (menuPanel() === 'line-style') {
+        <button type="button" class="tx-seq-grid__menu-item" role="menuitem" (click)="closeToRootPanel()">
+          ← Back
+        </button>
+        <span class="tx-seq-grid__menu-rule" aria-hidden="true"></span>
+        <p class="tx-seq-grid__menu-label">Line type</p>
+        @for (preset of lineStylePresets; track preset.id) {
+          <button
+            type="button"
+            class="tx-seq-grid__menu-item tx-seq-grid__menu-item--line"
+            role="menuitem"
+            [class.is-active]="(participant.lineStyle ?? 'dashed') === preset.id"
+            [attr.aria-label]="preset.label"
+            (click)="setLineStyle(preset.id)"
+          >
+            <span
+              class="tx-seq-grid__line-preview"
+              [class.is-dotted]="preset.id === 'dotted'"
+              [class.is-dashed]="preset.id === 'dashed'"
+              [class.is-solid]="preset.id === 'solid'"
+              [class.is-bold]="preset.id === 'bold'"
+              aria-hidden="true"
+            ></span>
+          </button>
+        }
+      }
+    } @else if (menuState()?.kind === 'message' && menuStep(); as step) {
+      @if (menuPanel() === 'arrow' && step.kind === 'message') {
+        <button type="button" class="tx-seq-grid__menu-item" role="menuitem" (click)="closeToRootPanel()">
+          ← Back
+        </button>
+        <span class="tx-seq-grid__menu-rule" aria-hidden="true"></span>
+        <p class="tx-seq-grid__menu-label">Arrow</p>
+        @for (preset of arrowPresets; track preset.id) {
+          <button
+            type="button"
+            class="tx-seq-grid__menu-item tx-seq-grid__menu-item--arrow"
+            role="menuitem"
+            [class.is-active]="step.arrow === preset.id"
+            [attr.aria-label]="preset.label"
+            (click)="setMessageArrow(preset.id)"
+          >
+            <svg class="tx-seq-grid__arrow-preview" viewBox="0 0 88 16" aria-hidden="true">
+              <line
+                x1="2"
+                y1="8"
+                [attr.x2]="preset.open ? 76 : 78"
+                [attr.stroke-dasharray]="preset.dashed ? '3 2' : null"
+              />
+              @if (preset.open) {
+                <polyline points="88,8 78,3.5 78,12.5" />
+              } @else {
+                <polygon points="88,8 78,4 78,12" />
+              }
+            </svg>
+            <span>{{ preset.label }}</span>
+          </button>
+        }
+      } @else if (step.kind === 'message') {
+        <button type="button" class="tx-seq-grid__menu-item" role="menuitem" (click)="renameMessage()">
+          Rename
+        </button>
+        <button type="button" class="tx-seq-grid__menu-item" role="menuitem" (click)="openArrowPanel()">
+          Arrow…
+        </button>
+        <span class="tx-seq-grid__menu-rule" aria-hidden="true"></span>
+        <button type="button" class="tx-seq-grid__menu-item is-danger" role="menuitem" (click)="deleteMessage()">
+          Delete
+        </button>
+      }
+    } @else if (menuState()?.kind === 'title') {
+      @if (!model().title.trim()) {
+        <button type="button" class="tx-seq-grid__menu-item" role="menuitem" (click)="renameTitle()">
+          Add title
+        </button>
+      } @else {
+        <button type="button" class="tx-seq-grid__menu-item" role="menuitem" (click)="renameTitle()">
+          Rename
+        </button>
+        <span class="tx-seq-grid__menu-rule" aria-hidden="true"></span>
+        <button type="button" class="tx-seq-grid__menu-item is-danger" role="menuitem" (click)="deleteTitle()">
+          Delete
+        </button>
+      }
+    } @else if (menuState()?.kind === 'note') {
+      <button type="button" class="tx-seq-grid__menu-item" role="menuitem" (click)="renameNote()">
+        Rename
+      </button>
+      <span class="tx-seq-grid__menu-rule" aria-hidden="true"></span>
+      <button type="button" class="tx-seq-grid__menu-item is-danger" role="menuitem" (click)="deleteNote()">
+        Delete
+      </button>
+    } @else if (menuState()?.kind === 'activation') {
+      <button type="button" class="tx-seq-grid__menu-item is-danger" role="menuitem" (click)="deleteActivation()">
+        Delete
+      </button>
+    } @else if (menuState()?.kind === 'frame') {
+      <button type="button" class="tx-seq-grid__menu-item" role="menuitem" (click)="renameFrame()">
+        Rename
+      </button>
+      @if (menuStep()?.kind === 'alt') {
+        <button type="button" class="tx-seq-grid__menu-item" role="menuitem" (click)="addElseToFrame()">
+          Add else
+        </button>
+      }
+      <span class="tx-seq-grid__menu-rule" aria-hidden="true"></span>
+      <button type="button" class="tx-seq-grid__menu-item is-danger" role="menuitem" (click)="deleteFrame()">
+        Delete
+      </button>
+    } @else if (menuState()?.kind === 'else') {
+      <button type="button" class="tx-seq-grid__menu-item" role="menuitem" (click)="renameElse()">
+        Rename
+      </button>
+      <span class="tx-seq-grid__menu-rule" aria-hidden="true"></span>
+      <button type="button" class="tx-seq-grid__menu-item is-danger" role="menuitem" (click)="deleteElse()">
+        Delete
+      </button>
+    } @else if (menuState()?.kind === 'section' && menuSection(); as section) {
+      <button type="button" class="tx-seq-grid__menu-item" role="menuitem" (click)="renameSection()">
+        Rename
+      </button>
+      <span class="tx-seq-grid__menu-rule" aria-hidden="true"></span>
+      <button type="button" class="tx-seq-grid__menu-item is-danger" role="menuitem" (click)="deleteSection()">
+        Delete
+      </button>
+    } @else if (menuParticipant(); as participant) {
+      @if (menuPanel() === 'root') {
+        <button type="button" class="tx-seq-grid__menu-item" role="menuitem" (click)="renameParticipant()">
+          Rename
+        </button>
+        <button type="button" class="tx-seq-grid__menu-item" role="menuitem" (click)="renameAlias()">
+          Alias
+        </button>
+        <button type="button" class="tx-seq-grid__menu-item" role="menuitem" (click)="openDesignPanel()">
+          Change design
+        </button>
+        <span class="tx-seq-grid__menu-rule" aria-hidden="true"></span>
+        <button type="button" class="tx-seq-grid__menu-item is-danger" role="menuitem" (click)="deleteParticipant()">
+          Delete
+        </button>
+      } @else {
+        <button type="button" class="tx-seq-grid__menu-item" role="menuitem" (click)="closeToRootPanel()">
+          ← Back
+        </button>
+        <span class="tx-seq-grid__menu-rule" aria-hidden="true"></span>
+        <p class="tx-seq-grid__menu-label">Role</p>
+        <button
+          type="button"
+          class="tx-seq-grid__menu-item"
+          role="menuitem"
+          [class.is-active]="(participant.role ?? 'participant') === 'actor'"
+          (click)="setRole('actor')"
+        >
+          Actor
+        </button>
+        <button
+          type="button"
+          class="tx-seq-grid__menu-item"
+          role="menuitem"
+          [class.is-active]="(participant.role ?? 'participant') === 'participant'"
+          (click)="setRole('participant')"
+        >
+          Participant
+        </button>
+        @if ((participant.role ?? 'participant') !== 'actor') {
+          <span class="tx-seq-grid__menu-rule" aria-hidden="true"></span>
+          <p class="tx-seq-grid__menu-label">Color</p>
+          <div class="tx-seq-grid__swatch-row" role="group" aria-label="Participant color">
+            @for (preset of colorPresets; track preset.id) {
+              <button
+                type="button"
+                class="tx-seq-grid__swatch"
+                role="menuitem"
+                [class.is-active]="(participant.color ?? '') === preset.value"
+                [class.is-clear]="!preset.hex"
+                [style.background-color]="preset.hex || null"
+                [attr.aria-label]="preset.label"
+                (click)="setColor(preset.value)"
+              ></button>
+            }
+          </div>
+        }
+      }
+    }
+  </div>
+</ng-template>

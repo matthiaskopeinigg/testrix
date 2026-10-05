@@ -1,0 +1,32 @@
+@if (visible()) {
+  <div
+    class="tx-dirty-strip"
+    role="status"
+    aria-live="polite"
+    aria-label="Workspace status"
+    animate.enter="tx-dirty-strip-in"
+    animate.leave="tx-dirty-strip-out"
+  >
+    @if (unsavedCount() > 0) {
+      <tx-hint [label]="'Jump among ' + unsavedCount() + ' unsaved tabs'" placement="bottom">
+        <button type="button" class="tx-dirty-strip__chip" (click)="cycleUnsaved()">
+          {{ unsavedCount() }} unsaved
+        </button>
+      </tx-hint>
+    }
+    @if (failedCount() > 0) {
+      <tx-hint label="Open History with recent failures" placement="bottom">
+        <button type="button" class="tx-dirty-strip__chip is-failed" (click)="openFailed()">
+          {{ failedCount() }} failed
+        </button>
+      </tx-hint>
+    }
+    @if (footprintHeavy()) {
+      <tx-hint label="Open Data settings — trim history or tabs" placement="bottom">
+        <button type="button" class="tx-dirty-strip__chip is-perf" (click)="openDataSettings()">
+          Heavy workspace
+        </button>
+      </tx-hint>
+    }
+  </div>
+}

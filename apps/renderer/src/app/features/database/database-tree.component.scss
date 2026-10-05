@@ -194,7 +194,7 @@
 }
 
 .tx-database-tree__filter input {
-  @include mixins.tx-focus-ring;
+  @include mixins.tx-input-focus;
   box-sizing: border-box;
   width: 100%;
   min-height: 26px;
