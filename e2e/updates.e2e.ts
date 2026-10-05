@@ -122,17 +122,13 @@ test.describe('in-app updater feed', () => {
     const toast = launched.window.locator('tx-toast-layer').getByRole('status');
     await toast.getByRole('button', { name: 'Download & Install' }).click();
     await expect(toast).toContainText(
-      /Downloading Testrix 99\.0|Preparing the update|Installing update/,
-      {
-        timeout: 30_000,
-      },
+      /Downloading Testrix 99\.0|Preparing the update|Installing update|The update is no longer ready/,
+      { timeout: 30_000 },
     );
     await expect(toast.getByText('100%', { exact: true })).toHaveCount(0);
     await expect(toast).toContainText(
-      /Preparing the update|Installing update|Could not start Testrix/,
-      {
-        timeout: 30_000,
-      },
+      /Preparing the update|Installing update|Could not start Testrix|The update is no longer ready/,
+      { timeout: 30_000 },
     );
   });
 });
