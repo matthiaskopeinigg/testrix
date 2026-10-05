@@ -4,7 +4,7 @@ import { createServer, type Server } from 'node:http';
 import path from 'node:path';
 
 /** Must match `UPDATE_REPOSITORY` in `@testrix/contracts`. */
-const UPDATE_REPOSITORY = 'matthiaskopeinigg/testrix-workspace';
+const UPDATE_REPOSITORY = 'matthiaskopeinigg/testrix';
 
 const INSTALLER = Buffer.alloc(48 * 1024, 7);
 

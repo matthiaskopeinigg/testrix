@@ -69,7 +69,7 @@ Manifests live on a fixed release tagged `updates`, because GitHub's `releases/l
   "channel": "beta",
   "releasedAt": "2026-10-01T09:00:00.000Z",
   "notes": "### Added\n\n- …",
-  "url": "https://github.com/matthiaskopeinigg/testrix-workspace/releases/download/v2.1.0-beta.1/Testrix.exe",
+  "url": "https://github.com/matthiaskopeinigg/testrix/releases/download/v2.1.0-beta.1/Testrix.exe",
   "sha512": "<base64 SHA-512 of the installer>",
   "size": 123456789,
   "minVersion": "2.0.0"

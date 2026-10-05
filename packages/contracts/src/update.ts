@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 /** GitHub repository that publishes Testrix releases. */
-export const UPDATE_REPOSITORY = 'matthiaskopeinigg/testrix-workspace';
+export const UPDATE_REPOSITORY = 'matthiaskopeinigg/testrix';
 
 /**
  * Release tag whose assets hold the current `stable.json` and `beta.json`. A fixed tag

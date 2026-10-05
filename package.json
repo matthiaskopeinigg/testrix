@@ -10,7 +10,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/matthiaskopeinigg/testrix-workspace.git"
+    "url": "https://github.com/matthiaskopeinigg/testrix.git"
   },
   "packageManager": "npm@11.6.2",
   "engines": {

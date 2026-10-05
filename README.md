@@ -4,7 +4,7 @@
 
 # Testrix
 
-[![CI](https://github.com/matthiaskopeinigg/testrix-workspace/actions/workflows/ci.yml/badge.svg)](https://github.com/matthiaskopeinigg/testrix-workspace/actions/workflows/ci.yml)
+[![CI](https://github.com/matthiaskopeinigg/testrix/actions/workflows/ci.yml/badge.svg)](https://github.com/matthiaskopeinigg/testrix/actions/workflows/ci.yml)
 
 **Local-first desktop toolkit for building, testing, and verifying software.** APIs, databases, flows, and regression tools on this PC — no cloud account.
 
@@ -19,7 +19,7 @@
 
 ## Install
 
-Download **Testrix.exe** from [GitHub Releases](https://github.com/matthiaskopeinigg/testrix-workspace/releases). Windows builds are **not Authenticode-signed** (no paid code-signing certificate). SmartScreen may show an unknown-publisher warning; that is expected. In-app updates still verify an Ed25519-signed manifest and the SHA-512 of the installer. See [NOTICE](NOTICE) and [docs/releasing.md](docs/releasing.md).
+Download **Testrix.exe** from [GitHub Releases](https://github.com/matthiaskopeinigg/testrix/releases). Windows builds are **not Authenticode-signed** (no paid code-signing certificate). SmartScreen may show an unknown-publisher warning; that is expected. In-app updates still verify an Ed25519-signed manifest and the SHA-512 of the installer. See [NOTICE](NOTICE) and [docs/releasing.md](docs/releasing.md).
 
 ---
 
