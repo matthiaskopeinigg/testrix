@@ -59,7 +59,12 @@ export async function launchApp(userData?: string, env: NodeJS.ProcessEnv = {}):
 
 export async function closeApp(launched: Launched | undefined, keepProfile = false): Promise<void> {
   if (!launched?.app) return;
-  await launched.app.close();
+  const child = launched.app.process();
+  await Promise.race([
+    launched.app.close().catch(() => undefined),
+    new Promise((resolve) => setTimeout(resolve, 10_000)),
+  ]);
+  if (child.exitCode === null) child.kill('SIGKILL');
   if (!keepProfile) await rm(launched.userData, { recursive: true, force: true });
 }
 

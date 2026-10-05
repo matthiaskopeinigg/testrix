@@ -36,10 +36,14 @@ test.describe('tx-update-settings-pane', () => {
 
   test('shows why an unpackaged build cannot update itself', async () => {
     await openUpdatesPane(launched.window);
-    await expect(launched.window.locator('tx-update-settings-pane')).toContainText(
-      'Development builds do not update themselves',
+    const unsupported =
+      process.platform === 'win32'
+        ? 'Development builds do not update themselves'
+        : 'Automatic updates are only available on Windows';
+    await expect(launched.window.locator('tx-update-settings-pane')).toContainText(unsupported);
+    await expect(launched.window.getByRole('button', { name: 'Download & Install' })).toHaveCount(
+      0,
     );
-    await expect(launched.window.getByRole('button', { name: 'Download & Install' })).toHaveCount(0);
   });
 });
 
@@ -55,7 +59,11 @@ test.describe('in-app updater feed', () => {
     const root = await mkdtemp(path.join(os.tmpdir(), 'testrix-e2e-feed-'));
     installDir = path.join(root, 'install');
     const userData = path.join(root, 'profile');
-    await seedUpdateSettings(userData, { autoCheck: false, autoDownload: false, channel: 'stable' });
+    await seedUpdateSettings(userData, {
+      autoCheck: false,
+      autoDownload: false,
+      channel: 'stable',
+    });
     launched = await launchApp(userData, {
       TESTRIX_UPDATE_FEED: feed.origin,
       TESTRIX_UPDATE_PUBLIC_KEY: feed.publicKey,
@@ -91,8 +99,7 @@ test.describe('in-app updater feed', () => {
         }
       ).testrix.update;
       const current = await api.getStatus();
-      if (current.phase === 'available' || current.phase === 'ready')
-        return current;
+      if (current.phase === 'available' || current.phase === 'ready') return current;
       return api.check();
     });
     expect(status.isSupported).toBe(true);
@@ -114,12 +121,18 @@ test.describe('in-app updater feed', () => {
   test('Download & Install leaves 100% behind and starts the install toast', async () => {
     const toast = launched.window.locator('tx-toast-layer').getByRole('status');
     await toast.getByRole('button', { name: 'Download & Install' }).click();
-    await expect(toast).toContainText(/Downloading Testrix 99\.0|Preparing the update|Installing update/, {
-      timeout: 30_000,
-    });
+    await expect(toast).toContainText(
+      /Downloading Testrix 99\.0|Preparing the update|Installing update/,
+      {
+        timeout: 30_000,
+      },
+    );
     await expect(toast.getByText('100%', { exact: true })).toHaveCount(0);
-    await expect(toast).toContainText(/Preparing the update|Installing update|Could not start Testrix/, {
-      timeout: 30_000,
-    });
+    await expect(toast).toContainText(
+      /Preparing the update|Installing update|Could not start Testrix/,
+      {
+        timeout: 30_000,
+      },
+    );
   });
 });
