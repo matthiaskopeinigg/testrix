@@ -35,7 +35,7 @@ describe('TestingRuntime live events', () => {
 
   it('broadcasts run events instead of sending them only to the first window', async () => {
     root = await mkdtemp(path.join(os.tmpdir(), 'testrix-testing-runtime-'));
-    const store = new ConfigStore({ getPath: () => root } as ConstructorParameters<typeof ConfigStore>[0]);
+    const store = new ConfigStore({ getPath: () => root } as unknown as ConstructorParameters<typeof ConfigStore>[0]);
     const primarySend = vi.fn();
     const broadcast = vi.fn();
     const runtime = new TestingRuntime({
