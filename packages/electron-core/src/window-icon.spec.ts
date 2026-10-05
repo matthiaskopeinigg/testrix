@@ -9,7 +9,7 @@ describe('resolveWindowIcon', () => {
     const icon = resolveWindowIcon();
     expect(icon).toBeTruthy();
     expect(existsSync(icon!)).toBe(true);
-    expect(path.basename(icon!)).toMatch(/^icon\.(ico|png)$/);
+    expect(path.extname(icon!)).toBe(process.platform === 'win32' ? '.ico' : '.png');
   });
 
   it('exposes the icon on BrowserWindow options', () => {

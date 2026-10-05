@@ -32,7 +32,7 @@ All notable changes to this project are documented here. The format follows [Kee
 
 - Live flow, regression, load, mock, listener, intercept, and device progress updates every open workbench window.
 - Production dependencies pass the high-severity audit: Angular 22.2.1, and `basic-ftp` 6.2.2 for the mock server's FTP client.
-- Linux end-to-end tests install the Electron binary before launch and use the X11 display, so the workbench window opens on the CI runner.
+- Linux end-to-end tests open the workbench. Electron on Linux rejects a Windows `.ico` window icon, which aborted startup before any window existed.
 - Settings schema no longer depends on a circular `database` ↔ `settings` import (that left `databasePrefsSchema` undefined in the renderer bundle).
 - The in-app updater skips a GitHub Releases hit when it already checked within six hours, sends `If-None-Match`, and backs off on 429/403 instead of retrying.
 - `npm run electron:pack` uses `apps/desktop` as the electron-builder project so workspace-root detection no longer looks for splash assets and `index.js` at the repo root. Pack pins Electron 44.3.0 for both the desktop payload and Setup shell, and skips the native rebuild when Visual Studio C++ tools are missing.
