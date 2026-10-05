@@ -64,6 +64,9 @@
     "db:reset": "docker compose --project-directory docker down -v && docker compose --project-directory docker up -d",
     "db:ps": "docker compose --project-directory docker ps"
   },
+  "overrides": {
+    "basic-ftp": "6.2.2"
+  },
   "devDependencies": {
     "@eslint/js": "^9.39.5",
     "@playwright/test": "^1.55.0",
