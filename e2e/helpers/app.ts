@@ -59,8 +59,27 @@ export async function launchApp(userData?: string, env: NodeJS.ProcessEnv = {}):
 
 export async function closeApp(launched: Launched | undefined, keepProfile = false): Promise<void> {
   if (!launched?.app) return;
-  await launched.app.evaluate(({ app }) => app.exit(0)).catch(() => undefined);
-  await launched.app.close().catch(() => undefined);
+  const child = launched.app.process();
+  // exit() tears the page down before evaluate can resolve, so wait on the process.
+  void launched.app.evaluate(({ app }) => app.exit(0)).catch(() => undefined);
+  await new Promise<void>((resolve) => {
+    if (child.exitCode !== null) {
+      resolve();
+      return;
+    }
+    const timer = setTimeout(() => {
+      if (child.exitCode === null) child.kill('SIGKILL');
+      resolve();
+    }, 5_000);
+    child.once('exit', () => {
+      clearTimeout(timer);
+      resolve();
+    });
+  });
+  await Promise.race([
+    launched.app.close().catch(() => undefined),
+    new Promise((resolve) => setTimeout(resolve, 3_000)),
+  ]);
   if (!keepProfile) await rm(launched.userData, { recursive: true, force: true });
 }
 
