@@ -337,7 +337,10 @@ export async function startApplication(): Promise<void> {
         { name: 'websocket', run: () => websocket.closeAll() },
       ],
       SHUTDOWN_TIMEOUT_MS,
-    ).finally(() => app.quit());
+    ).finally(() => {
+      if (process.env['TESTRIX_E2E'] === '1') app.exit(0);
+      else app.quit();
+    });
   });
 
   app.on('window-all-closed', () => {

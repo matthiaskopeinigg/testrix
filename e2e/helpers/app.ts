@@ -42,6 +42,7 @@ export async function launchApp(userData?: string, env: NodeJS.ProcessEnv = {}):
       TESTRIX_UPDATE_STUB_INSTALLER: '',
       TESTRIX_USER_DATA_DIR: profile,
       TESTRIX_NO_SPLASH: '1',
+      TESTRIX_E2E: '1',
       ELECTRON_ENABLE_LOGGING: '1',
       ...(process.platform === 'linux' ? { ELECTRON_OZONE_PLATFORM_HINT: 'x11' } : {}),
       ...env,
@@ -59,26 +60,9 @@ export async function launchApp(userData?: string, env: NodeJS.ProcessEnv = {}):
 
 export async function closeApp(launched: Launched | undefined, keepProfile = false): Promise<void> {
   if (!launched?.app) return;
-  const child = launched.app.process();
-  // exit() tears the page down before evaluate can resolve, so wait on the process.
-  void launched.app.evaluate(({ app }) => app.exit(0)).catch(() => undefined);
-  await new Promise<void>((resolve) => {
-    if (child.exitCode !== null) {
-      resolve();
-      return;
-    }
-    const timer = setTimeout(() => {
-      if (child.exitCode === null) child.kill('SIGKILL');
-      resolve();
-    }, 5_000);
-    child.once('exit', () => {
-      clearTimeout(timer);
-      resolve();
-    });
-  });
   await Promise.race([
     launched.app.close().catch(() => undefined),
-    new Promise((resolve) => setTimeout(resolve, 3_000)),
+    new Promise((resolve) => setTimeout(resolve, 15_000)),
   ]);
   if (!keepProfile) await rm(launched.userData, { recursive: true, force: true });
 }
