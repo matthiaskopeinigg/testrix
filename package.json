@@ -54,7 +54,7 @@
     "@angular/core": "^21.2.20",
     "@angular/forms": "^21.2.20",
     "@angular/platform-browser": "^21.2.20",
-    "@angular/router": "^21.2.20",
+    "@angular/router": "^21.2.24",
     "@clickhouse/client": "^1.23.1",
     "bcryptjs": "^3.0.3",
     "better-sqlite3": "^12.11.1",
