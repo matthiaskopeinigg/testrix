@@ -1,5 +1,8 @@
+import { createRequire } from 'node:module';
 import nodeFs, { appendFileSync, existsSync, mkdirSync } from 'node:fs';
 import path from 'node:path';
+
+const require = createRequire(import.meta.url);
 
 /**
  * Electron patches `node:fs` so it can read asar archives. That patch throws

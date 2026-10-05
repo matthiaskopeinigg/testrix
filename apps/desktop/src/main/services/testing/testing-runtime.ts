@@ -36,6 +36,8 @@ export interface TestingRuntimeOptions {
   readonly http: HttpHost;
   readonly database: DatabaseHost;
   readonly getMainWindow: () => BrowserWindow | null;
+  /** Delivers live run events to every open workbench window. */
+  readonly broadcast: (channel: string, payload?: unknown) => void;
 }
 
 function activeEnvironmentVars(store: ConfigStore): Record<string, string> {
@@ -421,10 +423,9 @@ export class TestingRuntime {
     );
   }
 
+  /** Progress and hit events must reach every workbench, including windows opened later. */
   private send(channel: string, payload: unknown): void {
-    const win = this.options.getMainWindow();
-    if (win && !win.isDestroyed())
-      win.webContents.send(channel, payload);
+    this.options.broadcast(channel, payload);
   }
 }
 

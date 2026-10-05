@@ -271,6 +271,7 @@ export async function startApplication(): Promise<void> {
     http,
     database,
     getMainWindow: () => mainWindowRef,
+    broadcast: (channel, payload) => broadcastToWorkbenchWindows(channel, payload),
   });
   testing.start();
   database.configure({

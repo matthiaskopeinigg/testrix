@@ -9,7 +9,7 @@
 **Local-first desktop toolkit for building, testing, and verifying software.** APIs, databases, flows, and regression tools on this PC — no cloud account.
 
 <img src="assets/brand/icon.png" width="28" alt="" /> &nbsp;
-`2.0.0-beta.1` &nbsp;·&nbsp; `MIT` &nbsp;·&nbsp; `Node >=20.11` &nbsp;·&nbsp; `Windows` &nbsp;·&nbsp; `macOS` &nbsp;·&nbsp; `Linux`
+`2.0.0` &nbsp;·&nbsp; `MIT` &nbsp;·&nbsp; `Node >=20.11` &nbsp;·&nbsp; `Windows` &nbsp;·&nbsp; `macOS` &nbsp;·&nbsp; `Linux`
 
 [Develop](docs/development.md) · [Release](docs/releasing.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md) · [Changelog](CHANGELOG.md)
 
@@ -17,7 +17,7 @@
 
 `assets/brand/logo.svg` is the mark. `npm run sync:brand` copies it and generates icons into the apps.
 
-## Install the beta
+## Install
 
 Download **Testrix.exe** from [GitHub Releases](https://github.com/matthiaskopeinigg/testrix-workspace/releases). Windows builds are **not Authenticode-signed** (no paid code-signing certificate). SmartScreen may show an unknown-publisher warning; that is expected. In-app updates still verify an Ed25519-signed manifest and the SHA-512 of the installer. See [NOTICE](NOTICE) and [docs/releasing.md](docs/releasing.md).
 
