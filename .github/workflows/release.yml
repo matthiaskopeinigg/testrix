@@ -160,6 +160,11 @@ jobs:
             flags+=(--prerelease)
           fi
           if gh release view "$TAG" >/dev/null 2>&1; then
+            # Deleting and recreating the tag turns the existing release into a draft.
+            flags+=(--draft=false)
+            if [ "${{ steps.meta.outputs.prerelease }}" != "true" ]; then
+              flags+=(--latest)
+            fi
             gh release edit "$TAG" "${flags[@]}"
             gh release upload "$TAG" "${assets[@]}" --clobber
           else

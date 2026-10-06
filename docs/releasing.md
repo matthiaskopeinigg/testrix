@@ -55,7 +55,7 @@ Rotating the key (`npm run updater:keygen -- --force`) means installed builds re
 
 A hyphen in the version (`-beta.`, `-rc.`) makes the GitHub release a **pre-release**. You can also run **Actions → Release → Run workflow** and pass the existing tag.
 
-The workflow runs the same Quality jobs as CI, then packs three installers: unsigned Windows `Testrix.exe`, unsigned macOS `Testrix-mac-arm64.dmg` and `Testrix-mac-x64.dmg`, and Linux x64 `Testrix-linux-x64.AppImage` and `Testrix-linux-x64.deb`. It publishes those files on the GitHub release with the changelog, and uploads `<channel>.json` and `<channel>.json.sig` to the `updates` release. The signed manifest still points at `Testrix.exe`. In-app updates are Windows-only.
+The workflow runs the same Quality jobs as CI, then packs three installers: unsigned Windows `Testrix.exe`, unsigned macOS `Testrix-mac-arm64.dmg` and `Testrix-mac-x64.dmg`, and Linux x64 `Testrix-linux-x86_64.AppImage` and `Testrix-linux-amd64.deb`. It publishes those files on the GitHub release with the changelog, and uploads `<channel>.json` and `<channel>.json.sig` to the `updates` release. The signed manifest still points at `Testrix.exe`. In-app updates are Windows-only.
 
 ## What the workflow publishes
 

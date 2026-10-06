@@ -77,7 +77,7 @@ const notes =
 if (!notes) console.warn(`release-manifest: CHANGELOG has no notes for ${version}`);
 if (values['notes-out']) {
   const unsigned =
-    '> **Installers.** Windows: `Testrix.exe` (unsigned; SmartScreen may warn). In-app updates are Windows-only and still verify an Ed25519-signed manifest and the SHA-512 of that file. macOS: `Testrix-mac-arm64.dmg` and `Testrix-mac-x64.dmg` (unsigned; Control-click → Open the first time). Linux x64: `Testrix-linux-x64.AppImage` and `Testrix-linux-x64.deb`.\n\n';
+    '> **Installers.** Windows: `Testrix.exe` (unsigned; SmartScreen may warn). In-app updates are Windows-only and still verify an Ed25519-signed manifest and the SHA-512 of that file. macOS: `Testrix-mac-arm64.dmg` and `Testrix-mac-x64.dmg` (unsigned; Control-click → Open the first time). Linux x64: `Testrix-linux-x86_64.AppImage` and `Testrix-linux-amd64.deb`.\n\n';
   writeFileSync(values['notes-out'], `${unsigned}${notes || `Testrix ${version}`}\n`);
 }
 

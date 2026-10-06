@@ -17,7 +17,7 @@ All notable changes to this project are documented here. The format follows [Kee
 - Expanded contributing and security policies, Code of Conduct, `NOTICE`, and `.env.example`.
 - `npm run check:docs` — validates relative Markdown links in README and `docs/`.
 - `npm run updater:local` — packs `Testrix-Setup.exe`, serves a GitHub-shaped local release feed, and lets an unpackaged `npm start` check that feed instead of GitHub.
-- macOS disk images (`Testrix-mac-arm64.dmg`, `Testrix-mac-x64.dmg`) and Linux x64 packages (`Testrix-linux-x64.AppImage`, `Testrix-linux-x64.deb`) on the GitHub release. In-app updates stay Windows-only.
+- macOS disk images (`Testrix-mac-arm64.dmg`, `Testrix-mac-x64.dmg`) and Linux x64 packages (`Testrix-linux-x86_64.AppImage`, `Testrix-linux-amd64.deb`) on the GitHub release. In-app updates stay Windows-only.
 
 ### Changed
 
