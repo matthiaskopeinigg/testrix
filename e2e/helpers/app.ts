@@ -1,3 +1,4 @@
+import { spawnSync, type ChildProcess } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { mkdtemp, rm } from 'node:fs/promises';
 import os from 'node:os';
@@ -60,25 +61,62 @@ export async function launchApp(userData?: string, env: NodeJS.ProcessEnv = {}):
 
 export async function closeApp(launched: Launched | undefined, keepProfile = false): Promise<void> {
   if (!launched?.app) return;
-  const child = launched.app.process();
-  if (child.exitCode === null) child.kill('SIGKILL');
-  await new Promise<void>((resolve) => {
-    if (child.exitCode !== null) {
-      resolve();
-      return;
-    }
-    const timer = setTimeout(resolve, 3_000);
-    child.once('exit', () => {
+  await stopAppProcess(launched.app.process());
+  if (!keepProfile) {
+    await rm(launched.userData, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
+  }
+}
+
+export async function relaunchApp(launched: Launched): Promise<Launched> {
+  await closeApp(launched, true);
+  return launchApp(launched.userData);
+}
+
+/**
+ * Playwright launches Electron detached, so a single-pid kill leaves the GPU
+ * and utility processes holding stdio. The worker then waits out its teardown
+ * timeout for a `close` event that never arrives. Kill the process group, and
+ * do not call `ChildProcess.kill` — that sets `killed` and makes Playwright
+ * skip its own group kill.
+ */
+async function stopAppProcess(child: ChildProcess): Promise<void> {
+  if (child.exitCode !== null && !hasOpenStdio(child)) return;
+  const closed = new Promise<void>((resolve) => {
+    const timer = setTimeout(resolve, 5_000);
+    child.once('close', () => {
       clearTimeout(timer);
       resolve();
     });
   });
-  if (!keepProfile) await rm(launched.userData, { recursive: true, force: true });
+  killAppTree(child);
+  await closed;
 }
 
-export async function relaunchApp(launched: Launched): Promise<Launched> {
-  await launched.app.close();
-  return launchApp(launched.userData);
+function killAppTree(child: ChildProcess): void {
+  const pid = child.pid;
+  if (pid === undefined) return;
+  if (process.platform === 'win32') {
+    spawnSync('taskkill', ['/pid', String(pid), '/T', '/F'], { windowsHide: true });
+    return;
+  }
+  try {
+    process.kill(-pid, 'SIGKILL');
+  } catch (error) {
+    if (isMissingProcess(error)) return;
+    try {
+      process.kill(pid, 'SIGKILL');
+    } catch (fallbackError) {
+      if (!isMissingProcess(fallbackError)) throw fallbackError;
+    }
+  }
+}
+
+function hasOpenStdio(child: ChildProcess): boolean {
+  return child.stdout?.readable === true || child.stderr?.readable === true;
+}
+
+function isMissingProcess(error: unknown): boolean {
+  return typeof error === 'object' && error !== null && 'code' in error && error.code === 'ESRCH';
 }
 
 export async function clickRail(window: Page, label: string): Promise<void> {
