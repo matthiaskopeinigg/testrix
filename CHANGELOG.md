@@ -4,6 +4,8 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+## [2.0.1] — 2026-10-06
+
 ### Added
 
 - Ctrl+C copies a sidebar selection and Ctrl+V pastes it into the same list after a workspace switch. Collections, environments, database connections and queries, flows and the other service lists, PlantUML diagrams, and flow templates are included. A folder brings its children.

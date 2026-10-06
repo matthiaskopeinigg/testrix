@@ -1,6 +1,6 @@
 {
   "name": "@testrix/http-engine",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "private": true,
   "type": "module",
   "main": "./src/index.ts",
@@ -9,7 +9,7 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@testrix/contracts": "2.0.0",
+    "@testrix/contracts": "2.0.1",
     "undici": "^7.24.4"
   }
 }
