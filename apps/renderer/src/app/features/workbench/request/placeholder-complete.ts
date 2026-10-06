@@ -194,6 +194,8 @@ export interface PlaceholderSegment {
 export interface SplitPlaceholderOptions {
   readonly pathParams?: boolean;
   readonly origins?: readonly PlaceholderOrigin[];
+  /** Paint `{{name}}` tokens that are not in `variables` as unknown. */
+  readonly markUnknown?: boolean;
 }
 
 const SEGMENT_RE = /\{\{\s*[A-Za-z0-9_.-]+\s*\}\}|\$[A-Za-z][A-Za-z0-9]*(?:\([^)]*\))?/g;
@@ -217,6 +219,7 @@ function hintForMustache(
   token: string,
   variables: ReadonlySet<string>,
   origins: readonly PlaceholderOrigin[],
+  markUnknown: boolean,
 ): string | null {
   const name = mustacheName(token);
   if (!name)
@@ -230,7 +233,7 @@ function hintForMustache(
     if (item.toLowerCase() === name.toLowerCase())
       return 'Folder or environment variable';
   }
-  return null;
+  return markUnknown ? 'Unknown variable' : null;
 }
 
 function mustacheOriginFields(
@@ -269,7 +272,13 @@ export function splitPlaceholderSegments(
   if (!value)
     return [];
   const names = new Set(uniqueNames(variables));
-  const hits = collectPlaceholderHits(value, names, options.pathParams === true, options.origins ?? []);
+  const hits = collectPlaceholderHits(
+    value,
+    names,
+    options.pathParams === true,
+    options.origins ?? [],
+    options.markUnknown === true,
+  );
   const parts: PlaceholderSegment[] = [];
   let last = 0;
   for (const hit of hits) {
@@ -343,6 +352,7 @@ function collectPlaceholderHits(
   variables: ReadonlySet<string>,
   pathParams: boolean,
   origins: readonly PlaceholderOrigin[],
+  markUnknown = false,
 ): PlaceholderHit[] {
   const hits: PlaceholderHit[] = [];
   const pattern = new RegExp(SEGMENT_RE.source, 'g');
@@ -351,7 +361,7 @@ function collectPlaceholderHits(
     const text = match[0] ?? '';
     const start = match.index;
     const hint = text.startsWith('{{')
-      ? hintForMustache(text, variables, origins)
+      ? hintForMustache(text, variables, origins, markUnknown)
       : hintForDollar(text);
     if (hint)
       hits.push({

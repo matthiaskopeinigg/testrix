@@ -74,15 +74,18 @@
                   [value]="variable.key"
                   (valueChange)="handleKey($event)"
                 />
-                <tx-input
-                  id="env-var-value"
-                  label="Value"
-                  placeholder="Value"
-                  [type]="variable.secret && !isRevealed(variable.id) ? 'password' : 'text'"
-                  [ariaLabel]="(variable.key || 'Variable') + ' value'"
-                  [value]="variable.value"
-                  (valueChange)="handleValue($event)"
-                >
+                <div class="tx-env-value">
+                  <tx-token-field
+                    id="env-var-value"
+                    label="Value"
+                    [placeholder]="valuePlaceholder"
+                    [type]="variable.secret && !isRevealed(variable.id) ? 'password' : 'text'"
+                    [ariaLabel]="(variable.key || 'Variable') + ' value'"
+                    [value]="variable.value"
+                    [variables]="variableNames()"
+                    [markUnknown]="true"
+                    (valueChange)="handleValue($event)"
+                  />
                   @if (variable.secret) {
                     <tx-hint [label]="isRevealed(variable.id) ? 'Hide value' : 'Show value'" placement="left">
                       <button
@@ -113,7 +116,10 @@
                       </button>
                     </tx-hint>
                   }
-                </tx-input>
+                </div>
+                @if (valuePreview(); as preview) {
+                  <p class="tx-env-inspector__meta" [class.is-unresolved]="preview.unresolved">{{ preview.text }}</p>
+                }
                 <div class="tx-env-options">
                   <p class="tx-env-options__label">Options</p>
                   <tx-hint

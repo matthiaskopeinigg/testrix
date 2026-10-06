@@ -52,6 +52,38 @@ export function isEnvironmentVariable(node: EnvironmentNode): node is Environmen
   return node.kind !== 'folder';
 }
 
+const VARIABLE_TOKEN = /\{\{\s*([A-Za-z0-9_.-]+)\s*\}\}/g;
+
+/** `{{name}}` tokens in `value` that are not in `names` (case-insensitive). */
+export function unknownEnvironmentVariableNames(value: string, names: readonly string[]): string[] {
+  const known = new Set(names.map((name) => name.toLowerCase()));
+  const unknown: string[] = [];
+  for (const match of value.matchAll(VARIABLE_TOKEN)) {
+    const name = match[1] ?? '';
+    if (!name || known.has(name.toLowerCase()))
+      continue;
+    if (unknown.some((item) => item.toLowerCase() === name.toLowerCase()))
+      continue;
+    unknown.push(name);
+  }
+  return unknown;
+}
+
+/** Known names that share the last segment of an unknown reference, such as `baseUrl` for `ms.baseUrl`. */
+export function environmentReferenceSuggestions(unknown: string, names: readonly string[]): string[] {
+  const tail = unknown.split('.').pop()?.toLowerCase() ?? '';
+  if (!tail)
+    return [];
+  return [
+    ...new Set(
+      names.filter((name) => {
+        const lower = name.toLowerCase();
+        return lower === tail || lower.endsWith(`.${tail}`);
+      }),
+    ),
+  ];
+}
+
 /**
  * Enabled environment variables as a name-to-value map for `{{var}}` substitution.
  * A variable inside folder `ms.folder` is available as `{{url}}` and as `{{ms.folder.url}}`.

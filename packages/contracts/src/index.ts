@@ -453,6 +453,8 @@ export {
   isEnvironmentFolder,
   isEnvironmentVariable,
   environmentVariableMap,
+  environmentReferenceSuggestions,
+  unknownEnvironmentVariableNames,
   findEnabledEnvironmentVariableByKey,
   mapEnvironmentNodes,
   moveEnvironmentNode,

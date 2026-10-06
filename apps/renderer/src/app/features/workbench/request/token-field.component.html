@@ -4,7 +4,13 @@
   }
   <span class="tx-token-field__shell">
     @if (hasTokens()) {
-      <tx-placeholder-highlight [value]="value()" [variables]="variables()" [pathParams]="pathParams()" [multiline]="multiline()" />
+      <tx-placeholder-highlight
+        [value]="value()"
+        [variables]="variables()"
+        [pathParams]="pathParams()"
+        [multiline]="multiline()"
+        [markUnknown]="markUnknown()"
+      />
     }
     @if (multiline()) {
       <textarea

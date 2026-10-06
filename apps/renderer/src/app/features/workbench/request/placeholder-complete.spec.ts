@@ -102,6 +102,13 @@ describe('splitPlaceholderSegments', () => {
     ]);
   });
 
+  it('marks unknown {{vars}} when asked', () => {
+    expect(splitPlaceholderSegments('test:{{ms.baseUrl}}', ['baseUrl'], { markUnknown: true })).toEqual([
+      { text: 'test:', kind: 'text', hint: '' },
+      { text: '{{ms.baseUrl}}', kind: 'mustache', hint: 'Unknown variable' },
+    ]);
+  });
+
   it('highlights :path tokens in the URL path, not the query string', () => {
     expect(
       splitPlaceholderSegments('https://api.local/users/:id?x=:skip', [], { pathParams: true }),

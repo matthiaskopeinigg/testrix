@@ -60,6 +60,7 @@ export class TokenFieldComponent {
   readonly readonly = input(false, { transform: booleanAttribute });
   readonly variant = input<'field' | 'cell' | 'code'>('field');
   readonly pathParams = input(false, { transform: booleanAttribute });
+  readonly markUnknown = input(false, { transform: booleanAttribute });
   readonly variables = input<readonly string[]>([]);
   readonly valueChange = output<string>();
   /** Fires on blur with the control's current text (for commit/normalize). */
@@ -83,7 +84,10 @@ export class TokenFieldComponent {
   readonly completeOriginEl = computed(() => this.completeOrigin() ?? this.host.nativeElement);
   readonly hasTokens = computed(() =>
     this.type() !== 'password' &&
-    hasPlaceholderTokens(this.value(), this.variables(), { pathParams: this.pathParams() }),
+    hasPlaceholderTokens(this.value(), this.variables(), {
+      pathParams: this.pathParams(),
+      markUnknown: this.markUnknown(),
+    }),
   );
   readonly controlAria = computed(() => this.ariaLabel() || this.label() || 'Value');
   readonly tokenHover = signal(false);
@@ -205,6 +209,7 @@ export class TokenFieldComponent {
     const part = segmentAtOffset(target.value, offset, this.variables(), {
       pathParams: this.pathParams(),
       origins: this.originHost?.placeholderOrigins() ?? [],
+      markUnknown: this.markUnknown(),
     });
     if (!part?.clickable || !part.originKind)
       return;
@@ -260,6 +265,7 @@ export class TokenFieldComponent {
     const part = segmentAtOffset(origin.value, offset, this.variables(), {
       pathParams: this.pathParams(),
       origins: this.originHost?.placeholderOrigins() ?? [],
+      markUnknown: this.markUnknown(),
     });
     if (!part || part.kind === 'text' || !part.hint) {
       this.tokenHover.set(false);

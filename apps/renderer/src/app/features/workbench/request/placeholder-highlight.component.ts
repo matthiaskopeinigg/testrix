@@ -19,16 +19,19 @@ export class PlaceholderHighlightComponent {
   readonly variables = input<readonly string[]>([]);
   readonly pathParams = input(false);
   readonly multiline = input(false);
+  readonly markUnknown = input(false);
   readonly parts = computed(() =>
     splitPlaceholderSegments(this.value(), this.variables(), {
       pathParams: this.pathParams(),
       origins: this.originHost?.placeholderOrigins() ?? [],
+      markUnknown: this.markUnknown(),
     }),
   );
   readonly hasTokens = computed(() =>
     hasPlaceholderTokens(this.value(), this.variables(), {
       pathParams: this.pathParams(),
       origins: this.originHost?.placeholderOrigins() ?? [],
+      markUnknown: this.markUnknown(),
     }),
   );
 

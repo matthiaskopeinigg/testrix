@@ -1,8 +1,10 @@
 import {
   createDefaultEnvironments,
   createDefaultEnvironmentsFile,
+  environmentReferenceSuggestions,
   environmentVariableMap,
   findEnabledEnvironmentVariableByKey,
+  unknownEnvironmentVariableNames,
   insertEnvironmentNode,
   isEnvironmentDescendant,
   isEnvironmentFolder,
@@ -74,6 +76,31 @@ describe('EnvironmentEditorComponent (variable tree)', () => {
       'ms.folder.health': 'https://api.test/health',
     });
     expect(findEnabledEnvironmentVariableByKey(nodes, 'ms.folder.url')?.id).toBe('v2');
+  });
+
+  it('names an unknown folder path and suggests the real key', () => {
+    const nodes: EnvironmentNode[] = [
+      folder('ms', 'ms', [
+        folder('pm', 'pm', [
+          variable('url', 'url', 'test:{{ms.baseUrl}}'),
+          variable('base', 'baseUrl', 'https://api.test'),
+        ]),
+      ]),
+    ];
+    const names = Object.keys(environmentVariableMap(nodes));
+    expect(unknownEnvironmentVariableNames('test:{{ms.baseUrl}}', names)).toEqual(['ms.baseUrl']);
+    expect(environmentReferenceSuggestions('ms.baseUrl', names)).toEqual(
+      expect.arrayContaining(['baseUrl', 'ms.pm.baseUrl']),
+    );
+    expect(environmentVariableMap(nodes)['url']).toBe('test:{{ms.baseUrl}}');
+    expect(environmentVariableMap([
+      folder('ms', 'ms', [
+        folder('pm', 'pm', [
+          variable('url', 'url', 'test:{{baseUrl}}'),
+          variable('base', 'baseUrl', 'https://api.test'),
+        ]),
+      ]),
+    ])['url']).toBe('test:https://api.test');
   });
 
   it('keeps a cyclic variable reference as written', () => {

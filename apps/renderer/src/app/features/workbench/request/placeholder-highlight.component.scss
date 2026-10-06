@@ -56,8 +56,9 @@
 }
 
 .tx-ph__token.is-unknown {
-  background: color-mix(in srgb, var(--tx-accent) 8%, transparent);
-  opacity: 0.78;
+  background: color-mix(in srgb, var(--tx-danger) 18%, transparent);
+  color: var(--tx-danger);
+  opacity: 1;
 }
 
 .tx-ph__token.is-link {

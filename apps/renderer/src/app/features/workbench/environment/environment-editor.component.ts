@@ -19,6 +19,8 @@ import {
 } from '@angular/core';
 import {
   environmentFolderCount,
+  environmentReferenceSuggestions,
+  environmentVariableMap,
   findEnabledEnvironmentVariableByKey,
   findEnvironmentFolder,
   findEnvironmentLocation,
@@ -28,6 +30,8 @@ import {
   isEnvironmentVariable,
   mapEnvironmentNodes,
   newEntityId,
+  resolveVariableTemplates,
+  unknownEnvironmentVariableNames,
   type Environment,
   type EnvironmentFolder,
   type EnvironmentNode,
@@ -41,6 +45,8 @@ import {
   TxInputComponent,
   playLeaveThen,
 } from '@testrix/ui';
+
+import { TokenFieldComponent } from '../request/token-field.component';
 
 import { ConfirmDialogService } from '../../../core/confirm-dialog.service';
 import {
@@ -67,6 +73,21 @@ function emptyVariable(id: string): EnvironmentVariable {
     enabled: true,
     secret: false,
   };
+}
+
+interface ValuePreview {
+  readonly text: string;
+  readonly unresolved: boolean;
+}
+
+function maskSecrets(nodes: readonly EnvironmentNode[]): EnvironmentNode[] {
+  return nodes.map((node) => {
+    if (isEnvironmentFolder(node))
+      return { ...node, children: maskSecrets(node.children) };
+    if (node.secret)
+      return { ...node, value: '••••' };
+    return node;
+  });
 }
 
 function readText(value: string | null | undefined): string {
@@ -167,6 +188,7 @@ interface EnvMenu {
     TxEmptyStateComponent,
     TxHintComponent,
     TxInputComponent,
+    TokenFieldComponent,
     EnvironmentTreeComponent,
   ],
   templateUrl: './environment-editor.component.html',
@@ -285,6 +307,43 @@ export class EnvironmentEditorComponent {
     if (names.length === 0 || !/^[A-Za-z0-9_.-]+$/.test(pathKey))
       return `Requests use ${short}`;
     return `Requests use ${short}. {{${pathKey}}} is the same variable.`;
+  }
+
+  readonly valuePlaceholder = 'Value or {{otherVariable}}';
+
+  variableNames(): readonly string[] {
+    const env = this.environment();
+    if (!env)
+      return [];
+    return Object.keys(environmentVariableMap(env.variables));
+  }
+
+  valuePreview(): ValuePreview | null {
+    const variable = this.focusedVariable();
+    const env = this.environment();
+    if (!variable || !env || !variable.value.includes('{{'))
+      return null;
+    if (variable.secret && !this.isRevealed(variable.id))
+      return null;
+    const names = this.variableNames();
+    const unknown = unknownEnvironmentVariableNames(variable.value, names);
+    if (unknown.length > 0) {
+      const hints = [...new Set(unknown.flatMap((name) => environmentReferenceSuggestions(name, names)))]
+        .sort((left, right) => Number(left.includes('.')) - Number(right.includes('.')) || left.localeCompare(right))
+        .slice(0, 4);
+      const missing = unknown.map((name) => `{{${name}}}`).join(', ');
+      if (hints.length === 0)
+        return { text: `No variable named ${missing}.`, unresolved: true };
+      const use = hints.map((name) => `{{${name}}}`).join(' or ');
+      return { text: `No variable named ${missing}. Use ${use}.`, unresolved: true };
+    }
+    const vars = { ...environmentVariableMap(maskSecrets(env.variables)) };
+    const slot = variable.key.trim() || '__preview';
+    vars[slot] = variable.value;
+    const next = resolveVariableTemplates(vars)[slot] ?? variable.value;
+    if (!next || next === variable.value)
+      return null;
+    return { text: `Resolves to ${next}`, unresolved: false };
   }
 
   focusedFolder(): EnvironmentFolder | null {
