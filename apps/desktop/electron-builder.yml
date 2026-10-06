@@ -12,6 +12,7 @@ directories:
 
 extraMetadata:
   name: Testrix
+  homepage: https://github.com/matthiaskopeinigg/testrix
   author:
     name: Matthias Kopeinigg
   description: Testrix — local-first desktop API workbench
