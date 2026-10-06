@@ -24,14 +24,19 @@ function fakeApp(userData: string) {
 }
 
 function withSecret(file: EnvironmentsFile, value: string): Pick<EnvironmentsFile, 'items'> {
-  const [first, ...rest] = file.items;
+  const host = file.items[0] ?? {
+    id: 'env-shop',
+    name: 'Shop',
+    modifiedAt: '2026-10-06T00:00:00.000Z',
+    variables: [],
+  };
   return {
     items: [
       {
-        ...first!,
+        ...host,
         variables: [{ kind: 'variable', id: 'var-token', key: 'token', value, description: '', enabled: true, secret: true }],
       },
-      ...rest,
+      ...file.items.slice(1),
     ],
   };
 }
