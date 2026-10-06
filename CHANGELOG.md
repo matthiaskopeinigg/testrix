@@ -32,7 +32,7 @@ All notable changes to this project are documented here. The format follows [Kee
 ### Fixed
 
 - Live flow, regression, load, mock, listener, intercept, and device progress updates every open workbench window.
-- Production dependencies pass the high-severity audit: Angular 22.2.1, and `basic-ftp` 6.2.2 for the mock server's FTP client.
+- Production dependencies pass the high-severity audit: Angular 22.2.1, `basic-ftp` 6.2.2 for the mock server's FTP client, and `@graphql-tools/utils` 12.0.3 for the mock server's GraphQL helpers.
 - Linux end-to-end tests open the workbench. Electron on Linux rejects a Windows `.ico` window icon, which aborted startup before any window existed.
 - Settings schema no longer depends on a circular `database` ↔ `settings` import (that left `databasePrefsSchema` undefined in the renderer bundle).
 - The in-app updater skips a GitHub Releases hit when it already checked within six hours, sends `If-None-Match`, and backs off on 429/403 instead of retrying.
