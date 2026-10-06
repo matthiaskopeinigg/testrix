@@ -54,6 +54,7 @@
     "electron:build:win:payload": "node tooling/scripts/pack-payload.mjs --platform=win",
     "electron:build:win:setup": "node tooling/scripts/pack-setup.mjs --platform=win",
     "electron:pack": "cross-env CSC_IDENTITY_AUTO_DISCOVERY=false npm run build && cross-env CSC_IDENTITY_AUTO_DISCOVERY=false npm run electron:build:win:payload && cross-env CSC_IDENTITY_AUTO_DISCOVERY=false npm run electron:build:win:setup",
+    "electron:pack:desktop": "node tooling/scripts/pack-desktop.mjs",
     "release:bump": "node tooling/scripts/bump-version.mjs",
     "release:manifest": "node tooling/scripts/release-manifest.mjs",
     "updater:keygen": "node tooling/scripts/updater-keygen.mjs",

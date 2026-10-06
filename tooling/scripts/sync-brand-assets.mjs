@@ -40,11 +40,22 @@ const ico = await pngToIco(pngBuffers);
 
 const pngTargets = [
   'assets/brand/icon.png',
-  'build/icon.png',
   'apps/desktop/src/assets/icon.png',
   'apps/setup/src/assets/icon.png',
-  'apps/setup/build/icon.png',
 ];
+// electron-builder turns this into the macOS icns. It must be at least 512.
+const icon512 = await sharp(svg)
+  .resize(512, 512, {
+    fit: 'contain',
+    background: { r: 0, g: 0, b: 0, alpha: 0 },
+  })
+  .png()
+  .toBuffer();
+for (const rel of ['build/icon.png', 'apps/setup/build/icon.png']) {
+  const dest = path.join(root, rel);
+  mkdirSync(path.dirname(dest), { recursive: true });
+  writeFileSync(dest, icon512);
+}
 const icoTargets = [
   'assets/brand/icon.ico',
   'build/icon.ico',

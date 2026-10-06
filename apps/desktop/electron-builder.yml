@@ -44,15 +44,25 @@ win:
 mac:
   icon: icon.png
   category: public.app-category.developer-tools
-  target:
-    - target: dir
-      arch:
-        - x64
-        - arm64
+  # No paid Apple Developer certificate. The dmg stays unsigned.
   identity: null
+  hardenedRuntime: false
+  gatekeeperAssess: false
+  artifactName: Testrix-mac-${arch}.${ext}
+  target:
+    - target: dmg
+      arch:
+        - arm64
+        - x64
 
 linux:
   icon: icon.png
-  target:
-    - dir
   category: Development
+  artifactName: Testrix-linux-${arch}.${ext}
+  target:
+    - target: AppImage
+      arch:
+        - x64
+    - target: deb
+      arch:
+        - x64

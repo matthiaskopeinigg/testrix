@@ -19,7 +19,16 @@
 
 ## Install
 
-Download **Testrix.exe** from [GitHub Releases](https://github.com/matthiaskopeinigg/testrix/releases). Windows builds are **not Authenticode-signed** (no paid code-signing certificate). SmartScreen may show an unknown-publisher warning; that is expected. In-app updates still verify an Ed25519-signed manifest and the SHA-512 of the installer. See [NOTICE](NOTICE) and [docs/releasing.md](docs/releasing.md).
+Download a build from [GitHub Releases](https://github.com/matthiaskopeinigg/testrix/releases).
+
+| Platform | File |
+| --- | --- |
+| Windows | `Testrix.exe` |
+| macOS (Apple silicon) | `Testrix-mac-arm64.dmg` |
+| macOS (Intel) | `Testrix-mac-x64.dmg` |
+| Linux x64 | `Testrix-linux-x64.AppImage` or `Testrix-linux-x64.deb` |
+
+Windows and macOS builds are unsigned (no paid certificates). SmartScreen and Gatekeeper may warn on first launch. In-app updates are Windows-only and still verify an Ed25519-signed manifest and the SHA-512 of `Testrix.exe`. See [NOTICE](NOTICE) and [docs/releasing.md](docs/releasing.md).
 
 ---
 

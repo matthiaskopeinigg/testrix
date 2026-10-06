@@ -55,11 +55,11 @@ Rotating the key (`npm run updater:keygen -- --force`) means installed builds re
 
 A hyphen in the version (`-beta.`, `-rc.`) makes the GitHub release a **pre-release**. You can also run **Actions → Release → Run workflow** and pass the existing tag.
 
-The workflow runs the same Quality jobs as CI, packs unsigned `Testrix.exe`, publishes the GitHub release with the changelog (plus an unsigned-installer note), and uploads `<channel>.json` and `<channel>.json.sig` to the `updates` release.
+The workflow runs the same Quality jobs as CI, then packs three installers: unsigned Windows `Testrix.exe`, unsigned macOS `Testrix-mac-arm64.dmg` and `Testrix-mac-x64.dmg`, and Linux x64 `Testrix-linux-x64.AppImage` and `Testrix-linux-x64.deb`. It publishes those files on the GitHub release with the changelog, and uploads `<channel>.json` and `<channel>.json.sig` to the `updates` release. The signed manifest still points at `Testrix.exe`. In-app updates are Windows-only.
 
 ## What the workflow publishes
 
-The installer is a portable Electron shell with an appended `payload.zip` and `TESTRIXPK` footer.
+`Testrix.exe` is a portable Electron shell with an appended `payload.zip` and `TESTRIXPK` footer. macOS and Linux artifacts are electron-builder packages of the same desktop app (`npm run electron:pack:desktop` on that OS). They are unsigned, and they are not fed to the Windows updater.
 
 Manifests live on a fixed release tagged `updates`, because GitHub's `releases/latest` never resolves to a pre-release. Don't delete that release. Each manifest looks like this:
 
@@ -84,6 +84,8 @@ Manifests live on a fixed release tagged `updates`, because GitHub's `releases/l
 npm run build
 npm run electron:pack
 ```
+
+On macOS or Linux, `npm run electron:pack:desktop` writes the dmg, AppImage, and deb into `release/` instead of `Testrix.exe`.
 
 `electron-builder` must run with `--project apps/desktop`. Without that, version 26 treats the workspace root as the app and looks for `src/splash` and `index.js` in the wrong place. Both the desktop payload and the Setup shell pin `electronVersion` to `44.3.0`; a caret range such as `^44.3.0` is rejected.
 
