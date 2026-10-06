@@ -15,6 +15,7 @@ extraMetadata:
   homepage: https://github.com/matthiaskopeinigg/testrix
   author:
     name: Matthias Kopeinigg
+    email: matthiaskopeinigg@gmail.com
   description: Testrix — local-first desktop API workbench
 
 files:
