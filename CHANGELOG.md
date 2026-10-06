@@ -4,6 +4,8 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+## [2.0.2] — 2026-10-06
+
 ### Added
 
 - A variable inside an environment folder is used by its key, so `url` in folder `ms.folder` is `{{url}}`. `{{ms.folder.url}}` names that same variable when another `url` exists.

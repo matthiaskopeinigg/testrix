@@ -1,6 +1,6 @@
 {
   "name": "@testrix/electron-core",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "private": true,
   "type": "module",
   "main": "./src/index.ts",
@@ -9,7 +9,7 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@testrix/contracts": "2.0.1"
+    "@testrix/contracts": "2.0.2"
   },
   "peerDependencies": {
     "electron": ">=44"
