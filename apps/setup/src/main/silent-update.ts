@@ -2,7 +2,9 @@ import { createRequire } from 'node:module';
 import nodeFs, { appendFileSync, existsSync, mkdirSync } from 'node:fs';
 import path from 'node:path';
 
-const require = createRequire(import.meta.url);
+// The Setup bundle is CommonJS. esbuild leaves `import.meta.url` empty there,
+// and createRequire(undefined) crashes the installer before any window opens.
+const require = createRequire(__filename);
 
 /**
  * Electron patches `node:fs` so it can read asar archives. That patch throws
