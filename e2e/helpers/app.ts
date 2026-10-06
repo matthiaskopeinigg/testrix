@@ -73,11 +73,11 @@ export async function relaunchApp(launched: Launched): Promise<Launched> {
 }
 
 /**
- * Playwright launches Electron detached, so a single-pid kill leaves the GPU
- * and utility processes holding stdio. The worker then waits out its teardown
- * timeout for a `close` event that never arrives. Kill the process group, and
- * do not call `ChildProcess.kill` — that sets `killed` and makes Playwright
- * skip its own group kill.
+ * Playwright launches Electron detached and waits for the child `close` event
+ * during worker teardown. A single-pid kill leaves helper processes holding
+ * stdio, so that event never arrives. Kill the process group, then destroy the
+ * pipes. Do not call `ChildProcess.kill` — that sets `killed` and makes
+ * Playwright skip its own group kill.
  */
 async function stopAppProcess(child: ChildProcess): Promise<void> {
   if (child.exitCode !== null && !hasOpenStdio(child)) return;
@@ -89,6 +89,19 @@ async function stopAppProcess(child: ChildProcess): Promise<void> {
     });
   });
   killAppTree(child);
+  if (child.exitCode === null) {
+    await new Promise<void>((resolve) => {
+      const timer = setTimeout(resolve, 1_000);
+      child.once('exit', () => {
+        clearTimeout(timer);
+        resolve();
+      });
+    });
+  }
+  // Node emits process `close` only after every stdio pipe ends. Electron's
+  // helper processes keep those pipes open, so destroy them once the parent
+  // has exited. That is what removes Playwright's teardown handle.
+  for (const stream of child.stdio) stream?.destroy();
   await closed;
 }
 
