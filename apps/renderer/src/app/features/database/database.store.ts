@@ -25,6 +25,7 @@ import {
 } from '@testrix/contracts';
 
 import { DesktopApiService } from '../../core/desktop-api.service';
+import { uniquePasteName } from '../../core/unique-paste-name';
 import { applyPointerSelect, emptySelection } from '../../core/range-select';
 import {
   buildSchemaCatalogChildren,
@@ -541,6 +542,60 @@ export class DatabaseStore {
     this.persistQueries();
   }
 
+  copyConnections(): DatabaseConnectionTreeItem[] {
+    return this.topLevelConnectionIds([...this.connectionSelectedIds()])
+      .map((id) => findConnectionParent(this.connectionNodes(), id)?.node)
+      .filter((node): node is DatabaseConnectionTreeItem => Boolean(node))
+      .map((node) => structuredClone(node));
+  }
+
+  copyQueries(): SavedQueryTreeItem[] {
+    return this.topLevelQueryIds([...this.querySelectedIds()])
+      .map((id) => findQueryParent(this.queryNodes(), id)?.node)
+      .filter((node): node is SavedQueryTreeItem => Boolean(node))
+      .map((node) => structuredClone(node));
+  }
+
+  pasteConnections(nodes: readonly DatabaseConnectionTreeItem[]): readonly string[] {
+    if (nodes.length === 0)
+      return [];
+    const used = new Set(allDatabaseTreeIds(this.connectionNodes()));
+    const names = this.connectionNodes().map((node) => node.name);
+    const clones = nodes.map((node) => {
+      const clone = cloneConnectionNode(node, used, { rename: false });
+      const name = uniquePasteName(node.name, names, 'Connection');
+      names.push(name);
+      return { ...clone, name };
+    });
+    this.connectionNodes.set(
+      insertConnectionNode(this.connectionNodes(), null, Number.MAX_SAFE_INTEGER, clones),
+    );
+    this.persistConnections();
+    const ids = clones.map((node) => node.id);
+    this.connectionSelectedIds.set(ids);
+    this.connectionAnchorId.set(ids[0] ?? null);
+    return ids;
+  }
+
+  pasteQueries(nodes: readonly SavedQueryTreeItem[]): readonly string[] {
+    if (nodes.length === 0)
+      return [];
+    const used = new Set(allQueryTreeIds(this.queryNodes()));
+    const names = this.queryNodes().map((node) => node.name);
+    const clones = nodes.map((node) => {
+      const clone = cloneQueryNode(node, used, { rename: false });
+      const name = uniquePasteName(node.name, names, 'Query');
+      names.push(name);
+      return { ...clone, name };
+    });
+    this.queryNodes.set(insertQueryNode(this.queryNodes(), null, Number.MAX_SAFE_INTEGER, clones));
+    this.persistQueries();
+    const ids = clones.map((node) => node.id);
+    this.querySelectedIds.set(ids);
+    this.queryAnchorId.set(ids[0] ?? null);
+    return ids;
+  }
+
   duplicate(id: string, section: DatabaseNavSection): DatabaseNavNode | null {
     if (section === 'connections') {
       const found = findConnectionParent(this.connectionNodes(), id);
@@ -738,6 +793,38 @@ export class DatabaseStore {
   async disconnect(connectionId: string): Promise<void> {
     await this.desktop.api.database.disconnect(connectionId);
     await this.refreshStatuses();
+  }
+
+  private topLevelConnectionIds(ids: readonly string[]): string[] {
+    const set = new Set(ids);
+    return ids.filter((id) => {
+      const found = findConnectionParent(this.connectionNodes(), id);
+      if (!found)
+        return false;
+      let parent = found.parentId;
+      while (parent) {
+        if (set.has(parent))
+          return false;
+        parent = findConnectionParent(this.connectionNodes(), parent)?.parentId ?? null;
+      }
+      return true;
+    });
+  }
+
+  private topLevelQueryIds(ids: readonly string[]): string[] {
+    const set = new Set(ids);
+    return ids.filter((id) => {
+      const found = findQueryParent(this.queryNodes(), id);
+      if (!found)
+        return false;
+      let parent = found.parentId;
+      while (parent) {
+        if (set.has(parent))
+          return false;
+        parent = findQueryParent(this.queryNodes(), parent)?.parentId ?? null;
+      }
+      return true;
+    });
   }
 
   private connectionFolderParent(parentId: string | null): string | null {

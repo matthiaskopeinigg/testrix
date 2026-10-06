@@ -89,27 +89,28 @@ describe('collab remotes and activity', () => {
 
 describe('collab secrets overlay', () => {
   it('peels a secret variable and applies it back', () => {
-    const environments = createDefaultEnvironmentsFile();
     const withSecret = {
-      ...environments,
-      items: environments.items.map((env, index) =>
-        index === 0
-          ? {
-              ...env,
-              variables: [
-                {
-                  kind: 'variable' as const,
-                  id: 'var_secret',
-                  key: 'token',
-                  value: 's3cret',
-                  description: '',
-                  enabled: true,
-                  secret: true,
-                },
-              ],
-            }
-          : env,
-      ),
+      ...createDefaultEnvironmentsFile(),
+      items: [
+        {
+          id: 'env-shop',
+          name: 'Shop',
+          modifiedAt: '2026-01-01T00:00:00.000Z',
+          variables: [
+            {
+              kind: 'variable' as const,
+              id: 'var_secret',
+              key: 'token',
+              value: 's3cret',
+              description: '',
+              enabled: true,
+              secret: true,
+            },
+          ],
+        },
+      ],
+      activeId: 'env-shop',
+      orderIds: ['env-shop'],
     };
     const peeled = peelWorkspaceSecrets({
       environments: withSecret,

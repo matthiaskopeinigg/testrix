@@ -4,9 +4,9 @@ import {
   ChangeDetectionStrategy,
   Component,
   DestroyRef,
+  ElementRef,
   HostListener,
   effect,
-  type ElementRef,
   inject,
   signal,
   viewChild,
@@ -17,7 +17,8 @@ import type { PlantumlNode } from '@testrix/contracts';
 import { TxEmptyStateComponent, TxHintComponent, playLeaveThen } from '@testrix/ui';
 
 import { ConfirmDialogService } from '../../core/confirm-dialog.service';
-import { isEditableKeyboardTarget, isModKey } from '../../core/selection-hotkeys';
+import { isEditableKeyboardTarget, isModKey, ownsTreeClipboardShortcut } from '../../core/selection-hotkeys';
+import { TreeClipboardService } from '../../core/tree-clipboard.service';
 import { ToolsDndService } from './tools-dnd.service';
 import { ToolsListComponent } from './tools-list.component';
 import { ToolsStore } from './tools.store';
@@ -43,9 +44,12 @@ interface DrillMenu {
   templateUrl: './tools-sidebar.component.html',
   styleUrl: './tools-sidebar.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { 'data-tree-clipboard': 'tools' },
 })
 export class ToolsSidebarComponent {
   readonly store = inject(ToolsStore);
+  private readonly host = inject(ElementRef<HTMLElement>);
+  private readonly clipboard = inject(TreeClipboardService);
   readonly plantuml = inject(PlantumlStore);
   readonly dnd = inject(ToolsDndService);
   private readonly confirm = inject(ConfirmDialogService);
@@ -240,6 +244,35 @@ export class ToolsSidebarComponent {
         for (const id of ids)
           await this.plantuml.duplicate(id);
       })();
+      return;
+    }
+
+    if (!ownsTreeClipboardShortcut(this.host.nativeElement, event, true))
+      return;
+
+    if (isModKey(event, 'c') && !event.shiftKey) {
+      const nodes = this.plantuml.copySelection();
+      if (nodes.length === 0)
+        return;
+      event.preventDefault();
+      this.clipboard.set({ kind: 'plantuml', nodes });
+      return;
+    }
+
+    if (isModKey(event, 'v') && !event.shiftKey) {
+      const memory = this.clipboard.peek('plantuml');
+      if (memory) {
+        event.preventDefault();
+        this.plantuml.search.set('');
+        void this.plantuml.pasteCopied(memory.nodes);
+        return;
+      }
+      void this.clipboard.get('plantuml').then((payload) => {
+        if (!payload)
+          return;
+        this.plantuml.search.set('');
+        void this.plantuml.pasteCopied(payload.nodes);
+      });
     }
   }
 

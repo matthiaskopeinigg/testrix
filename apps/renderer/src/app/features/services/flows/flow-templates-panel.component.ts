@@ -4,7 +4,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   DestroyRef,
-  type ElementRef,
+  ElementRef,
   HostListener,
   afterNextRender,
   inject,
@@ -28,8 +28,10 @@ import { ConfirmDialogService } from '../../../core/confirm-dialog.service';
 import {
   isEditableKeyboardTarget,
   isModKey,
+  ownsTreeClipboardShortcut,
   shouldDeferToFlowCanvas,
 } from '../../../core/selection-hotkeys';
+import { TreeClipboardService } from '../../../core/tree-clipboard.service';
 import { isRangeModifier, isToggleModifier, shouldKeepPointerSelection } from '../../../core/range-select';
 import { ServiceToolbarComponent } from '../shared/service-toolbar.component';
 import { FlowTemplatesDndService } from './flow-templates-dnd.service';
@@ -53,9 +55,12 @@ type TemplatesMenu =
   templateUrl: './flow-templates-panel.component.html',
   styleUrl: './flow-templates-panel.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { 'data-tree-clipboard': 'flow-templates', tabindex: '-1' },
 })
 export class FlowTemplatesPanelComponent {
   readonly store = inject(FlowTemplatesStore);
+  private readonly host = inject(ElementRef<HTMLElement>);
+  private readonly clipboard = inject(TreeClipboardService);
   readonly dnd = inject(FlowTemplatesDndService);
   private readonly confirm = inject(ConfirmDialogService);
   private readonly overlay = inject(Overlay);
@@ -104,6 +109,7 @@ export class FlowTemplatesPanelComponent {
     )
       return;
     this.store.applyPointerSelect(group.id, event);
+    this.claimClipboardFocus();
     if (isRangeModifier(event) || isToggleModifier(event))
       return;
     this.store.toggleGroupExpanded(group.id);
@@ -119,6 +125,7 @@ export class FlowTemplatesPanelComponent {
     )
       return;
     this.store.applyPointerSelect(leaf.id, event);
+    this.claimClipboardFocus();
     if (isRangeModifier(event) || isToggleModifier(event))
       return;
     this.store.openTemplate(leaf.id);
@@ -387,7 +394,39 @@ export class FlowTemplatesPanelComponent {
         for (const id of ids)
           await this.store.duplicate(id);
       })();
+      return;
     }
+
+    if (!ownsTreeClipboardShortcut(this.host.nativeElement, event, false))
+      return;
+
+    if (isModKey(event, 'c') && !event.shiftKey) {
+      const templates = this.store.copySelection();
+      if (templates.length === 0)
+        return;
+      event.preventDefault();
+      this.clipboard.set({ kind: 'flow-templates', templates });
+      return;
+    }
+
+    if (isModKey(event, 'v') && !event.shiftKey) {
+      const memory = this.clipboard.peek('flow-templates');
+      if (memory) {
+        event.preventDefault();
+        void this.store.pasteCopied(memory.templates);
+        return;
+      }
+      void this.clipboard.get('flow-templates').then((payload) => {
+        if (payload)
+          void this.store.pasteCopied(payload.templates);
+      });
+    }
+  }
+
+  private claimClipboardFocus(): void {
+    const host = this.host.nativeElement;
+    if (document.activeElement !== host)
+      host.focus({ preventScroll: true });
   }
 
   private openMenu(event: MouseEvent, partial: TemplatesMenu): void {

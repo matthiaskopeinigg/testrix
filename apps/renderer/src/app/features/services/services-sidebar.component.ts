@@ -4,6 +4,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   DestroyRef,
+  ElementRef,
   HostListener,
   inject,
   signal,
@@ -20,8 +21,10 @@ import {
   isEditableKeyboardTarget,
   isFlowCanvasKeyboardTarget,
   isModKey,
+  ownsTreeClipboardShortcut,
   shouldDeferToFlowCanvas,
 } from '../../core/selection-hotkeys';
+import { TreeClipboardService } from '../../core/tree-clipboard.service';
 import { ServiceIconComponent } from './service-icon.component';
 import { ServicesStore } from './services.store';
 import { ServiceListPaneComponent } from './shared/service-list-pane.component';
@@ -48,9 +51,12 @@ interface ServicesMenu {
   templateUrl: './services-sidebar.component.html',
   styleUrl: './services-sidebar.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { 'data-tree-clipboard': 'services' },
 })
 export class ServicesSidebarComponent {
   readonly store = inject(ServicesStore);
+  private readonly host = inject(ElementRef<HTMLElement>);
+  private readonly clipboard = inject(TreeClipboardService);
   private readonly confirm = inject(ConfirmDialogService);
   private readonly toasts = inject(TxToastService);
   private readonly palettePins = inject(PalettePinsStore);
@@ -343,6 +349,35 @@ export class ServicesSidebarComponent {
         for (const id of ids)
           await this.store.duplicate(serviceId, id);
       })();
+      return;
+    }
+
+    if (
+      !event.shiftKey &&
+      (isModKey(event, 'c') || isModKey(event, 'v')) &&
+      ownsTreeClipboardShortcut(this.host.nativeElement, event, true)
+    ) {
+      if (isModKey(event, 'c')) {
+        const nodes = this.store.copySelection(serviceId);
+        if (nodes.length > 0) {
+          event.preventDefault();
+          this.clipboard.set({ kind: 'service', serviceId, nodes });
+        }
+        return;
+      }
+      const memory = this.clipboard.peek('service', serviceId);
+      if (memory) {
+        event.preventDefault();
+        this.store.setSearch(serviceId, '');
+        void this.store.pasteCopied(serviceId, memory.nodes);
+        return;
+      }
+      void this.clipboard.get('service', serviceId).then((payload) => {
+        if (!payload)
+          return;
+        this.store.setSearch(serviceId, '');
+        void this.store.pasteCopied(serviceId, payload.nodes);
+      });
       return;
     }
 

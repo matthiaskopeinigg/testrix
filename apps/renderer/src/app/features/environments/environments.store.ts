@@ -21,6 +21,7 @@ import {
 } from '@testrix/contracts';
 
 import { DesktopApiService } from '../../core/desktop-api.service';
+import { uniquePasteName } from '../../core/unique-paste-name';
 import { applyPointerSelect, emptySelection, type SelectionEntry } from '../../core/range-select';
 import { moveByInsertIndex, moveManyByInsertIndex, type EnvDropSlot } from './environments-drop-model';
 
@@ -62,7 +63,7 @@ export class EnvironmentsStore {
 
   readonly items = signal<EnvironmentList>(createDefaultEnvironments());
   readonly searchQuery = signal('');
-  readonly activeId = signal<string | null>('env-local');
+  readonly activeId = signal<string | null>(null);
   readonly dragItem = signal<Environment | null>(null);
   readonly dragIds = signal<readonly string[]>([]);
   readonly dropTarget = signal<EnvDropSlot | null>(null);
@@ -265,6 +266,38 @@ export class EnvironmentsStore {
     this.selectionAnchorId.set(id);
     this.persist();
     return item;
+  }
+
+  copySelection(): Environment[] {
+    const selected = new Set(this.selectedIds());
+    return this.items()
+      .filter((item) => selected.has(item.id))
+      .map((item) => structuredClone(item));
+  }
+
+  pasteCopied(items: readonly Environment[]): readonly string[] {
+    if (items.length === 0)
+      return [];
+    const names = this.items().map((item) => item.name);
+    const ids = this.items().map((item) => item.id);
+    const clones = items.map((source) => {
+      const id = nextEnvironmentId(ids);
+      ids.push(id);
+      const name = uniquePasteName(source.name, names, 'Environment');
+      names.push(name);
+      return {
+        id,
+        name,
+        modifiedAt: new Date().toISOString(),
+        variables: cloneEnvironmentNodes(source.variables),
+      } satisfies Environment;
+    });
+    this.items.update((list) => [...list, ...clones]);
+    const pasted = clones.map((item) => item.id);
+    this.selectedIds.set(pasted);
+    this.selectionAnchorId.set(pasted[0] ?? null);
+    this.persist();
+    return pasted;
   }
 
   duplicate(id: string): Environment | null {

@@ -235,7 +235,9 @@ export function patchQuery(
 export function cloneConnectionNode(
   node: DatabaseConnectionTreeItem,
   used: Set<string>,
+  options?: { readonly rename?: boolean },
 ): DatabaseConnectionTreeItem {
+  const rename = options?.rename !== false;
   const id = nextId(used, isDatabaseConnectionFolder(node) ? 'dbf' : 'dbc');
   used.add(id);
   const now = new Date().toISOString();
@@ -243,15 +245,20 @@ export function cloneConnectionNode(
     return {
       ...node,
       id,
-      name: `${node.name} copy`,
+      name: rename ? `${node.name} copy` : node.name,
       updatedAt: now,
-      children: node.children.map((child) => cloneConnectionNode(child, used)),
+      children: node.children.map((child) => cloneConnectionNode(child, used, options)),
     };
   }
-  return { ...node, id, name: `${node.name} copy` };
+  return { ...node, id, name: rename ? `${node.name} copy` : node.name };
 }
 
-export function cloneQueryNode(node: SavedQueryTreeItem, used: Set<string>): SavedQueryTreeItem {
+export function cloneQueryNode(
+  node: SavedQueryTreeItem,
+  used: Set<string>,
+  options?: { readonly rename?: boolean },
+): SavedQueryTreeItem {
+  const rename = options?.rename !== false;
   const id = nextId(used, isSavedQueryFolder(node) ? 'qrf' : 'qry');
   used.add(id);
   const now = new Date().toISOString();
@@ -259,12 +266,12 @@ export function cloneQueryNode(node: SavedQueryTreeItem, used: Set<string>): Sav
     return {
       ...node,
       id,
-      name: `${node.name} copy`,
+      name: rename ? `${node.name} copy` : node.name,
       updatedAt: now,
-      children: node.children.map((child) => cloneQueryNode(child, used)),
+      children: node.children.map((child) => cloneQueryNode(child, used, options)),
     };
   }
-  return { ...node, id, name: `${node.name} copy`, updatedAt: now };
+  return { ...node, id, name: rename ? `${node.name} copy` : node.name, updatedAt: now };
 }
 
 export function createConnectionItem(

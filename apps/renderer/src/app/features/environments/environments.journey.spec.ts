@@ -1,6 +1,5 @@
 import {
   DEFAULT_FOLDER_AUTH,
-  createDefaultEnvironments,
   environmentVariableMap,
   insertEnvironmentNode,
   isEnvironmentFolder,
@@ -21,18 +20,25 @@ function folder(id: string, name: string, children: EnvironmentNode[] = []): Env
 
 /**
  * End-to-end style journeys for Environments without a browser driver.
- * Walks seeded envs → nested vars → HTTP Send placeholder expansion.
+ * Walks an environment → nested vars → HTTP Send placeholder expansion.
  */
 describe('Environments e2e journeys', () => {
-  it('loads seeded environments and maps nested variables into an HTTP plan', () => {
+  it('maps nested variables into an HTTP plan', () => {
     const file = parseEnvironmentsFile({
       schemaVersion: 1,
-      items: createDefaultEnvironments(),
-      activeId: 'env-local',
-      orderIds: [],
+      items: [
+        {
+          id: 'env-shop',
+          name: 'Shop',
+          modifiedAt: '2026-01-01T00:00:00.000Z',
+          variables: [],
+        },
+      ],
+      activeId: 'env-shop',
+      orderIds: ['env-shop'],
     });
-    expect(file.activeId).toBe('env-local');
-    const local = file.items.find((item) => item.id === 'env-local');
+    expect(file.activeId).toBe('env-shop');
+    const local = file.items.find((item) => item.id === 'env-shop');
     expect(local).toBeTruthy();
 
     const nested = insertEnvironmentNode(

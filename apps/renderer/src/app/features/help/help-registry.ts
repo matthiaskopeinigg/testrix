@@ -286,7 +286,7 @@ export const HELP_ARTICLES: readonly HelpArticle[] = [
       'Workspace files are local JSON next to collections.json: flows.json, emulator.json, load.json, regressions.json, mocks.json, listeners.json, and intercept.json.',
     ],
     tips: [
-      'Delete removes the selected or open item; a toast offers Undo for a few seconds (Ctrl+Z also undoes the last delete when focus is not in an editor). Ctrl+A selects all visible rows; Ctrl+D duplicates; Escape clears the selection.',
+      'Delete removes the selected or open item; a toast offers Undo for a few seconds (Ctrl+Z also undoes the last delete when focus is not in an editor). Ctrl+A selects all visible rows; Ctrl+D duplicates; Ctrl+C copies the selection and Ctrl+V pastes it, including after you switch workspace. Escape clears the selection.',
       'Right-click empty space in a service sidebar to create. Tools stay on their own rail.',
     ],
     keywords: 'services hub catalog drill sidebar regression flows emulator load mock listener intercept interceptor json delete undo select all duplicate multi select drag',
@@ -540,10 +540,10 @@ export const HELP_ARTICLES: readonly HelpArticle[] = [
     id: 'shortcuts-sidebar-selection',
     section: 'shortcuts',
     title: 'Sidebar selection',
-    summary: 'Delete, select all, and duplicate in Collections, Environments, Database, History, and Services lists.',
+    summary: 'Delete, select all, duplicate, and copy between workspaces in sidebar lists.',
     body: [
       'Focus a sidebar list (not an editor field), then Delete or Backspace removes the selected rows after confirmation. A toast offers Undo for several seconds before the delete is written to disk.',
-      'Ctrl+A selects every visible row in the active sidebar. Ctrl+D duplicates the current selection in Collections and Environments.',
+      'Ctrl+A selects every visible row in the active sidebar. Ctrl+D duplicates the current selection. Ctrl+C copies collections, environments, database items, flows, and the other service, tool, and template lists. Ctrl+V pastes that copy into the same list, including after you switch workspace.',
       'History uses the same Delete and Ctrl+A pattern on its rail. Flow canvases keep their own Delete, Ctrl+D, and undo stack when the canvas has focus.',
     ],
     tips: ['Click empty space in a sidebar first so URL or SQL fields do not steal the shortcut.'],

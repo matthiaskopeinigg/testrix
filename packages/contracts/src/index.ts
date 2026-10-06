@@ -495,6 +495,7 @@ export {
 export {
   collectServiceArtifactIds,
   collectServiceTreeTags,
+  cloneServiceSubtree,
   duplicateServiceNode,
   emptyServiceFolder,
   extractServiceNode,

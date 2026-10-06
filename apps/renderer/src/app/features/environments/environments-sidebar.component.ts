@@ -22,8 +22,10 @@ import { ConfirmDialogService } from '../../core/confirm-dialog.service';
 import {
   isEditableKeyboardTarget,
   isModKey,
+  ownsTreeClipboardShortcut,
   shouldDeferToFlowCanvas,
 } from '../../core/selection-hotkeys';
+import { TreeClipboardService } from '../../core/tree-clipboard.service';
 import {
   collectOpenRequestVariableNames,
   missingEnvironmentVariableNames,
@@ -48,6 +50,7 @@ interface EnvListMenu {
   templateUrl: './environments-sidebar.component.html',
   styleUrl: './environments-sidebar.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { 'data-tree-clipboard': 'environments' },
 })
 export class EnvironmentsSidebarComponent {
   readonly store = inject(EnvironmentsStore);
@@ -60,6 +63,7 @@ export class EnvironmentsSidebarComponent {
   private readonly injector = inject(Injector);
   private readonly destroyRef = inject(DestroyRef);
   private readonly host = inject(ElementRef<HTMLElement>);
+  private readonly clipboard = inject(TreeClipboardService);
 
   private readonly rootRef = viewChild<ElementRef<HTMLElement>>('root');
   private readonly scrollerRef = viewChild<ElementRef<HTMLElement>>('scroller');
@@ -337,6 +341,35 @@ export class EnvironmentsSidebarComponent {
       event.preventDefault();
       for (const id of ids)
         this.store.duplicate(id);
+      return;
+    }
+
+    if (!ownsTreeClipboardShortcut(this.host.nativeElement, event, true))
+      return;
+
+    if (isModKey(event, 'c') && !event.shiftKey) {
+      const items = this.store.copySelection();
+      if (items.length === 0)
+        return;
+      event.preventDefault();
+      this.clipboard.set({ kind: 'environments', items });
+      return;
+    }
+
+    if (isModKey(event, 'v') && !event.shiftKey) {
+      const memory = this.clipboard.peek('environments');
+      if (memory) {
+        event.preventDefault();
+        this.store.setSearchQuery('');
+        this.store.pasteCopied(memory.items);
+        return;
+      }
+      void this.clipboard.get('environments').then((payload) => {
+        if (!payload)
+          return;
+        this.store.setSearchQuery('');
+        this.store.pasteCopied(payload.items);
+      });
     }
   }
 

@@ -1,6 +1,7 @@
 import { Injectable, computed, effect, inject, signal } from '@angular/core';
 import {
   collectPlantumlArtifactIds,
+  cloneServiceSubtree,
   duplicateServiceNode,
   emptyPlantumlArtifact,
   emptyServiceFolder,
@@ -19,6 +20,7 @@ import {
 } from '@testrix/contracts';
 
 import { DesktopApiService } from '../../../core/desktop-api.service';
+import { uniquePasteName } from '../../../core/unique-paste-name';
 import {
   applyPointerSelect,
   emptySelection,
@@ -330,6 +332,39 @@ export class PlantumlStore {
     const now = new Date().toISOString();
     await this.writeTree(renameServiceNode(this.items(), nodeId, name, now));
     this.workbench.renamePlantumlTabs(nodeId, name);
+  }
+
+  copySelection(): PlantumlNode[] {
+    const ids = this.topLevelSelection(this.selectionOrActive());
+    const nodes: PlantumlNode[] = [];
+    for (const id of ids) {
+      const node = findServiceNode(this.items(), id);
+      if (node)
+        nodes.push(structuredClone(node) as PlantumlNode);
+    }
+    return nodes;
+  }
+
+  async pasteCopied(nodes: readonly PlantumlNode[]): Promise<readonly string[]> {
+    if (nodes.length === 0)
+      return [];
+    const now = new Date().toISOString();
+    let tree = [...this.items()];
+    const names = tree.map((node) => node.name);
+    const pasted: PlantumlNode[] = [];
+    for (const node of nodes) {
+      const clone = cloneServiceSubtree(node, now) as PlantumlNode;
+      const name = uniquePasteName(node.name, names, 'Diagram');
+      names.push(name);
+      const named = { ...clone, name } as PlantumlNode;
+      tree = insertServiceChild(tree, null, named);
+      pasted.push(named);
+    }
+    await this.writeTree(ensureFoldersFirst(tree));
+    const ids = pasted.map((node) => node.id);
+    this.selectedIds.set(ids);
+    this.selectionAnchorId.set(ids[0] ?? null);
+    return ids;
   }
 
   async duplicate(nodeId: string): Promise<void> {

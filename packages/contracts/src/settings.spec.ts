@@ -331,8 +331,9 @@ describe('parseSessionFile', () => {
 });
 
 describe('parseEnvironmentsFile', () => {
-  it('seeds a list when the file is empty', () => {
-    expect(parseEnvironmentsFile({}).items.length).toBeGreaterThan(0);
+  it('starts empty when the file has no items', () => {
+    expect(parseEnvironmentsFile({}).items).toEqual([]);
+    expect(parseEnvironmentsFile({}).activeId).toBeNull();
   });
 
   it('keeps an explicit empty environments list', () => {
@@ -345,7 +346,7 @@ describe('parseEnvironmentsFile', () => {
     expect(parsed.activeId).toBeNull();
   });
 
-  it('does not invent variables when only a count was stored', () => {
+  it('drops an unmodified seed environment that only stored a count', () => {
     const parsed = parseEnvironmentsFile({
       items: [
         {
@@ -358,10 +359,11 @@ describe('parseEnvironmentsFile', () => {
       activeId: 'env-local',
       orderIds: ['env-local'],
     });
-    expect(parsed.items[0]?.variables).toEqual([]);
+    expect(parsed.items).toEqual([]);
+    expect(parsed.activeId).toBeNull();
   });
 
-  it('clears unmodified first-run seeded variables', () => {
+  it('drops unmodified first-run seeded variables and the empty shell', () => {
     const parsed = parseEnvironmentsFile({
       items: [
         {
@@ -414,7 +416,8 @@ describe('parseEnvironmentsFile', () => {
       activeId: 'env-ci',
       orderIds: ['env-ci'],
     });
-    expect(parsed.items[0]?.variables).toEqual([]);
+    expect(parsed.items).toEqual([]);
+    expect(parsed.activeId).toBeNull();
   });
 
   it('keeps nested folders of variables', () => {
@@ -450,15 +453,16 @@ describe('parseEnvironmentsFile', () => {
     const parsed = parseEnvironmentsFile({
       items: [
         {
-          id: 'env-local',
+          id: 'env-custom',
           name: 'Local',
           modifiedAt: '2026-01-01T00:00:00.000Z',
           variables: [],
         },
       ],
       activeId: null,
-      orderIds: ['env-local'],
+      orderIds: ['env-custom'],
     });
+    expect(parsed.items).toHaveLength(1);
     expect(parsed.activeId).toBeNull();
   });
 });

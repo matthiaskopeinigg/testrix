@@ -23,18 +23,11 @@ function folder(id: string, name: string, children: EnvironmentNode[] = []): Env
 }
 
 describe('EnvironmentsSidebarComponent (list)', () => {
-  it('seeds default environments with stable ids', () => {
-    const items = createDefaultEnvironments();
-    expect(items.map((item) => item.id)).toEqual([
-      'env-local',
-      'env-staging',
-      'env-production',
-      'env-ci',
-      'env-sandbox',
-      'env-preview',
-    ]);
-    expect(items[0]?.name).toBe('Local');
-    expect(items[0]?.variables).toEqual([]);
+  it('starts with no environments', () => {
+    expect(createDefaultEnvironments()).toEqual([]);
+    const file = createDefaultEnvironmentsFile();
+    expect(file.items).toEqual([]);
+    expect(file.activeId).toBeNull();
   });
 
   it('reorders the environment list by insert index', () => {
@@ -87,8 +80,6 @@ describe('EnvironmentEditorComponent (variable tree)', () => {
   it('parses environments.json and keeps an explicit empty list', () => {
     const empty = parseEnvironmentsFile({ schemaVersion: 1, items: [], activeId: null, orderIds: [] });
     expect(empty.items).toEqual([]);
-    const seeded = createDefaultEnvironmentsFile();
-    expect(seeded.items.length).toBeGreaterThan(0);
-    expect(seeded.activeId).toBeTruthy();
+    expect(createDefaultEnvironmentsFile().items).toEqual([]);
   });
 });

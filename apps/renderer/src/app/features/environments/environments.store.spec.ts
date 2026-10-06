@@ -13,11 +13,13 @@ describe('EnvironmentsStore', () => {
     store = createStoreHarness(EnvironmentsStore, { saveEnvironments } as never).store;
   });
 
-  it('hydrates and filters by search', () => {
+  it('hydrates an empty catalog and filters by search', () => {
     store.hydrate(createDefaultEnvironmentsFile());
-    expect(store.items().length).toBeGreaterThan(1);
+    expect(store.items()).toEqual([]);
+    const created = store.create();
+    store.rename(created.id, 'Local lab');
     store.setSearchQuery('local');
-    expect(store.visibleEnvironments().every((item) => item.name.toLowerCase().includes('local'))).toBe(true);
+    expect(store.visibleEnvironments().map((item) => item.id)).toEqual([created.id]);
   });
 
   it('creates, activates and removes environments', () => {
@@ -32,10 +34,10 @@ describe('EnvironmentsStore', () => {
 
   it('renames and tracks list selection', () => {
     store.hydrate(createDefaultEnvironmentsFile());
-    const id = store.items()[0]?.id ?? '';
-    store.rename(id, 'Studio');
-    expect(store.environmentById(id)?.name).toBe('Studio');
-    store.applyListPointerSelect(id, { shiftKey: false, ctrlKey: false, metaKey: false });
-    expect(store.isSelected(id)).toBe(true);
+    const created = store.create();
+    store.rename(created.id, 'Studio');
+    expect(store.environmentById(created.id)?.name).toBe('Studio');
+    store.applyListPointerSelect(created.id, { shiftKey: false, ctrlKey: false, metaKey: false });
+    expect(store.isSelected(created.id)).toBe(true);
   });
 });

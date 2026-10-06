@@ -113,15 +113,9 @@ export const environmentPrefsSchema = z.object({
 export type EnvironmentPrefs = z.infer<typeof environmentPrefsSchema>;
 
 export const DEFAULT_ENVIRONMENT_PREFS: EnvironmentPrefs = {
-  activeId: 'env-local',
+  activeId: null,
   orderIds: [],
 };
-
-function isoDaysAgo(days: number): string {
-  const date = new Date();
-  date.setUTCDate(date.getUTCDate() - days);
-  return date.toISOString();
-}
 
 function variable(
   envId: string,
@@ -707,38 +701,26 @@ export function moveEnvironmentNodes(
   return replaceSiblingList(stripped, parentId, nextSiblings);
 }
 
-/** Seeded environments written to environments.json on first launch. */
+const SEED_ENVIRONMENT_NAMES: Readonly<Record<string, string>> = {
+  'env-local': 'Local',
+  'env-staging': 'Staging',
+  'env-production': 'Production',
+  'env-ci': 'CI',
+  'env-sandbox': 'Sandbox',
+  'env-preview': 'Preview',
+};
+
+/**
+ * True for an untouched first-run environment (known id and name, no variables).
+ * Customized copies of those ids are kept.
+ */
+export function isUnmodifiedSeedEnvironment(env: Environment): boolean {
+  return SEED_ENVIRONMENT_NAMES[env.id] === env.name && env.variables.length === 0;
+}
+
+/** New workspaces start with no environments. */
 export function createDefaultEnvironments(): EnvironmentList {
-  const ids = [
-    'env-local',
-    'env-staging',
-    'env-production',
-    'env-ci',
-    'env-sandbox',
-    'env-preview',
-  ] as const;
-  const names: Record<(typeof ids)[number], string> = {
-    'env-local': 'Local',
-    'env-staging': 'Staging',
-    'env-production': 'Production',
-    'env-ci': 'CI',
-    'env-sandbox': 'Sandbox',
-    'env-preview': 'Preview',
-  };
-  const ages: Record<(typeof ids)[number], number> = {
-    'env-local': 0,
-    'env-staging': 2,
-    'env-production': 5,
-    'env-ci': 1,
-    'env-sandbox': 8,
-    'env-preview': 3,
-  };
-  return ids.map((id) => ({
-    id,
-    name: names[id],
-    modifiedAt: isoDaysAgo(ages[id]),
-    variables: createDefaultVariables(id),
-  }));
+  return [];
 }
 
 /** Next environment catalog id. */
@@ -760,7 +742,7 @@ export function createDefaultEnvironmentsFile(): EnvironmentsFile {
   return {
     schemaVersion: CONFIG_SCHEMA_VERSION,
     items,
-    activeId: items[0]?.id ?? 'env-local',
+    activeId: null,
     orderIds: items.map((item) => item.id),
   };
 }
@@ -856,11 +838,12 @@ export function parseEnvironmentsFile(raw: unknown): EnvironmentsFile {
       : raw && typeof raw === 'object' && !Array.isArray(raw)
         ? (raw as Record<string, unknown>)
         : {};
-  // Explicit empty `items` stays empty; missing/invalid files get the seed list.
+  // Missing, invalid, and explicit empty lists stay empty. Untouched first-run shells are dropped.
   const rawItems = source['items'];
-  const items: Environment[] = Array.isArray(rawItems)
+  const items: Environment[] = (Array.isArray(rawItems)
     ? rawItems.map(parseItem).filter((item): item is Environment => item !== null)
-    : fallback.items;
+    : fallback.items
+  ).filter((item) => !isUnmodifiedSeedEnvironment(item));
   const rawOrderIds = source['orderIds'];
   const orderIds = Array.isArray(rawOrderIds)
     ? rawOrderIds.filter((id): id is string => typeof id === 'string')

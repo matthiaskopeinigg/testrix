@@ -16,7 +16,7 @@ import {
   ViewContainerRef,
   type TemplateRef,
 } from '@angular/core';
-import type { CollectionNodeKind } from '@testrix/contracts';
+import type { CollectionNode, CollectionNodeKind } from '@testrix/contracts';
 import { TxButtonComponent, TxEmptyStateComponent, TxToastService, playLeaveThen } from '@testrix/ui';
 
 import { ConfirmDialogService } from '../../core/confirm-dialog.service';
@@ -25,8 +25,10 @@ import { PalettePinsStore } from '../../core/palette-pins.store';
 import {
   isEditableKeyboardTarget,
   isModKey,
+  ownsTreeClipboardShortcut,
   shouldDeferToFlowCanvas,
 } from '../../core/selection-hotkeys';
+import { TreeClipboardService } from '../../core/tree-clipboard.service';
 import { ImportWorkspaceDialogService } from '../workspace-transfer/import-workspace-dialog.service';
 import { WorkbenchStore } from '../workbench/workbench.store';
 import { CollectionsDndService } from './collections-dnd.service';
@@ -47,6 +49,7 @@ interface CollectionsMenu {
   templateUrl: './collections-sidebar.component.html',
   styleUrl: './collections-sidebar.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { 'data-tree-clipboard': 'collections' },
 })
 export class CollectionsSidebarComponent {
   readonly store = inject(CollectionsStore);
@@ -59,6 +62,7 @@ export class CollectionsSidebarComponent {
   private readonly injector = inject(Injector);
   private readonly destroyRef = inject(DestroyRef);
   private readonly host = inject(ElementRef<HTMLElement>);
+  private readonly clipboard = inject(TreeClipboardService);
   private readonly desktop = inject(DesktopApiService);
   private readonly importWorkspace = inject(ImportWorkspaceDialogService);
   private readonly palettePins = inject(PalettePinsStore);
@@ -338,7 +342,39 @@ export class CollectionsSidebarComponent {
       this.store.clearFilters();
       for (const id of ids)
         this.store.duplicate(id);
+      return;
     }
+
+    if (!ownsTreeClipboardShortcut(this.host.nativeElement, event, true))
+      return;
+
+    if (isModKey(event, 'c') && !event.shiftKey) {
+      const nodes = this.store.copySelection();
+      if (nodes.length === 0)
+        return;
+      event.preventDefault();
+      this.clipboard.set({ kind: 'collections', nodes });
+      return;
+    }
+
+    if (isModKey(event, 'v') && !event.shiftKey) {
+      const memory = this.clipboard.peek('collections');
+      if (memory) {
+        event.preventDefault();
+        this.pasteCollectionNodes(memory.nodes);
+        return;
+      }
+      void this.clipboard.get('collections').then((payload) => {
+        if (payload)
+          this.pasteCollectionNodes(payload.nodes);
+      });
+    }
+  }
+
+  private pasteCollectionNodes(nodes: readonly CollectionNode[]): void {
+    this.store.setSearchQuery('');
+    this.store.clearFilters();
+    this.store.pasteCopied(nodes);
   }
 
   private async deleteIds(ids: readonly string[]): Promise<void> {

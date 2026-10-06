@@ -34,6 +34,7 @@ import {
 
 import { DesktopApiService } from '../../core/desktop-api.service';
 import { applyPointerSelect, emptySelection, type SelectionEntry } from '../../core/range-select';
+import { uniquePasteName } from '../../core/unique-paste-name';
 import { COLLECTIONS_ROOT_ID, flattenTree, type DropSlot } from './collections-drop-model';
 
 export { COLLECTIONS_ROOT_ID } from './collections-drop-model';
@@ -1132,6 +1133,37 @@ export class CollectionsStore {
       return node;
     };
     this.commitTree(sortTree(this.tree().map(patch), this.sortMode()));
+  }
+
+  /** Top-level selected nodes, ready to paste into this or another workspace. */
+  copySelection(): CollectionNode[] {
+    const ids = topLevelDeleteIds(this.tree(), this.selectedIds());
+    const nodes: CollectionNode[] = [];
+    for (const id of ids) {
+      const found = findNode(this.tree(), id);
+      if (found)
+        nodes.push(cloneNodeDeep(found.node));
+    }
+    return nodes;
+  }
+
+  /** Inserts copied nodes at the root with new ids. Keeps a name when it is free. */
+  pasteCopied(nodes: readonly CollectionNode[]): readonly string[] {
+    if (nodes.length === 0)
+      return [];
+    const used = new Set(collectAllNodeIds(this.tree()));
+    const names = this.tree().map((node) => node.name);
+    const clones = nodes.map((node) => {
+      const clone = cloneCollectionNode(node, used);
+      const name = uniquePasteName(node.name, names, defaultCollectionName(node.kind));
+      names.push(name);
+      return { ...clone, name } as CollectionNode;
+    });
+    this.commitTree(sortTree(insertNodes(this.tree(), null, this.tree().length, clones), this.sortMode()));
+    const ids = clones.map((node) => node.id);
+    this.selectedIds.set(ids);
+    this.selectionAnchorId.set(ids[0] ?? null);
+    return ids;
   }
 
   duplicate(id: string): CollectionNode | null {

@@ -7,7 +7,6 @@ import {
   type QueriesFile,
 } from './database';
 import {
-  createDefaultEnvironmentsFile,
   type EnvironmentFolder,
   type EnvironmentNode,
   type EnvironmentVariable,
@@ -82,15 +81,17 @@ export function createTestingCollectionsFile(): CollectionsFile {
 }
 
 export function createTestingEnvironmentsFile(): EnvironmentsFile {
-  const base = createDefaultEnvironmentsFile();
-  const items = base.items.map((item) => ({
-    ...item,
-    variables: testingEnvVariables(item.id),
+  const items = (['env-local', 'env-staging'] as const).map((id) => ({
+    id,
+    name: id === 'env-local' ? 'Local' : 'Staging',
+    modifiedAt: new Date(0).toISOString(),
+    variables: testingEnvVariables(id),
   }));
   return {
-    ...base,
+    schemaVersion: CONFIG_SCHEMA_VERSION,
     items,
     activeId: 'env-local',
+    orderIds: items.map((item) => item.id),
   };
 }
 

@@ -47,3 +47,26 @@ export function shouldDeferToFlowCanvas(event: KeyboardEvent): boolean {
     return true;
   return flowCanvasHasSelection();
 }
+
+/**
+ * True when this list should handle Ctrl+C / Ctrl+V.
+ * A focused list wins. An unfocused rail list handles the shortcut only when focus
+ * is not already inside another list.
+ */
+export function ownsTreeClipboardShortcut(
+  host: HTMLElement,
+  event: KeyboardEvent,
+  allowWhenUnfocused: boolean,
+): boolean {
+  const target = event.target;
+  if (target instanceof Node && host.contains(target))
+    return true;
+  const active = document.activeElement;
+  if (active instanceof Node && host.contains(active))
+    return true;
+  if (!allowWhenUnfocused)
+    return false;
+  if (active instanceof Element && active.closest('[data-tree-clipboard]'))
+    return false;
+  return true;
+}

@@ -2,6 +2,7 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import {
   collectServiceArtifactIds,
   defaultServiceSection,
+  cloneServiceSubtree,
   duplicateServiceNode,
   emptyFlowArtifact,
   emptyInterceptArtifact,
@@ -77,6 +78,7 @@ import {
 } from '@testrix/contracts';
 
 import { DesktopApiService } from '../../core/desktop-api.service';
+import { uniquePasteName } from '../../core/unique-paste-name';
 import {
   applyPointerSelect,
   emptySelection,
@@ -950,6 +952,42 @@ export class ServicesStore {
     const now = new Date().toISOString();
     await this.writeTree(id, renameServiceNode(this.rawTree(id), nodeId, name, now));
     this.workbench.renameServiceTabs(nodeId, name);
+  }
+
+  copySelection(serviceId: ServiceId): ServiceTreeNode<Record<string, unknown>>[] {
+    const ids = this.topLevelSelection(serviceId, this.selectionOrActive(serviceId));
+    const nodes: ServiceTreeNode<Record<string, unknown>>[] = [];
+    for (const id of ids) {
+      const node = findServiceNode(this.rawTree(serviceId), id);
+      if (node)
+        nodes.push(structuredClone(node));
+    }
+    return nodes;
+  }
+
+  async pasteCopied(
+    serviceId: ServiceId,
+    nodes: readonly ServiceTreeNode<Record<string, unknown>>[],
+  ): Promise<readonly string[]> {
+    if (nodes.length === 0)
+      return [];
+    const now = new Date().toISOString();
+    let tree = this.rawTree(serviceId);
+    const names = tree.map((node) => node.name);
+    const pasted: ServiceTreeNode<Record<string, unknown>>[] = [];
+    for (const node of nodes) {
+      const clone = cloneServiceSubtree(node, now);
+      const name = uniquePasteName(node.name, names, 'Item');
+      names.push(name);
+      const named = { ...clone, name };
+      tree = insertServiceChild(tree, null, named);
+      pasted.push(named);
+    }
+    await this.writeTree(serviceId, ensureFoldersFirst(tree));
+    const ids = pasted.map((node) => node.id);
+    this.selectedIds.set(ids);
+    this.selectionAnchorId.set(ids[0] ?? null);
+    return ids;
   }
 
   async duplicate(id: ServiceId, nodeId: string): Promise<void> {

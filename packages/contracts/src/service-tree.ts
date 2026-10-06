@@ -248,6 +248,23 @@ export function duplicateServiceNode<T>(
   return insertAfter(nodes, id, clone);
 }
 
+/** Deep-clones a service tree node with fresh ids, keeping names and artifact bodies. */
+export function cloneServiceSubtree<T>(node: ServiceTreeNode<T>, now: string): ServiceTreeNode<T> {
+  if (node.kind === 'folder') {
+    return {
+      ...node,
+      id: newServiceNodeId(),
+      updatedAt: now,
+      children: node.children.map((child) => cloneServiceSubtree(child, now)),
+    }
+  }
+  return {
+    ...node,
+    id: newServiceNodeId(),
+    updatedAt: now,
+  }
+}
+
 function cloneServiceNode<T>(node: ServiceTreeNode<T>, now: string): ServiceTreeNode<T> {
   if (node.kind === 'folder') {
     return {

@@ -4,6 +4,14 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+### Added
+
+- Ctrl+C copies a sidebar selection and Ctrl+V pastes it into the same list after a workspace switch. Collections, environments, database connections and queries, flows and the other service lists, PlantUML diagrams, and flow templates are included. A folder brings its children.
+
+### Changed
+
+- New workspaces start with no environments. Untouched first-run Local, Staging, Production, CI, Sandbox, and Preview catalogs are removed on load. An environment you renamed or filled in is kept. The Testing workspace still includes Local and Staging for the public demo URLs.
+
 ## [2.0.0] — 2026-10-05
 
 ### Added

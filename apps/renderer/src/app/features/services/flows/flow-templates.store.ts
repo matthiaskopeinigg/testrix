@@ -13,6 +13,7 @@ import {
 } from '@testrix/contracts';
 
 import { DesktopApiService } from '../../../core/desktop-api.service';
+import { uniquePasteName } from '../../../core/unique-paste-name';
 import {
   applyPointerSelect,
   emptySelection,
@@ -721,6 +722,36 @@ export class FlowTemplatesStore {
     if (!source)
       return;
     await this.save({ ...source, tags: normalizeFlowTemplateTags(tags) });
+  }
+
+  copySelection(): FlowGraphTemplate[] {
+    return this.selectedIds()
+      .filter((id) => !parseFlowTemplateGroupNodeId(id))
+      .map((id) => this.findTemplate(id))
+      .filter((item): item is FlowGraphTemplate => item !== null)
+      .map((item) => structuredClone(item));
+  }
+
+  async pasteCopied(templates: readonly FlowGraphTemplate[]): Promise<readonly string[]> {
+    if (templates.length === 0)
+      return [];
+    const names = this.allTemplates().map((item) => item.name);
+    const ids: string[] = [];
+    for (const source of templates) {
+      const name = uniquePasteName(source.name, names, 'Template');
+      names.push(name);
+      const clone: FlowGraphTemplate = {
+        ...structuredClone(source),
+        id: newFlowTemplateId(),
+        name,
+        builtin: undefined,
+      };
+      await this.save(clone);
+      ids.push(clone.id);
+    }
+    this.selectedIds.set(ids);
+    this.selectionAnchorId.set(ids[0] ?? null);
+    return ids;
   }
 
   async duplicate(id: string): Promise<string> {

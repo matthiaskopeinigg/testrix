@@ -19,6 +19,8 @@ import {
 import {
   databaseConnectionTabNodeId,
   databaseQueryTabNodeId,
+  type DatabaseConnectionTreeItem,
+  type SavedQueryTreeItem,
 } from '@testrix/contracts';
 import { TxButtonComponent, TxEmptyStateComponent, playLeaveThen } from '@testrix/ui';
 
@@ -26,8 +28,10 @@ import { ConfirmDialogService } from '../../core/confirm-dialog.service';
 import {
   isEditableKeyboardTarget,
   isModKey,
+  ownsTreeClipboardShortcut,
   shouldDeferToFlowCanvas,
 } from '../../core/selection-hotkeys';
+import { TreeClipboardService } from '../../core/tree-clipboard.service';
 import { WorkbenchStore } from '../workbench/workbench.store';
 import { DatabaseDndService } from './database-dnd.service';
 import { isDatabaseDraggableNav, type DatabaseNavKind, type DatabaseNavNode } from './database-nav';
@@ -71,6 +75,7 @@ function databaseMenuHasItems(menu: DatabaseMenu): boolean {
   templateUrl: './database-sidebar.component.html',
   styleUrl: './database-sidebar.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { 'data-tree-clipboard': 'database' },
 })
 export class DatabaseSidebarComponent {
   readonly store = inject(DatabaseStore);
@@ -82,6 +87,7 @@ export class DatabaseSidebarComponent {
   private readonly injector = inject(Injector);
   private readonly destroyRef = inject(DestroyRef);
   private readonly host = inject(ElementRef<HTMLElement>);
+  private readonly clipboard = inject(TreeClipboardService);
 
   private readonly rootRef = viewChild<ElementRef<HTMLElement>>('root');
   private readonly scrollerRef = viewChild<ElementRef<HTMLElement>>('scroller');
@@ -493,7 +499,47 @@ export class DatabaseSidebarComponent {
       this.store.setSearchQuery('');
       for (const id of ids)
         this.store.duplicate(id, section);
+      return;
     }
+
+    if (!ownsTreeClipboardShortcut(this.host.nativeElement, event, true))
+      return;
+
+    if (isModKey(event, 'c') && !event.shiftKey) {
+      const connections = this.store.copyConnections();
+      if (connections.length > 0) {
+        event.preventDefault();
+        this.clipboard.set({ kind: 'database', section: 'connections', nodes: connections });
+        return;
+      }
+      const queries = this.store.copyQueries();
+      if (queries.length === 0)
+        return;
+      event.preventDefault();
+      this.clipboard.set({ kind: 'database', section: 'queries', nodes: queries });
+      return;
+    }
+
+    if (isModKey(event, 'v') && !event.shiftKey) {
+      const memory = this.clipboard.peek('database');
+      if (memory) {
+        event.preventDefault();
+        this.pasteDatabase(memory.section, memory.nodes);
+        return;
+      }
+      void this.clipboard.get('database').then((payload) => {
+        if (payload)
+          this.pasteDatabase(payload.section, payload.nodes);
+      });
+    }
+  }
+
+  private pasteDatabase(section: 'connections' | 'queries', nodes: readonly unknown[]): void {
+    this.store.setSearchQuery('');
+    if (section === 'connections')
+      this.store.pasteConnections(nodes as readonly DatabaseConnectionTreeItem[]);
+    else
+      this.store.pasteQueries(nodes as readonly SavedQueryTreeItem[]);
   }
 
   private openMenu(event: MouseEvent, partial: DatabaseMenu): void {
