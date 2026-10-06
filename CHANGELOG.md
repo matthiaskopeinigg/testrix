@@ -4,6 +4,8 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+## [2.0.3] — 2026-10-06
+
 ### Added
 
 - Environment variable values highlight `{{names}}`. A name that does not exist is shown in red, with the key or folder path to use instead, and a line under the field shows what the value resolves to.

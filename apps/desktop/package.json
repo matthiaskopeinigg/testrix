@@ -1,7 +1,7 @@
 {
   "name": "@testrix/desktop",
   "productName": "Testrix",
-  "version": "2.0.2",
+  "version": "2.0.3",
   "description": "Testrix — local-first desktop API workbench",
   "author": {
     "name": "Matthias Kopeinigg"
@@ -10,9 +10,9 @@
   "private": true,
   "main": "dist/main.cjs",
   "dependencies": {
-    "@testrix/contracts": "2.0.2",
-    "@testrix/electron-core": "2.0.2",
-    "@testrix/http-engine": "2.0.2",
+    "@testrix/contracts": "2.0.3",
+    "@testrix/electron-core": "2.0.3",
+    "@testrix/http-engine": "2.0.3",
     "better-sqlite3": "^12.11.1",
     "fflate": "^0.8.3",
     "ioredis": "^5.11.1",
