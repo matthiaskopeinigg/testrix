@@ -263,6 +263,30 @@ export class EnvironmentEditorComponent {
     return node && isEnvironmentVariable(node) ? node : null;
   }
 
+  /** Short `{{key}}` usage, plus the folder path when the variable is nested. */
+  variableReferenceLabel(): string {
+    const variable = this.focusedVariable();
+    const env = this.environment();
+    const key = variable?.key.trim() ?? '';
+    if (!variable || !env || !key)
+      return '';
+    const names: string[] = [];
+    const seen = new Set<string>();
+    let parentId = findEnvironmentLocation(env.variables, variable.id)?.parentId ?? null;
+    while (parentId && !seen.has(parentId)) {
+      seen.add(parentId);
+      const folder = findEnvironmentFolder(env.variables, parentId);
+      if (folder?.name.trim())
+        names.unshift(folder.name.trim());
+      parentId = folder ? (findEnvironmentLocation(env.variables, parentId)?.parentId ?? null) : null;
+    }
+    const short = `{{${key}}}`;
+    const pathKey = [...names, key].join('.');
+    if (names.length === 0 || !/^[A-Za-z0-9_.-]+$/.test(pathKey))
+      return `Requests use ${short}`;
+    return `Requests use ${short}. {{${pathKey}}} is the same variable.`;
+  }
+
   focusedFolder(): EnvironmentFolder | null {
     const node = this.focusedNode();
     return node && isEnvironmentFolder(node) ? node : null;

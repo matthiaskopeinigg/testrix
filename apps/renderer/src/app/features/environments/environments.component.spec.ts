@@ -48,9 +48,42 @@ describe('EnvironmentEditorComponent (variable tree)', () => {
       variable('v2', 'token', 'secret', false),
       folder('f1', 'Shared', [variable('v3', 'region', 'eu')]),
     ];
-    expect(environmentVariableMap(nodes)).toEqual({ host: 'api.local', region: 'eu' });
+    expect(environmentVariableMap(nodes)).toEqual({
+      host: 'api.local',
+      region: 'eu',
+      'Shared.region': 'eu',
+    });
     expect(findEnabledEnvironmentVariableByKey(nodes, 'host')?.value).toBe('api.local');
+    expect(findEnabledEnvironmentVariableByKey(nodes, 'Shared.region')?.id).toBe('v3');
     expect(findEnabledEnvironmentVariableByKey(nodes, 'token')).toBeNull();
+  });
+
+  it('resolves a folder variable by its key and expands values that reference other variables', () => {
+    const nodes: EnvironmentNode[] = [
+      variable('v1', 'baseUrl', 'https://api.test'),
+      folder('f1', 'ms.folder', [
+        variable('v2', 'url', '{{baseUrl}}'),
+        variable('v3', 'health', '{{url}}/health'),
+      ]),
+    ];
+    expect(environmentVariableMap(nodes)).toEqual({
+      baseUrl: 'https://api.test',
+      url: 'https://api.test',
+      health: 'https://api.test/health',
+      'ms.folder.url': 'https://api.test',
+      'ms.folder.health': 'https://api.test/health',
+    });
+    expect(findEnabledEnvironmentVariableByKey(nodes, 'ms.folder.url')?.id).toBe('v2');
+  });
+
+  it('keeps a cyclic variable reference as written', () => {
+    const nodes: EnvironmentNode[] = [
+      variable('v1', 'left', '{{right}}'),
+      variable('v2', 'right', '{{left}}'),
+    ];
+    const map = environmentVariableMap(nodes);
+    expect(map['left']).toBe('{{left}}');
+    expect(map['right']).toBe('{{left}}');
   });
 
   it('last enabled duplicate key wins in the overlay map', () => {

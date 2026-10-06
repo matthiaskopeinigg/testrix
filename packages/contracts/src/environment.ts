@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { resolveVariableTemplates } from './collection-folder';
 import { newEntityId } from './entity-id';
 import { CONFIG_SCHEMA_VERSION } from './settings';
 
@@ -51,24 +52,37 @@ export function isEnvironmentVariable(node: EnvironmentNode): node is Environmen
   return node.kind !== 'folder';
 }
 
-/** Enabled environment variables as a name-to-value map for `{{var}}` substitution. */
+/**
+ * Enabled environment variables as a name-to-value map for `{{var}}` substitution.
+ * A variable inside folder `ms.folder` is available as `{{url}}` and as `{{ms.folder.url}}`.
+ * Values that reference other variables are expanded.
+ */
 export function environmentVariableMap(nodes: readonly EnvironmentNode[]): Record<string, string> {
-  const out: Record<string, string> = {};
-  const walk = (list: readonly EnvironmentNode[]): void => {
+  const aliases: Record<string, string> = {};
+  const shorts: Record<string, string> = {};
+  const walk = (list: readonly EnvironmentNode[], prefix: readonly string[]): void => {
     for (const node of list) {
       if (isEnvironmentFolder(node)) {
-        walk(node.children);
+        const name = node.name.trim();
+        walk(node.children, name ? [...prefix, name] : prefix);
         continue;
       }
-      if (node.enabled && node.key.trim())
-        out[node.key.trim()] = node.value;
+      const key = node.key.trim();
+      if (!node.enabled || !key)
+        continue;
+      shorts[key] = node.value;
+      if (prefix.length === 0)
+        continue;
+      const path = [...prefix, key].join('.');
+      if (path !== key && /^[A-Za-z0-9_.-]+$/.test(path))
+        aliases[path] = node.value;
     }
   };
-  walk(nodes);
-  return out;
+  walk(nodes, []);
+  return resolveVariableTemplates({ ...aliases, ...shorts });
 }
 
-/** Last enabled variable with this key, matching `environmentVariableMap` overlay order. */
+/** Last enabled variable with this key or folder path, matching `environmentVariableMap`. */
 export function findEnabledEnvironmentVariableByKey(
   nodes: readonly EnvironmentNode[],
   key: string,
@@ -76,19 +90,29 @@ export function findEnabledEnvironmentVariableByKey(
   const needle = key.trim().toLowerCase();
   if (!needle)
     return null;
-  let found: EnvironmentVariable | null = null;
-  const walk = (list: readonly EnvironmentNode[]): void => {
+  let byKey: EnvironmentVariable | null = null;
+  let byPath: EnvironmentVariable | null = null;
+  const walk = (list: readonly EnvironmentNode[], prefix: readonly string[]): void => {
     for (const node of list) {
       if (isEnvironmentFolder(node)) {
-        walk(node.children);
+        const name = node.name.trim();
+        walk(node.children, name ? [...prefix, name] : prefix);
         continue;
       }
-      if (node.enabled && node.key.trim().toLowerCase() === needle)
-        found = node;
+      const variableKey = node.key.trim();
+      if (!node.enabled || !variableKey)
+        continue;
+      if (variableKey.toLowerCase() === needle) {
+        byKey = node;
+        continue;
+      }
+      const path = [...prefix, variableKey].join('.').toLowerCase();
+      if (prefix.length > 0 && path === needle)
+        byPath = node;
     }
   };
-  walk(nodes);
-  return found;
+  walk(nodes, []);
+  return byKey ?? byPath;
 }
 
 /** Named variable set shown in the Environments sidebar. */

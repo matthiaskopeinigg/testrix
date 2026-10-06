@@ -362,6 +362,39 @@ export function interpolateTemplate(text: string, vars: Readonly<Record<string, 
   });
 }
 
+/**
+ * Expands `{{name}}` inside variable values, including values that reference
+ * other values. A cycle keeps the token as written.
+ */
+export function resolveVariableTemplates(
+  vars: Readonly<Record<string, string>>,
+): Record<string, string> {
+  const resolved = new Map<string, string>();
+  const resolveKey = (key: string, stack: ReadonlySet<string>): string => {
+    const cached = resolved.get(key);
+    if (cached !== undefined)
+      return cached;
+    const raw = vars[key];
+    if (raw === undefined)
+      return '';
+    if (stack.has(key))
+      return raw;
+    const nextStack = new Set(stack);
+    nextStack.add(key);
+    const value = raw.replace(VAR_PATTERN, (match, name: string) => {
+      if (!Object.prototype.hasOwnProperty.call(vars, name) || nextStack.has(name))
+        return match;
+      return resolveKey(name, nextStack);
+    });
+    resolved.set(key, value);
+    return value;
+  };
+  const out: Record<string, string> = {};
+  for (const key of Object.keys(vars))
+    out[key] = resolveKey(key, new Set());
+  return out;
+}
+
 export function interpolateKvRows(
   rows: readonly CollectionKvRow[],
   vars: Readonly<Record<string, string>>,

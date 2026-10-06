@@ -160,6 +160,7 @@ export const HELP_ARTICLES: readonly HelpArticle[] = [
     summary: 'Named sets of variables, including secrets.',
     body: [
       'The Environments rail lists environments for the active workspace. Open one to edit keys, values, folders, and secret flags.',
+      'A variable inside a folder is used by its key, so url in folder ms.folder is {{url}}. {{ms.folder.url}} names that same variable when another url exists. A value can reference another variable, such as {{baseUrl}}/test.',
       'The titlebar environment picker chooses which environment requests should use. You can choose None when you want no active set.',
     ],
     tips: ['Right-click an environment for Open, Rename, Duplicate, and Delete. Drag the list to change order.'],

@@ -5,6 +5,7 @@ import {
   cookiesMatchingUrl,
   inheritedKvRows,
   interpolateTemplate,
+  resolveVariableTemplates,
   mergeFolderConfigs,
   parentFolderConfigs,
   parseCollectionFolderConfig,
@@ -209,5 +210,23 @@ describe('interpolateTemplate', () => {
 
   it('leaves unknown tokens in place', () => {
     expect(interpolateTemplate('{{missing}}', {})).toBe('{{missing}}');
+  });
+});
+
+describe('resolveVariableTemplates', () => {
+  it('expands a value that references another variable', () => {
+    expect(
+      resolveVariableTemplates({
+        baseUrl: 'https://api.test',
+        path: '{{baseUrl}}/test',
+      }),
+    ).toEqual({
+      baseUrl: 'https://api.test',
+      path: 'https://api.test/test',
+    });
+  });
+
+  it('leaves a cycle as written', () => {
+    expect(resolveVariableTemplates({ a: '{{b}}', b: '{{a}}' })).toEqual({ a: '{{a}}', b: '{{a}}' });
   });
 });

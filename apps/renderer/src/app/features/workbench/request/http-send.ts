@@ -9,6 +9,7 @@ import {
   findNodePath,
   interpolateKvRows,
   interpolateTemplate,
+  resolveVariableTemplates,
   mergeFolderConfigs,
   effectiveVerifyTls,
   mergeRequestSettings,
@@ -144,10 +145,10 @@ export function planHttpSend(input: {
     emailDomain: input.emailDomain,
     uuid: input.uuid,
   };
-  const rawVars = {
+  const rawVars = resolveVariableTemplates({
     ...input.envVars,
     ...variableMapFromRows(merged.variables),
-  };
+  });
   const vars = expandPlaceholderMap(rawVars, expandOptions);
   const displayDefaults = interpolateKvRows(input.defaultHeaders ?? [], rawVars);
   const displayFolderHeaders = interpolateKvRows(merged.headers, rawVars);

@@ -60,6 +60,9 @@
                 <span class="tx-env-inspector__mark" aria-hidden="true">#</span>
                 <div class="tx-env-inspector__heading">
                   <h2 class="tx-env-inspector__title">{{ variable.key.trim() || 'Untitled key' }}</h2>
+                  @if (variableReferenceLabel(); as usage) {
+                    <p class="tx-env-inspector__meta">{{ usage }}</p>
+                  }
                 </div>
               </header>
               <div class="tx-env-inspector__body">

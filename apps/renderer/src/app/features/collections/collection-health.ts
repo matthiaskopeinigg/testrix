@@ -3,6 +3,7 @@ import {
   ensureRequestUrlScheme,
   findNodePath,
   interpolateTemplate,
+  resolveVariableTemplates,
   mergeFolderConfigs,
   requestConfigOf,
   variableMapFromRows,
@@ -97,8 +98,10 @@ export function scanCollectionHealth(input: {
   walkLeaves(scope, (node) => {
     const folders = ancestorFolderConfigs(input.tree, node.id);
     const merged = mergeFolderConfigs(folders);
-    const folderVars = variableMapFromRows(merged.variables);
-    const vars = { ...input.envVars, ...folderVars };
+    const vars = resolveVariableTemplates({
+      ...input.envVars,
+      ...variableMapFromRows(merged.variables),
+    });
 
     if (node.kind === 'http') {
       const config = requestConfigOf(node);

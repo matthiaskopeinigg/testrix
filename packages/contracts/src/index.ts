@@ -379,6 +379,7 @@ export {
   inheritedKvRows,
   interpolateKvRows,
   interpolateTemplate,
+  resolveVariableTemplates,
   effectiveVerifyTls,
   mergeFolderConfigs,
   oauthCodeChallengeMethodSchema,

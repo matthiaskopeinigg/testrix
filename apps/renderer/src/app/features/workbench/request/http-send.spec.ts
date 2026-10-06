@@ -225,4 +225,23 @@ describe('planHttpSend', () => {
     expect(plan.payload.auth.apiKey).toBe('secret');
     expect(plan.payload.auth.apiKeyHeader).toBe('X-Token');
   });
+
+  it('expands a variable whose value references another variable', () => {
+    const plan = planHttpSend({
+      tree: [],
+      nodeId: 'orphan',
+      method: 'GET',
+      url: '{{health}}',
+      params: [],
+      headers: [],
+      body: '',
+      authMode: 'none',
+      requestAuth: parseCollectionFolderConfig({}).auth,
+      envVars: {
+        baseUrl: 'https://api.test',
+        health: '{{baseUrl}}/health',
+      },
+    });
+    expect(plan.payload.url).toBe('https://api.test/health');
+  });
 });
