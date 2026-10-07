@@ -4,6 +4,8 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+## [2.0.7] — 2026-10-07
+
 ### Fixed
 
 - Picking a CSS selector keeps `{{name}}` in the Open browser URL. The page still opens at the resolved address.
