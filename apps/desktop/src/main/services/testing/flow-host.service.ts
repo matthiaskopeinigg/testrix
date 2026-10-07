@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { BrowserWindow, session } from 'electron';
+import { type BrowserWindow, session } from 'electron';
 import {
   DEFAULT_FOLDER_AUTH,
   overlayCookies,
