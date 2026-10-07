@@ -1,6 +1,6 @@
 {
   "name": "@testrix/setup",
-  "version": "2.0.10",
+  "version": "2.0.11",
   "private": true,
   "main": "dist/main.cjs",
   "productName": "Testrix",
@@ -15,8 +15,8 @@
     "pack:win": "electron-builder build --win portable --publish never"
   },
   "dependencies": {
-    "@testrix/contracts": "2.0.10",
-    "@testrix/electron-core": "2.0.10"
+    "@testrix/contracts": "2.0.11",
+    "@testrix/electron-core": "2.0.11"
   },
   "devDependencies": {
     "electron": "^44.3.0",
