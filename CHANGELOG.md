@@ -4,6 +4,8 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+## [2.0.5] — 2026-10-07
+
 ### Added
 
 - Saved order on the collections sort menu. Dragging a row, or moving it with the keyboard, switches to Saved order so the arrangement stays. A request can sit above a folder.
