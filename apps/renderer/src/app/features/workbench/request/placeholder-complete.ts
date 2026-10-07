@@ -241,7 +241,7 @@ function mustacheOriginFields(
   origins: readonly PlaceholderOrigin[],
 ): Pick<PlaceholderSegment, 'clickable' | 'originKind' | 'sourceId' | 'sourceName' | 'originName'> {
   const origin = originForName(origins, mustacheName(token));
-  if (!origin)
+  if (!origin || origin.kind === 'flow')
     return {};
   return {
     clickable: true,

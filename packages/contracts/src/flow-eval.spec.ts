@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { resolveFlowText } from './flow-eval';
+import { emptyFlowGraphNode, flowPlaceholderNames } from './flow-graph';
 
 describe('resolveFlowText', () => {
   const random = () => 0.42;
@@ -10,6 +11,11 @@ describe('resolveFlowText', () => {
     expect(resolveFlowText('{{baseUrl}}/login', { baseUrl: 'https://api.example' })).toBe(
       'https://api.example/login',
     );
+  });
+
+  it('substitutes a Set variable into a request URL path', () => {
+    expect(resolveFlowText('google.at/{{username}}', { username: 'ada' })).toBe('google.at/ada');
+    expect(resolveFlowText('google.at/{{username}}', { Username: 'ada' })).toBe('google.at/ada');
   });
 
   it('expands $randomEmail and %randomEmail into an address', () => {
@@ -28,5 +34,22 @@ describe('resolveFlowText', () => {
 
   it('leaves percent-encoding and unknown tokens alone', () => {
     expect(resolveFlowText('a%20b $notAToken %notAToken', {})).toBe('a%20b $notAToken %notAToken');
+  });
+});
+
+describe('flowPlaceholderNames', () => {
+  it('collects Set variable, Capture, and Manual names', () => {
+    const set = { ...emptyFlowGraphNode('set-var'), config: { name: 'username', value: 'ada' } };
+    const manual = { ...emptyFlowGraphNode('manual'), config: { variable: 'note', prompt: '', placeholder: '' } };
+    const capture = {
+      ...emptyFlowGraphNode('capture'),
+      config: { rules: JSON.stringify([{ kind: 'json', path: 'id', name: 'userId' }]) },
+    };
+    const off = {
+      ...emptyFlowGraphNode('set-var'),
+      enabled: false,
+      config: { name: 'hidden', value: 'no' },
+    };
+    expect(flowPlaceholderNames([set, manual, capture, off])).toEqual(['username', 'note', 'userId']);
   });
 });

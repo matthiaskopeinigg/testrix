@@ -1151,7 +1151,7 @@ export class FlowHost {
       }
 
       case 'set-var': {
-        const name = flowConfigString(node, 'name');
+        const name = flowConfigString(node, 'name').trim();
         if (name)
           scope.vars.vars[name] = this.flowText(flowConfigString(node, 'value'), scope.vars.vars);
         return null;

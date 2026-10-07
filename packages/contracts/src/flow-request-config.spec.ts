@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { resolveFlowText } from './flow-eval';
 import {
   flowRequestBodyFromConfig,
   flowRequestBodyHasContent,
@@ -43,6 +44,11 @@ describe('flow-request-config', () => {
     expect(planFlowRequestUrl({ url: '127.0.0.1:8080/health' })).toBe('http://127.0.0.1:8080/health');
     expect(planFlowRequestUrl({ url: 'google.com' })).toBe('https://google.com');
     expect(planFlowRequestUrl({ url: '{{base}}/x' })).toBe('{{base}}/x');
+    expect(
+      planFlowRequestUrl({
+        url: resolveFlowText('google.at/{{username}}', { username: 'ada' }),
+      }),
+    ).toBe('https://google.at/ada');
   });
 
   it('syncs path params from the URL and filters headers', () => {

@@ -12,7 +12,7 @@ import type { WorkbenchStore } from '../workbench.store';
 /** Folder, environment, or flow data column that currently wins for a `{{name}}` substitution. */
 export interface PlaceholderOrigin {
   readonly name: string;
-  readonly kind: 'folder' | 'environment' | 'data';
+  readonly kind: 'folder' | 'environment' | 'data' | 'flow';
   readonly sourceId: string;
   readonly sourceName: string;
 }
@@ -110,6 +110,8 @@ export function hintForVariableOrigin(origin: PlaceholderOrigin | undefined): st
     return `Folder · ${origin.sourceName}`;
   if (origin.kind === 'data')
     return `Data · ${origin.sourceName}`;
+  if (origin.kind === 'flow')
+    return 'Set on this flow';
   return `Environment · ${origin.sourceName}`;
 }
 

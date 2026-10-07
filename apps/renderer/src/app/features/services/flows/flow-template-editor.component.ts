@@ -24,6 +24,7 @@ import {
   findFlowGraphNode,
   flattenDatabaseConnections,
   flowConfigString,
+  flowPlaceholderNames,
   flowHasStartToEndPath,
   flowNodeLabel,
   flowRunOrderIndex,
@@ -220,7 +221,8 @@ export class FlowTemplateEditorComponent {
 
   readonly placeholderVariables = computed(() => {
     const env = this.environments.items().find((item) => item.id === this.environments.activeId());
-    return env ? Object.keys(environmentVariableMap(env.variables)) : [];
+    const envNames = env ? Object.keys(environmentVariableMap(env.variables)) : [];
+    return [...new Set([...envNames, ...flowPlaceholderNames(this.graph().nodes)])];
   });
 
   readonly connectionOptions = computed(() =>

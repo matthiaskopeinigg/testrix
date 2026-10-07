@@ -398,6 +398,10 @@
     @case ('set-var') {
       <tx-input id="flow-var" label="Variable" [value]="text('name')" (valueChange)="setText('name', $event)" />
       <tx-token-field id="flow-val" label="Value" [value]="text('value')" [variables]="variables()" (valueChange)="setText('value', $event)" />
+      <p class="tx-flow-inspector__hint">
+        Later steps read this as <code>{{ '{{' }}name{{ '}}' }}</code>. A request URL can be
+        <code>google.at/{{ '{{' }}username{{ '}}' }}</code>.
+      </p>
     }
     @case ('capture') {
       <p class="tx-flow-inspector__hint">

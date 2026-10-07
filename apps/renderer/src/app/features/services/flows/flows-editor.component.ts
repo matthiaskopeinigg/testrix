@@ -27,6 +27,7 @@ import {
   findFlowGraphNode,
   flattenDatabaseConnections,
   flowConfigString,
+  flowPlaceholderNames,
   flowHasBrowserNodes,
   flowHasDeviceNodes,
   flowHasStartToEndPath,
@@ -541,7 +542,8 @@ export class FlowsEditorComponent implements PlaceholderOriginHost {
     const env = this.resolvedEnvironment();
     const envNames = env ? Object.keys(environmentVariableMap(env.variables)) : [];
     const columns = this.scenario()?.data.columns ?? [];
-    return [...new Set([...envNames, ...columns])];
+    const flowNames = flowPlaceholderNames(this.graph().nodes);
+    return [...new Set([...envNames, ...columns, ...flowNames])];
   });
 
   readonly variableOrigins = computed(() => {
@@ -551,18 +553,24 @@ export class FlowsEditorComponent implements PlaceholderOriginHost {
       environment: env ? { id: env.id, name: env.name, variables: env.variables } : null,
     });
     const scenario = this.scenario();
-    if (!scenario?.data.columns.length)
-      return base;
     const byKey = new Map(base.map((origin) => [origin.name.toLowerCase(), origin] as const));
-    for (const column of scenario.data.columns) {
+    for (const column of scenario?.data.columns ?? []) {
       const name = column.trim();
       if (!name)
         continue;
       byKey.set(name.toLowerCase(), {
         name,
-        kind: 'data',
-        sourceId: scenario.id,
-        sourceName: scenario.name || 'Data rows',
+        kind: 'data' as const,
+        sourceId: scenario?.id ?? '',
+        sourceName: scenario?.name || 'Data rows',
+      });
+    }
+    for (const name of flowPlaceholderNames(this.graph().nodes)) {
+      byKey.set(name.toLowerCase(), {
+        name,
+        kind: 'flow',
+        sourceId: scenario?.id ?? '',
+        sourceName: scenario?.name || 'This flow',
       });
     }
     return [...byKey.values()];

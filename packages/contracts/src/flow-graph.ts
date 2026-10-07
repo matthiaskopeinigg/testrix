@@ -237,7 +237,7 @@ const DESCRIPTORS: readonly FlowNodeDescriptor[] = [
   { kind: 'assert-json', label: 'Validate value', chip: 'VALUE', hint: 'Validates the previous connected node�s response or variables. After Listen/Intercept, waits for that hit first.', group: 'assert' },
   { kind: 'request', label: 'HTTP request', chip: 'HTTP', hint: 'Call an API with params, headers, and body. Host needs no https:// — scheme is filled automatically.', group: 'data' },
   { kind: 'database', label: 'Database query', chip: 'SQL', hint: 'Run SQL against a saved connection. Results land in status/body/rowCount and first-row columns as variables.', group: 'data' },
-  { kind: 'set-var', label: 'Set variable', chip: 'SET', hint: 'Write a value into flow variables.', group: 'data' },
+  { kind: 'set-var', label: 'Set variable', chip: 'SET', hint: 'Write a value later steps read as {{name}}, including a request URL.', group: 'data' },
   {
     kind: 'capture',
     label: 'Capture',
@@ -614,6 +614,56 @@ export function flowHasStartToEndPath(scenario: Pick<FlowScenario, 'nodes' | 'ed
       stack.push(next);
   }
   return false;
+}
+
+/**
+ * Names a later step can read as `{{name}}`: Set variable, Capture, and Manual step.
+ * Disabled nodes are skipped. The first spelling wins when names differ only by case.
+ */
+export function flowPlaceholderNames(nodes: readonly FlowGraphNode[]): string[] {
+  const names: string[] = [];
+  const seen = new Set<string>();
+  const add = (raw: string): void => {
+    const name = raw.trim();
+    if (!name)
+      return;
+    const key = name.toLowerCase();
+    if (seen.has(key))
+      return;
+    seen.add(key);
+    names.push(name);
+  };
+  for (const node of nodes) {
+    if (node.enabled === false)
+      continue;
+    if (node.kind === 'set-var')
+      add(flowConfigString(node, 'name'));
+    else if (node.kind === 'manual')
+      add(flowConfigString(node, 'variable', 'manual'));
+    else if (node.kind === 'capture') {
+      for (const name of captureVariableNames(flowConfigString(node, 'rules')))
+        add(name);
+    }
+  }
+  return names;
+}
+
+function captureVariableNames(raw: string): string[] {
+  if (!raw.trim())
+    return [];
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed))
+      return [];
+    return parsed.flatMap((item) => {
+      if (!item || typeof item !== 'object')
+        return [];
+      const name = (item as { name?: unknown }).name;
+      return typeof name === 'string' ? [name] : [];
+    });
+  } catch {
+    return [];
+  }
 }
 
 export function flowConfigString(node: FlowGraphNode, key: string, fallback = ''): string {

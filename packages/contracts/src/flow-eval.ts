@@ -19,7 +19,19 @@ export interface FlowEvalContext {
  * Replaces `{{name}}` tokens from the flow variable map.
  */
 export function interpolateFlow(text: string, vars: Readonly<Record<string, string>>): string {
-  return text.replace(/\{\{\s*([\w.-]+)\s*\}\}/g, (_all, key: string) => vars[key] ?? '');
+  return text.replace(/\{\{\s*([\w.-]+)\s*\}\}/g, (_all, key: string) => lookupFlowVar(vars, key) ?? '');
+}
+
+/** Exact key, then a trimmed case-insensitive match so `{{username}}` finds `Username`. */
+function lookupFlowVar(vars: Readonly<Record<string, string>>, key: string): string | undefined {
+  if (Object.prototype.hasOwnProperty.call(vars, key))
+    return vars[key];
+  const needle = key.trim().toLowerCase();
+  for (const name of Object.keys(vars)) {
+    if (name.trim().toLowerCase() === needle)
+      return vars[name];
+  }
+  return undefined;
 }
 
 /**
