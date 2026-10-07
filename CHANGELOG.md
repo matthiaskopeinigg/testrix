@@ -4,6 +4,8 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+## [2.0.9] — 2026-10-07
+
 ### Fixed
 
 - Pick on page replays browser steps and skips HTTP request, Capture, and other API steps in between, so those nodes no longer cancel the picker.
