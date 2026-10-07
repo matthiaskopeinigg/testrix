@@ -16,7 +16,7 @@ import {
 
 describe('pickHintForKind', () => {
   it('returns action-specific hints', () => {
-    expect(pickHintForKind('browser-click')).toContain('button');
+    expect(pickHintForKind('browser-click')).toContain('element');
     expect(pickHintForKind('browser-type')).toContain('input');
     expect(pickHintForKind('browser-select')).toContain('select');
     expect(pickHintForKind('assert-text')).toContain('CSS selector');
@@ -123,6 +123,7 @@ describe('injected picker helpers', () => {
     expect(SNAP_ELEMENT_TO_PICK_KIND_FN).toContain('matchesType');
     expect(SNAP_ELEMENT_TO_PICK_KIND_FN).toContain('parentOrHost');
     expect(SNAP_ELEMENT_TO_PICK_KIND_FN).toContain('hasPointerCursor');
+    expect(SNAP_ELEMENT_TO_PICK_KIND_FN).toContain('return el');
     expect(BUILD_SHORT_CSS_SELECTOR_FN).toContain('data-testid');
     expect(BUILD_SHORT_CSS_SELECTOR_FN).toContain('parts.length > 4');
   });

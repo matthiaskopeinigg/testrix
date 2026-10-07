@@ -4,6 +4,10 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+### Fixed
+
+- Pick on a later Click still opens when an earlier Click or Type misses its element, and the click you make is stored even when the target is not a button.
+
 ## [2.0.9] — 2026-10-07
 
 ### Fixed

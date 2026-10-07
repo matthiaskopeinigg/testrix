@@ -804,7 +804,7 @@
     />
     <tx-hint
       [label]="pickingSelector() ? 'Click an element in the E2E window…' : 'Pick on page'"
-      detail="Replays earlier browser steps. HTTP request and Capture in between are skipped."
+      detail="Replays earlier browser steps. HTTP request and Capture are skipped. A missed Click or Type does not close the picker."
       placement="left"
     >
       <button

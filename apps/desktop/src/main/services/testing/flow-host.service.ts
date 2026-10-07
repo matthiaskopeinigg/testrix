@@ -637,7 +637,14 @@ export class FlowHost {
           await lane.ensure(1100, 800, { visible: true });
         if (lane.current())
           await lane.setAction(flowNodeLabel(node));
-        await this.runNode(scope, node, []);
+        try {
+          await this.runNode(scope, node, []);
+        } catch (error) {
+          if (error instanceof Error && error.message === 'cancelled')
+            throw error;
+          // A Click or Type that misses its element must not close the picker.
+          // The window stays on the last page that did load.
+        }
       }
       return null;
     } catch (error) {

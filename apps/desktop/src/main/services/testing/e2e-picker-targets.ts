@@ -54,7 +54,7 @@ export function browserPickPrefixNeedsSelector(kind: string): boolean {
 export function pickHintForKind(kind?: string | null): string {
   switch (kind) {
     case 'browser-click':
-      return 'Pick a button or link · Esc cancels';
+      return 'Click the element · Esc cancels';
     case 'browser-type':
       return 'Pick an input or textarea · Esc cancels';
     case 'browser-select':
@@ -254,6 +254,8 @@ export const SNAP_ELEMENT_TO_PICK_KIND_FN = `function(kind) {
       if (hasPointerCursor(cur)) return cur;
       cur = parentOrHost(cur);
     }
+    // A click target is often a div, not a button. Keep the element under the pointer.
+    return el;
   }
   return null;
 }`;
