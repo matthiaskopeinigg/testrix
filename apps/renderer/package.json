@@ -1,6 +1,6 @@
 {
   "name": "@testrix/renderer",
-  "version": "2.0.9",
+  "version": "2.0.10",
   "private": true,
   "scripts": {
     "sync:plantuml": "node ./scripts/sync-plantuml-assets.mjs",
@@ -30,8 +30,8 @@
     "@codemirror/view": "^6.43.12",
     "@lezer/highlight": "^1.2.3",
     "@plantuml/core": "^1.2026.8",
-    "@testrix/contracts": "2.0.9",
-    "@testrix/ui": "2.0.9",
+    "@testrix/contracts": "2.0.10",
+    "@testrix/ui": "2.0.10",
     "graphql": "^17.0.2",
     "rxjs": "~7.8.0",
     "tslib": "^2.8.1"
