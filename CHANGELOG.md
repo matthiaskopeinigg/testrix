@@ -4,6 +4,8 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+## [2.0.6] — 2026-10-07
+
 ### Fixed
 
 - Sort and filter menus open from their button and stay inside the sidebar.
