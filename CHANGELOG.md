@@ -4,13 +4,17 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
-## [2.0.11] — 2026-10-07
-
 ### Fixed
 
 - Pick on a later Click runs every earlier node on the path from Start, so a Type step such as {{otp}} receives values from Capture, Set variable, database, and the rest. A failed step still leaves the picker open.
 - Type writes into the input inside a custom element, so an OTP field receives the captured value when keystrokes land on the host.
 - Capture no longer shows an Exchange button. The HTTP request node already owns that exchange.
+
+## [2.0.11] — 2026-10-07
+
+### Fixed
+
+- The 2.0.11 tag failed desktop typecheck before publish. These fixes shipped in the next release.
 
 ## [2.0.10] — 2026-10-07
 
