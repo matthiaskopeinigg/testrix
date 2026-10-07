@@ -4,6 +4,8 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+## [2.0.4] — 2026-10-07
+
 ### Added
 
 - Select variables or folders in an environment, then Ctrl+C and Ctrl+V to paste them into another environment. Keys stay the same, so `{{url}}` still works.
