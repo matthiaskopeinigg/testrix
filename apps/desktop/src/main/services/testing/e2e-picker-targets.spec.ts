@@ -24,14 +24,23 @@ describe('pickHintForKind', () => {
 });
 
 describe('browserPickPrefixKind', () => {
-  it('replays browser steps and skips API nodes that sit between them', () => {
-    expect(browserPickPrefixKind('browser-open')).toBe(true);
-    expect(browserPickPrefixKind('browser-click')).toBe(true);
-    expect(browserPickPrefixKind('set-var')).toBe(true);
-    expect(browserPickPrefixKind('wait')).toBe(true);
+  it('replays every node kind on the path before the selector', () => {
     expect(
-      ['request', 'capture', 'database', 'assert-status', 'device-tap'].map(browserPickPrefixKind),
-    ).toEqual([false, false, false, false, false]);
+      [
+        'browser-open',
+        'browser-click',
+        'set-var',
+        'wait',
+        'request',
+        'capture',
+        'database',
+        'assert-status',
+        'device-tap',
+        'manual',
+        'http-listener',
+        'for-each',
+      ].map(browserPickPrefixKind),
+    ).toEqual([true, true, true, true, true, true, true, true, true, true, true, true]);
   });
 
   it('skips selector steps that are still empty', () => {

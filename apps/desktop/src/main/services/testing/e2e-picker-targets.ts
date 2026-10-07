@@ -9,35 +9,12 @@ import {
 export type PickSelectorKind = FlowNodeKind | string;
 
 /**
- * Kinds that must not run while picking a CSS selector.
- * They do not move the page, and a failure (empty body, missing JSON path,
- * status assert) was closing the E2E window before the user could click.
+ * Pick replays every node on the path from Start, whatever its kind.
+ * A failure is swallowed by the picker so the window stays open.
+ * Steps that still have an empty selector are skipped separately.
  */
-const BROWSER_PICK_PREFIX_SKIP = new Set([
-  'request',
-  'capture',
-  'database',
-  'manual',
-  'trigger',
-  'cache',
-  'http-listener',
-  'http-interceptor',
-  'http-validate',
-  'assert-status',
-  'assert-json',
-  'assert-text',
-  'assert-visible',
-  'assert-url',
-  'for-each',
-  'while',
-  'retry',
-]);
-
-/** True when Pick on page should replay this node to reach the current page. */
-export function browserPickPrefixKind(kind: string): boolean {
-  if (kind.startsWith('device-'))
-    return false;
-  return !BROWSER_PICK_PREFIX_SKIP.has(kind);
+export function browserPickPrefixKind(_kind: string): boolean {
+  return true;
 }
 
 /** Selector-based browser steps that cannot run until the user has authored a selector. */

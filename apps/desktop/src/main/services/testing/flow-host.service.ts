@@ -78,6 +78,7 @@ import {
   prefixNodeIdsBefore,
 } from './e2e-picker-targets';
 import { BrowserLane, E2E_PARTITION } from './flow-browser-lane';
+import { FLOW_TEXT_TARGET_FNS, flowTextPageScript } from './flow-text-target';
 import {
   assertFlowMatch,
   devicePickPrefixKind,
@@ -572,9 +573,8 @@ export class FlowHost {
   }
 
   /**
-   * Replays browser steps that precede `stopBeforeNodeId` on the pick lane.
-   * HTTP request, Capture, and other API steps are skipped so a failure there
-   * cannot close the window before the user clicks an element.
+   * Replays every node that precedes `stopBeforeNodeId` on the path from Start.
+   * A failed step does not close the window before the user clicks an element.
    */
   private async runPickPrefix(options: {
     readonly scenario: FlowScenario;
@@ -637,12 +637,16 @@ export class FlowHost {
           await lane.ensure(1100, 800, { visible: true });
         if (lane.current())
           await lane.setAction(flowNodeLabel(node));
+        const parents = scenario.edges
+          .filter((edge) => edge.to === node.id)
+          .map((edge) => nodes.get(edge.from))
+          .filter((parent): parent is FlowGraphNode => !!parent);
         try {
-          await this.runNode(scope, node, []);
+          await this.runNode(scope, node, parents);
         } catch (error) {
           if (error instanceof Error && error.message === 'cancelled')
             throw error;
-          // A Click or Type that misses its element must not close the picker.
+          // Any failed step must not close the picker.
           // The window stays on the last page that did load.
         }
       }
@@ -1907,35 +1911,35 @@ export class FlowHost {
       case 'browser-type': {
         const text = this.flowText(flowConfigString(node, 'text'), vars);
         const clear = flowConfigBoolean(node, 'clearFirst', true);
+        const isTrue = (value: unknown): value is true => value === true;
+        const isText = (value: unknown): value is string => typeof value === 'string';
         if (this.e2eReplay === 'fast') {
           const ok = await evalAcrossFrames(
             win,
-            `(() => {
-              ${DEEP_QUERY_HELPER}
-              const el = __txQuery(${JSON.stringify(selector)});
-              if (!el) return false;
-              el.focus();
-              if (${clear ? 'true' : 'false'} && 'value' in el) el.value = '';
-              if ('value' in el) {
-                el.value = ${JSON.stringify(text)};
-                el.dispatchEvent(new Event('input', { bubbles: true }));
-                el.dispatchEvent(new Event('change', { bubbles: true }));
-              } else {
-                el.textContent = ${JSON.stringify(text)};
-              }
-              return true;
-            })()`,
-            (value): value is true => value === true,
+            flowTextPageScript(DEEP_QUERY_HELPER, selector, 'write', text, clear),
+            isTrue,
           );
           if (!ok)
             throw new Error(`No input for ${selector}`);
           return;
         }
-        const point = await this.prepareTarget(win, selector, scope.signal);
+        const before = clear
+          ? ''
+          : (await evalAcrossFrames(
+              win,
+              flowTextPageScript(DEEP_QUERY_HELPER, selector, 'read'),
+              isText,
+            )) ?? '';
+        const point = await this.prepareTarget(win, selector, scope.signal, 4000, true);
         if (!point)
           throw new Error(`No input for ${selector}`);
         await scope.lane.withAutomation(async () => {
           await this.mouseClick(win, point.x, point.y, scope.signal);
+          await evalAcrossFrames(
+            win,
+            flowTextPageScript(DEEP_QUERY_HELPER, selector, 'focus'),
+            isTrue,
+          );
           if (clear) {
             win.webContents.selectAll();
             await this.pace(40, scope.signal);
@@ -1951,6 +1955,21 @@ export class FlowHost {
           }
           await this.pace(120, scope.signal);
         });
+        const actual = await evalAcrossFrames(
+          win,
+          flowTextPageScript(DEEP_QUERY_HELPER, selector, 'read'),
+          isText,
+        );
+        const expected = clear ? text : `${before}${text}`;
+        if (actual !== expected) {
+          const wrote = await evalAcrossFrames(
+            win,
+            flowTextPageScript(DEEP_QUERY_HELPER, selector, 'write', expected, true),
+            isTrue,
+          );
+          if (!wrote)
+            throw new Error(`No input for ${selector}`);
+        }
         return;
       }
 
@@ -2161,13 +2180,17 @@ export class FlowHost {
     selector: string,
     signal: AbortSignal,
     timeoutMs = 4000,
+    preferEditable = false,
   ): Promise<{ readonly x: number; readonly y: number } | null> {
     if (win.isDestroyed())
       return null;
     const quoted = JSON.stringify(selector || 'body');
     const script = `(() => {
       ${DEEP_QUERY_HELPER}
-      const el = __txQuery(${quoted});
+      ${preferEditable ? FLOW_TEXT_TARGET_FNS : ''}
+      const host = __txQuery(${quoted});
+      if (!host) return null;
+      const el = ${preferEditable ? '(__txFindEditable(host) || host)' : 'host'};
       if (!el) return null;
       el.scrollIntoView({ block: 'center', inline: 'center', behavior: 'auto' });
       const rect = el.getBoundingClientRect();

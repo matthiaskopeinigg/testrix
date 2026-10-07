@@ -80,12 +80,12 @@ export interface FlowRunEventDetail {
   readonly actual?: string;
 }
 
-  /** True when a run detail is an HTTP exchange owned by Request / Listen / Intercept / Capture. */
+/** True when a run detail is an HTTP exchange owned by Request / Listen / Intercept. */
 export function flowDetailHasExchange(detail: FlowRunEventDetail | null | undefined): boolean {
   if (!detail)
     return false;
-  // Validators assert; the exchange lives on the producer node (request / listen / intercept).
-  if (detail.kind !== 'request' && detail.kind !== 'listener' && detail.kind !== 'interceptor' && detail.kind !== 'capture')
+  // Capture reads the same exchange the HTTP request already shows.
+  if (detail.kind !== 'request' && detail.kind !== 'listener' && detail.kind !== 'interceptor')
     return false;
   // Listen / Intercept: only after a real hit (not arm-only / miss).
   if ((detail.kind === 'listener' || detail.kind === 'interceptor') && detail.hit !== true)
