@@ -751,6 +751,7 @@ export {
 export {
   evalFlowCondition,
   interpolateFlow,
+  resolveFlowText,
   type FlowEvalContext,
 } from './flow-eval';
 export {

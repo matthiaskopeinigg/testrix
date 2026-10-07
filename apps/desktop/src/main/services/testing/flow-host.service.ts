@@ -14,7 +14,7 @@ import {
   flowHasStartToEndPath,
   flowNodeLabel,
   flowScenarioRunCount,
-  interpolateFlow,
+  resolveFlowText,
   ensureRequestUrlScheme,
   browserOpenUrlCandidates,
   isAbortedNavigationError,
@@ -141,11 +141,24 @@ export class FlowHost {
     private readonly mock: MockHost,
     private readonly intercept: InterceptHost,
     android: AndroidToolchainHost,
-    store: ConfigStore,
+    private readonly store: ConfigStore,
   ) {
     this.android = android;
     this.emulatorSerial = () => store.emulator.selectedSerial?.trim() || '';
     this.devices = new DeviceLane(android, () => store.emulator);
+  }
+
+  /** `{{name}}` from the run, then `$randomEmail` / `%randomEmail` and the other catalog tokens. */
+  private flowText(text: string, vars: Readonly<Record<string, string>>): string {
+    return resolveFlowText(text, vars, { emailDomain: this.store.settings.placeholderEmailDomain });
+  }
+
+  private evalCondition(expression: string, ctx: FlowEvalContext): boolean {
+    return evalFlowCondition(expression, ctx, { emailDomain: this.store.settings.placeholderEmailDomain });
+  }
+
+  private deviceVars(vars: Record<string, string>): DeviceLaneVars {
+    return { vars, emailDomain: this.store.settings.placeholderEmailDomain };
   }
 
   bind(listener: ((event: FlowRunEvent) => void) | null): void {
@@ -482,7 +495,7 @@ export class FlowHost {
 
     const controller = new AbortController();
     const signal = controller.signal;
-    const vars: DeviceLaneVars = { vars: { ...envVars } };
+    const vars: DeviceLaneVars = this.deviceVars({ ...envVars });
     this.devices.beginRun();
     this.activeArtifact = {
       description: '',
@@ -526,7 +539,7 @@ export class FlowHost {
           continue;
         // Skip Tap / Wait / Assert that still have no selector (still being authored).
         if (devicePickPrefixNeedsSelector(node.kind)) {
-          const selector = interpolateFlow(flowConfigString(node, 'selector', ''), vars.vars).trim();
+          const selector = this.flowText(flowConfigString(node, 'selector', ''), vars.vars).trim();
           if (!selector)
             continue;
         }
@@ -1087,7 +1100,7 @@ export class FlowHost {
   }
 
   private ifBranch(scope: ScopeContext, node: FlowGraphNode): boolean {
-    return evalFlowCondition(flowConfigString(node, 'condition', 'true') || 'true', scope.vars);
+    return this.evalCondition(flowConfigString(node, 'condition', 'true') || 'true', scope.vars);
   }
 
   private async runNode(
@@ -1112,11 +1125,11 @@ export class FlowHost {
         if (this.batching)
           throw new FlowStepError('Manual step cannot run inside a regression pack');
         const prompt =
-          interpolateFlow(flowConfigString(node, 'prompt', 'Enter a value to continue'), scope.vars.vars).trim() ||
+          this.flowText(flowConfigString(node, 'prompt', 'Enter a value to continue'), scope.vars.vars).trim() ||
           'Enter a value to continue';
         const variable =
-          interpolateFlow(flowConfigString(node, 'variable', 'manual'), scope.vars.vars).trim() || 'manual';
-        const placeholder = interpolateFlow(flowConfigString(node, 'placeholder'), scope.vars.vars);
+          this.flowText(flowConfigString(node, 'variable', 'manual'), scope.vars.vars).trim() || 'manual';
+        const placeholder = this.flowText(flowConfigString(node, 'placeholder'), scope.vars.vars);
         const value = await this.askManualPrompt(signal, {
           title: flowNodeLabel(node),
           prompt,
@@ -1140,7 +1153,7 @@ export class FlowHost {
       case 'set-var': {
         const name = flowConfigString(node, 'name');
         if (name)
-          scope.vars.vars[name] = interpolateFlow(flowConfigString(node, 'value'), scope.vars.vars);
+          scope.vars.vars[name] = this.flowText(flowConfigString(node, 'value'), scope.vars.vars);
         return null;
       }
 
@@ -1185,7 +1198,7 @@ export class FlowHost {
       case 'while': {
         const max = Math.max(1, Math.min(FLOW_LOOP_MAX_ITERATIONS, flowConfigNumber(node, 'maxIterations', 10)));
         let passes = 0;
-        while (passes < max && evalFlowCondition(flowConfigString(node, 'condition', 'false'), scope.vars)) {
+        while (passes < max && this.evalCondition(flowConfigString(node, 'condition', 'false'), scope.vars)) {
           await this.runScope(scope, node.id);
           passes += 1;
         }
@@ -1215,17 +1228,17 @@ export class FlowHost {
 
       case 'request': {
         const method =
-          interpolateFlow(flowConfigString(node, 'method', 'GET'), scope.vars.vars).trim().toUpperCase() || 'GET';
-        const rawUrl = interpolateFlow(flowConfigString(node, 'url', '127.0.0.1/'), scope.vars.vars);
+          this.flowText(flowConfigString(node, 'method', 'GET'), scope.vars.vars).trim().toUpperCase() || 'GET';
+        const rawUrl = this.flowText(flowConfigString(node, 'url', '127.0.0.1/'), scope.vars.vars);
         const pathParams = parseFlowRequestKvRows(flowConfigString(node, 'pathParams')).map((row) => ({
           ...row,
-          key: interpolateFlow(row.key, scope.vars.vars),
-          value: interpolateFlow(row.value, scope.vars.vars),
+          key: this.flowText(row.key, scope.vars.vars),
+          value: this.flowText(row.value, scope.vars.vars),
         }));
         const queryParams = parseFlowRequestKvRows(flowConfigString(node, 'queryParams')).map((row) => ({
           ...row,
-          key: interpolateFlow(row.key, scope.vars.vars),
-          value: interpolateFlow(row.value, scope.vars.vars),
+          key: this.flowText(row.key, scope.vars.vars),
+          value: this.flowText(row.value, scope.vars.vars),
         }));
         const url = planFlowRequestUrl({ url: rawUrl, pathParams, queryParams });
         const requestBodyModel = interpolateFlowRequestBody(
@@ -1240,15 +1253,15 @@ export class FlowHost {
             binaryType: flowConfigString(node, 'binaryType'),
             binaryBase64: flowConfigString(node, 'binaryBase64'),
           }),
-          (value) => interpolateFlow(value, scope.vars.vars),
+          (value) => this.flowText(value, scope.vars.vars),
         );
         const encoded = planFlowRequestEncodedBody(requestBodyModel);
         const requestBody = encoded.text;
         const headers = mergeFlowRequestContentType(
           flowRequestHeaderPairs(parseFlowRequestKvRows(flowConfigString(node, 'headers'))).map(
             (pair) => ({
-              key: interpolateFlow(pair.key, scope.vars.vars),
-              value: interpolateFlow(pair.value, scope.vars.vars),
+              key: this.flowText(pair.key, scope.vars.vars),
+              value: this.flowText(pair.value, scope.vars.vars),
             }),
           ),
           encoded.contentType,
@@ -1289,7 +1302,7 @@ export class FlowHost {
         const connection = findDatabaseConnection(scope.databases.nodes, flowConfigString(node, 'connectionId'));
         if (!connection)
           throw new Error('Database connection missing');
-        const query = interpolateFlow(flowConfigString(node, 'query', 'SELECT 1'), scope.vars.vars);
+        const query = this.flowText(flowConfigString(node, 'query', 'SELECT 1'), scope.vars.vars);
         const envelope = await this.database.query({ connection, query });
         const columns = envelope.table.columns;
         const objects = envelope.table.rows.map((row) => {
@@ -1317,14 +1330,14 @@ export class FlowHost {
       }
 
       case 'http-listener': {
-        const matchUrl = interpolateFlow(flowConfigString(node, 'url'), scope.vars.vars);
-        const method = interpolateFlow(flowConfigString(node, 'method', '*'), scope.vars.vars) || '*';
+        const matchUrl = this.flowText(flowConfigString(node, 'url'), scope.vars.vars);
+        const method = this.flowText(flowConfigString(node, 'method', '*'), scope.vars.vars) || '*';
         const match = flowConfigString(node, 'match', 'contains') || 'contains';
         const waitMs = flowConfigNumber(node, 'waitMs', 10_000);
         const stage = parseFlowHttpStage(flowConfigString(node, 'stage', 'response'));
-        const headerName = interpolateFlow(flowConfigString(node, 'headerName'), scope.vars.vars);
-        const headerValue = interpolateFlow(flowConfigString(node, 'headerValue'), scope.vars.vars);
-        const bodyContains = interpolateFlow(flowConfigString(node, 'bodyContains'), scope.vars.vars);
+        const headerName = this.flowText(flowConfigString(node, 'headerName'), scope.vars.vars);
+        const headerValue = this.flowText(flowConfigString(node, 'headerValue'), scope.vars.vars);
+        const bodyContains = this.flowText(flowConfigString(node, 'bodyContains'), scope.vars.vars);
         const useProxy = Boolean(this.devices.activeSerial());
         const useBrowser =
           !useProxy &&
@@ -1381,20 +1394,20 @@ export class FlowHost {
       }
 
       case 'http-interceptor': {
-        const matchUrl = interpolateFlow(flowConfigString(node, 'url'), scope.vars.vars);
-        const method = interpolateFlow(flowConfigString(node, 'method', '*'), scope.vars.vars) || '*';
+        const matchUrl = this.flowText(flowConfigString(node, 'url'), scope.vars.vars);
+        const method = this.flowText(flowConfigString(node, 'method', '*'), scope.vars.vars) || '*';
         const match = flowConfigString(node, 'match', 'contains') || 'contains';
         const waitMs = flowConfigNumber(node, 'waitMs', 10_000);
         const stage = parseFlowHttpStage(flowConfigString(node, 'stage', 'request'));
-        const headerName = interpolateFlow(flowConfigString(node, 'headerName'), scope.vars.vars);
-        const headerValue = interpolateFlow(flowConfigString(node, 'headerValue'), scope.vars.vars);
-        const bodyContains = interpolateFlow(flowConfigString(node, 'bodyContains'), scope.vars.vars);
+        const headerName = this.flowText(flowConfigString(node, 'headerName'), scope.vars.vars);
+        const headerValue = this.flowText(flowConfigString(node, 'headerValue'), scope.vars.vars);
+        const bodyContains = this.flowText(flowConfigString(node, 'bodyContains'), scope.vars.vars);
         const action = parseFlowInterceptAction(flowConfigString(node, 'action', 'passthrough'));
-        const setHeaders = interpolateFlow(flowConfigString(node, 'setHeaders', '[]'), scope.vars.vars);
-        const removeHeaders = interpolateFlow(flowConfigString(node, 'removeHeaders', '[]'), scope.vars.vars);
-        const setBody = interpolateFlow(flowConfigString(node, 'setBody'), scope.vars.vars);
+        const setHeaders = this.flowText(flowConfigString(node, 'setHeaders', '[]'), scope.vars.vars);
+        const removeHeaders = this.flowText(flowConfigString(node, 'removeHeaders', '[]'), scope.vars.vars);
+        const setBody = this.flowText(flowConfigString(node, 'setBody'), scope.vars.vars);
         const mockStatus = flowConfigNumber(node, 'mockStatus', 200);
-        const mockBody = interpolateFlow(flowConfigString(node, 'mockBody', '{\n}\n'), scope.vars.vars);
+        const mockBody = this.flowText(flowConfigString(node, 'mockBody', '{\n}\n'), scope.vars.vars);
         const useProxy = Boolean(this.devices.activeSerial());
         const useBrowser =
           !useProxy &&
@@ -1479,7 +1492,7 @@ export class FlowHost {
       case 'assert-json': {
         await this.resolvePreviousHttp(scope, parents);
         const expression = flowConfigString(node, 'expression', 'status == 200');
-        if (!evalFlowCondition(expression, scope.vars)) {
+        if (!this.evalCondition(expression, scope.vars)) {
           throw new FlowStepError(`${flowNodeLabel(node)} did not hold`, {
             kind: 'assert',
             expected: expression,
@@ -1501,7 +1514,7 @@ export class FlowHost {
           const artifact = scope.artifact ?? this.activeArtifact;
           if (!artifact)
             throw new Error('Device nodes need a flow artifact.');
-          await this.devices.run(node, artifact, scope.vars, signal);
+          await this.devices.run(node, artifact, this.deviceVars(scope.vars.vars), signal);
           if (node.kind === 'device-start' && scenarioNeedsDeviceProxy(scope.scenario))
             await this.ensureDeviceProxy(scope.scenario);
           return null;
@@ -1753,7 +1766,7 @@ export class FlowHost {
 
   private async runBrowserNode(scope: ScopeContext, node: FlowGraphNode): Promise<void> {
     const vars = scope.vars.vars;
-    const selector = interpolateFlow(flowConfigString(node, 'selector'), vars);
+    const selector = this.flowText(flowConfigString(node, 'selector'), vars);
 
     if (node.kind === 'browser-open') {
       const win = await scope.lane.ensure(
@@ -1762,7 +1775,7 @@ export class FlowHost {
       );
       if (scope.signal.aborted || win.isDestroyed())
         throw new Error('cancelled');
-      await this.load(win, interpolateFlow(flowConfigString(node, 'url', 'http://127.0.0.1/'), vars));
+      await this.load(win, this.flowText(flowConfigString(node, 'url', 'http://127.0.0.1/'), vars));
       if (scope.signal.aborted || win.isDestroyed())
         throw new Error('cancelled');
       await scope.lane.setAction(flowNodeLabel(node));
@@ -1802,7 +1815,7 @@ export class FlowHost {
       }
 
       case 'browser-type': {
-        const text = interpolateFlow(flowConfigString(node, 'text'), vars);
+        const text = this.flowText(flowConfigString(node, 'text'), vars);
         const clear = flowConfigBoolean(node, 'clearFirst', true);
         if (this.e2eReplay === 'fast') {
           const ok = await evalAcrossFrames(
@@ -1852,7 +1865,7 @@ export class FlowHost {
       }
 
       case 'browser-select': {
-        const value = interpolateFlow(flowConfigString(node, 'value'), vars);
+        const value = this.flowText(flowConfigString(node, 'value'), vars);
         const point = await this.prepareTarget(win, selector, scope.signal);
         if (!point)
           throw new Error(`No select for ${selector}`);
@@ -1977,14 +1990,14 @@ export class FlowHost {
         );
         if (actual === null)
           throw new Error(`No element for ${selector}`);
-        const expected = interpolateFlow(flowConfigString(node, 'expected'), vars);
+        const expected = this.flowText(flowConfigString(node, 'expected'), vars);
         assertFlowMatch(actual.trim(), expected, flowConfigString(node, 'match', 'contains'), selector);
         await this.prepareTarget(win, selector || 'body', scope.signal);
         return;
       }
 
       case 'assert-url': {
-        const expected = interpolateFlow(flowConfigString(node, 'expected'), vars);
+        const expected = this.flowText(flowConfigString(node, 'expected'), vars);
         const mode = flowConfigString(node, 'match', 'contains');
         const timeout = Math.max(0, flowConfigNumber(node, 'timeoutMs', 5000));
         if (timeout === 0) {

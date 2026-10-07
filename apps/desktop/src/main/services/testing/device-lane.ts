@@ -5,7 +5,7 @@ import {
   flowConfigBoolean,
   flowConfigNumber,
   flowConfigString,
-  interpolateFlow,
+  resolveFlowText,
   isFlowDeviceKind,
   normalizeAndroidPackageInput,
   parseDeviceHierarchy,
@@ -19,6 +19,8 @@ import { AdbClient } from './adb-client';
 import type { AndroidToolchainHost } from './android-toolchain.service';
 export interface DeviceLaneVars {
   readonly vars: Record<string, string>;
+  /** Domain for `$randomEmail` / `%randomEmail`. */
+  readonly emailDomain?: string;
 }
 
 /**
@@ -100,7 +102,9 @@ export class DeviceLane {
       return;
     throwIfAborted(signal);
     const text = (key: string, fallback = '') =>
-      interpolateFlow(flowConfigString(node, key, fallback), vars.vars).trim();
+      resolveFlowText(flowConfigString(node, key, fallback), vars.vars, {
+        emailDomain: vars.emailDomain,
+      }).trim();
 
     if (node.kind === 'device-start') {
       await this.startDevice(

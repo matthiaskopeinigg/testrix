@@ -4,6 +4,12 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+### Fixed
+
+- Picking a CSS selector keeps `{{name}}` in the Open browser URL. The page still opens at the resolved address.
+- `$randomEmail` and `%randomEmail` become a generated address when a flow runs or when Pick loads a page. The saved field keeps the token. Settings → HTTP sets the domain, and `%randomEmail(other.at)` overrides it for that token.
+- A long token field scrolls to the caret, including the last character. Selecting the whole value stays inside the field.
+
 ## [2.0.6] — 2026-10-07
 
 ### Fixed

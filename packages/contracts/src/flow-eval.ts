@@ -1,3 +1,4 @@
+import { expandPlaceholders, type ExpandPlaceholderOptions } from './placeholders';
 import type { FlowStep } from './flows-file';
 
 export interface FlowEvalContext {
@@ -17,15 +18,37 @@ export interface FlowEvalContext {
 /**
  * Replaces `{{name}}` tokens from the flow variable map.
  */
-export function interpolateFlow(text: string, vars: Record<string, string>): string {
+export function interpolateFlow(text: string, vars: Readonly<Record<string, string>>): string {
   return text.replace(/\{\{\s*([\w.-]+)\s*\}\}/g, (_all, key: string) => vars[key] ?? '');
+}
+
+/**
+ * Substitutes `{{name}}`, then expands `$randomEmail` and `%randomEmail` (and the other catalog tokens).
+ * Unknown `$foo` / `%foo` stay as written. Percent-encoding such as `%20` is left alone.
+ */
+export function resolveFlowText(
+  text: string,
+  vars: Readonly<Record<string, string>>,
+  options: ExpandPlaceholderOptions = {},
+): string {
+  const interpolated = interpolateFlow(text, vars);
+  const dollars = expandPlaceholders(interpolated, options);
+  return dollars.replace(/%([A-Za-z][A-Za-z0-9]*)(?:\(([^)]*)\))?/g, (match, name: string, rawArgs: string | undefined) => {
+    const dollar = rawArgs === undefined ? `$${name}` : `$${name}(${rawArgs})`;
+    const expanded = expandPlaceholders(dollar, options);
+    return expanded === dollar ? match : expanded;
+  });
 }
 
 /**
  * Evaluates a compact comparison used by IF / WHILE / VALIDATION steps.
  */
-export function evalFlowCondition(expression: string, ctx: FlowEvalContext): boolean {
-  const expr = interpolateFlow(expression, ctx.vars).trim();
+export function evalFlowCondition(
+  expression: string,
+  ctx: FlowEvalContext,
+  options: ExpandPlaceholderOptions = {},
+): boolean {
+  const expr = resolveFlowText(expression, ctx.vars, options).trim();
   if (!expr)
     return true;
   if (expr === 'true' || expr === '1')

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { flowBrowserOpenUrlCandidates, resolveFlowBrowserOpenUrl } from './flow-open-url';
+import { flowBrowserOpenUrlCandidates, flowFieldKeepsTemplate, resolveFlowBrowserOpenUrl } from './flow-open-url';
 
 describe('flow-open-url', () => {
   it('adds https for bare hosts', () => {
@@ -15,6 +15,15 @@ describe('flow-open-url', () => {
   it('interpolates then adds a scheme', () => {
     expect(resolveFlowBrowserOpenUrl('{{host}}/app', { host: 'api.example.com' })).toBe(
       'https://api.example.com/app',
+    );
+  });
+
+  it('keeps a templated open URL distinct from the page it loads', () => {
+    expect(flowFieldKeepsTemplate('{{host}}/login')).toBe(true);
+    expect(flowFieldKeepsTemplate('https://example.com/$randomEmail')).toBe(true);
+    expect(flowFieldKeepsTemplate('https://example.com/login')).toBe(false);
+    expect(resolveFlowBrowserOpenUrl('{{host}}/login', { host: 'example.com' })).toBe(
+      'https://example.com/login',
     );
   });
 

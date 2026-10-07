@@ -75,6 +75,7 @@ export class TokenFieldComponent {
   private pointerMoved = false;
   private pointerDownX = 0;
   private pointerDownY = 0;
+  private revealing = false;
 
   readonly completePositions = COMPLETE_POSITIONS;
   readonly completeOpen = signal(false);
@@ -101,6 +102,7 @@ export class TokenFieldComponent {
     if (!(target instanceof HTMLInputElement) && !(target instanceof HTMLTextAreaElement))
       return;
     this.valueChange.emit(target.value);
+    this.queueReveal(target);
     if (this.readonly())
       return;
     this.refreshComplete(target, 'auto');
@@ -124,9 +126,10 @@ export class TokenFieldComponent {
         event.key === 'Home' ||
         event.key === 'End'
       )
-        queueMicrotask(() =>
-          this.showHintAtOffset(target, target.selectionStart ?? target.value.length),
-        );
+        queueMicrotask(() => {
+          this.queueReveal(target);
+          this.showHintAtOffset(target, target.selectionStart ?? target.value.length);
+        });
       return;
     }
     if (event.key === 'ArrowDown') {
@@ -181,6 +184,8 @@ export class TokenFieldComponent {
         Math.abs(event.clientY - this.pointerDownY) > 3
       )
         this.pointerMoved = true;
+      if (target instanceof HTMLInputElement)
+        this.nudgeClip(target, event.clientX);
       return;
     }
     if (target.selectionStart !== target.selectionEnd) {
@@ -201,6 +206,8 @@ export class TokenFieldComponent {
     const target = event.target;
     if (!(target instanceof HTMLInputElement) && !(target instanceof HTMLTextAreaElement))
       return;
+    if (target instanceof HTMLInputElement)
+      this.queueReveal(target);
     if (this.pointerMoved || target.selectionStart !== target.selectionEnd)
       return;
     if (!shouldOpenPlaceholderOrigin(event))
@@ -232,13 +239,92 @@ export class TokenFieldComponent {
       this.valueCommit.emit(this.value());
   }
 
+  handleCaret(event: Event): void {
+    const target = event.target;
+    if (!(target instanceof HTMLInputElement))
+      return;
+    this.queueReveal(target);
+  }
+
   handleScroll(event: Event): void {
     const target = event.target;
-    if (!(target instanceof HTMLTextAreaElement))
+    if (target instanceof HTMLInputElement) {
+      this.revealCaret(target);
       return;
-    const highlight = target.parentElement?.querySelector('tx-placeholder-highlight');
-    if (highlight instanceof HTMLElement)
-      highlight.scrollTop = target.scrollTop;
+    }
+    if (target instanceof HTMLTextAreaElement)
+      this.syncHighlightScroll(target);
+  }
+
+  /** Multiline token paint follows the textarea's own scroll. */
+  private syncHighlightScroll(el: HTMLTextAreaElement): void {
+    const layer = el.parentElement?.querySelector('tx-placeholder-highlight .tx-ph');
+    if (!(layer instanceof HTMLElement))
+      return;
+    layer.style.transform = `translate(${-el.scrollLeft}px, ${-el.scrollTop}px)`;
+  }
+
+  private queueReveal(el: HTMLInputElement | HTMLTextAreaElement): void {
+    if (el instanceof HTMLTextAreaElement) {
+      this.syncHighlightScroll(el);
+      requestAnimationFrame(() => this.syncHighlightScroll(el));
+      return;
+    }
+    this.revealCaret(el);
+    requestAnimationFrame(() => this.revealCaret(el));
+  }
+
+  /**
+   * Single-line fields scroll an outer clip. The input stays as wide as the
+   * text so its own scroll offset stays 0 and selection cannot paint outside.
+   */
+  private revealCaret(el: HTMLInputElement): void {
+    if (this.revealing)
+      return;
+    const clip = el.closest('.tx-token-field__clip');
+    if (!(clip instanceof HTMLElement))
+      return;
+    const style = getComputedStyle(el);
+    const padLeft = Number.parseFloat(style.paddingLeft) || 0;
+    const start = el.selectionStart ?? 0;
+    const end = el.selectionEnd ?? start;
+    const focus = el.selectionDirection === 'backward' ? start : end;
+    const ctx = this.measureCtx();
+    let caretX = padLeft;
+    if (ctx) {
+      ctx.font = `${style.fontStyle} ${style.fontWeight} ${style.fontSize} ${style.fontFamily}`.trim();
+      caretX += ctx.measureText(el.value.slice(0, focus)).width;
+    }
+    const slack = 24;
+    const view = clip.clientWidth;
+    let next = clip.scrollLeft;
+    if (start === 0 && end === el.value.length && end > start)
+      next = 0;
+    else if (caretX + slack > next + view)
+      next = caretX + slack - view;
+    else if (caretX - slack < next)
+      next = Math.max(0, caretX - slack);
+    this.revealing = true;
+    if (el.scrollLeft !== 0)
+      el.scrollLeft = 0;
+    if (clip.scrollLeft !== next)
+      clip.scrollLeft = next;
+    this.revealing = false;
+  }
+
+  /** Dragging against the clip edge scrolls the text under the pointer. */
+  private nudgeClip(el: HTMLInputElement, clientX: number): void {
+    const clip = el.closest('.tx-token-field__clip');
+    if (!(clip instanceof HTMLElement))
+      return;
+    const rect = clip.getBoundingClientRect();
+    const edge = 20;
+    if (clientX > rect.right - edge)
+      clip.scrollLeft += 18;
+    else if (clientX < rect.left + edge)
+      clip.scrollLeft = Math.max(0, clip.scrollLeft - 18);
+    if (el.scrollLeft !== 0)
+      el.scrollLeft = 0;
   }
 
   handleCompletePick(item: PlaceholderSuggestion): void {
@@ -332,6 +418,7 @@ export class TokenFieldComponent {
       () => {
         origin.focus();
         origin.setSelectionRange(applied.cursor, applied.cursor);
+        this.queueReveal(origin);
       },
       { injector: this.injector },
     );

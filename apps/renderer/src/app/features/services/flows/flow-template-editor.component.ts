@@ -636,8 +636,6 @@ export class FlowTemplateEditorComponent {
         stopBeforeNodeId: node.id,
         scenario,
       });
-      if (result.loadedUrl)
-        this.applyBrowserOpenUrl(result.loadedUrl);
       if (result.ok && result.selector)
         this.patchSelectedConfig({ selector: result.selector });
     } finally {
@@ -684,7 +682,10 @@ export class FlowTemplateEditorComponent {
     }
   }
 
-  /** Prefer the draft graph's browser-open URL (env-resolved) so Pick uses unsaved edits. */
+  /**
+   * URL the picker should open. Resolved for the browser only — the Open node
+   * keeps `{{url}}` and is not replaced with the loaded address.
+   */
   private pickPageUrl(): string | null {
     const env = this.environments.items().find((item) => item.id === this.environments.activeId());
     const vars = env ? environmentVariableMap(env.variables) : {};
@@ -696,23 +697,9 @@ export class FlowTemplateEditorComponent {
     const raw = flowConfigString(open, 'url', '').trim();
     if (!raw)
       return null;
-    const resolved = resolveFlowBrowserOpenUrl(raw, vars);
-    if (!resolved)
-      return null;
-    if (resolved !== raw)
-      this.commit(patchNodeConfig(this.graph(), open.id, { url: resolved }));
-    return resolved;
-  }
-
-  private applyBrowserOpenUrl(loadedUrl: string): void {
-    const open =
-      this.graph().nodes.find((item) => item.kind === 'browser-open' && item.enabled !== false) ??
-      this.graph().nodes.find((item) => item.kind === 'browser-open');
-    if (!open)
-      return;
-    const current = flowConfigString(open, 'url', '').trim();
-    if (loadedUrl && loadedUrl !== current)
-      this.commit(patchNodeConfig(this.graph(), open.id, { url: loadedUrl }));
+    return resolveFlowBrowserOpenUrl(raw, vars, {
+      emailDomain: this.desktop.settings().placeholderEmailDomain,
+    }) || null;
   }
 
   patchSelectedEdgeName(name: string): void {

@@ -47,6 +47,7 @@
   font: inherit;
   font-size: var(--tx-type-ui);
   font-variant-numeric: tabular-nums;
+  text-overflow: clip;
   resize: none;
   -webkit-user-select: text;
   user-select: text;

@@ -17,12 +17,14 @@
 
 :host-context(.is-multiline) {
   align-items: flex-start;
-  overflow: auto;
+  overflow: hidden;
 }
 
 .tx-ph {
   display: block;
-  overflow: hidden;
+  width: max-content;
+  max-width: none;
+  overflow: visible;
   font: inherit;
   letter-spacing: inherit;
   line-height: inherit;

@@ -3,16 +3,16 @@
     <span class="tx-token-field__label">{{ label() }}</span>
   }
   <span class="tx-token-field__shell">
-    @if (hasTokens()) {
-      <tx-placeholder-highlight
-        [value]="value()"
-        [variables]="variables()"
-        [pathParams]="pathParams()"
-        [multiline]="multiline()"
-        [markUnknown]="markUnknown()"
-      />
-    }
     @if (multiline()) {
+      @if (hasTokens()) {
+        <tx-placeholder-highlight
+          [value]="value()"
+          [variables]="variables()"
+          [pathParams]="pathParams()"
+          [multiline]="true"
+          [markUnknown]="markUnknown()"
+        />
+      }
       <textarea
         class="tx-token-field__input"
         [class.has-tokens]="hasTokens()"
@@ -35,25 +35,41 @@
         (scroll)="handleScroll($event)"
       ></textarea>
     } @else {
-      <input
-        class="tx-token-field__input"
-        [class.has-tokens]="hasTokens()"
-        [id]="id() || null"
-        [attr.type]="type()"
-        [value]="value()"
-        [placeholder]="placeholder()"
-        [attr.aria-label]="controlAria()"
-        [readOnly]="readonly()"
-        spellcheck="false"
-        autocomplete="off"
-        (input)="handleInput($event)"
-        (keydown)="handleKey($event)"
-        (pointerdown)="handlePointerDown($event)"
-        (pointermove)="handlePointerMove($event)"
-        (pointerleave)="handlePointerLeave()"
-        (click)="handleClick($event)"
-        (blur)="handleBlur()"
-      />
+      <span class="tx-token-field__clip">
+        <span class="tx-token-field__track">
+          <span class="tx-token-field__sizer" aria-hidden="true">{{ value() }}</span>
+          @if (hasTokens()) {
+            <tx-placeholder-highlight
+              [value]="value()"
+              [variables]="variables()"
+              [pathParams]="pathParams()"
+              [markUnknown]="markUnknown()"
+            />
+          }
+          <input
+            class="tx-token-field__input"
+            [class.has-tokens]="hasTokens()"
+            [id]="id() || null"
+            [attr.type]="type()"
+            [value]="value()"
+            [placeholder]="placeholder()"
+            [attr.aria-label]="controlAria()"
+            [readOnly]="readonly()"
+            spellcheck="false"
+            autocomplete="off"
+            (input)="handleInput($event)"
+            (keydown)="handleKey($event)"
+            (keyup)="handleCaret($event)"
+            (select)="handleCaret($event)"
+            (pointerdown)="handlePointerDown($event)"
+            (pointermove)="handlePointerMove($event)"
+            (pointerleave)="handlePointerLeave()"
+            (click)="handleClick($event)"
+            (scroll)="handleScroll($event)"
+            (blur)="handleBlur()"
+          />
+        </span>
+      </span>
     }
   </span>
 </label>
