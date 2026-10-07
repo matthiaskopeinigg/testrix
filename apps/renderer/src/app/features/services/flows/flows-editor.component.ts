@@ -181,6 +181,8 @@ export class FlowsEditorComponent implements PlaceholderOriginHost {
   readonly designChromeAnimate = signal(false);
   readonly fitToken = signal(0);
   readonly pickingSelector = signal(false);
+  readonly selectorPickError = signal<string | null>(null);
+  readonly selectorPickNodeId = signal<string | null>(null);
   readonly pickingDeviceSelector = signal(false);
   readonly devicePickError = signal<string | null>(null);
   readonly dirty = signal(false);
@@ -1116,6 +1118,8 @@ export class FlowsEditorComponent implements PlaceholderOriginHost {
     const scenario = this.scenario();
     if (!scenario)
       return;
+    this.selectorPickError.set(null);
+    this.selectorPickNodeId.set(node.id);
     this.pickingSelector.set(true);
     try {
       const url = this.pickPageUrl();
@@ -1130,8 +1134,13 @@ export class FlowsEditorComponent implements PlaceholderOriginHost {
         stopBeforeNodeId: node.id,
         scenario: draft,
       });
-      if (result.ok && result.selector)
+      if (result.ok && result.selector) {
         this.patchSelectedConfig({ selector: result.selector });
+        this.selectorPickError.set(null);
+        return;
+      }
+      if (!result.cancelled && result.error)
+        this.selectorPickError.set(result.error);
     } finally {
       this.pickingSelector.set(false);
     }

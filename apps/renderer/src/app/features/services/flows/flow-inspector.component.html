@@ -214,6 +214,9 @@
           (valueCommit)="commitRequestUrl($event)"
         />
       </div>
+      <p class="tx-flow-inspector__hint">
+        Sends the workspace cookie jar and cookies from the E2E browser. A call that cannot be sent stops the flow.
+      </p>
       <div class="tx-flow-inspector__req-tabs" role="tablist" aria-label="Request sections">
         @for (section of requestSections; track section) {
           <button
@@ -405,8 +408,9 @@
     }
     @case ('capture') {
       <p class="tx-flow-inspector__hint">
-        Reads the last HTTP exchange (request or listener). Example JSON path
-        <code>replicas[0].entries[0].otp</code>; header <code>authorization</code> → <code>token</code>.
+        Reads the last HTTP exchange. A JSON string still walks, so
+        <code>items[0].value.pin</code> stores the pin. Later steps read
+        <code>{{ '{{' }}pin{{ '}}' }}</code>.
       </p>
       @for (rule of captureRules(); track $index) {
         <div class="tx-flow-inspector__capture-rule">
@@ -800,7 +804,7 @@
     />
     <tx-hint
       [label]="pickingSelector() ? 'Click an element in the E2E window…' : 'Pick on page'"
-      detail="Opens the E2E browser so you can click the target element"
+      detail="Replays earlier browser steps. HTTP request and Capture in between are skipped."
       placement="left"
     >
       <button
@@ -814,4 +818,7 @@
       </button>
     </tx-hint>
   </div>
+  @if (selectorPickError(); as pickError) {
+    <p class="tx-flow-inspector__hint is-error" role="alert">{{ pickError }}</p>
+  }
 </ng-template>

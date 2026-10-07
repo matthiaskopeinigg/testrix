@@ -120,6 +120,7 @@ export class FlowInspectorComponent {
   readonly pickDeviceSelector = output<{ readonly runPrevious: boolean }>();
   readonly pickingDeviceSelector = input(false);
   readonly devicePickError = input<string | null>(null);
+  readonly selectorPickError = input<string | null>(null);
 
   /** When true, Pick runs preceding device steps (Launch / Wait / …), never boots. */
   readonly runPreviousDeviceSteps = signal(false);

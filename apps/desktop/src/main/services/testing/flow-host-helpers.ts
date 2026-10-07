@@ -3,6 +3,7 @@ import {
   ensureRequestUrlScheme,
   extractFlowJsonPath,
   parseFlowCaptureRules,
+  type CollectionCookie,
   type FlowEvalContext,
   type FlowRunEventDetail,
   type FlowScenario,
@@ -47,6 +48,55 @@ export function devicePickPrefixKind(kind: string): boolean {
     kind !== 'device-start' &&
     kind !== 'device-install'
   );
+}
+
+/** Chromium session cookie row, mapped into the workspace cookie shape. */
+export interface SessionCookieInput {
+  readonly name: string;
+  readonly value: string;
+  readonly domain?: string;
+  readonly path?: string;
+  readonly secure?: boolean;
+  readonly httpOnly?: boolean;
+  /** Unix seconds, as returned by Electron `cookies.get`. */
+  readonly expirationDate?: number;
+}
+
+/** Maps an E2E browser cookie so the HTTP engine can send it with a flow request. */
+export function collectionCookieFromSession(cookie: SessionCookieInput): CollectionCookie | null {
+  const name = cookie.name.trim();
+  if (!name)
+    return null;
+  const domain = (cookie.domain ?? '').trim();
+  const path = cookie.path?.trim() || '/';
+  const expires =
+    typeof cookie.expirationDate === 'number' && Number.isFinite(cookie.expirationDate)
+      ? new Date(cookie.expirationDate * 1000).toISOString()
+      : '';
+  return {
+    id: `e2e:${name}:${domain}:${path}`,
+    enabled: true,
+    name,
+    value: cookie.value,
+    domain,
+    path,
+    expires,
+    secure: cookie.secure === true,
+    httpOnly: cookie.httpOnly === true,
+  };
+}
+
+/** URL Electron accepts when writing a Set-Cookie back onto the E2E session. */
+export function sessionCookieUrl(
+  cookie: Pick<CollectionCookie, 'domain' | 'path' | 'secure'>,
+  fallbackUrl: string,
+): string {
+  const domain = cookie.domain.trim().replace(/^\./, '');
+  if (!domain)
+    return fallbackUrl;
+  const scheme = cookie.secure ? 'https' : 'http';
+  const path = cookie.path.trim() || '/';
+  return `${scheme}://${domain}${path.startsWith('/') ? path : `/${path}`}`;
 }
 
 export function httpSummary(detail: FlowRunEventDetail): string {

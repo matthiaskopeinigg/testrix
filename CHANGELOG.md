@@ -4,6 +4,12 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+### Fixed
+
+- Pick on page replays browser steps and skips HTTP request, Capture, and other API steps in between, so those nodes no longer cancel the picker.
+- An HTTP request node sends the workspace cookie jar and the E2E browser session, uses the workspace proxy and TLS setting, and fails the step when the call cannot be sent.
+- Capture reads a field inside a JSON string, such as `items[0].value.pin`.
+
 ## [2.0.8] — 2026-10-07
 
 ### Fixed

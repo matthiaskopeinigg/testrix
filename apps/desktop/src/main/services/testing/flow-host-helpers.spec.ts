@@ -5,12 +5,14 @@ import {
   applyFlowResponse,
   assertFlowMatch,
   BODY_PREVIEW_LIMIT,
+  collectionCookieFromSession,
   devicePickPrefixKind,
   flowUrlMatches,
   headerMapFromPairs,
   httpSummary,
   normalizeUrlForCompare,
   previewBody,
+  sessionCookieUrl,
   sleep,
 } from './flow-host-helpers';
 
@@ -77,6 +79,24 @@ describe('flow step helpers', () => {
 
     // Assert
     expect(summaries).toEqual(['captured token', '200 · GET · https://a.test', 'no hit']);
+  });
+
+  it('maps an E2E session cookie onto the request cookie jar', () => {
+    const cookie = collectionCookieFromSession({
+      name: 'sid',
+      value: 'abc',
+      domain: '.example.test',
+      path: '/',
+      secure: true,
+      httpOnly: true,
+      expirationDate: 1_700_000_000,
+    });
+
+    expect(cookie?.name).toBe('sid');
+    expect(cookie?.domain).toBe('.example.test');
+    expect(cookie?.secure).toBe(true);
+    expect(sessionCookieUrl(cookie!, 'https://fallback.test/')).toBe('https://example.test/');
+    expect(collectionCookieFromSession({ name: '  ', value: '' })).toBeNull();
   });
 
   it('only re-runs device steps other than start and install before Pick', () => {

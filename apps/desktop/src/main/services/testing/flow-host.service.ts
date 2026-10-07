@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { BrowserWindow, session } from 'electron';
 import {
   DEFAULT_FOLDER_AUTH,
+  overlayCookies,
   FLOW_LOOP_MAX_ITERATIONS,
   buildFlowRunPlan,
   evalFlowCondition,
@@ -35,6 +36,7 @@ import {
   isFlowDeviceKind,
   DEFAULT_DATABASES_FILE,
   IpcChannels,
+  type CollectionCookie,
   type DatabasesFile,
   type FlowArtifactFields,
   type FlowE2eReplay,
@@ -70,7 +72,11 @@ import {
   DEEP_QUERY_HELPER,
   pickSelectorWithCdp,
 } from './e2e-picker-cdp';
-import { prefixNodeIdsBefore } from './e2e-picker-targets';
+import {
+  browserPickPrefixKind,
+  browserPickPrefixNeedsSelector,
+  prefixNodeIdsBefore,
+} from './e2e-picker-targets';
 import { BrowserLane, E2E_PARTITION } from './flow-browser-lane';
 import {
   assertFlowMatch,
@@ -87,6 +93,8 @@ import {
   sleep,
   applyFlowCaptureRules,
   applyFlowResponse,
+  collectionCookieFromSession,
+  sessionCookieUrl,
   type ArmedHttpListen,
 } from './flow-host-helpers';
 
@@ -564,8 +572,9 @@ export class FlowHost {
   }
 
   /**
-   * Runs draft scenario nodes that precede `stopBeforeNodeId` on the pick lane.
-   * Leaves the window open for inspect mode when a browser step ran.
+   * Replays browser steps that precede `stopBeforeNodeId` on the pick lane.
+   * HTTP request, Capture, and other API steps are skipped so a failure there
+   * cannot close the window before the user clicks an element.
    */
   private async runPickPrefix(options: {
     readonly scenario: FlowScenario;
@@ -617,6 +626,13 @@ export class FlowHost {
         const node = nodes.get(id);
         if (!node || node.enabled === false)
           continue;
+        if (!browserPickPrefixKind(node.kind))
+          continue;
+        if (browserPickPrefixNeedsSelector(node.kind)) {
+          const selector = this.flowText(flowConfigString(node, 'selector', ''), scope.vars.vars).trim();
+          if (!selector)
+            continue;
+        }
         if (isFlowBrowserKind(node.kind) && !lane.current())
           await lane.ensure(1100, 800, { visible: true });
         if (lane.current())
@@ -834,6 +850,58 @@ export class FlowHost {
       }
     }
     return failure;
+  }
+
+  /**
+   * Workspace jar plus cookies the E2E browser already holds for this URL,
+   * so a request after a login click sends the same session.
+   */
+  private async cookiesForFlowRequest(url: string): Promise<CollectionCookie[]> {
+    const jar = this.store.cookies.cookies;
+    let browser: CollectionCookie[] = [];
+    try {
+      const rows = await session.fromPartition(E2E_PARTITION).cookies.get({ url });
+      browser = rows
+        .map((row) => collectionCookieFromSession(row))
+        .filter((row): row is CollectionCookie => row !== null);
+    } catch {
+      browser = [];
+    }
+    return overlayCookies(jar, browser);
+  }
+
+  /** Writes Set-Cookie back onto the E2E window and the workspace jar. */
+  private async rememberFlowSetCookies(
+    cookies: readonly CollectionCookie[],
+    requestUrl: string,
+  ): Promise<void> {
+    if (cookies.length === 0)
+      return;
+    const e2e = session.fromPartition(E2E_PARTITION);
+    for (const cookie of cookies) {
+      if (!cookie.name.trim())
+        continue;
+      const expiresAt = cookie.expires ? Date.parse(cookie.expires) : Number.NaN;
+      try {
+        await e2e.cookies.set({
+          url: sessionCookieUrl(cookie, requestUrl),
+          name: cookie.name,
+          value: cookie.value,
+          domain: cookie.domain.trim() || undefined,
+          path: cookie.path.trim() || '/',
+          secure: cookie.secure,
+          httpOnly: cookie.httpOnly,
+          ...(Number.isFinite(expiresAt) ? { expirationDate: expiresAt / 1000 } : {}),
+        });
+      } catch {
+        // A rejected cookie must not fail the request that already succeeded.
+      }
+    }
+    try {
+      await this.store.patchCookies({ cookies: overlayCookies(this.store.cookies.cookies, cookies) });
+    } catch {
+      // Jar persistence is best-effort; the E2E session already has the cookies.
+    }
   }
 
   /** HTTP execute that aborts promptly when the flow/regression signal fires. */
@@ -1241,6 +1309,7 @@ export class FlowHost {
           value: this.flowText(row.value, scope.vars.vars),
         }));
         const url = planFlowRequestUrl({ url: rawUrl, pathParams, queryParams });
+        const cookies = await this.cookiesForFlowRequest(url);
         const requestBodyModel = interpolateFlowRequestBody(
           flowRequestBodyFromConfig({
             bodyMode: flowConfigString(node, 'bodyMode'),
@@ -1272,21 +1341,35 @@ export class FlowHost {
           headers: [...headers],
           body: requestBody,
           followRedirects: true,
-          verifyTls: true,
+          verifyTls: this.store.settings.certificates.verifyTls,
           timeoutMs: 30000,
-          sendCookies: false,
-          cookies: [],
+          sendCookies: true,
+          cookies,
+          proxy: this.store.settings.proxy,
           auth: DEFAULT_FOLDER_AUTH,
           preRequest: [],
           postResponse: [],
           variables: { ...scope.vars.vars },
         });
+        if (response.error) {
+          if (signal.aborted || response.error === 'Request cancelled.')
+            throw new Error('cancelled');
+          throw new FlowStepError(response.error, {
+            kind: 'request',
+            method,
+            url,
+            status: response.status,
+            body: response.error,
+            requestBody: requestBody ? previewBody(requestBody) : undefined,
+          });
+        }
         const responseHeaders = headerMapFromPairs(response.headers);
         applyFlowResponse(scope.vars, response.status, response.body, responseHeaders, {
           method,
           url,
           requestBody,
         });
+        await this.rememberFlowSetCookies(response.setCookies, url);
         return {
           kind: 'request',
           method,

@@ -8,6 +8,49 @@ import {
 /** Node kinds that use a filtered CSS picker. */
 export type PickSelectorKind = FlowNodeKind | string;
 
+/**
+ * Kinds that must not run while picking a CSS selector.
+ * They do not move the page, and a failure (empty body, missing JSON path,
+ * status assert) was closing the E2E window before the user could click.
+ */
+const BROWSER_PICK_PREFIX_SKIP = new Set([
+  'request',
+  'capture',
+  'database',
+  'manual',
+  'trigger',
+  'cache',
+  'http-listener',
+  'http-interceptor',
+  'http-validate',
+  'assert-status',
+  'assert-json',
+  'assert-text',
+  'assert-visible',
+  'assert-url',
+  'for-each',
+  'while',
+  'retry',
+]);
+
+/** True when Pick on page should replay this node to reach the current page. */
+export function browserPickPrefixKind(kind: string): boolean {
+  if (kind.startsWith('device-'))
+    return false;
+  return !BROWSER_PICK_PREFIX_SKIP.has(kind);
+}
+
+/** Selector-based browser steps that cannot run until the user has authored a selector. */
+export function browserPickPrefixNeedsSelector(kind: string): boolean {
+  return (
+    kind === 'browser-click' ||
+    kind === 'browser-type' ||
+    kind === 'browser-select' ||
+    kind === 'browser-hover' ||
+    kind === 'browser-wait-for'
+  );
+}
+
 export function pickHintForKind(kind?: string | null): string {
   switch (kind) {
     case 'browser-click':

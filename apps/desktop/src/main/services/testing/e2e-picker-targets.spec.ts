@@ -6,6 +6,8 @@ import {
 } from '@testrix/contracts';
 
 import {
+  browserPickPrefixKind,
+  browserPickPrefixNeedsSelector,
   BUILD_SHORT_CSS_SELECTOR_FN,
   pickHintForKind,
   prefixNodeIdsBefore,
@@ -18,6 +20,24 @@ describe('pickHintForKind', () => {
     expect(pickHintForKind('browser-type')).toContain('input');
     expect(pickHintForKind('browser-select')).toContain('select');
     expect(pickHintForKind('assert-text')).toContain('CSS selector');
+  });
+});
+
+describe('browserPickPrefixKind', () => {
+  it('replays browser steps and skips API nodes that sit between them', () => {
+    expect(browserPickPrefixKind('browser-open')).toBe(true);
+    expect(browserPickPrefixKind('browser-click')).toBe(true);
+    expect(browserPickPrefixKind('set-var')).toBe(true);
+    expect(browserPickPrefixKind('wait')).toBe(true);
+    expect(
+      ['request', 'capture', 'database', 'assert-status', 'device-tap'].map(browserPickPrefixKind),
+    ).toEqual([false, false, false, false, false]);
+  });
+
+  it('skips selector steps that are still empty', () => {
+    expect(browserPickPrefixNeedsSelector('browser-click')).toBe(true);
+    expect(browserPickPrefixNeedsSelector('browser-open')).toBe(false);
+    expect(browserPickPrefixNeedsSelector('browser-press')).toBe(false);
   });
 });
 

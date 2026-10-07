@@ -51,6 +51,20 @@ describe('extractFlowJsonPath', () => {
   it('throws on empty path', () => {
     expect(() => extractFlowJsonPath('{}', '  ')).toThrow(/empty/);
   });
+
+  it('reads a field inside a JSON string', () => {
+    const body = {
+      items: [
+        {
+          number: 0,
+          value:
+            '{"@class":"at.tmobile.ms.onetimepin.domain.OneTimePin","pin":"646462","nonce":"fba869d9"}',
+        },
+      ],
+    };
+    expect(extractFlowJsonPath(JSON.stringify(body), 'items[0].value.pin')).toBe('646462');
+    expect(extractFlowJsonPath(JSON.stringify(body), 'items[0].value')).toContain('"pin":"646462"');
+  });
 });
 
 describe('getJsonPathValue', () => {

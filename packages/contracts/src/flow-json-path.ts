@@ -14,6 +14,8 @@ const RULE_KINDS = new Set<FlowCaptureRuleKind>(['body', 'status', 'header', 'js
 /**
  * Walks a JSON value with dotted / bracket paths.
  * Supports `replicas[0].entries[0].otp` and `replicas.0.entries.0.otp`.
+ * A string that holds JSON is parsed when the path continues into it, so
+ * `items[0].value.pin` reads `pin` inside `value`.
  */
 export function getJsonPathValue(root: unknown, path: string): unknown {
   const trimmed = path.trim();
@@ -22,6 +24,7 @@ export function getJsonPathValue(root: unknown, path: string): unknown {
   const parts = tokenizeJsonPath(trimmed);
   let current: unknown = root;
   for (const part of parts) {
+    current = unwrapJsonString(current);
     if (current === null || current === undefined)
       return undefined;
     if (typeof part === 'number') {
@@ -35,6 +38,20 @@ export function getJsonPathValue(root: unknown, path: string): unknown {
     current = (current as Record<string, unknown>)[part];
   }
   return current;
+}
+
+/** Parses a JSON object or array stored as text. Other strings stay as written. */
+function unwrapJsonString(value: unknown): unknown {
+  if (typeof value !== 'string')
+    return value;
+  const text = value.trim();
+  if (!text.startsWith('{') && !text.startsWith('['))
+    return value;
+  try {
+    return JSON.parse(text) as unknown;
+  } catch {
+    return value;
+  }
 }
 
 /**

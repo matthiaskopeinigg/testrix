@@ -275,6 +275,7 @@
                           [pickingSelector]="pickingSelector()"
                           [pickingDeviceSelector]="pickingDeviceSelector()"
                           [devicePickError]="devicePickError()"
+                          [selectorPickError]="selectorPickNodeId() === node.id ? selectorPickError() : null"
                           (patch)="patchSelected($event)"
                           (configPatch)="patchSelectedConfig($event)"
                           (removed)="deleteSelection()"

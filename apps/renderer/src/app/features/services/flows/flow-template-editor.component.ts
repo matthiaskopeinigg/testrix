@@ -143,6 +143,8 @@ export class FlowTemplateEditorComponent {
   readonly picker = signal<PickerTarget | null>(null);
   readonly exchangeViewer = signal<{ readonly nodeId: string; readonly title: string } | null>(null);
   readonly pickingSelector = signal(false);
+  readonly selectorPickError = signal<string | null>(null);
+  readonly selectorPickNodeId = signal<string | null>(null);
   readonly pickingDeviceSelector = signal(false);
   readonly devicePickError = signal<string | null>(null);
   private hydrateKey = '';
@@ -619,6 +621,8 @@ export class FlowTemplateEditorComponent {
     const node = this.selectedNode();
     if (!node)
       return;
+    this.selectorPickError.set(null);
+    this.selectorPickNodeId.set(node.id);
     this.pickingSelector.set(true);
     try {
       const url = this.pickPageUrl();
@@ -638,8 +642,13 @@ export class FlowTemplateEditorComponent {
         stopBeforeNodeId: node.id,
         scenario,
       });
-      if (result.ok && result.selector)
+      if (result.ok && result.selector) {
         this.patchSelectedConfig({ selector: result.selector });
+        this.selectorPickError.set(null);
+        return;
+      }
+      if (!result.cancelled && result.error)
+        this.selectorPickError.set(result.error);
     } finally {
       this.pickingSelector.set(false);
     }
