@@ -14,6 +14,7 @@ import {
   type TemplateRef,
 } from '@angular/core';
 import { parseFlowTemplateGroupNodeId } from '@testrix/contracts';
+import { isContextMenuLeftOfRow, isSidebarToolbarContext } from '../../../core/tree-context-menu';
 import {
   TxDraggableDirective,
   TxEmptyStateComponent,
@@ -131,6 +132,14 @@ export class FlowTemplatesPanelComponent {
     this.store.openTemplate(leaf.id);
   }
 
+  handleChromeMenu(event: MouseEvent): void {
+    if (!isSidebarToolbarContext(event))
+      return;
+    event.preventDefault();
+    event.stopPropagation();
+    this.openMenu(event, { kind: 'root' });
+  }
+
   handleEmptyMenu(event: MouseEvent): void {
     const target = event.target;
     if (target instanceof Element && target.closest('[data-node-id]'))
@@ -139,12 +148,20 @@ export class FlowTemplatesPanelComponent {
   }
 
   handleGroupMenu(group: FlowTemplateTreeGroup, event: MouseEvent): void {
+    if (isContextMenuLeftOfRow(event)) {
+      this.openMenu(event, { kind: 'root' });
+      return;
+    }
     if (!this.store.selectedIds().includes(group.id))
       this.store.applyPointerSelect(group.id, event);
     this.openMenu(event, { kind: 'group', tag: group.tag });
   }
 
   handleItemMenu(leaf: FlowTemplateTreeLeaf, event: MouseEvent): void {
+    if (isContextMenuLeftOfRow(event)) {
+      this.openMenu(event, { kind: 'root' });
+      return;
+    }
     if (!this.store.selectedIds().includes(leaf.id))
       this.store.applyPointerSelect(leaf.id, event);
     this.openMenu(event, { kind: 'template', id: leaf.id, name: leaf.name });

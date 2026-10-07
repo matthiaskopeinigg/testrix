@@ -48,6 +48,7 @@
               [class.is-renaming]="renamingId() === row.node.id"
               [attr.aria-expanded]="row.node.kind === 'folder' ? isExpanded(row.node.id) : null"
               [attr.aria-selected]="isSelected(row.node.id)"
+              data-tree-row
               [attr.aria-label]="rowLabel(row.node)"
               (click)="handleRowClick(row.node, $event)"
               (contextmenu)="handleRowMenu(row.node, $event)"

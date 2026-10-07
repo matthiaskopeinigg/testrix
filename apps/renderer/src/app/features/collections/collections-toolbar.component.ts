@@ -4,7 +4,6 @@ import {
   ElementRef,
   HostListener,
   computed,
-  effect,
   inject,
   signal,
 } from '@angular/core';
@@ -18,7 +17,6 @@ import {
 import { TxHintComponent, TxInputComponent } from '@testrix/ui';
 
 import { CollectionsStore } from './collections.store';
-import { CollectionHealthService } from './collection-health.service';
 
 type MenuId = 'filter' | 'sort' | null;
 
@@ -30,6 +28,7 @@ interface MenuPosition {
 }
 
 const SORT_OPTIONS: ReadonlyArray<{ id: CollectionSortMode; label: string }> = [
+  { id: 'saved', label: 'Saved order' },
   { id: 'name-asc', label: 'Name A–Z' },
   { id: 'name-desc', label: 'Name Z–A' },
   { id: 'type', label: 'Type' },
@@ -39,7 +38,6 @@ const SORT_OPTIONS: ReadonlyArray<{ id: CollectionSortMode; label: string }> = [
 const MENU_WIDTH = 180;
 const MENU_GAP = 6;
 const MENU_EDGE = 8;
-const TOOLS_USED_KEY = 'testrix.collections.toolbarToolsUsed';
 
 @Component({
   selector: 'tx-collections-toolbar',
@@ -51,8 +49,8 @@ const TOOLS_USED_KEY = 'testrix.collections.toolbarToolsUsed';
 })
 export class CollectionsToolbarComponent {
   private readonly host = inject(ElementRef<HTMLElement>);
+
   readonly store = inject(CollectionsStore);
-  private readonly health = inject(CollectionHealthService);
   readonly openMenu = signal<MenuId>(null);
   readonly menuPosition = signal<MenuPosition | null>(null);
   readonly sortOptions = SORT_OPTIONS;
@@ -68,30 +66,12 @@ export class CollectionsToolbarComponent {
     this.store.allFoldersExpanded() ? 'Collapse all' : 'Expand all',
   );
 
-  private readonly toolsUsed = signal(readToolsUsedFlag());
-
-  readonly showToolActions = computed(
-    () =>
-      this.store.searchQuery().trim().length > 0 ||
-      this.toolsUsed() ||
-      this.store.isFilterActive() ||
-      this.store.sortMode() !== 'name-asc',
-  );
-
-  constructor() {
-    effect(() => {
-      if (this.store.isFilterActive() || this.store.sortMode() !== 'name-asc')
-        this.markToolsUsed();
-    });
-  }
-
   handleSearch(value: string): void {
     this.store.setSearchQuery(value);
   }
 
   handleToggleMenu(menu: Exclude<MenuId, null>, event: MouseEvent): void {
     event.stopPropagation();
-    this.markToolsUsed();
     const trigger = event.currentTarget;
     if (!(trigger instanceof HTMLElement)) {
       return;
@@ -110,28 +90,23 @@ export class CollectionsToolbarComponent {
   }
 
   handleToggleExpandAll(): void {
-    this.markToolsUsed();
     this.store.toggleExpandAll();
   }
 
   handleSort(mode: CollectionSortMode): void {
-    this.markToolsUsed();
     this.store.setSortMode(mode);
     this.handleCloseMenus();
   }
 
   handleToggleKind(kind: 'folder' | 'http' | 'websocket'): void {
-    this.markToolsUsed();
     this.store.toggleKindFilter(kind);
   }
 
   handleToggleMethod(method: HttpMethod): void {
-    this.markToolsUsed();
     this.store.toggleMethodFilter(method);
   }
 
   handleToggleStatus(status: CollectionStatusFilter): void {
-    this.markToolsUsed();
     this.store.toggleStatusFilter(status);
   }
 
@@ -159,22 +134,6 @@ export class CollectionsToolbarComponent {
     }
   }
 
-  handleHealthCheck(): void {
-    this.markToolsUsed();
-    this.health.run(null);
-  }
-
-  private markToolsUsed(): void {
-    if (this.toolsUsed())
-      return;
-    this.toolsUsed.set(true);
-    try {
-      sessionStorage.setItem(TOOLS_USED_KEY, '1');
-    } catch {
-      /* storage unavailable */
-    }
-  }
-
   private computeMenuPosition(trigger: HTMLElement): MenuPosition {
     const triggerRect = trigger.getBoundingClientRect();
     const bounds =
@@ -191,13 +150,5 @@ export class CollectionsToolbarComponent {
     const maxHeight = Math.max(120, Math.floor(bounds.bottom - top - MENU_EDGE));
 
     return { top, left, maxHeight, width };
-  }
-}
-
-function readToolsUsedFlag(): boolean {
-  try {
-    return sessionStorage.getItem(TOOLS_USED_KEY) === '1';
-  } catch {
-    return false;
   }
 }

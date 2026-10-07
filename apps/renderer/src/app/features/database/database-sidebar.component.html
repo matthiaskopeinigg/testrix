@@ -1,4 +1,4 @@
-<div class="tx-database" #root (contextmenu)="$event.preventDefault()">
+<div class="tx-database" #root (contextmenu)="handleChromeMenu($event)">
   <tx-database-toolbar />
   <div
     class="tx-database__body"
@@ -114,6 +114,21 @@
 <ng-template #databaseMenu>
   @if (menu(); as menu) {
     <div class="tx-database-menu tx-menu" role="menu">
+      @if (menu.kind === 'root-sidebar') {
+        <button type="button" class="tx-database-menu__item" role="menuitem" (click)="handleNewFolder('connections')">
+          New connection folder
+        </button>
+        <button type="button" class="tx-database-menu__item" role="menuitem" (click)="handleNewConnection()">
+          New connection
+        </button>
+        <span class="tx-database-menu__rule" aria-hidden="true"></span>
+        <button type="button" class="tx-database-menu__item" role="menuitem" (click)="handleNewFolder('queries')">
+          New query folder
+        </button>
+        <button type="button" class="tx-database-menu__item" role="menuitem" (click)="handleNewQuery()">
+          New query
+        </button>
+      }
       @if (menu.kind === 'root-connections' || menu.kind === 'folder' && menu.section === 'connections') {
         <button type="button" class="tx-database-menu__item" role="menuitem" (click)="handleNewFolder('connections')">
           New folder

@@ -16,6 +16,7 @@ import { serviceGroups, findServiceNode, type ServiceId, type ServiceItem, type 
 import { TxHintComponent, TxToastService, playLeaveThen } from '@testrix/ui';
 
 import { ConfirmDialogService } from '../../core/confirm-dialog.service';
+import { isContextMenuLeftOfRow } from '../../core/tree-context-menu';
 import { PalettePinsStore } from '../../core/palette-pins.store';
 import {
   isEditableKeyboardTarget,
@@ -127,6 +128,10 @@ export class ServicesSidebarComponent {
     serviceId: ServiceId,
     event: { readonly node: ServiceTreeNode<Record<string, unknown>>; readonly event: MouseEvent },
   ): void {
+    if (isContextMenuLeftOfRow(event.event)) {
+      this.openMenu(event.event, { serviceId, target: { kind: 'root' } });
+      return;
+    }
     if (!this.store.selectedIds().includes(event.node.id))
       this.store.applyPointerSelect(serviceId, event.node.id, event.event);
     this.openMenu(event.event, {

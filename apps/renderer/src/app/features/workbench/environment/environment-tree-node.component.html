@@ -13,6 +13,7 @@
       [attr.tabindex]="renaming() ? -1 : 0"
       [attr.aria-expanded]="isFolder() ? expanded() : null"
       [attr.aria-current]="focused() ? 'true' : null"
+      data-tree-row
       [attr.aria-label]="rowAriaLabel()"
       (click)="handleRowClick($event)"
       (dblclick)="handleRowDblClick($event)"

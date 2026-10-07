@@ -16,9 +16,10 @@ import {
   ViewContainerRef,
   type TemplateRef,
 } from '@angular/core';
-import { TxButtonComponent, TxEmptyStateComponent, TxToastService, playLeaveThen } from '@testrix/ui';
+import { TxButtonComponent, TxEmptyStateComponent, TxToastService, forwardPaddingContextMenu, playLeaveThen } from '@testrix/ui';
 
 import { ConfirmDialogService } from '../../core/confirm-dialog.service';
+import { isContextMenuLeftOfRow, isSidebarToolbarContext } from '../../core/tree-context-menu';
 import {
   isEditableKeyboardTarget,
   isModKey,
@@ -101,7 +102,16 @@ export class EnvironmentsSidebarComponent {
     this.store.clearListSelection();
   }
 
+  handleChromeMenu(event: MouseEvent): void {
+    event.preventDefault();
+    if (!isSidebarToolbarContext(event))
+      return;
+    this.openMenu(event, { kind: 'root', id: null });
+  }
+
   handleRootMenu(event: MouseEvent): void {
+    if (forwardPaddingContextMenu(event))
+      return;
     const target = event.target;
     if (target instanceof Element && target.closest('[data-env-id]')) {
       return;
@@ -110,6 +120,10 @@ export class EnvironmentsSidebarComponent {
   }
 
   handleItemMenu(request: EnvironmentsMenuRequest): void {
+    if (isContextMenuLeftOfRow(request.event)) {
+      this.openMenu(request.event, { kind: 'root', id: null });
+      return;
+    }
     if (!this.store.selectedIds().includes(request.id)) {
       this.store.applyListPointerSelect(request.id, {
         shiftKey: false,

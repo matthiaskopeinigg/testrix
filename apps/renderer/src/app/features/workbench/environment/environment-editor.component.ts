@@ -43,6 +43,7 @@ import {
   TxEmptyStateComponent,
   TxHintComponent,
   TxInputComponent,
+  forwardPaddingContextMenu,
   playLeaveThen,
 } from '@testrix/ui';
 
@@ -56,6 +57,7 @@ import {
 } from '../../../core/range-select';
 import { isEditableKeyboardTarget, isModKey, ownsTreeClipboardShortcut } from '../../../core/selection-hotkeys';
 import { TreeClipboardService } from '../../../core/tree-clipboard.service';
+import { isContextMenuLeftOfRow, isSidebarToolbarContext } from '../../../core/tree-context-menu';
 import { EnvironmentsStore } from '../../environments/environments.store';
 import { EnvironmentEditorDndService } from './environment-editor-dnd.service';
 import { copyEnvironmentSelection, pasteEnvironmentNodes } from './environment-node-clipboard';
@@ -639,6 +641,16 @@ export class EnvironmentEditorComponent {
 
   handleNodeMenu(request: EnvironmentTreeMenuRequest): void {
     const { node, parentId, event } = request;
+    if (event instanceof MouseEvent && isContextMenuLeftOfRow(event)) {
+      this.openMenu(event, {
+        kind: 'root',
+        id: null,
+        parentId: null,
+        name: 'Environment',
+        secret: false,
+      });
+      return;
+    }
     if (isEnvironmentFolder(node)) {
       this.openMenu(event, {
         kind: 'folder',
@@ -658,7 +670,21 @@ export class EnvironmentEditorComponent {
     });
   }
 
+  handleToolbarMenu(event: MouseEvent): void {
+    if (!isSidebarToolbarContext(event))
+      return;
+    this.openMenu(event, {
+      kind: 'root',
+      id: null,
+      parentId: null,
+      name: 'Environment',
+      secret: false,
+    });
+  }
+
   handleRootMenu(event: Event): void {
+    if (event instanceof MouseEvent && forwardPaddingContextMenu(event))
+      return;
     this.openMenu(event, {
       kind: 'root',
       id: null,

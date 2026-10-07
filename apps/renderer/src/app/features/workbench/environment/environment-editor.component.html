@@ -2,7 +2,7 @@
   @if (environment(); as env) {
     <div class="tx-env-split">
       <aside class="tx-env-nav" aria-label="Variables and folders">
-        <div class="tx-env-nav__bar">
+        <div class="tx-env-nav__bar" data-sidebar-toolbar (contextmenu)="handleToolbarMenu($event)">
           <tx-input
             class="tx-env-nav__search"
             id="env-tree-search"

@@ -8,7 +8,6 @@ import { DesktopApiService } from '../../core/desktop-api.service';
 import { PalettePinsStore } from '../../core/palette-pins.store';
 import { ImportWorkspaceDialogService } from '../workspace-transfer/import-workspace-dialog.service';
 import { WorkbenchStore } from '../workbench/workbench.store';
-import { CollectionHealthService } from './collection-health.service';
 import { CollectionsDndService } from './collections-dnd.service';
 import { CollectionsSidebarComponent } from './collections-sidebar.component';
 import { CollectionsStore } from './collections.store';
@@ -51,7 +50,6 @@ describe('CollectionsSidebarComponent', () => {
         { provide: DesktopApiService, useValue: { settings: () => ({}) } },
         { provide: ImportWorkspaceDialogService, useValue: { open: vi.fn() } },
         { provide: PalettePinsStore, useValue: { pins: signal([]) } },
-        { provide: CollectionHealthService, useValue: { open: vi.fn() } },
       ],
     });
   });

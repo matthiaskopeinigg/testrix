@@ -1,7 +1,7 @@
 import { DEFAULT_COLLECTION_FILTERS, type CollectionNode } from '@testrix/contracts';
 import { describe, expect, it } from 'vitest';
 
-import { filterCollectionTree } from './collections.store';
+import { filterCollectionTree, sortCollectionTree } from './collections.store';
 
 const ISO = '2026-01-01T00:00:00.000Z';
 
@@ -12,6 +12,18 @@ function emptyFolder(id: string, name = 'New folder'): CollectionNode {
 function http(id: string, name = 'Get users'): CollectionNode {
   return { kind: 'http', id, name, modifiedAt: ISO, method: 'GET', status: null };
 }
+
+describe('sortCollectionTree', () => {
+  it('keeps a dragged order when sort is saved', () => {
+    const tree = [http('b', 'Beta'), emptyFolder('a', 'Alpha'), http('c', 'Gamma')];
+    expect(sortCollectionTree(tree, 'saved').map((node) => node.id)).toEqual(['b', 'a', 'c']);
+  });
+
+  it('sorts folders ahead of requests by name', () => {
+    const tree = [http('b', 'Beta'), emptyFolder('a', 'Alpha')];
+    expect(sortCollectionTree(tree, 'name-asc').map((node) => node.id)).toEqual(['a', 'b']);
+  });
+});
 
 describe('filterCollectionTree', () => {
   it('keeps an empty folder when there is no search query', () => {

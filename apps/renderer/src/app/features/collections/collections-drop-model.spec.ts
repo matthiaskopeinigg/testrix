@@ -156,6 +156,21 @@ describe('buildSlotTable', () => {
     expect(keyed.get(`between:${COLLECTIONS_ROOT_ID}:1`)?.denied).toBe(false);
   });
 
+  it('allows a request above a folder when the drop keeps manual order', () => {
+    const rows = layout(flattenTree(makeTree(), (id) => id === 'folder-a'));
+    const table = buildSlotTable(rows, {
+      draggedId: 'item-3',
+      draggedIsFolder: false,
+      contentTop: 0,
+      contentBottom: CONTENT_BOTTOM,
+      manualOrder: true,
+    });
+    const slot = table.bands
+      .flatMap((band) => band.candidates)
+      .find((candidate) => candidate.key === `between:${COLLECTIONS_ROOT_ID}:0`);
+    expect(slot?.denied).toBe(false);
+  });
+
   it('allows a folder to shuffle past itself but not below a request', () => {
     const table = tableFor('folder-a');
     const keyed = new Map(

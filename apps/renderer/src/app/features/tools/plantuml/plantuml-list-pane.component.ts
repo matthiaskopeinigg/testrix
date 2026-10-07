@@ -10,9 +10,11 @@ import {
   viewChild,
 } from '@angular/core';
 import type { PlantumlDiagramKind, PlantumlNode } from '@testrix/contracts';
+import { isContextMenuLeftOfRow, isSidebarToolbarContext } from '../../../core/tree-context-menu';
 import {
   TxDraggableDirective,
   TxEmptyStateComponent,
+  forwardPaddingContextMenu,
   type TxDragEndEvent,
   type TxDragMoveEvent,
   type TxDragStartEvent,
@@ -97,14 +99,24 @@ export class PlantumlListPaneComponent {
   handleRowMenu(node: PlantumlNode, event: MouseEvent): void {
     event.preventDefault();
     event.stopPropagation();
+    if (isContextMenuLeftOfRow(event)) {
+      this.menu.emit({ node: null, event });
+      return;
+    }
     if (!this.store.selectedIds().includes(node.id))
       this.store.select(node.id);
     this.menu.emit({ node, event });
   }
 
   handleEmptyMenu(event: MouseEvent): void {
+    if (forwardPaddingContextMenu(event))
+      return;
     const target = event.target;
-    if (target instanceof Element && target.closest('[data-node-id], button, input, tx-hint, .tx-plantuml-toolbar__menu'))
+    if (!(target instanceof Element))
+      return;
+    if (target.closest('[data-node-id], .tx-menu'))
+      return;
+    if (!isSidebarToolbarContext(event) && target.closest('input, textarea, select, button'))
       return;
     event.preventDefault();
     this.menu.emit({ node: null, event });

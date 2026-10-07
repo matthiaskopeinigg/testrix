@@ -8,13 +8,6 @@
   display: block;
 }
 
-:host ::ng-deep .tx-hint__trigger {
-  display: block;
-  width: 100%;
-  max-width: 100%;
-  min-width: 0;
-}
-
 .tx-collections-node__row {
   @include mixins.tx-hover-fill;
   display: flex;
@@ -131,6 +124,28 @@
   color: var(--tx-text-primary);
   font: inherit;
   font-size: 12px;
+}
+
+.tx-collections-node__health {
+  flex: 0 1 auto;
+  max-width: 46%;
+  min-width: 0;
+  overflow: hidden;
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: 10px;
+  line-height: 1.4;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+  color: var(--tx-warning, #e6b450);
+  background: color-mix(in srgb, var(--tx-warning, #e6b450) 16%, transparent);
+}
+
+.tx-collections-node__health.is-error {
+  color: var(--tx-danger, #f07178);
+  background: color-mix(in srgb, var(--tx-danger, #f07178) 16%, transparent);
 }
 
 .tx-collections-node__status {

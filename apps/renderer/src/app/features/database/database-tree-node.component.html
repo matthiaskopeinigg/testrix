@@ -23,6 +23,7 @@
       [attr.aria-expanded]="expandable() ? expanded() : null"
       [attr.aria-current]="active() ? 'page' : null"
       [attr.aria-label]="rowAriaLabel()"
+      data-tree-row
       [attr.aria-keyshortcuts]="canRename() ? 'Alt+ArrowUp Alt+ArrowDown' : null"
       (click)="handleRowClick($event)"
       (dblclick)="handleRowDblClick($event)"

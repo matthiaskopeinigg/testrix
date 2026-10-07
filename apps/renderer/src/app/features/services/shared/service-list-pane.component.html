@@ -1,4 +1,4 @@
-<div class="tx-service-pane">
+<div class="tx-service-pane" (contextmenu)="handleToolbarMenu($event)">
   @if (templatesOpen()) {
     <tx-flow-templates-panel />
   } @else {

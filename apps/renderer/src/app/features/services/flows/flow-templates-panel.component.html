@@ -1,4 +1,4 @@
-<div class="tx-flow-tpl">
+<div class="tx-flow-tpl" (contextmenu)="handleChromeMenu($event)">
   <header class="tx-flow-tpl__head">
     <tx-hint label="Back to flows" placement="bottom">
       <button type="button" class="tx-flow-tpl__back" aria-label="Back to flows" (click)="close()">
@@ -65,6 +65,7 @@
                 class="tx-flow-tpl__row is-group"
                 role="button"
                 tabindex="0"
+                data-tree-row
                 [attr.data-node-id]="group.id"
                 [class.is-selected]="store.isSelected(group.id)"
                 [attr.aria-expanded]="store.isGroupExpanded(group.id)"
@@ -123,6 +124,7 @@
                     class="tx-flow-tpl__row is-template"
                     role="button"
                     tabindex="0"
+                    data-tree-row
                     [attr.data-node-id]="leaf.id"
                     [class.is-selected]="store.isSelected(leaf.id)"
                     (click)="handleTemplateClick(leaf, $event)"
@@ -169,6 +171,7 @@
                 class="tx-flow-tpl__row is-template"
                 role="button"
                 tabindex="0"
+                data-tree-row
                 [attr.data-node-id]="leaf.id"
                 [class.is-selected]="store.isSelected(leaf.id)"
                 (click)="handleTemplateClick(leaf, $event)"

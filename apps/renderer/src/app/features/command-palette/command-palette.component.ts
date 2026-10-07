@@ -456,16 +456,20 @@ export class CommandPaletteComponent {
       },
     });
 
-    commands.push({
-      id: 'collection-health',
-      label: 'Check collection health',
-      hint: 'Find empty URLs and unresolved variables',
-      keywords: 'health broken request missing variable url validate collection',
-      run: () => {
-        this.collectionHealth.run(null);
-        this.shell.closeOverlays();
-      },
-    });
+    const healthIssues = this.collectionHealth.issues();
+    if (healthIssues.length > 0) {
+      const countLabel = healthIssues.length === 1 ? '1 issue' : `${healthIssues.length} issues`;
+      commands.push({
+        id: 'collection-health',
+        label: 'Show collection issues',
+        hint: `${countLabel} in the active environment`,
+        keywords: 'health broken request missing variable url validate collection',
+        run: () => {
+          this.collectionHealth.show();
+          this.shell.closeOverlays();
+        },
+      });
+    }
 
     commands.push({
       id: 'window-new',

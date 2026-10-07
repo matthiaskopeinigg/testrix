@@ -190,6 +190,8 @@ function compareSiblings(a: CollectionNode, b: CollectionNode, sortMode: Collect
   }
 
   switch (sortMode) {
+    case 'saved':
+      return 0;
     case 'name-desc':
       return b.name.localeCompare(a.name, undefined, { sensitivity: 'base' });
     case 'type': {
@@ -223,7 +225,14 @@ export function ensureFoldersFirst(nodes: CollectionTree): CollectionTree {
   return [...folders, ...leaves];
 }
 
+/** Orders siblings. `saved` leaves the stored order untouched. */
+export function sortCollectionTree(nodes: CollectionTree, sortMode: CollectionSortMode): CollectionTree {
+  return sortTree(nodes, sortMode);
+}
+
 function sortTree(nodes: CollectionTree, sortMode: CollectionSortMode): CollectionTree {
+  if (sortMode === 'saved')
+    return nodes;
   const sorted = [...nodes].sort((a, b) => compareSiblings(a, b, sortMode));
   return sorted.map((node) => {
     if (node.kind !== 'folder') {
@@ -488,18 +497,6 @@ export function canPlaceAtIndex(
   return index >= folders;
 }
 
-function clampInsertIndex(
-  dragged: CollectionNode,
-  siblings: readonly CollectionNode[],
-  index: number,
-): number {
-  const folders = siblings.filter((node) => node.kind === 'folder' && node.id !== dragged.id).length;
-  if (dragged.kind === 'folder') {
-    return Math.max(0, Math.min(index, folders));
-  }
-  return Math.max(folders, Math.min(index, siblings.length));
-}
-
 @Injectable({ providedIn: 'root' })
 export class CollectionsStore {
   private readonly desktop = inject(DesktopApiService);
@@ -527,9 +524,10 @@ export class CollectionsStore {
   private collectionsPersistInFlight: Promise<void> | null = null;
   private static readonly COLLECTIONS_PERSIST_DEBOUNCE_MS = 400;
 
-  readonly visibleTree = computed(() =>
-    ensureFoldersFirst(filterCollectionTree(this.tree(), this.filters(), this.searchQuery())),
-  );
+  readonly visibleTree = computed(() => {
+    const filtered = filterCollectionTree(this.tree(), this.filters(), this.searchQuery());
+    return this.sortMode() === 'saved' ? filtered : ensureFoldersFirst(filtered);
+  });
 
   readonly hasVisibleNodes = computed(() => this.visibleTree().length > 0);
 
@@ -644,9 +642,11 @@ export class CollectionsStore {
 
   setSortMode(mode: CollectionSortMode): void {
     this.sortMode.set(mode);
-    this.tree.update((nodes) => sortTree(nodes, mode));
+    if (mode !== 'saved')
+      this.tree.update((nodes) => sortTree(nodes, mode));
     this.persistPrefs();
-    this.persist();
+    if (mode !== 'saved')
+      this.persist();
   }
 
   setFilters(filters: CollectionFilters): void {
@@ -761,20 +761,15 @@ export class CollectionsStore {
       return;
     }
 
-    let targetSiblings: CollectionNode[];
-    if (parentId === null) {
-      targetSiblings = removed.tree;
-    } else {
+    if (parentId !== null) {
       const folder = findNode(removed.tree, parentId);
       if (!folder || folder.node.kind !== 'folder') {
         return;
       }
-      targetSiblings = folder.node.children;
     }
 
-    insertIndex = clampInsertIndex(removed.removed, targetSiblings, insertIndex);
-
-    const next = ensureFoldersFirst(insertNode(removed.tree, parentId, insertIndex, removed.removed));
+    this.useSavedOrder();
+    const next = insertNode(removed.tree, parentId, insertIndex, removed.removed);
     this.commitTree(next);
     this.markMoved(nodeId);
     this.pruneSelection();
@@ -842,7 +837,8 @@ export class CollectionsStore {
       return false;
     }
 
-    next = ensureFoldersFirst(insertNodes(next, parentId, insertIndex, extracted));
+    next = insertNodes(next, parentId, insertIndex, extracted);
+    this.useSavedOrder();
     this.commitTree(next);
     this.markMoved(extracted[0].id);
     this.pruneSelection();
@@ -869,9 +865,6 @@ export class CollectionsStore {
     // `target` is the index after removal, which is what the folders-first rule checks.
     const target = found.index + direction;
     if (target < 0 || target >= found.siblings.length) {
-      return null;
-    }
-    if (!canPlaceAtIndex(found.siblings, found.node, target)) {
       return null;
     }
 
@@ -1270,6 +1263,14 @@ export class CollectionsStore {
         expanded.add(entry.parentId);
     }
     this.expandedIds.set(expanded);
+    this.persistPrefs();
+  }
+
+  /** A drag or keyboard move keeps the new sibling order instead of snapping back to a sort. */
+  private useSavedOrder(): void {
+    if (this.sortMode() === 'saved')
+      return;
+    this.sortMode.set('saved');
     this.persistPrefs();
   }
 

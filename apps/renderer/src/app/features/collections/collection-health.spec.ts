@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { DEFAULT_REQUEST_CONFIG, DEFAULT_WEBSOCKET_CONFIG, type CollectionTree } from '@testrix/contracts';
 
-import { scanCollectionHealth } from './collection-health';
+import { indexCollectionHealth, scanCollectionHealth } from './collection-health';
 
 function tree(): CollectionTree {
   return [
@@ -89,5 +89,20 @@ describe('scanCollectionHealth', () => {
       envVars: {},
     });
     expect(issues).toEqual([]);
+  });
+});
+
+describe('indexCollectionHealth', () => {
+  it('rolls issue counts up to folders and skips healthy requests', () => {
+    const nodes = tree();
+    const issues = scanCollectionHealth({
+      tree: nodes,
+      envVars: { baseUrl: 'https://api.example.com' },
+    });
+    const index = indexCollectionHealth(nodes, issues);
+    expect(index.byNodeId.has('http-ok')).toBe(false);
+    expect(index.byNodeId.get('http-empty')?.[0]?.message).toBe('URL is empty');
+    expect(index.folders.get('folder-1')?.count).toBe(issues.length);
+    expect(index.folders.get('folder-1')?.severity).toBe('error');
   });
 });

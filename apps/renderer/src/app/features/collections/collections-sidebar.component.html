@@ -1,4 +1,4 @@
-<div class="tx-collections" #root (contextmenu)="$event.preventDefault()">
+<div class="tx-collections" #root (contextmenu)="handleChromeMenu($event)">
   <tx-collections-toolbar />
   <div
     class="tx-collections__body"

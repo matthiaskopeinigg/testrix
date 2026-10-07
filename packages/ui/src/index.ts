@@ -30,6 +30,7 @@ export {
   type TxRailSlideDir,
 } from './chrome/tx-activity-rail/tx-rail.model';
 export { TxSidebarComponent } from './chrome/tx-sidebar/tx-sidebar.component';
+export { forwardPaddingContextMenu } from './chrome/tx-sidebar/forward-padding-context-menu';
 export {
   clampSidebarWidth,
   TX_SIDEBAR_DEFAULT_WIDTH,

@@ -92,6 +92,8 @@ export interface BuildSlotTableOptions {
   readonly contentBottom: number;
   readonly indent?: number;
   readonly gutter?: number;
+  /** When true, a request may sit above a folder. A completed drop keeps that order. */
+  readonly manualOrder?: boolean;
 }
 
 export const EMPTY_SLOT_TABLE: DropSlotTable = {
@@ -199,6 +201,8 @@ export function buildSlotTable(
   const dragged = byId.get(draggedId) ?? null;
 
   const isDenied = (parentId: string, index: number): boolean => {
+    if (options.manualOrder)
+      return false;
     const parent = stats.get(parentId) ?? { folderCount: 0 };
     // Mirror the removal that the move performs, so a no-op reorder never reads as invalid.
     const effective =

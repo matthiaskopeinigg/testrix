@@ -22,9 +22,10 @@ import {
   type DatabaseConnectionTreeItem,
   type SavedQueryTreeItem,
 } from '@testrix/contracts';
-import { TxButtonComponent, TxEmptyStateComponent, playLeaveThen } from '@testrix/ui';
+import { TxButtonComponent, TxEmptyStateComponent, forwardPaddingContextMenu, playLeaveThen } from '@testrix/ui';
 
 import { ConfirmDialogService } from '../../core/confirm-dialog.service';
+import { isContextMenuLeftOfRow, isSidebarToolbarContext } from '../../core/tree-context-menu';
 import {
   isEditableKeyboardTarget,
   isModKey,
@@ -42,7 +43,7 @@ import { DatabaseTreeComponent } from './database-tree.component';
 import type { DatabaseMenuRequest } from './database-tree-node.component';
 
 interface DatabaseMenu {
-  readonly kind: DatabaseNavKind | 'root-connections' | 'root-queries';
+  readonly kind: DatabaseNavKind | 'root-connections' | 'root-queries' | 'root-sidebar';
   readonly id: string | null;
   readonly section: 'connections' | 'queries';
   readonly connectionId?: string;
@@ -53,6 +54,7 @@ function databaseMenuHasItems(menu: DatabaseMenu): boolean {
   return (
     menu.kind === 'root-connections' ||
     menu.kind === 'root-queries' ||
+    menu.kind === 'root-sidebar' ||
     menu.kind === 'folder' ||
     menu.kind === 'connection' ||
     menu.kind === 'query' ||
@@ -139,7 +141,16 @@ export class DatabaseSidebarComponent {
     this.store.clearSelection();
   }
 
+  handleChromeMenu(event: MouseEvent): void {
+    event.preventDefault();
+    if (!isSidebarToolbarContext(event))
+      return;
+    this.openMenu(event, { kind: 'root-sidebar', id: null, section: 'connections' });
+  }
+
   handleRootMenu(event: MouseEvent, section: 'connections' | 'queries'): void {
+    if (forwardPaddingContextMenu(event))
+      return;
     const target = event.target;
     if (target instanceof Element && target.closest('[data-node-id]'))
       return;
@@ -151,6 +162,14 @@ export class DatabaseSidebarComponent {
   }
 
   handleItemMenu(request: DatabaseMenuRequest): void {
+    if (isContextMenuLeftOfRow(request.event)) {
+      this.openMenu(request.event, {
+        kind: request.node.section === 'connections' ? 'root-connections' : 'root-queries',
+        id: null,
+        section: request.node.section,
+      });
+      return;
+    }
     const selected =
       request.node.section === 'connections'
         ? this.store.connectionSelectedIds()

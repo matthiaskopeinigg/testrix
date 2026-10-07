@@ -17,7 +17,7 @@ import {
   type TemplateRef,
 } from '@angular/core';
 import type { CollectionNode, CollectionNodeKind } from '@testrix/contracts';
-import { TxButtonComponent, TxEmptyStateComponent, TxToastService, playLeaveThen } from '@testrix/ui';
+import { TxButtonComponent, TxEmptyStateComponent, TxToastService, forwardPaddingContextMenu, playLeaveThen } from '@testrix/ui';
 
 import { ConfirmDialogService } from '../../core/confirm-dialog.service';
 import { DesktopApiService } from '../../core/desktop-api.service';
@@ -29,6 +29,7 @@ import {
   shouldDeferToFlowCanvas,
 } from '../../core/selection-hotkeys';
 import { TreeClipboardService } from '../../core/tree-clipboard.service';
+import { isContextMenuLeftOfRow, isSidebarToolbarContext } from '../../core/tree-context-menu';
 import { ImportWorkspaceDialogService } from '../workspace-transfer/import-workspace-dialog.service';
 import { WorkbenchStore } from '../workbench/workbench.store';
 import { CollectionsDndService } from './collections-dnd.service';
@@ -115,7 +116,16 @@ export class CollectionsSidebarComponent {
     this.store.clearSelection();
   }
 
+  handleChromeMenu(event: MouseEvent): void {
+    event.preventDefault();
+    if (!isSidebarToolbarContext(event))
+      return;
+    this.openMenu(event, { kind: 'root', id: null });
+  }
+
   handleRootMenu(event: MouseEvent): void {
+    if (forwardPaddingContextMenu(event))
+      return;
     const target = event.target;
     if (target instanceof Element && target.closest('[data-node-id]'))
       return;
@@ -123,6 +133,10 @@ export class CollectionsSidebarComponent {
   }
 
   handleItemMenu(request: CollectionsMenuRequest): void {
+    if (isContextMenuLeftOfRow(request.event)) {
+      this.openMenu(request.event, { kind: 'root', id: null });
+      return;
+    }
     if (!this.store.selectedIds().includes(request.node.id)) {
       this.store.applyPointerSelect(request.node.id, {
         shiftKey: false,

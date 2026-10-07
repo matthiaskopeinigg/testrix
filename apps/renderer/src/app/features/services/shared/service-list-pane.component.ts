@@ -13,11 +13,13 @@ import type { ServiceId, ServiceTreeNode } from '@testrix/contracts';
 import {
   TxButtonComponent,
   TxEmptyStateComponent,
+  forwardPaddingContextMenu,
   type TxDragEndEvent,
   type TxDragMoveEvent,
   type TxDragStartEvent,
 } from '@testrix/ui';
 
+import { isSidebarToolbarContext } from '../../../core/tree-context-menu';
 import { ServicesDndService } from '../services-dnd.service';
 import { type ServicesStore } from '../services.store';
 import { FlowTemplatesPanelComponent } from '../flows/flow-templates-panel.component';
@@ -91,7 +93,17 @@ export class ServiceListPaneComponent {
     afterNextRender(() => this.registerSurface());
   }
 
+  handleToolbarMenu(event: MouseEvent): void {
+    if (!isSidebarToolbarContext(event))
+      return;
+    event.preventDefault();
+    event.stopPropagation();
+    this.emptyMenu.emit(event);
+  }
+
   handleEmptyMenu(event: MouseEvent): void {
+    if (forwardPaddingContextMenu(event))
+      return;
     const target = event.target;
     if (target instanceof Element && target.closest('[data-node-id]'))
       return;

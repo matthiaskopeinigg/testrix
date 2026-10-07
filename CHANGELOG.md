@@ -4,6 +4,15 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+### Added
+
+- Saved order on the collections sort menu. Dragging a row, or moving it with the keyboard, switches to Saved order so the arrangement stays. A request can sit above a folder.
+
+### Changed
+
+- Collection issues show on the row. An empty URL or an unresolved variable appears beside the request, and a folder shows how many issues it contains. Click the mark to open the list. The command palette offers Show collection issues only when something is wrong.
+- Right-click the space left of a tree row, empty space, or the toolbar beside search, filter, and sort to create a folder or item. Collections, Database, Environments, service lists, flow templates, PlantUML, and the environment variable tree use this. The row stays unselected. Right-click the row itself still selects it and opens Open, Rename, and Delete.
+
 ## [2.0.4] — 2026-10-07
 
 ### Added

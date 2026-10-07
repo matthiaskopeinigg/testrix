@@ -74,7 +74,7 @@ describe('CommandPaletteComponent', () => {
         { provide: ExportWorkspaceDialogService, useValue: { open: vi.fn() } },
         { provide: ImportWorkspaceDialogService, useValue: { open: vi.fn(), show: vi.fn() } },
         { provide: CollectionsStore, useValue: { tree: signal([]), search: signal('') } },
-        { provide: CollectionHealthService, useValue: { open: vi.fn() } },
+        { provide: CollectionHealthService, useValue: { issues: signal([]), show: vi.fn() } },
         { provide: HistoryStore, useValue: { items: signal([]), entries: signal([]) } },
         { provide: HelpContextService, useValue: { open: vi.fn(), openContextualHelp: vi.fn() } },
         {

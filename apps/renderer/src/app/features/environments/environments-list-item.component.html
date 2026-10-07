@@ -14,6 +14,7 @@
     [class.is-renaming]="renaming()"
     [attr.aria-selected]="selected() || active()"
     [attr.aria-label]="rowAriaLabel()"
+    data-tree-row
     [attr.aria-keyshortcuts]="'Alt+ArrowUp Alt+ArrowDown'"
     (click)="handleRowClick($event)"
     (keydown)="handleRowKeydown($event)"

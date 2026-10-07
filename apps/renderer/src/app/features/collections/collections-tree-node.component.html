@@ -3,14 +3,7 @@
   [style.--tx-tree-depth]="depth()"
   [class.is-folder]="node().kind === 'folder'"
 >
-  <tx-hint
-    stretch
-    label="Shift+click range"
-    detail="Ctrl+click add"
-    placement="right"
-    [suppressed]="renaming()"
-  >
-    <div
+  <div
       class="tx-collections-node__row"
       [class.is-folder]="node().kind === 'folder'"
       [class.is-leaf]="isLeaf()"
@@ -23,6 +16,7 @@
       [attr.aria-expanded]="node().kind === 'folder' ? expanded() : null"
       [attr.aria-current]="active() ? 'page' : null"
       [attr.aria-label]="rowAriaLabel()"
+      data-tree-row
       [attr.aria-keyshortcuts]="'Alt+ArrowUp Alt+ArrowDown'"
       (click)="handleRowClick($event)"
       (keydown)="handleRowKeydown($event)"
@@ -100,6 +94,14 @@
         />
       } @else {
         <span class="tx-collections-node__name">{{ node().name }}</span>
+        @if (healthMark(); as mark) {
+          <span
+            class="tx-collections-node__health"
+            [class.is-error]="mark.severity === 'error'"
+            aria-hidden="true"
+            (click)="handleHealthClick($event)"
+          >{{ mark.label }}</span>
+        }
         @if (httpNode(); as http) {
           @if (http.status !== null) {
             <span class="tx-collections-node__status" aria-hidden="true">{{ http.status }}</span>
@@ -107,5 +109,4 @@
         }
       }
     </div>
-  </tx-hint>
 </div>

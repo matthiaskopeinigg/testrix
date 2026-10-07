@@ -1,6 +1,8 @@
 <div
   class="tx-service-node"
+  data-tree-row
   [style.padding-left.px]="8 + depth() * 12"
+  (contextmenu)="handleMenu($event)"
 >
   <div
     class="tx-service-node__drag"

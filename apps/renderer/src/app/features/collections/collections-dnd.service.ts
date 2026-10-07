@@ -192,6 +192,7 @@ export class CollectionsDndService {
       draggedFolderIds,
       contentTop: 0,
       contentBottom: Math.max(scroller.scrollHeight, scrollerRect.height),
+      manualOrder: true,
     });
   }
 

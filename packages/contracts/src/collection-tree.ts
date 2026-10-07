@@ -126,6 +126,7 @@ export type CollectionTree = CollectionNode[];
 
 /** How siblings are ordered after folders-first. */
 export const collectionSortModeSchema = z.enum([
+  'saved',
   'name-asc',
   'name-desc',
   'type',

@@ -1,4 +1,4 @@
-<div class="tx-collections-toolbar">
+<div class="tx-collections-toolbar" data-sidebar-toolbar>
   <div class="tx-collections-toolbar__search">
     <tx-input
       id="collections-search"
@@ -7,7 +7,6 @@
       (valueChange)="handleSearch($event)"
     />
   </div>
-  @if (showToolActions()) {
   <div class="tx-collections-toolbar__actions" role="toolbar" aria-label="Collection tools">
     <tx-hint [label]="expandToggleLabel()" placement="bottom">
       <button
@@ -93,7 +92,7 @@
         <button
           type="button"
           class="tx-collections-toolbar__btn"
-          [class.is-active]="openMenu() === 'sort'"
+          [class.is-active]="store.sortMode() !== 'name-asc' || openMenu() === 'sort'"
           aria-label="Sort collections"
           [attr.aria-expanded]="openMenu() === 'sort'"
           (click)="handleToggleMenu('sort', $event)"
@@ -104,21 +103,7 @@
         </button>
       </tx-hint>
     </div>
-    <tx-hint label="Check collection health" detail="Find empty URLs and missing variables" placement="bottom">
-      <button
-        type="button"
-        class="tx-collections-toolbar__btn"
-        aria-label="Check collection health"
-        (click)="handleHealthCheck()"
-      >
-        <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
-          <circle cx="8" cy="8" r="5.25" fill="none" stroke="currentColor" stroke-width="1.35" />
-          <path d="M8 5v3.5M8 11.1h.01" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
-        </svg>
-      </button>
-    </tx-hint>
   </div>
-  }
 
   @if (openMenu(); as menu) {
     <div
@@ -192,3 +177,4 @@
       </div>
   }
 </div>
+

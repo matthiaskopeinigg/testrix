@@ -130,10 +130,10 @@ export const HELP_ARTICLES: readonly HelpArticle[] = [
     title: 'Collection tree',
     summary: 'Nested folders of HTTP and WebSocket requests.',
     body: [
-      'Collections live in the Collections rail. Folders can nest. Drag a node to reorder it or drop it into another folder. Shift-click and Ctrl/Cmd-click select multiple rows; dragging a selected row moves the whole selection in tree order.',
+      'Collections live in the Collections rail. Folders can nest. Drag a node to reorder it or drop it into another folder. A drag switches sort to Saved order, so the new order stays. Shift-click and Ctrl/Cmd-click select multiple rows; dragging a selected row moves the whole selection in tree order.',
       'Search, filter, and sort sit in the collections toolbar. Collapse all folds the tree so you can scan names.',
     ],
-    tips: ['Right-click empty space for New folder or New request. Right-click a folder and choose Open for tags, auth, headers, and docs. Click a folder row to expand or collapse it.'],
+    tips: ['Right-click a row for Open, Rename, and Delete. Right-click the space left of a row, empty space, or the toolbar beside search, filter, and sort for New folder or New request. Right-click a folder and choose Open for tags, auth, headers, and docs. Click a folder row to expand or collapse it.'],
     keywords: 'collections folders tree drag drop search filter sort http websocket folder settings oauth multi select shift ctrl',
   },
   {
@@ -765,12 +765,13 @@ export const HELP_ARTICLES: readonly HelpArticle[] = [
     id: 'collection-health',
     section: 'collections',
     title: 'Collection health',
-    summary: 'Offline scan for empty URLs and unresolved variables.',
+    summary: 'Empty URLs and unresolved variables show on the collection row.',
     body: [
-      'Use Check collection health on the Collections toolbar or the command palette. The scan walks HTTP and WebSocket leaves against the active environment — no network probes.',
-      'Issues include empty URLs, bad schemes after resolve, and leftover {{name}} placeholders in URL, headers, params, body, or auth. Click a row to open the request.',
+      'Testrix marks HTTP and WebSocket requests as you edit them, using the active environment. The check stays on this machine and does not send a request.',
+      'A request shows the problem next to its name, such as an empty URL or a leftover variable placeholder in the URL, headers, params, body, or auth. A folder shows how many issues sit inside it.',
+      'Click the mark to open the list, then click a row to open that request. The mark clears when the URL or variable is fixed.',
     ],
-    tips: ['Scope the whole tree from the toolbar; run again after fixing variables in the active environment.'],
+    tips: ['Switch the active environment to recheck the same requests against a different variable set.'],
     keywords: 'health broken request missing variable url validate collection scan',
   },
   {

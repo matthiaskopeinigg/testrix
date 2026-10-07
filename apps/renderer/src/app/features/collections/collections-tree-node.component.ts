@@ -1,6 +1,7 @@
-import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
 import type { CollectionNode } from '@testrix/contracts';
-import { TxHintComponent } from '@testrix/ui';
+
+import { CollectionHealthService } from './collection-health.service';
 
 /** Keyboard request to shift a row one slot within its parent. */
 export interface CollectionsReorderRequest {
@@ -21,12 +22,12 @@ export interface CollectionsMenuRequest {
 @Component({
   selector: 'tx-collections-tree-node',
   standalone: true,
-  imports: [TxHintComponent],
   templateUrl: './collections-tree-node.component.html',
   styleUrl: './collections-tree-node.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CollectionsTreeNodeComponent {
+  private readonly health = inject(CollectionHealthService);
   readonly node = input.required<CollectionNode>();
   readonly depth = input(0);
   readonly expanded = input(false);
@@ -53,15 +54,17 @@ export class CollectionsTreeNodeComponent {
     return kind === 'http' || kind === 'websocket';
   });
 
+  readonly healthMark = computed(() => this.health.markFor(this.node().id));
+
   readonly rowAriaLabel = computed(() => {
     const node = this.node();
-    if (node.kind === 'folder') {
-      return this.expanded() ? `Collapse ${node.name}` : `Expand ${node.name}`;
-    }
-    if (node.kind === 'http') {
-      return `Open ${node.method} ${node.name}`;
-    }
-    return `Open WebSocket ${node.name}`;
+    const base = node.kind === 'folder'
+      ? (this.expanded() ? `Collapse ${node.name}` : `Expand ${node.name}`)
+      : node.kind === 'http'
+        ? `Open ${node.method} ${node.name}`
+        : `Open WebSocket ${node.name}`;
+    const mark = this.healthMark();
+    return mark ? `${base}. ${mark.label}` : base;
   });
 
   handleChevronClick(event: MouseEvent): void {
@@ -104,6 +107,12 @@ export class CollectionsTreeNodeComponent {
     event.preventDefault();
     event.stopPropagation();
     this.nodeMenu.emit({ node: this.node(), event });
+  }
+
+  handleHealthClick(event: MouseEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.health.show(this.node().id);
   }
 
   handleRenameInput(event: Event): void {

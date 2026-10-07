@@ -232,3 +232,62 @@ export function scanCollectionHealth(input: {
 
   return issues;
 }
+
+export interface CollectionFolderHealth {
+  readonly count: number;
+  readonly severity: CollectionHealthSeverity;
+  readonly issues: readonly CollectionHealthIssue[];
+}
+
+export interface CollectionHealthIndex {
+  readonly issues: readonly CollectionHealthIssue[];
+  readonly byNodeId: ReadonlyMap<string, readonly CollectionHealthIssue[]>;
+  readonly folders: ReadonlyMap<string, CollectionFolderHealth>;
+}
+
+/** Groups scan results by request and rolls issue counts up to ancestor folders. */
+export function indexCollectionHealth(
+  tree: CollectionTree,
+  issues: readonly CollectionHealthIssue[],
+): CollectionHealthIndex {
+  const byNodeId = new Map<string, CollectionHealthIssue[]>();
+  for (const issue of issues) {
+    const list = byNodeId.get(issue.nodeId);
+    if (list)
+      list.push(issue);
+    else
+      byNodeId.set(issue.nodeId, [issue]);
+  }
+
+  const folders = new Map<string, CollectionFolderHealth>();
+
+  function walk(nodes: readonly CollectionNode[]): CollectionFolderHealth {
+    let count = 0;
+    let severity: CollectionHealthSeverity = 'warning';
+    const collected: CollectionHealthIssue[] = [];
+    for (const node of nodes) {
+      if (node.kind === 'folder') {
+        const nested = walk(node.children);
+        if (nested.count === 0)
+          continue;
+        folders.set(node.id, nested);
+        count += nested.count;
+        collected.push(...nested.issues);
+        if (nested.severity === 'error')
+          severity = 'error';
+        continue;
+      }
+      const direct = byNodeId.get(node.id);
+      if (!direct)
+        continue;
+      count += direct.length;
+      collected.push(...direct);
+      if (direct.some((issue) => issue.severity === 'error'))
+        severity = 'error';
+    }
+    return { count, severity, issues: collected };
+  }
+
+  walk(tree);
+  return { issues, byNodeId, folders };
+}

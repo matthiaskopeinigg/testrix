@@ -11,6 +11,7 @@ import {
 } from '@angular/core';
 
 import { TxHintComponent } from '../../primitives/tx-hint/tx-hint.component';
+import { forwardPaddingContextMenu } from './forward-padding-context-menu';
 import {
   clampSidebarWidth,
   TX_SIDEBAR_COLLAPSE_WIDTH,
@@ -71,6 +72,10 @@ export class TxSidebarComponent {
 
   constructor() {
     this.destroyRef.onDestroy(() => this.unbindDrag());
+  }
+
+  handleBodyContextMenu(event: MouseEvent): void {
+    forwardPaddingContextMenu(event);
   }
 
   handleResizeStart(event: PointerEvent): void {
