@@ -54,14 +54,17 @@ import {
   isToggleModifier,
   shouldKeepPointerSelection,
 } from '../../../core/range-select';
+import { isEditableKeyboardTarget, isModKey, ownsTreeClipboardShortcut } from '../../../core/selection-hotkeys';
+import { TreeClipboardService } from '../../../core/tree-clipboard.service';
 import { EnvironmentsStore } from '../../environments/environments.store';
 import { EnvironmentEditorDndService } from './environment-editor-dnd.service';
+import { copyEnvironmentSelection, pasteEnvironmentNodes } from './environment-node-clipboard';
 import { EnvironmentTreeComponent } from './environment-tree.component';
 import type {
   EnvironmentTreeMenuRequest,
   EnvironmentTreeSelectRequest,
 } from './environment-tree-node.component';
-import type { WorkbenchTab } from '../workbench.store';
+import { WorkbenchStore, type WorkbenchTab } from '../workbench.store';
 
 function emptyVariable(id: string): EnvironmentVariable {
   return {
@@ -195,10 +198,15 @@ interface EnvMenu {
   styleUrl: './environment-editor.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
   providers: [EnvironmentEditorDndService],
+  host: {
+    'data-tree-clipboard': 'environment-nodes',
+  },
 })
 export class EnvironmentEditorComponent {
   readonly tab = input.required<WorkbenchTab>();
   private readonly environments = inject(EnvironmentsStore);
+  private readonly workbench = inject(WorkbenchStore);
+  private readonly clipboard = inject(TreeClipboardService);
   private readonly confirm = inject(ConfirmDialogService);
   readonly dnd = inject(EnvironmentEditorDndService);
   private readonly injector = inject(Injector);
@@ -219,8 +227,13 @@ export class EnvironmentEditorComponent {
   private lastEnvId: string | null = null;
   private lastFocusNonce = 0;
 
+  private destroyed = false;
+
   constructor() {
-    this.destroyRef.onDestroy(() => this.closeMenu(true));
+    this.destroyRef.onDestroy(() => {
+      this.destroyed = true;
+      this.closeMenu(true);
+    });
     effect(() => {
       const env = this.environment();
       const envId = env?.id ?? null;
@@ -743,27 +756,51 @@ export class EnvironmentEditorComponent {
 
   @HostListener('document:keydown', ['$event'])
   handleDocumentKeydown(event: KeyboardEvent): void {
-    if (event.key !== 'Escape') {
+    if (event.key === 'Escape') {
+      if (this.confirm.request())
+        return;
+      if (this.menu()) {
+        event.preventDefault();
+        this.closeMenu();
+        return;
+      }
+      if (this.renamingId()) {
+        event.preventDefault();
+        this.finishRename();
+        return;
+      }
+      const env = this.environment();
+      if (env && this.environments.nodeSelectionFor(env.id).ids.length > 0) {
+        event.preventDefault();
+        this.environments.clearNodeSelection(env.id);
+      }
       return;
     }
-    if (this.confirm.request()) {
-      return;
-    }
-    if (this.menu()) {
-      event.preventDefault();
-      this.closeMenu();
-      return;
-    }
-    if (this.renamingId()) {
-      event.preventDefault();
-      this.finishRename();
-      return;
-    }
+    this.handleClipboardKeydown(event);
+  }
+
+  handleMenuCopy(): void {
+    const menu = this.menu();
+    this.closeMenu();
     const env = this.environment();
-    if (env && this.environments.nodeSelectionFor(env.id).ids.length > 0) {
-      event.preventDefault();
-      this.environments.clearNodeSelection(env.id);
-    }
+    if (!env)
+      return;
+    const selected = this.selectedIds();
+    const targetId = menu?.id;
+    const ids =
+      targetId && selected.includes(targetId) && selected.length > 1
+        ? [...selected]
+        : targetId
+          ? [targetId]
+          : [...selected];
+    this.copyNodes(env.variables, ids);
+  }
+
+  handleMenuPaste(): void {
+    const menu = this.menu();
+    const parentId = menu?.kind === 'folder' ? menu.id : null;
+    this.closeMenu();
+    this.pasteFromClipboard(parentId);
   }
 
   @HostListener('window:resize')
@@ -854,6 +891,86 @@ export class EnvironmentEditorComponent {
     const top = y + height > window.innerHeight - margin ? Math.max(margin, y - height) : y;
     position.left(`${left}px`).top(`${top}px`);
     overlayRef.updatePosition();
+  }
+
+  private handleClipboardKeydown(event: KeyboardEvent): void {
+    if (this.renamingId() || this.confirm.request())
+      return;
+    if (isEditableKeyboardTarget(event.target))
+      return;
+    if (event.shiftKey || !(isModKey(event, 'c') || isModKey(event, 'v')))
+      return;
+    const copying = isModKey(event, 'c');
+    if (!this.ownsVariableClipboard(event, !copying))
+      return;
+    const env = this.environment();
+    if (!env)
+      return;
+    if (isModKey(event, 'c')) {
+      const selected = this.selectedIds();
+      const focused = this.selectedId();
+      const ids = selected.length > 0 ? [...selected] : focused ? [focused] : [];
+      if (!this.copyNodes(env.variables, ids))
+        return;
+      event.preventDefault();
+      return;
+    }
+    event.preventDefault();
+    this.pasteFromClipboard(this.focusedFolder()?.id ?? null);
+  }
+
+  private ownsVariableClipboard(event: KeyboardEvent, allowWhenUnfocused: boolean): boolean {
+    const group = this.workbench.focusedGroup();
+    if (!group || group.activeTabId !== this.tab().id)
+      return false;
+    return ownsTreeClipboardShortcut(this.host.nativeElement, event, allowWhenUnfocused);
+  }
+
+  private copyNodes(nodes: readonly EnvironmentNode[], ids: readonly string[]): boolean {
+    const copied = copyEnvironmentSelection(nodes, ids);
+    if (copied.length === 0)
+      return false;
+    this.clipboard.set({ kind: 'environment-nodes', nodes: copied });
+    return true;
+  }
+
+  private pasteFromClipboard(parentId: string | null): void {
+    const memory = this.clipboard.peek('environment-nodes');
+    if (memory) {
+      this.pasteNodes(memory.nodes, parentId);
+      return;
+    }
+    void this.clipboard.get('environment-nodes').then((payload) => {
+      if (!payload || this.destroyed)
+        return;
+      this.pasteNodes(payload.nodes, parentId);
+    });
+  }
+
+  private pasteNodes(nodes: readonly EnvironmentNode[], parentId: string | null): void {
+    const env = this.environment();
+    if (!env || nodes.length === 0)
+      return;
+    const pasted = pasteEnvironmentNodes(env.variables, nodes, parentId);
+    if (pasted.ids.length === 0)
+      return;
+    if (this.query().trim())
+      this.query.set('');
+    this.environments.setVariables(env.id, pasted.nodes);
+    const ids = [...pasted.ids];
+    const focusId = ids[0] ?? null;
+    this.environments.setNodeSelection(env.id, { ids, anchorId: focusId, paneId: focusId });
+    this.selectedId.set(focusId);
+    if (!focusId)
+      return;
+    afterNextRender(
+      () => {
+        const row = this.host.nativeElement.querySelector(`[data-env-node-id="${focusId}"]`);
+        if (row instanceof HTMLElement)
+          row.scrollIntoView({ block: 'nearest' });
+      },
+      { injector: this.injector },
+    );
   }
 
   private selectAndFocus(id: string): void {

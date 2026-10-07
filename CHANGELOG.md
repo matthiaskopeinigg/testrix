@@ -4,6 +4,16 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+### Added
+
+- Select variables or folders in an environment, then Ctrl+C and Ctrl+V to paste them into another environment. Keys stay the same, so `{{url}}` still works.
+- HTML, XML, and SVG responses show a Preview tab that renders the page.
+
+### Fixed
+
+- The response More menu opens, so Raw, Cookies, and the other sections are reachable.
+- A failed request no longer shows a failure count in the title bar.
+
 ## [2.0.3] — 2026-10-06
 
 ### Added

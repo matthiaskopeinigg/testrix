@@ -28,5 +28,10 @@ describe('parseTreeClipboard', () => {
     expect(parseTreeClipboard({ kind: 'environments', items: [{ id: 'env_1' }] })?.kind).toBe('environments')
     expect(parseTreeClipboard({ kind: 'collections', nodes: [] })).toBeNull()
     expect(parseTreeClipboard('plain text')).toBeNull()
+    expect(parseTreeClipboard({
+      kind: 'environment-nodes',
+      nodes: [{ kind: 'variable', id: 'v1', key: 'url', value: 'https://api.test', enabled: true, secret: false }],
+    })?.kind).toBe('environment-nodes')
+    expect(parseTreeClipboard({ kind: 'environment-nodes', nodes: [{ kind: 'variable' }] })).toBeNull()
   })
 })

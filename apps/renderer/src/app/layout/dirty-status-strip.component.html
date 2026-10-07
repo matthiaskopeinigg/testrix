@@ -14,13 +14,6 @@
         </button>
       </tx-hint>
     }
-    @if (failedCount() > 0) {
-      <tx-hint label="Open History with recent failures" placement="bottom">
-        <button type="button" class="tx-dirty-strip__chip is-failed" (click)="openFailed()">
-          {{ failedCount() }} failed
-        </button>
-      </tx-hint>
-    }
     @if (footprintHeavy()) {
       <tx-hint label="Open Data settings — trim history or tabs" placement="bottom">
         <button type="button" class="tx-dirty-strip__chip is-perf" (click)="openDataSettings()">

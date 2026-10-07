@@ -161,10 +161,11 @@ export const HELP_ARTICLES: readonly HelpArticle[] = [
     body: [
       'The Environments rail lists environments for the active workspace. Open one to edit keys, values, folders, and secret flags.',
       'A variable inside a folder is used by its key, so url in folder ms.folder is {{url}}. {{ms.folder.url}} names that same variable when another url exists. A value can reference another variable, such as {{baseUrl}}/test.',
+      'Select variables or folders, then Ctrl+C and Ctrl+V to paste them into another environment. Keys stay the same, so {{url}} still works.',
       'The titlebar environment picker chooses which environment requests should use. You can choose None when you want no active set.',
     ],
     tips: ['Right-click an environment for Open, Rename, Duplicate, and Delete. Drag the list to change order.'],
-    keywords: 'environments variables secrets env picker duplicate rename',
+    keywords: 'environments variables secrets env picker duplicate rename paste copy',
   },
   {
     id: 'database-sidebar',

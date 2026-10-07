@@ -17,6 +17,7 @@ export interface ResponseTabLayoutInput {
   readonly runCount: number
   readonly redirectCount: number
   readonly canDiff: boolean
+  readonly canPreview: boolean
 }
 
 const OVERFLOW_TAB_ORDER: readonly RequestResponseTab[] = [
@@ -31,7 +32,10 @@ const OVERFLOW_TAB_ORDER: readonly RequestResponseTab[] = [
  * Primary response tabs: Pretty, Headers, optional Timeline / Runs, plus promoted Redirects / Diff.
  */
 export function primaryResponseTabs(input: ResponseTabLayoutInput): readonly RequestResponseTab[] {
-  const tabs: RequestResponseTab[] = ['pretty', 'headers']
+  const tabs: RequestResponseTab[] = ['pretty']
+  if (input.canPreview)
+    tabs.push('preview')
+  tabs.push('headers')
   if (input.hasTiming)
     tabs.push('timeline')
   if (input.runCount > 0)

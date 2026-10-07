@@ -1,3 +1,4 @@
+import { DomSanitizer } from '@angular/platform-browser';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -15,7 +16,7 @@ import {
   untracked,
   viewChild,
 } from '@angular/core';
-import { OverlayModule } from '@angular/cdk/overlay';
+import { OverlayModule, type ConnectedPosition } from '@angular/cdk/overlay';
 import {
   ancestorFolderConfigs,
   ancestorFolderOrigins,
@@ -194,6 +195,11 @@ export class RequestEditorComponent implements PlaceholderOriginHost {
   private readonly history = inject(HistoryStore);
   private readonly cookies = inject(CookieJarStore);
   readonly shell = inject(ShellStateService);
+  private readonly sanitizer = inject(DomSanitizer);
+  readonly responseMorePositions: ConnectedPosition[] = [
+    { originX: 'end', originY: 'bottom', overlayX: 'end', overlayY: 'top', offsetY: 4 },
+    { originX: 'end', originY: 'top', overlayX: 'end', overlayY: 'bottom', offsetY: -4 },
+  ];
   private readonly helpContext = inject(HelpContextService);
   private readonly cookieAuth = inject(CookieAuthDialogService);
   private readonly injector = inject(Injector);
@@ -315,6 +321,7 @@ export class RequestEditorComponent implements PlaceholderOriginHost {
       runCount: this.runs().length,
       redirectCount: this.responseRedirects().length,
       canDiff: this.canShowDiff(),
+      canPreview: this.canPreview(),
     };
   });
   readonly primaryResponseTabs = computed(() => primaryResponseTabs(this.responseTabLayout()));
@@ -354,7 +361,7 @@ export class RequestEditorComponent implements PlaceholderOriginHost {
     const res = this.response();
     if (!res || !this.canPreview())
       return null;
-    return previewDocument(res.body);
+    return this.sanitizer.bypassSecurityTrustHtml(previewDocument(res.body));
   });
   readonly responseCookies = computed((): readonly CollectionCookie[] => {
     const res = this.response();
@@ -1105,10 +1112,6 @@ export class RequestEditorComponent implements PlaceholderOriginHost {
 
   handleDocumentDown(event: Event): void {
     const target = event.target;
-    if (this.responseMoreOpen()) {
-      if (target instanceof Element && !target.closest('.tx-request-editor__response-more'))
-        this.closeResponseMore();
-    }
     if (!this.completeOpen())
       return;
     if (!(target instanceof Node))
@@ -1676,6 +1679,11 @@ export class RequestEditorComponent implements PlaceholderOriginHost {
 
   @HostListener('document:keydown', ['$event'])
   handleDocumentKeydown(event: KeyboardEvent): void {
+    if (event.key === 'Escape' && this.responseMoreOpen()) {
+      event.preventDefault();
+      this.closeResponseMore();
+      return;
+    }
     if (!isModKey(event, 's'))
       return;
     if (isEditableKeyboardTarget(event.target))

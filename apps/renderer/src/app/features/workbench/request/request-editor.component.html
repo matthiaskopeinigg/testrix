@@ -631,6 +631,8 @@
             <button
               type="button"
               class="tx-request-editor__tab tx-request-editor__tab--more"
+              cdkOverlayOrigin
+              #responseMoreOrigin="cdkOverlayOrigin"
               [class.is-active]="responseMoreActive() || responseMoreOpen()"
               aria-haspopup="menu"
               [attr.aria-expanded]="responseMoreOpen()"
@@ -638,25 +640,32 @@
             >
               More
             </button>
-            @if (responseMoreOpen()) {
-              <div class="tx-request-editor__response-more-menu tx-menu" role="menu">
-                @for (id of overflowResponseTabs(); track id) {
-                  <button
-                    type="button"
-                    class="tx-request-editor__response-more-item"
-                    role="menuitem"
-                    [class.is-active]="responseTab() === id"
-                    (click)="handleResponseMoreTab(id)"
-                  >
-                    {{ responseTabLabel(id) }}
-                    @if (id === 'cookies' && responseCookies().length > 0) {
-                      <span class="tx-request-editor__count">{{ responseCookies().length }}</span>
-                    }
-                  </button>
-                }
-              </div>
-            }
           </div>
+          <ng-template
+            cdkConnectedOverlay
+            [cdkConnectedOverlayOrigin]="responseMoreOrigin"
+            [cdkConnectedOverlayOpen]="responseMoreOpen()"
+            [cdkConnectedOverlayPositions]="responseMorePositions"
+            [cdkConnectedOverlayPush]="true"
+            (overlayOutsideClick)="closeResponseMore()"
+          >
+            <div class="tx-request-editor__response-more-menu tx-menu" role="menu">
+              @for (id of overflowResponseTabs(); track id) {
+                <button
+                  type="button"
+                  class="tx-request-editor__response-more-item"
+                  role="menuitem"
+                  [class.is-active]="responseTab() === id"
+                  (click)="handleResponseMoreTab(id)"
+                >
+                  {{ responseTabLabel(id) }}
+                  @if (id === 'cookies' && responseCookies().length > 0) {
+                    <span class="tx-request-editor__count">{{ responseCookies().length }}</span>
+                  }
+                </button>
+              }
+            </div>
+          </ng-template>
         }
       </div>
     </div>

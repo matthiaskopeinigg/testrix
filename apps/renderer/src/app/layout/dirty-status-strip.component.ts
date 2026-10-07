@@ -38,19 +38,9 @@ export class DirtyStatusStripComponent {
 
   readonly unsavedCount = computed(() => this.dirtyTabs.count());
 
-  readonly failedCount = computed(() =>
-    this.history.entries()
-      .slice(0, 40)
-      .filter((entry) => {
-        const status = entry.status;
-        return status == null || status >= 400 || status === 0;
-      }).length,
-  );
-
   readonly visible = computed(
     () =>
       this.unsavedCount() > 0
-      || this.failedCount() > 0
       || this.footprintHeavy()
       || this.runInterrupted(),
   );
@@ -111,12 +101,6 @@ export class DirtyStatusStripComponent {
         return;
       }
     }
-  }
-
-  openFailed(): void {
-    this.shell.selectRail('history');
-    this.shell.showSidebar();
-    this.history.statusClasses.set(['client', 'server', 'error']);
   }
 
   openDataSettings(): void {

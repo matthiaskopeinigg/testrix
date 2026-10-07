@@ -99,12 +99,6 @@
     background: color-mix(in srgb, rgb(220 140 56) 12%, transparent);
   }
 
-  &.is-failed {
-    color: #ffb8b8;
-    border-color: color-mix(in srgb, rgb(220 80 80) 40%, var(--tx-border-subtle));
-    background: color-mix(in srgb, rgb(220 80 80) 12%, transparent);
-  }
-
   &.is-perf {
     color: color-mix(in srgb, var(--tx-accent) 55%, #c8b8ff);
     border-color: color-mix(in srgb, var(--tx-accent) 28%, var(--tx-border-subtle));

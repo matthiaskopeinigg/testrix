@@ -1,11 +1,13 @@
 import { Injectable } from '@angular/core'
-import type {
-  CollectionNode,
-  Environment,
-  FlowGraphTemplate,
-  PlantumlNode,
-  ServiceId,
-  ServiceTreeNode,
+import {
+  environmentNodeSchema,
+  type CollectionNode,
+  type Environment,
+  type EnvironmentNode,
+  type FlowGraphTemplate,
+  type PlantumlNode,
+  type ServiceId,
+  type ServiceTreeNode,
 } from '@testrix/contracts'
 
 const CLIPBOARD_PREFIX = 'testrix-tree-clipboard:v1:'
@@ -13,6 +15,7 @@ const CLIPBOARD_PREFIX = 'testrix-tree-clipboard:v1:'
 export type TreeClipboardPayload =
   | { readonly kind: 'collections'; readonly nodes: readonly CollectionNode[] }
   | { readonly kind: 'environments'; readonly items: readonly Environment[] }
+  | { readonly kind: 'environment-nodes'; readonly nodes: readonly EnvironmentNode[] }
   | {
       readonly kind: 'database'
       readonly section: 'connections' | 'queries'
@@ -102,6 +105,16 @@ export function parseTreeClipboard(value: unknown): TreeClipboardPayload | null 
     return structuredClone(record) as TreeClipboardPayload
   if (record.kind === 'environments' && Array.isArray(record.items) && record.items.length > 0)
     return structuredClone(record) as TreeClipboardPayload
+  if (record.kind === 'environment-nodes' && Array.isArray(record.nodes) && record.nodes.length > 0) {
+    const nodes: EnvironmentNode[] = []
+    for (const node of record.nodes) {
+      const parsed = environmentNodeSchema.safeParse(node)
+      if (!parsed.success)
+        return null
+      nodes.push(parsed.data)
+    }
+    return { kind: 'environment-nodes', nodes }
+  }
   if (
     record.kind === 'database' &&
     (record.section === 'connections' || record.section === 'queries') &&

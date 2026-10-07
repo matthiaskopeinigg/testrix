@@ -259,6 +259,12 @@
         <button type="button" class="tx-env-menu__item" role="menuitem" (click)="handleRenameFromMenu()">
           Rename
         </button>
+        <button type="button" class="tx-env-menu__item" role="menuitem" (click)="handleMenuCopy()">
+          Copy
+        </button>
+        <button type="button" class="tx-env-menu__item" role="menuitem" (click)="handleMenuPaste()">
+          Paste
+        </button>
         <span class="tx-env-menu__rule" aria-hidden="true"></span>
         <button type="button" class="tx-env-menu__item is-danger" role="menuitem" (click)="handleMenuDelete()">
           {{ selectedIds().includes(menu.id ?? '') && selectedIds().length > 1 ? 'Delete selected' : 'Delete' }}
@@ -281,6 +287,12 @@
             {{ isRevealed(menu.id ?? '') ? 'Hide value' : 'Show value' }}
           </button>
         }
+        <button type="button" class="tx-env-menu__item" role="menuitem" (click)="handleMenuCopy()">
+          Copy
+        </button>
+        <button type="button" class="tx-env-menu__item" role="menuitem" (click)="handleMenuPaste()">
+          Paste
+        </button>
         <span class="tx-env-menu__rule" aria-hidden="true"></span>
         <button type="button" class="tx-env-menu__item is-danger" role="menuitem" (click)="handleMenuDelete()">
           {{ selectedIds().includes(menu.id ?? '') && selectedIds().length > 1 ? 'Delete selected' : 'Delete' }}
@@ -291,6 +303,9 @@
         </button>
         <button type="button" class="tx-env-menu__item" role="menuitem" (click)="handleAddVariableFromMenu()">
           Add variable
+        </button>
+        <button type="button" class="tx-env-menu__item" role="menuitem" (click)="handleMenuPaste()">
+          Paste
         </button>
       }
     </div>
