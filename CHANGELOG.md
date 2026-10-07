@@ -4,6 +4,12 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+### Fixed
+
+- Pick highlights the element under the cursor, including the Registrieren button after a Type step scrolls the page.
+- Closing the E2E window cancels Pick immediately.
+- A Manual step shows its prompt on the Testrix window during Run and during CSS selector Pick, including when the E2E window is in front.
+
 ## [2.0.12] — 2026-10-07
 
 ### Fixed

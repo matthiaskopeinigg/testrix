@@ -77,6 +77,7 @@ import {
   browserPickPrefixNeedsSelector,
   prefixNodeIdsBefore,
 } from './e2e-picker-targets';
+import { focusedWorkbenchWindow } from '../../windows/main-window';
 import { BrowserLane, E2E_PARTITION } from './flow-browser-lane';
 import { FLOW_TEXT_TARGET_FNS, flowTextPageScript } from './flow-text-target';
 import {
@@ -354,9 +355,13 @@ export class FlowHost {
           databases: databases ?? DEFAULT_DATABASES_FILE,
           envVars,
         });
+        if (prefixError === 'cancelled')
+          return { ok: false, cancelled: true };
         if (prefixError)
           return { ok: false, error: prefixError };
         win = lane.current() ?? (await lane.ensure(1100, 800, { visible: true }));
+        if (win.isDestroyed())
+          return { ok: false, cancelled: true };
         const after = win.webContents.getURL();
         if (after && after !== 'about:blank')
           loadedUrl = after;
@@ -380,6 +385,7 @@ export class FlowHost {
         loadedUrl = current;
       }
       lane.reveal();
+      await lane.setAction('Pick');
 
       await win.webContents
         .executeJavaScript(buildE2ePickerHintTeardownScript())
@@ -594,6 +600,14 @@ export class FlowHost {
     await this.clearE2eSession();
     const controller = new AbortController();
     const signal = controller.signal;
+    const abortBecauseClosed = () => controller.abort();
+    const watchPickWindow = () => {
+      const current = lane.current();
+      if (!current || current.isDestroyed())
+        return;
+      current.removeListener('close', abortBecauseClosed);
+      current.on('close', abortBecauseClosed);
+    };
     const ctx: FlowEvalContext = {
       status: 0,
       body: '',
@@ -620,6 +634,7 @@ export class FlowHost {
     try {
       if (ensureBrowser)
         await lane.ensure(1100, 800, { visible: true });
+      watchPickWindow();
       for (const id of prefixIds) {
         if (signal.aborted)
           return 'cancelled';
@@ -646,7 +661,11 @@ export class FlowHost {
         } catch (error) {
           if (error instanceof Error && error.message === 'cancelled')
             throw error;
-          // Any failed step must not close the picker.
+          // A Manual prompt must be answered. Skipping it would hide the dialog
+          // and leave later steps without the value the user just typed.
+          if (error instanceof FlowStepError && error.message.startsWith('Manual step'))
+            throw error;
+          // Any other failed step must not close the picker.
           // The window stays on the last page that did load.
         }
       }
@@ -1823,10 +1842,9 @@ export class FlowHost {
       readonly placeholder: string;
     },
   ): Promise<string | null> {
-    const parent =
-      BrowserWindow.getFocusedWindow() ??
-      BrowserWindow.getAllWindows().find((win) => !win.isDestroyed()) ??
-      null;
+    // The focused window is often the E2E browser. That page has no prompt
+    // listener, so the dialog never appears. Always ask on the workbench.
+    const parent = focusedWorkbenchWindow();
     if (!parent || parent.isDestroyed())
       throw new FlowStepError('No window available for manual step');
 
@@ -1839,23 +1857,36 @@ export class FlowHost {
       placeholder: input.placeholder || undefined,
     };
 
-    return new Promise<string | null>((resolve) => {
-      const finish = (value: string | null): void => {
-        signal.removeEventListener('abort', onAbort);
-        this.pendingManual.delete(requestId);
-        resolve(value);
-      };
-      const onAbort = (): void => finish(null);
-      if (signal.aborted) {
-        resolve(null);
-        return;
-      }
-      signal.addEventListener('abort', onAbort, { once: true });
-      this.pendingManual.set(requestId, {
-        resolve: (value) => finish(value),
+    const wasOnTop = parent.isAlwaysOnTop();
+    if (parent.isMinimized())
+      parent.restore();
+    parent.setAlwaysOnTop(true);
+    parent.show();
+    parent.moveTop();
+    parent.focus();
+
+    try {
+      return await new Promise<string | null>((resolve) => {
+        const finish = (value: string | null): void => {
+          signal.removeEventListener('abort', onAbort);
+          this.pendingManual.delete(requestId);
+          resolve(value);
+        };
+        const onAbort = (): void => finish(null);
+        if (signal.aborted) {
+          resolve(null);
+          return;
+        }
+        signal.addEventListener('abort', onAbort, { once: true });
+        this.pendingManual.set(requestId, {
+          resolve: (value) => finish(value),
+        });
+        parent.webContents.send(IpcChannels.flowManualPrompt, payload);
       });
-      parent.webContents.send(IpcChannels.flowManualPrompt, payload);
-    });
+    } finally {
+      if (!wasOnTop && !parent.isDestroyed())
+        parent.setAlwaysOnTop(false);
+    }
   }
 
   private async runBrowserNode(scope: ScopeContext, node: FlowGraphNode): Promise<void> {

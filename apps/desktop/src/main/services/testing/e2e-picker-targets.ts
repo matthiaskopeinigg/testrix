@@ -318,3 +318,72 @@ export const BUILD_SHORT_CSS_SELECTOR_FN = `function() {
   }
   return parts.join(' > ') || el.tagName.toLowerCase();
 }`;
+
+/**
+ * Page-side hit test. `x`/`y` are CSS viewport pixels from the pointer event
+ * (`clientX`/`clientY`), so a scrolled page still highlights the element under
+ * the cursor. Returns the CSS selector, or ''.
+ */
+export const PICK_ELEMENT_AT_POINT_FN = `function(x, y, kind) {
+  function skip(node) {
+    if (!node || node.nodeType !== 1) return true;
+    var id = node.id || '';
+    return id === '__tx-pick-box' || id === '__tx-picker-hint' || id === 'tx-e2e-target' || id === 'tx-e2e-guard-banner';
+  }
+  function fromPoint(px, py) {
+    var el = document.elementFromPoint(px, py);
+    var guard = 0;
+    while (el && el.shadowRoot && guard < 8) {
+      var inner = el.shadowRoot.elementFromPoint(px, py);
+      if (!inner || inner === el) break;
+      el = inner;
+      guard++;
+    }
+    if (skip(el)) return null;
+    return el;
+  }
+  function paint(el) {
+    var box = document.getElementById('__tx-pick-box');
+    if (!el || !el.getBoundingClientRect) {
+      if (box) box.style.display = 'none';
+      return;
+    }
+    var rect = el.getBoundingClientRect();
+    if (!(rect.width > 0) || !(rect.height > 0)) {
+      if (box) box.style.display = 'none';
+      return;
+    }
+    if (!box) {
+      box = document.createElement('div');
+      box.id = '__tx-pick-box';
+      box.setAttribute('style', [
+        'position:fixed',
+        'z-index:2147483646',
+        'pointer-events:none',
+        'box-sizing:border-box',
+        'border:2px solid #0a0c10',
+        'background:rgba(255,220,0,0.42)',
+        'border-radius:2px',
+      ].join(';'));
+      (document.documentElement || document.body).appendChild(box);
+    }
+    var pad = 3;
+    box.style.display = 'block';
+    box.style.left = Math.max(0, rect.left - pad) + 'px';
+    box.style.top = Math.max(0, rect.top - pad) + 'px';
+    box.style.width = Math.max(8, rect.width + pad * 2) + 'px';
+    box.style.height = Math.max(8, rect.height + pad * 2) + 'px';
+  }
+  var el = fromPoint(x, y);
+  if (!el) {
+    paint(null);
+    return '';
+  }
+  var snapped = (${SNAP_ELEMENT_TO_PICK_KIND_FN}).call(el, kind);
+  if (!snapped) {
+    paint(null);
+    return '';
+  }
+  paint(snapped);
+  return (${BUILD_SHORT_CSS_SELECTOR_FN}).call(snapped) || '';
+}`;
