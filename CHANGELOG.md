@@ -4,6 +4,8 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+## [2.0.14] — 2026-10-07
+
 ### Fixed
 
 - Pick highlights the element under the cursor, including the Registrieren button after a Type step scrolls the page.
