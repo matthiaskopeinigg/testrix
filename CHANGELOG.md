@@ -4,6 +4,8 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+## [2.0.12] — 2026-10-07
+
 ### Fixed
 
 - Pick on a later Click runs every earlier node on the path from Start, so a Type step such as {{otp}} receives values from Capture, Set variable, database, and the rest. A failed step still leaves the picker open.

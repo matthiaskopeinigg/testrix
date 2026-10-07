@@ -9,7 +9,7 @@
 **Local-first desktop toolkit for building, testing, and verifying software.** APIs, databases, flows, and regression tools on this PC — no cloud account.
 
 <img src="assets/brand/icon.png" width="28" alt="" /> &nbsp;
-`2.0.11` &nbsp;·&nbsp; `MIT` &nbsp;·&nbsp; `Node >=20.11` &nbsp;·&nbsp; `Windows` &nbsp;·&nbsp; `macOS` &nbsp;·&nbsp; `Linux`
+`2.0.12` &nbsp;·&nbsp; `MIT` &nbsp;·&nbsp; `Node >=20.11` &nbsp;·&nbsp; `Windows` &nbsp;·&nbsp; `macOS` &nbsp;·&nbsp; `Linux`
 
 [Develop](docs/development.md) · [Release](docs/releasing.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md) · [Changelog](CHANGELOG.md)
 
