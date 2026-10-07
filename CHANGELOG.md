@@ -4,6 +4,8 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+## [2.0.8] — 2026-10-07
+
 ### Fixed
 
 - A Set variable can be used in a later request URL, such as `google.at/{{username}}`. The field keeps the token; the request is sent with the value.
