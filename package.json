@@ -1,6 +1,6 @@
 {
   "name": "testrix",
-  "version": "2.0.12",
+  "version": "2.0.13",
   "description": "Testrix — local-first desktop API workbench",
   "license": "MIT",
   "private": true,
