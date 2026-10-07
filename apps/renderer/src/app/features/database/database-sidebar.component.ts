@@ -26,6 +26,7 @@ import { TxButtonComponent, TxEmptyStateComponent, forwardPaddingContextMenu, pl
 
 import { ConfirmDialogService } from '../../core/confirm-dialog.service';
 import { isContextMenuLeftOfRow, isSidebarToolbarContext } from '../../core/tree-context-menu';
+import { isOutsideTreePointer } from '../../core/tree-selection';
 import {
   isEditableKeyboardTarget,
   isModKey,
@@ -450,6 +451,15 @@ export class DatabaseSidebarComponent {
   handleWindowResize(): void {
     this.closeMenu();
     this.store.closeSchemaPicker();
+  }
+
+  @HostListener('document:pointerdown', ['$event'])
+  handleOutsidePointerDown(event: PointerEvent): void {
+    if (!isOutsideTreePointer(this.host.nativeElement, event))
+      return;
+    if (this.store.connectionSelectedIds().length === 0 && this.store.querySelectedIds().length === 0)
+      return;
+    this.store.clearSelection();
   }
 
   @HostListener('document:keydown', ['$event'])

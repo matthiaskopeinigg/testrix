@@ -18,6 +18,7 @@ import { TxEmptyStateComponent, TxHintComponent, playLeaveThen } from '@testrix/
 
 import { ConfirmDialogService } from '../../core/confirm-dialog.service';
 import { isEditableKeyboardTarget, isModKey, ownsTreeClipboardShortcut } from '../../core/selection-hotkeys';
+import { isOutsideTreePointer } from '../../core/tree-selection';
 import { TreeClipboardService } from '../../core/tree-clipboard.service';
 import { ToolsDndService } from './tools-dnd.service';
 import { ToolsListComponent } from './tools-list.component';
@@ -185,6 +186,16 @@ export class ToolsSidebarComponent {
     if (!ok)
       return;
     await this.plantuml.removeMany(ids);
+  }
+
+  @HostListener('document:pointerdown', ['$event'])
+  handleOutsidePointerDown(event: PointerEvent): void {
+    if (!isOutsideTreePointer(this.host.nativeElement, event))
+      return;
+    if (this.plantuml.selectedIds().length === 0 && this.store.selectedIds().length === 0)
+      return;
+    this.plantuml.clearSelection();
+    this.store.clearListSelection();
   }
 
   @HostListener('document:keydown', ['$event'])

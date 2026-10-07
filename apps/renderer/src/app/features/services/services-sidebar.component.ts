@@ -17,6 +17,7 @@ import { TxHintComponent, TxToastService, playLeaveThen } from '@testrix/ui';
 
 import { ConfirmDialogService } from '../../core/confirm-dialog.service';
 import { isContextMenuLeftOfRow } from '../../core/tree-context-menu';
+import { isOutsideTreePointer } from '../../core/tree-selection';
 import { PalettePinsStore } from '../../core/palette-pins.store';
 import {
   isEditableKeyboardTarget,
@@ -294,6 +295,15 @@ export class ServicesSidebarComponent {
   @HostListener('window:resize')
   handleWindowResize(): void {
     this.closeMenu();
+  }
+
+  @HostListener('document:pointerdown', ['$event'])
+  handleOutsidePointerDown(event: PointerEvent): void {
+    if (!isOutsideTreePointer(this.host.nativeElement, event))
+      return;
+    if (this.store.selectedIds().length === 0)
+      return;
+    this.store.clearSelection();
   }
 
   @HostListener('document:keydown', ['$event'])

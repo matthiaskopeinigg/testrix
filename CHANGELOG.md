@@ -4,6 +4,11 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+### Fixed
+
+- Sort and filter menus open from their button and stay inside the sidebar.
+- Clicking outside a tree sidebar clears a select-all. A click on a row or an open menu keeps the selection.
+
 ## [2.0.5] — 2026-10-07
 
 ### Added

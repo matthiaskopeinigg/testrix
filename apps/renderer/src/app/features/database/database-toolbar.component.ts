@@ -10,6 +10,7 @@ import {
 import type { DatabaseSidebarFilter, DatabaseSortMode } from '@testrix/contracts';
 import { TxHintComponent, TxInputComponent } from '@testrix/ui';
 
+import { placeToolbarMenu } from '../../core/toolbar-menu-position';
 import { DatabaseStore } from './database.store';
 
 type MenuId = 'filter' | 'sort' | null;
@@ -36,8 +37,6 @@ const FILTER_OPTIONS: ReadonlyArray<{ id: DatabaseSidebarFilter; label: string }
 ];
 
 const MENU_WIDTH = 196;
-const MENU_GAP = 6;
-const MENU_EDGE = 8;
 
 @Component({
   selector: 'tx-database-toolbar',
@@ -117,17 +116,6 @@ export class DatabaseToolbarComponent {
   }
 
   private computeMenuPosition(trigger: HTMLElement): MenuPosition {
-    const triggerRect = trigger.getBoundingClientRect();
-    const bounds =
-      this.host.nativeElement.closest('.tx-sidebar')?.getBoundingClientRect() ??
-      this.host.nativeElement.closest('.tx-database')?.getBoundingClientRect() ??
-      new DOMRect(0, 0, window.innerWidth, window.innerHeight);
-    const width = Math.min(MENU_WIDTH, Math.max(140, bounds.width - MENU_EDGE * 2));
-    let left = triggerRect.left;
-    left = Math.min(left, bounds.right - width - MENU_EDGE);
-    left = Math.max(left, bounds.left + MENU_EDGE);
-    const top = triggerRect.bottom + MENU_GAP;
-    const maxHeight = Math.max(120, Math.floor(bounds.bottom - top - MENU_EDGE));
-    return { top, left, maxHeight, width };
+    return placeToolbarMenu(trigger, MENU_WIDTH);
   }
 }

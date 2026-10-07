@@ -21,6 +21,7 @@ import {
 import { TxEmptyStateComponent, TxHintComponent, TxInputComponent } from '@testrix/ui';
 
 import { ConfirmDialogService } from '../../core/confirm-dialog.service';
+import { placeToolbarMenu } from '../../core/toolbar-menu-position';
 import { DesktopApiService } from '../../core/desktop-api.service';
 import { isRangeModifier, isToggleModifier } from '../../core/range-select';
 import {
@@ -28,6 +29,7 @@ import {
   isModKey,
   shouldDeferToFlowCanvas,
 } from '../../core/selection-hotkeys';
+import { isOutsideTreePointer } from '../../core/tree-selection';
 import { WorkbenchStore } from '../workbench/workbench.store';
 import { CookieJarStore } from '../workbench/request/cookie-jar.store';
 import { sendHistoryEntryAgain } from './history-resend';
@@ -43,8 +45,6 @@ interface MenuPosition {
 }
 
 const MENU_WIDTH = 180;
-const MENU_GAP = 6;
-const MENU_EDGE = 8;
 
 @Component({
   selector: 'tx-history-sidebar',
@@ -203,6 +203,11 @@ export class HistorySidebarComponent {
     if (target instanceof Node && this.host.nativeElement.contains(target))
       return;
     this.handleCloseMenus();
+    if (!isOutsideTreePointer(this.host.nativeElement, event))
+      return;
+    if (this.store.selectedIds().length === 0)
+      return;
+    this.store.clearSelection();
   }
 
   @HostListener('window:resize')
@@ -266,16 +271,6 @@ export class HistorySidebarComponent {
   }
 
   private computeMenuPosition(trigger: HTMLElement): MenuPosition {
-    const triggerRect = trigger.getBoundingClientRect();
-    const bounds =
-      this.host.nativeElement.closest('.tx-sidebar')?.getBoundingClientRect() ??
-      this.host.nativeElement.getBoundingClientRect();
-    const width = Math.min(MENU_WIDTH, Math.max(140, bounds.width - MENU_EDGE * 2));
-    let left = triggerRect.left;
-    left = Math.min(left, bounds.right - width - MENU_EDGE);
-    left = Math.max(left, bounds.left + MENU_EDGE);
-    const top = triggerRect.bottom + MENU_GAP;
-    const maxHeight = Math.max(120, Math.floor(bounds.bottom - top - MENU_EDGE));
-    return { top, left, maxHeight, width };
+    return placeToolbarMenu(trigger, MENU_WIDTH);
   }
 }

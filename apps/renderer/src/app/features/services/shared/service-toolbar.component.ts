@@ -11,6 +11,7 @@ import {
 } from '@angular/core';
 import { TxHintComponent, TxInputComponent } from '@testrix/ui';
 
+import { placeToolbarMenu } from '../../../core/toolbar-menu-position';
 import type { ServiceSort } from '../services.store';
 
 type MenuId = 'filter' | null;
@@ -23,8 +24,6 @@ interface MenuPosition {
 }
 
 const MENU_WIDTH = 180;
-const MENU_GAP = 6;
-const MENU_EDGE = 8;
 
 @Component({
   selector: 'tx-service-toolbar',
@@ -108,14 +107,6 @@ export class ServiceToolbarComponent {
   }
 
   private computeMenuPosition(trigger: HTMLElement): MenuPosition {
-    const rect = trigger.getBoundingClientRect();
-    const width = MENU_WIDTH;
-    const left = Math.min(
-      Math.max(MENU_EDGE, rect.right - width),
-      window.innerWidth - width - MENU_EDGE,
-    );
-    const top = rect.bottom + MENU_GAP;
-    const maxHeight = Math.max(120, window.innerHeight - top - MENU_EDGE);
-    return { top, left, width, maxHeight };
+    return placeToolbarMenu(trigger, MENU_WIDTH);
   }
 }

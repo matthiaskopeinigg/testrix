@@ -32,6 +32,7 @@ import {
   ownsTreeClipboardShortcut,
   shouldDeferToFlowCanvas,
 } from '../../../core/selection-hotkeys';
+import { isOutsideTreePointer } from '../../../core/tree-selection';
 import { TreeClipboardService } from '../../../core/tree-clipboard.service';
 import { isRangeModifier, isToggleModifier, shouldKeepPointerSelection } from '../../../core/range-select';
 import { ServiceToolbarComponent } from '../shared/service-toolbar.component';
@@ -341,6 +342,15 @@ export class FlowTemplatesPanelComponent {
   @HostListener('window:resize')
   handleWindowResize(): void {
     this.closeMenu();
+  }
+
+  @HostListener('document:pointerdown', ['$event'])
+  handleOutsidePointerDown(event: PointerEvent): void {
+    if (!this.store.panelOpen() || !isOutsideTreePointer(this.host.nativeElement, event))
+      return;
+    if (this.store.selectedIds().length === 0)
+      return;
+    this.store.clearSelection();
   }
 
   @HostListener('document:keydown', ['$event'])

@@ -56,6 +56,7 @@ import {
   shouldKeepPointerSelection,
 } from '../../../core/range-select';
 import { isEditableKeyboardTarget, isModKey, ownsTreeClipboardShortcut } from '../../../core/selection-hotkeys';
+import { isOutsideTreePointer } from '../../../core/tree-selection';
 import { TreeClipboardService } from '../../../core/tree-clipboard.service';
 import { isContextMenuLeftOfRow, isSidebarToolbarContext } from '../../../core/tree-context-menu';
 import { EnvironmentsStore } from '../../environments/environments.store';
@@ -778,6 +779,16 @@ export class EnvironmentEditorComponent {
     }
     const menu = overlayRef.overlayElement.querySelector('.tx-menu');
     playLeaveThen(menu instanceof HTMLElement ? menu : null, dispose);
+  }
+
+  @HostListener('document:pointerdown', ['$event'])
+  handleOutsidePointerDown(event: PointerEvent): void {
+    if (!isOutsideTreePointer(this.host.nativeElement, event))
+      return;
+    const env = this.environment();
+    if (!env || this.environments.nodeSelectionFor(env.id).ids.length === 0)
+      return;
+    this.environments.clearNodeSelection(env.id);
   }
 
   @HostListener('document:keydown', ['$event'])

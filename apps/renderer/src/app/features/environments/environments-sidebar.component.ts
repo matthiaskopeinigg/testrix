@@ -20,6 +20,7 @@ import { TxButtonComponent, TxEmptyStateComponent, TxToastService, forwardPaddin
 
 import { ConfirmDialogService } from '../../core/confirm-dialog.service';
 import { isContextMenuLeftOfRow, isSidebarToolbarContext } from '../../core/tree-context-menu';
+import { isOutsideTreePointer } from '../../core/tree-selection';
 import {
   isEditableKeyboardTarget,
   isModKey,
@@ -310,6 +311,15 @@ export class EnvironmentsSidebarComponent {
   @HostListener('window:resize')
   handleWindowResize(): void {
     this.closeMenu();
+  }
+
+  @HostListener('document:pointerdown', ['$event'])
+  handleOutsidePointerDown(event: PointerEvent): void {
+    if (!isOutsideTreePointer(this.host.nativeElement, event))
+      return;
+    if (this.store.selectedIds().length === 0)
+      return;
+    this.store.clearListSelection();
   }
 
   @HostListener('document:keydown', ['$event'])

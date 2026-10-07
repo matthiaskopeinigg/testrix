@@ -30,6 +30,7 @@ import {
 } from '../../core/selection-hotkeys';
 import { TreeClipboardService } from '../../core/tree-clipboard.service';
 import { isContextMenuLeftOfRow, isSidebarToolbarContext } from '../../core/tree-context-menu';
+import { isOutsideTreePointer } from '../../core/tree-selection';
 import { ImportWorkspaceDialogService } from '../workspace-transfer/import-workspace-dialog.service';
 import { WorkbenchStore } from '../workbench/workbench.store';
 import { CollectionsDndService } from './collections-dnd.service';
@@ -299,6 +300,15 @@ export class CollectionsSidebarComponent {
   @HostListener('window:resize')
   handleWindowResize(): void {
     this.closeMenu();
+  }
+
+  @HostListener('document:pointerdown', ['$event'])
+  handleOutsidePointerDown(event: PointerEvent): void {
+    if (!isOutsideTreePointer(this.host.nativeElement, event))
+      return;
+    if (this.store.selectedIds().length === 0)
+      return;
+    this.store.clearSelection();
   }
 
   @HostListener('document:keydown', ['$event'])
